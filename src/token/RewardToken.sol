@@ -17,8 +17,10 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
     using SafeERC20 for IERC20;
 
     error InvalidBurnAmount();
+    error InvalidBurnFrom(address from);
     error BurnAmountExceedsBalance(uint256 availableBalance, uint256 burnAmount);
     error InvalidMintAmount();
+    error InvalidMintTo(address to);
     error InvalidApprovalOwner(address owner);
     error InvalidApprovalSpender(address spender);
     error InsufficientAllowance(address spender, uint256 currentAllowance, uint256 attemptedSpend);
@@ -65,8 +67,8 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
         emit Burn(user, receiverOfUnderlying, amount, supplyFactor);
     }
 
-    function _burnNormalized(address account, uint256 amount) internal virtual {
-        require(account != address(0), "ERC20: burn from the zero address");
+    function _burnNormalized(address account, uint256 amount) private {
+        if (account == address(0)) revert InvalidBurnFrom(address(0));
 
         normalizedTotalSupply -= amount;
 
@@ -80,15 +82,15 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
         uint256 amountScaled = amount.roundedDiv(_supplyFactor);
         if (amountScaled == 0) revert InvalidMintAmount();
         _mintNormalized(user, amountScaled);
-        
+
         IERC20(underlying).safeTransferFrom(_msgSender(), address(this), amount);
 
         emit Transfer(address(0), user, amount);
         emit Mint(user, amount, _supplyFactor);
     }
 
-    function _mintNormalized(address account, uint256 amount) internal virtual {
-        require(account != address(0), "ERC20: mint to the zero address");
+    function _mintNormalized(address account, uint256 amount) private {
+        if (account == address(0)) revert InvalidMintTo(address(0));
 
         normalizedTotalSupply += amount;
 
@@ -96,9 +98,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
     }
 
     function _mintToTreasury(uint256 amount, uint256 index) internal {
-        if (amount == 0) {
-            return;
-        }
+        if (amount == 0) return;
 
         address _treasury = treasury;
 
@@ -143,7 +143,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
         emit Approval(owner, spender, amount);
     }
 
-    function _spendAllowance(address owner, address spender, uint256 amount) internal {
+    function _spendAllowance(address owner, address spender, uint256 amount) private {
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance < amount) {
             revert InsufficientAllowance(spender, currentAllowance, amount);
@@ -179,7 +179,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
         return true;
     }
 
-    function _transfer(address from, address to, uint256 amount) internal {
+    function _transfer(address from, address to, uint256 amount) private {
         if (from == address(0)) revert InvalidTransferFrom(address(0));
         if (to == address(0)) revert InvalidTransferTo(address(0));
         if (from == to) revert SelfTransfer(from);
