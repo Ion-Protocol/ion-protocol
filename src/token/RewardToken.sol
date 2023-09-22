@@ -4,30 +4,25 @@ pragma solidity 0.8.19;
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Errors} from "./IERC20Errors.sol";
 import {IonPool} from "../IonPool.sol";
-import {RoundedMath} from "../math/RoundedMath.sol";
+import {RoundedMath, RAY} from "../math/RoundedMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
- * @title Reward Token
+ * @title RewardToken
  * @notice Heavily inspired by Aave's `AToken`
  */
-contract RewardToken is Context, IERC20, IERC20Metadata {
+contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     using RoundedMath for uint256;
     using SafeERC20 for IERC20;
 
     error InvalidBurnAmount();
-    error InvalidBurnFrom(address from);
-    error BurnAmountExceedsBalance(uint256 availableBalance, uint256 burnAmount);
     error InvalidMintAmount();
-    error InvalidMintTo(address to);
-    error InvalidApprovalOwner(address owner);
-    error InvalidApprovalSpender(address spender);
-    error InsufficientAllowance(address spender, uint256 currentAllowance, uint256 attemptedSpend);
-    error InvalidTransferFrom(address from);
-    error InvalidTransferTo(address to);
-    error TransferAmountExceedsBalance(address spender, uint256 balance, uint256 attemptedSpend);
     error SelfTransfer(address addr);
+    error ERC2612ExpiredSignature(uint256 deadline);
+    error ERC2612InvalidSigner(address signer, address owner);
 
     event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
     event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
@@ -36,14 +31,22 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
     // A user's true balance at any point will be the value in this mapping times the supplyFactor
     mapping(address account => uint256) _normalizedBalances;
     mapping(address account => mapping(address spender => uint256)) _allowances;
+    mapping(address account => uint256) public nonces;
 
-    address public immutable underlying;
-    address public immutable treasury;
+    bytes private constant EIP712_REVISION = bytes("1");
+    bytes32 private constant EIP712_DOMAIN =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public immutable DOMAIN_SEPARATOR;
+
     uint8 public immutable decimals;
-
-    uint256 public normalizedTotalSupply;
     string public name;
     string public symbol;
+    address public immutable underlying;
+
+    address public treasury;
+    uint256 public normalizedTotalSupply;
 
     uint256 internal supplyFactor;
 
@@ -53,33 +56,41 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
         decimals = decimals_;
         name = name_;
         symbol = symbol_;
-        supplyFactor = 1e18;
+
+        supplyFactor = RAY;
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(EIP712_DOMAIN, keccak256(bytes(name_)), keccak256(EIP712_REVISION), block.chainid, address(this))
+        );
     }
 
     function _burn(address user, address receiverOfUnderlying, uint256 amount) internal {
-        uint256 amountScaled = amount.roundedDiv(supplyFactor);
+        uint256 _supplyFactor = supplyFactor;
+        uint256 amountScaled = amount.roundedRayDiv(_supplyFactor);
         if (amountScaled == 0) revert InvalidBurnAmount();
         _burnNormalized(user, amountScaled);
 
         IERC20(underlying).safeTransfer(receiverOfUnderlying, amount);
 
         emit Transfer(user, address(0), amount);
-        emit Burn(user, receiverOfUnderlying, amount, supplyFactor);
+        emit Burn(user, receiverOfUnderlying, amount, _supplyFactor);
     }
 
     function _burnNormalized(address account, uint256 amount) private {
-        if (account == address(0)) revert InvalidBurnFrom(address(0));
-
-        normalizedTotalSupply -= amount;
+        if (account == address(0)) revert ERC20InvalidSender(address(0));
 
         uint256 oldAccountBalance = _normalizedBalances[account];
-        if (oldAccountBalance < amount) revert BurnAmountExceedsBalance(oldAccountBalance, amount);
-        _normalizedBalances[account] = oldAccountBalance - amount;
+        if (oldAccountBalance < amount) revert ERC20InsufficientBalance(account, oldAccountBalance, amount);
+        // Underflow impossible
+        unchecked {
+            _normalizedBalances[account] = oldAccountBalance - amount;
+        }
+
+        normalizedTotalSupply -= amount;
     }
 
     function _mint(address user, uint256 amount) internal {
         uint256 _supplyFactor = supplyFactor;
-        uint256 amountScaled = amount.roundedDiv(_supplyFactor);
+        uint256 amountScaled = amount.roundedRayDiv(_supplyFactor);
         if (amountScaled == 0) revert InvalidMintAmount();
         _mintNormalized(user, amountScaled);
 
@@ -90,30 +101,31 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
     }
 
     function _mintNormalized(address account, uint256 amount) private {
-        if (account == address(0)) revert InvalidMintTo(address(0));
+        if (account == address(0)) revert ERC20InvalidReceiver(address(0));
 
         normalizedTotalSupply += amount;
 
         _normalizedBalances[account] += amount;
     }
 
-    function _mintToTreasury(uint256 amount, uint256 index) internal {
+    function _mintToTreasury(uint256 amount) internal {
         if (amount == 0) return;
 
+        uint256 _supplyFactor = supplyFactor;
         address _treasury = treasury;
 
         // Compared to the normal mint, we don't check for rounding errors.
         // The amount to mint can easily be very small since it is a fraction of the interest accrued.
         // In that case, the treasury will experience a (very small) loss, but it
         // wont cause potentially valid transactions to fail.
-        _mintNormalized(_treasury, amount.roundedDiv(index));
+        _mintNormalized(_treasury, amount.roundedRayDiv(_supplyFactor));
 
         emit Transfer(address(0), _treasury, amount);
-        emit Mint(_treasury, amount, index);
+        emit Mint(_treasury, amount, _supplyFactor);
     }
 
     function balanceOf(address user) public view returns (uint256) {
-        return _normalizedBalances[user].roundedMul(supplyFactor);
+        return _normalizedBalances[user].roundedRayMul(supplyFactor);
     }
 
     function normalizedBalanceOf(address user) external view returns (uint256) {
@@ -127,7 +139,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
             return 0;
         }
 
-        return _normalizedTotalSupply.roundedMul(supplyFactor);
+        return _normalizedTotalSupply.roundedRayMul(supplyFactor);
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
@@ -135,9 +147,31 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
         return true;
     }
 
+    function increaseAllowance(address spender, uint256 increaseAmount) external returns (bool) {
+        _approve(_msgSender(), spender, allowance(_msgSender(), spender) + increaseAmount);
+        return true;
+    }
+
+    function decreaseAllowance(address spender, uint256 decreaseAmount) public virtual returns (bool) {
+        uint256 currentAllowance = allowance(_msgSender(), spender);
+
+        if (currentAllowance < decreaseAmount) {
+            revert ERC20InsufficientAllowance(_msgSender(), currentAllowance, decreaseAmount);
+        }
+
+        uint256 newAllowance;
+        // Underflow impossible
+        unchecked {
+            newAllowance = currentAllowance - decreaseAmount;
+        }
+
+        _approve(_msgSender(), spender, newAllowance);
+        return true;
+    }
+
     function _approve(address owner, address spender, uint256 amount) internal {
-        if (owner == address(0)) revert InvalidApprovalOwner(address(0));
-        if (spender == address(0)) revert InvalidApprovalSpender(address(0));
+        if (owner == address(0)) revert ERC20InvalidApprover(address(0));
+        if (spender == address(0)) revert ERC20InvalidSpender(address(0));
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
@@ -146,7 +180,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
     function _spendAllowance(address owner, address spender, uint256 amount) private {
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance < amount) {
-            revert InsufficientAllowance(spender, currentAllowance, amount);
+            revert ERC20InsufficientAllowance(spender, currentAllowance, amount);
         }
         uint256 newAllowance;
         // Underflow impossible
@@ -158,11 +192,6 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
 
     function allowance(address owner, address spender) public view returns (uint256) {
         return _allowances[owner][spender];
-    }
-
-    function transferUnderlyingTo(address target, uint256 amount) internal returns (uint256) {
-        IERC20(underlying).safeTransfer(target, amount);
-        return amount;
     }
 
     function transfer(address to, uint256 amount) public returns (bool) {
@@ -180,16 +209,16 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
     }
 
     function _transfer(address from, address to, uint256 amount) private {
-        if (from == address(0)) revert InvalidTransferFrom(address(0));
-        if (to == address(0)) revert InvalidTransferTo(address(0));
+        if (from == address(0)) revert ERC20InvalidSender(address(0));
+        if (to == address(0)) revert ERC20InvalidReceiver(address(0));
         if (from == to) revert SelfTransfer(from);
 
         uint256 _supplyFactor = supplyFactor;
-        uint256 amountNormalized = amount.roundedDiv(_supplyFactor);
+        uint256 amountNormalized = amount.roundedRayDiv(_supplyFactor);
 
         uint256 oldSenderBalance = _normalizedBalances[from];
         if (oldSenderBalance < amountNormalized) {
-            revert TransferAmountExceedsBalance(from, oldSenderBalance, amountNormalized);
+            revert ERC20InsufficientBalance(from, oldSenderBalance, amountNormalized);
         }
         // Underflow impossible
         unchecked {
@@ -198,5 +227,39 @@ contract RewardToken is Context, IERC20, IERC20Metadata {
         _normalizedBalances[to] += amountNormalized;
 
         emit BalanceTransfer(from, to, amountNormalized, _supplyFactor);
+    }
+
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        public
+        virtual
+    {
+        if (block.timestamp > deadline) {
+            revert ERC2612ExpiredSignature(deadline);
+        }
+
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));
+
+        bytes32 hash = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
+
+        address signer = ECDSA.recover(hash, v, r, s);
+        if (signer != owner) {
+            revert ERC2612InvalidSigner(signer, owner);
+        }
+
+        _approve(owner, spender, value);
+    }
+
+    /**
+     * @dev Consumes a nonce.
+     *
+     * Returns the current value and increments nonce.
+     */
+    function _useNonce(address owner) internal virtual returns (uint256) {
+        // For each account, the nonce has an initial value of 0, can only be incremented by one, and cannot be
+        // decremented or reset. This guarantees that the nonce never overflows.
+        unchecked {
+            // It is important to do x++ and not ++x here.
+            return nonces[owner]++;
+        }
     }
 }
