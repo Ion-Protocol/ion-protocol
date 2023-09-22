@@ -1,40 +1,72 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+uint256 constant WAD = 1e18;
+uint256 constant RAY = 1e27;
+
 library RoundedMath {
     error DivisionByZero();
     error MultiplicationOverflow();
-
-    uint256 internal constant FULL_SCALE = 1e18;
 
     /**
      * @dev Multiplication with proper rounding as opposed to truncation.
      * @param a multiplier
      * @param b multiplicand
-     * @return product in `FULL_SCALE`
+     * @return product in `WAD`
      */
-    function roundedMul(uint256 a, uint256 b) internal pure returns (uint256) {
+    function roundedWadMul(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a == 0 || b == 0) return 0;
 
         if (a > (type(uint256).max / b)) revert MultiplicationOverflow();
 
-        uint256 halfScale = FULL_SCALE / 2;
+        uint256 halfScale = WAD / 2;
 
-        return (a * b + halfScale) / FULL_SCALE;
+        return (a * b + halfScale) / WAD;
     }
 
     /**
      * @dev Division with proper rounding as opposed to truncation.
      * @param a dividend
      * @param b divisor
-     * @return quotient in `FULL_SCALE`
+     * @return quotient in `WAD`
      */
-    function roundedDiv(uint256 a, uint256 b) internal pure returns (uint256) {
+    function roundedWadDiv(uint256 a, uint256 b) internal pure returns (uint256) {
         if (b == 0) revert DivisionByZero();
         uint256 halfB = b / 2;
 
-        if (a > (type(uint256).max - halfB) / FULL_SCALE) revert MultiplicationOverflow();
+        if (a > (type(uint256).max - halfB) / WAD) revert MultiplicationOverflow();
 
-        return (a * FULL_SCALE + halfB) / b;
+        return (a * WAD + halfB) / b;
+    }
+
+    /**
+     * @dev Multiplication with proper rounding as opposed to truncation.
+     * @param a multiplier
+     * @param b multiplicand
+     * @return product in `RAY`
+     */
+    function roundedRayMul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0 || b == 0) return 0;
+
+        if (a > (type(uint256).max / b)) revert MultiplicationOverflow();
+
+        uint256 halfScale = RAY / 2;
+
+        return (a * b + halfScale) / RAY;
+    }
+
+    /**
+     * @dev Division with proper rounding as opposed to truncation.
+     * @param a dividend
+     * @param b divisor
+     * @return quotient in `RAY`
+     */
+    function roundedRayDiv(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (b == 0) revert DivisionByZero();
+        uint256 halfB = b / 2;
+
+        if (a > (type(uint256).max - halfB) / RAY) revert MultiplicationOverflow();
+
+        return (a * RAY + halfB) / b;
     }
 }
