@@ -1,97 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
 import {safeconsole as console} from "forge-std/safeconsole.sol";
+import {RewardTokenSharedSetup} from "../helpers/RewardTokenSharedSetup.sol";
 import {RewardToken} from "../../src/token/RewardToken.sol";
 import {IERC20Errors} from "../../src/token/IERC20Errors.sol";
-import {RoundedMath, RAY} from "../../src/math/RoundedMath.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {RoundedMath} from "../../src/math/RoundedMath.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract RewardTokenExternal is RewardToken {
-    constructor(address _underlying, address _treasury, uint8 decimals_, string memory name_, string memory symbol_)
-        RewardToken(_underlying, _treasury, decimals_, name_, symbol_)
-    {}
-
-    // --- Cheats ---
-    function setSupplyFactor(uint256 factor) external {
-        supplyFactor = factor;
-    }
-
-    function getSupplyFactor() external view returns (uint256) {
-        return supplyFactor;
-    }
-
-    // --- Expose Internal ---
-    function burn(address user, address receiverOfUnderlying, uint256 amount) external {
-        _burn(user, receiverOfUnderlying, amount);
-    }
-
-    function mint(address user, uint256 amount) external {
-        _mint(user, amount);
-    }
-
-    function mintToTreasury(uint256 amount) external {
-        _mintToTreasury(amount);
-    }
-
-    // --- Expose Events ---
-    function emitMint(address user, uint256 amount, uint256 index) external {
-        emit Mint(user, amount, index);
-    }
-
-    function emitBurn(address user, address receiverOfUnderlying, uint256 amount, uint256 index) external {
-        emit Burn(user, receiverOfUnderlying, amount, index);
-    }
-
-    function emitTransfer(address from, address to, uint256 value) external {
-        emit Transfer(from, to, value);
-    }
-
-    function emitBalanceTransfer(address from, address to, uint256 value, uint256 index) external {
-        emit BalanceTransfer(from, to, value, index);
-    }
-}
-
-contract RewardTokenUnitTest is Test {
+contract RewardTokenUnitTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-    event BalanceTransfer(address indexed from, address indexed to, uint256 value, uint256 index);
-    event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
-    event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    RewardTokenExternal rewardToken;
-    ERC20PresetMinterPauser underlying;
-    uint256 private constant INITIAL_UNDERYLING = 1000e18;
-    address private TREASURY = vm.addr(2);
-    uint8 private constant DECIMALS = 18;
-    string private constant SYMBOL = "iWETH";
-    string private constant NAME = "Ion Wrapped Ether";
-
-    uint256 sendingUserPrivateKey = 16;
-    uint256 receivingUserPrivateKey = 17;
-    uint256 spenderPrivateKey = 18;
-    address sendingUser = vm.addr(sendingUserPrivateKey); // random address
-    address receivingUser = vm.addr(receivingUserPrivateKey); // random address
-    address spender = vm.addr(spenderPrivateKey); // random address
-
-    function setUp() external {
-        underlying = new ERC20PresetMinterPauser("WETH", "Wrapped Ether");
-        underlying.mint(address(this), INITIAL_UNDERYLING);
-        rewardToken = new RewardTokenExternal(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
-    }
-
-    function test_setUp() external {
-        assertEq(rewardToken.name(), NAME);
-        assertEq(rewardToken.symbol(), SYMBOL);
-
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING);
-        assertEq(underlying.balanceOf(address(rewardToken)), 0);
-    }
 
     function test_mintRewardTokenBasic() external {
         uint256 amountOfRewardTokens = 100e18;
@@ -318,7 +236,8 @@ contract RewardTokenUnitTest is Test {
                 keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, amountOfRewardTokens, 0, deadline));
             ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+            (uint8 v, bytes32 r, bytes32 s) =
+                vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
             rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, v, r, s);
         }
@@ -351,7 +270,6 @@ contract RewardTokenUnitTest is Test {
     function test_permit() external {
         uint256 amountOfRewardTokens = 100e18;
 
-
         underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
         rewardToken.mint(sendingUser, amountOfRewardTokens);
 
@@ -372,7 +290,8 @@ contract RewardTokenUnitTest is Test {
                 keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, amountOfRewardTokens, 0, deadline));
             ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(spenderPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+            (uint8 v, bytes32 r, bytes32 s) =
+                vm.sign(spenderPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
             vm.expectRevert(abi.encodeWithSelector(RewardToken.ERC2612InvalidSigner.selector, spender, sendingUser));
             rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, v, r, s);
@@ -400,11 +319,11 @@ contract RewardTokenUnitTest is Test {
         return a * b / 1e18;
     }
 
-    function _calculateMalleableSignature(
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) internal pure returns (uint8, bytes32, bytes32) {
+    function _calculateMalleableSignature(uint8 v, bytes32 r, bytes32 s)
+        internal
+        pure
+        returns (uint8, bytes32, bytes32)
+    {
         // Ensure v is within the valid range (27 or 28)
         require(v == 27 || v == 28, "Invalid v value");
 
