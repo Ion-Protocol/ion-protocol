@@ -29,7 +29,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     event BalanceTransfer(address indexed from, address indexed to, uint256 value, uint256 index);
 
     // A user's true balance at any point will be the value in this mapping times the supplyFactor
-    mapping(address account => uint256) _normalizedBalances;
+    mapping(address account => uint256) _normalizedBalances; // [WAD]
     mapping(address account => mapping(address spender => uint256)) _allowances;
     mapping(address account => uint256) public nonces;
 
@@ -40,15 +40,15 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public immutable DOMAIN_SEPARATOR;
 
+    address public immutable underlying;
     uint8 public immutable decimals;
     string public name;
     string public symbol;
-    address public immutable underlying;
 
     address public treasury;
-    uint256 public normalizedTotalSupply;
+    uint256 public normalizedTotalSupply; // [WAD]
 
-    uint256 internal supplyFactor;
+    uint256 internal supplyFactor; // [RAY]
 
     constructor(address _underlying, address _treasury, uint8 decimals_, string memory name_, string memory symbol_) {
         underlying = _underlying;
