@@ -1,58 +1,47 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import {Test} from "forge-std/Test.sol";
 import {safeconsole as console} from "forge-std/safeconsole.sol";
-import {RewardTokenSharedSetup} from "../helpers/RewardTokenSharedSetup.sol";
 import {RewardToken} from "../../src/token/RewardToken.sol";
-import {IERC20Errors} from "../../src/token/IERC20Errors.sol";
+import {RewardTokenSharedSetup} from "../helpers/RewardTokenSharedSetup.sol";
 import {RoundedMath} from "../../src/math/RoundedMath.sol";
+import {IERC20Errors} from "../../src/token/IERC20Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract RewardTokenUnitTest is RewardTokenSharedSetup {
+contract RewardTokenFuzzTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
-    uint256 internal constant INITIAL_UNDERYLING = 1000e18;
+    function testFuzz_mintRewardTokenBasic(uint256 amountOfRewardTokens) external {
+        vm.assume(amountOfRewardTokens != 0);
+        // Prevent overflow
+        vm.assume(amountOfRewardTokens < 2 ** 128);
 
-    function setUp() public override {
-        super.setUp();
-        underlying.mint(address(this), INITIAL_UNDERYLING);
-    }
+        underlying.mint(address(this), amountOfRewardTokens);
 
-    function test_setUp() external {
-        assertEq(rewardToken.name(), NAME);
-        assertEq(rewardToken.symbol(), SYMBOL);
-
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING);
-        assertEq(underlying.balanceOf(address(rewardToken)), 0);
-    }
-
-    function test_mintRewardTokenBasic() external {
-        uint256 amountOfRewardTokens = 100e18;
-
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        underlying.approve(address(rewardToken), amountOfRewardTokens);
         vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
         rewardToken.mint(address(0), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
     }
 
-    function test_RevertWhen_MintingZeroTokens() external {
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
-        vm.expectRevert(RewardToken.InvalidMintAmount.selector);
-        rewardToken.mint(address(this), 0);
-    }
+    function testFuzz_burnRewardTokenBasic(uint256 amountOfRewardTokens) external {
+        vm.assume(amountOfRewardTokens != 0);
+        // Prevent overflow
+        vm.assume(amountOfRewardTokens < 2 ** 128);
 
-    function test_burnRewardTokenBasic() external {
-        uint256 amountOfRewardTokens = 100e18;
+        // Undo setup
+        underlying.mint(address(this), amountOfRewardTokens);
 
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        underlying.approve(address(rewardToken), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
 
         vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidSender.selector, address(0)));
         rewardToken.burn(address(0), address(this), amountOfRewardTokens);
@@ -61,27 +50,36 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         assertEq(rewardToken.balanceOf(address(this)), 0);
     }
 
-    function test_mintRewardTokenWithSupplyFactorChange() external {
-        uint256 amountOfRewardTokens = 100e18;
+    function testFuzz_mintRewardTokenWithSupplyFactorChange(uint256 amountOfRewardTokens, uint256 supplyFactorNew)
+        external
+    {
+        vm.assume(amountOfRewardTokens != 0);
+        // Prevent overflow
+        vm.assume(amountOfRewardTokens < 2 ** 128);
         uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        // supplyFactor greater than 10,000 is highly unlikely
+        supplyFactorNew = bound(supplyFactorNew, supplyFactorOld, 5_000e27);
+        vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
 
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        underlying.mint(address(this), amountOfRewardTokens);
+
+        underlying.approve(address(rewardToken), type(uint256).max);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
         uint256 expectedNormalizedMint1 = amountOfRewardTokens.roundedRayDiv(supplyFactorOld);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 supplyFactorNew = 1.5e27;
         uint256 interestCreated = _wadMul(amountOfRewardTokens, supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
         rewardToken.setSupplyFactor(supplyFactorNew);
 
+        underlying.mint(address(this), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
         uint256 expectedNormalizedMint2 = amountOfRewardTokens.roundedRayDiv(supplyFactorNew);
@@ -91,41 +89,40 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), totalDepositsNormalized);
         assertEq(rewardToken.balanceOf(address(this)), totalValue);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - totalDeposited);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), totalDeposited + interestCreated);
-
-        uint256 supplyFactorSecondNew = 2.5e27; // 2.5
-        interestCreated = _wadMul(amountOfRewardTokens, supplyFactorSecondNew - supplyFactorNew);
-        // Adds amount of underlying to the reward token contract based on how
-        // much the supply factor was changed
-        _depositInterestGains(interestCreated);
-        rewardToken.setSupplyFactor(supplyFactorSecondNew);
-
-        vm.expectRevert(RewardToken.InvalidMintAmount.selector);
-        rewardToken.mint(address(this), 1 wei);
     }
 
-    function test_burnRewardTokenWithSupplyFactorChange() external {
-        uint256 amountOfRewardTokens = 100e18;
+    function testFuzz_burnRewardTokenWithSupplyFactorChange(uint256 amountOfRewardTokens, uint256 supplyFactorNew)
+        external
+    {
+        vm.assume(amountOfRewardTokens != 0);
+        // Prevent overflow
+        vm.assume(amountOfRewardTokens < 2 ** 128);
         uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        // supplyFactor greater than 5,000 is highly unlikely
+        supplyFactorNew = bound(supplyFactorNew, supplyFactorOld + 1, 5_000e27);
+        vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
 
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        underlying.mint(address(this), amountOfRewardTokens);
+
+        underlying.approve(address(rewardToken), type(uint256).max);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
         uint256 expectedNormalizedMint1 = amountOfRewardTokens.roundedRayDiv(supplyFactorOld);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 supplyFactorNew = 2.5e27; // 2.5
         uint256 interestCreated = _wadMul(amountOfRewardTokens, supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
         rewardToken.setSupplyFactor(supplyFactorNew);
 
+        underlying.mint(address(this), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
         uint256 expectedNormalizedMint2 = amountOfRewardTokens.roundedRayDiv(supplyFactorNew);
@@ -135,44 +132,28 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), totalDepositsNormalized);
         assertEq(rewardToken.balanceOf(address(this)), totalValue);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - totalDeposited);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), totalDeposited + interestCreated);
 
-        uint256 burnAmount = 150e18;
+        uint256 burnAmount = amountOfRewardTokens;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientBalance.selector,
-                address(this),
-                totalDepositsNormalized,
-                (totalValue + totalValue).roundedRayDiv(supplyFactorNew)
-            )
-        );
-        rewardToken.burn(address(this), address(this), totalValue + totalValue);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidSender.selector, address(0)));
-        rewardToken.burn(address(0), address(this), totalDepositsNormalized);
-        vm.expectRevert(RewardToken.InvalidBurnAmount.selector);
-        rewardToken.burn(address(this), address(this), 1 wei);
         rewardToken.burn(address(this), address(this), burnAmount);
 
-        assertEq(rewardToken.balanceOf(address(this)), totalValue - burnAmount);
-        assertEq(rewardToken.totalSupply(), totalValue - burnAmount);
-        assertEq(
-            rewardToken.normalizedBalanceOf(address(this)),
-            totalDepositsNormalized - burnAmount.roundedRayDiv(supplyFactorNew)
-        );
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - totalDeposited + burnAmount);
+        assertEq(underlying.balanceOf(address(this)), burnAmount);
         assertEq(underlying.balanceOf(address(rewardToken)), totalDeposited + interestCreated - burnAmount);
     }
 
-    function test_transfer() external {
-        uint256 amountOfRewardTokens = 100e18;
+    function testFuzz_transfer(uint256 amountOfRewardTokens) external {
+        vm.assume(amountOfRewardTokens != 0);
+        vm.assume(amountOfRewardTokens < 2 ** 128);
 
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        underlying.mint(address(this), amountOfRewardTokens);
+
+        underlying.approve(address(rewardToken), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
         vm.expectRevert(
@@ -192,19 +173,22 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
 
         assertEq(rewardToken.balanceOf(address(this)), 0);
         assertEq(rewardToken.balanceOf(receivingUser), amountOfRewardTokens);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
     }
 
-    function test_transferFromWithApprove() external {
-        uint256 amountOfRewardTokens = 100e18;
+    function testFuzz_transferFromWithApprove(uint256 amountOfRewardTokens) external {
+        vm.assume(amountOfRewardTokens != 0);
+        vm.assume(amountOfRewardTokens < 2 ** 128);
 
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        underlying.mint(address(this), amountOfRewardTokens);
+
+        underlying.approve(address(rewardToken), amountOfRewardTokens);
         rewardToken.mint(sendingUser, amountOfRewardTokens);
 
         assertEq(rewardToken.balanceOf(sendingUser), amountOfRewardTokens);
         assertEq(rewardToken.balanceOf(receivingUser), 0);
         assertEq(rewardToken.allowance(sendingUser, spender), 0);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
         vm.prank(sendingUser);
@@ -235,16 +219,20 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         assertEq(rewardToken.allowance(sendingUser, spender), 0);
     }
 
-    function test_transferFromWithPermit() external {
-        uint256 amountOfRewardTokens = 100e18;
 
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+    function testFuzz_transferFromWithPermit(uint256 amountOfRewardTokens) external {
+        vm.assume(amountOfRewardTokens != 0);
+        vm.assume(amountOfRewardTokens < 2 ** 128);
+
+        underlying.mint(address(this), amountOfRewardTokens);
+
+        underlying.approve(address(rewardToken), amountOfRewardTokens);
         rewardToken.mint(sendingUser, amountOfRewardTokens);
 
         assertEq(rewardToken.balanceOf(sendingUser), amountOfRewardTokens);
         assertEq(rewardToken.balanceOf(receivingUser), 0);
         assertEq(rewardToken.allowance(sendingUser, spender), 0);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
         {
@@ -288,17 +276,28 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         assertEq(rewardToken.allowance(sendingUser, spender), 0);
     }
 
-    function test_permit() external {
-        uint256 amountOfRewardTokens = 100e18;
+    struct PermitLocals {
+        uint256 amountOfRewardTokens;
+    }
 
-        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
-        rewardToken.mint(sendingUser, amountOfRewardTokens);
+    function testFuzz_permit(uint256 amountOfRewardTokens, uint256 nonSenderPrivateKey, uint256 deadlineTime) external {
+        vm.assume(amountOfRewardTokens != 0);
+        vm.assume(amountOfRewardTokens < 2 ** 128);
+        nonSenderPrivateKey = bound(nonSenderPrivateKey, 100, 2 ** 128);
+        deadlineTime = bound(deadlineTime, 1, 2 ** 128);
 
-        assertEq(rewardToken.balanceOf(sendingUser), amountOfRewardTokens);
+        PermitLocals memory locals = PermitLocals({amountOfRewardTokens: amountOfRewardTokens});
+        locals.amountOfRewardTokens = amountOfRewardTokens;
+
+        underlying.mint(address(this), locals.amountOfRewardTokens);
+
+        underlying.approve(address(rewardToken), locals.amountOfRewardTokens);
+        rewardToken.mint(sendingUser, locals.amountOfRewardTokens);
+        assertEq(rewardToken.balanceOf(sendingUser), locals.amountOfRewardTokens);
         assertEq(rewardToken.balanceOf(receivingUser), 0);
         assertEq(rewardToken.allowance(sendingUser, spender), 0);
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewardTokens);
-        assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
+        assertEq(underlying.balanceOf(address(this)), 0);
+        assertEq(underlying.balanceOf(address(rewardToken)), locals.amountOfRewardTokens);
 
         {
             bytes32 PERMIT_TYPEHASH = rewardToken.PERMIT_TYPEHASH();
@@ -308,14 +307,14 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
 
             // Have spender try to sign on behalf of sendingUser (should fail)
             bytes32 structHash =
-                keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, amountOfRewardTokens, 0, deadline));
+                keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, locals.amountOfRewardTokens, 0, deadline));
             ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
             (uint8 v, bytes32 r, bytes32 s) =
-                vm.sign(spenderPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+                vm.sign(nonSenderPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
-            vm.expectRevert(abi.encodeWithSelector(RewardToken.ERC2612InvalidSigner.selector, spender, sendingUser));
-            rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, v, r, s);
+            vm.expectRevert(abi.encodeWithSelector(RewardToken.ERC2612InvalidSigner.selector, vm.addr(nonSenderPrivateKey), sendingUser));
+            rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, v, r, s);
 
             (v, r, s) = vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
             (uint8 vMalleable, bytes32 rMalleable, bytes32 sMalleable) = _calculateMalleableSignature(v, r, s);
@@ -323,16 +322,16 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
 
             // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay protection wasn't included
             vm.expectRevert("ECDSA: invalid signature 's' value");
-            rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable);
+            rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable);
 
             uint256 prevBlockTimestamp = block.timestamp;
             vm.warp(deadline + 1);
             vm.expectRevert(abi.encodeWithSelector(RewardToken.ERC2612ExpiredSignature.selector, deadline));
-            rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, v, r, s);
+            rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, v, r, s);
             vm.warp(prevBlockTimestamp);
-            rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, v, r, s);
+            rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, v, r, s);
         }
 
-        assertEq(rewardToken.allowance(sendingUser, spender), amountOfRewardTokens);
+        assertEq(rewardToken.allowance(sendingUser, spender), locals.amountOfRewardTokens);
     }
 }

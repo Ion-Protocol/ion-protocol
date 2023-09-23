@@ -62,7 +62,6 @@ abstract contract RewardTokenSharedSetup is Test {
 
     RewardTokenExternal rewardToken;
     ERC20PresetMinterPauser underlying;
-    uint256 internal constant INITIAL_UNDERYLING = 1000e18;
     address internal TREASURY = vm.addr(2);
     uint8 internal constant DECIMALS = 18;
     string internal constant SYMBOL = "iWETH";
@@ -75,17 +74,36 @@ abstract contract RewardTokenSharedSetup is Test {
     address receivingUser = vm.addr(receivingUserPrivateKey); // random address
     address spender = vm.addr(spenderPrivateKey); // random address
 
-    function setUp() external {
+    function setUp() public virtual {
         underlying = new ERC20PresetMinterPauser("WETH", "Wrapped Ether");
-        underlying.mint(address(this), INITIAL_UNDERYLING);
         rewardToken = new RewardTokenExternal(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
     }
 
-    function test_setUp() external {
-        assertEq(rewardToken.name(), NAME);
-        assertEq(rewardToken.symbol(), SYMBOL);
+    // --- Helpers ---
 
-        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING);
-        assertEq(underlying.balanceOf(address(rewardToken)), 0);
+    function _depositInterestGains(uint256 amount) internal {
+        underlying.mint(address(rewardToken), amount);
+    }
+
+    function _wadMul(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a * b / 1e18;
+    }
+
+    function _calculateMalleableSignature(uint8 v, bytes32 r, bytes32 s)
+        internal
+        pure
+        returns (uint8, bytes32, bytes32)
+    {
+        // Ensure v is within the valid range (27 or 28)
+        require(v == 27 || v == 28, "Invalid v value");
+
+        // Calculate the other s value by negating modulo the curve order n
+        uint256 n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
+        uint256 otherS = n - uint256(s);
+
+        // Calculate the other v value
+        uint8 otherV = 55 - v;
+
+        return (otherV, r, bytes32(otherS));
     }
 }
