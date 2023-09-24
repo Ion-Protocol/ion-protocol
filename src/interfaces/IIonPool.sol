@@ -8,8 +8,7 @@ interface IIonPool {
 
     function exit(uint256 amount) external;
 
-    function joinGem(bytes32 ilk, address usr, uint256 amt) external; 
+    function joinGem(bytes32 ilk, address usr, uint256 amt) external;
 
-    function exitGem(bytes32 ilk, address usr, uint256 amt) external; 
-
+    function exitGem(bytes32 ilk, address usr, uint256 amt) external;
 }
