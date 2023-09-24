@@ -156,7 +156,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         uint256 currentAllowance = allowance(_msgSender(), spender);
 
         if (currentAllowance < decreaseAmount) {
-            revert ERC20InsufficientAllowance(_msgSender(), currentAllowance, decreaseAmount);
+            revert ERC20InsufficientAllowance(spender, currentAllowance, decreaseAmount);
         }
 
         uint256 newAllowance;
