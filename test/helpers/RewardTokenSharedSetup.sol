@@ -32,23 +32,6 @@ contract RewardTokenExternal is RewardToken {
     function mintToTreasury(uint256 amount) external {
         _mintToTreasury(amount);
     }
-
-    // --- Expose Events ---
-    function emitMint(address user, uint256 amount, uint256 index) external {
-        emit Mint(user, amount, index);
-    }
-
-    function emitBurn(address user, address receiverOfUnderlying, uint256 amount, uint256 index) external {
-        emit Burn(user, receiverOfUnderlying, amount, index);
-    }
-
-    function emitTransfer(address from, address to, uint256 value) external {
-        emit Transfer(from, to, value);
-    }
-
-    function emitBalanceTransfer(address from, address to, uint256 value, uint256 index) external {
-        emit BalanceTransfer(from, to, value, index);
-    }
 }
 
 abstract contract RewardTokenSharedSetup is Test {

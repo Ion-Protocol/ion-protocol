@@ -219,7 +219,6 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         assertEq(rewardToken.allowance(sendingUser, spender), 0);
     }
 
-
     function testFuzz_transferFromWithPermit(uint256 amountOfRewardTokens) external {
         vm.assume(amountOfRewardTokens != 0);
         vm.assume(amountOfRewardTokens < 2 ** 128);
@@ -280,7 +279,9 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         uint256 amountOfRewardTokens;
     }
 
-    function testFuzz_permit(uint256 amountOfRewardTokens, uint256 nonSenderPrivateKey, uint256 deadlineTime) external {
+    function testFuzz_permit(uint256 amountOfRewardTokens, uint256 nonSenderPrivateKey, uint256 deadlineTime)
+        external
+    {
         vm.assume(amountOfRewardTokens != 0);
         vm.assume(amountOfRewardTokens < 2 ** 128);
         nonSenderPrivateKey = bound(nonSenderPrivateKey, 100, 2 ** 128);
@@ -313,7 +314,11 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
             (uint8 v, bytes32 r, bytes32 s) =
                 vm.sign(nonSenderPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
-            vm.expectRevert(abi.encodeWithSelector(RewardToken.ERC2612InvalidSigner.selector, vm.addr(nonSenderPrivateKey), sendingUser));
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    RewardToken.ERC2612InvalidSigner.selector, vm.addr(nonSenderPrivateKey), sendingUser
+                )
+            );
             rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, v, r, s);
 
             (v, r, s) = vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
@@ -322,7 +327,9 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
 
             // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay protection wasn't included
             vm.expectRevert("ECDSA: invalid signature 's' value");
-            rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable);
+            rewardToken.permit(
+                sendingUser, spender, locals.amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable
+            );
 
             uint256 prevBlockTimestamp = block.timestamp;
             vm.warp(deadline + 1);

@@ -45,6 +45,13 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         rewardToken.mint(address(this), 0);
     }
 
+    function test_MintNormalizedZeroToTreasury() external {
+        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        // 1 wei / 2.5 RAY will be rounded down to zero
+        rewardToken.setSupplyFactor(2.5e27);
+        rewardToken.mintToTreasury(1 wei);
+    }
+
     function test_burnRewardTokenBasic() external {
         uint256 amountOfRewardTokens = 100e18;
 
@@ -334,5 +341,87 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         }
 
         assertEq(rewardToken.allowance(sendingUser, spender), amountOfRewardTokens);
+    }
+
+    function test_increaseAllowance() external {
+        uint256 amountToApproveTotal = 100e18;
+
+        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        rewardToken.mint(sendingUser, amountToApproveTotal);
+
+        assertEq(rewardToken.balanceOf(sendingUser), amountToApproveTotal);
+        assertEq(rewardToken.balanceOf(receivingUser), 0);
+        assertEq(rewardToken.allowance(sendingUser, spender), 0);
+        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountToApproveTotal);
+        assertEq(underlying.balanceOf(address(rewardToken)), amountToApproveTotal);
+
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidSpender.selector, address(0)));
+        rewardToken.increaseAllowance(address(0), amountToApproveTotal);
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidApprover.selector, address(0)));
+        vm.prank(address(0));
+        rewardToken.increaseAllowance(spender, amountToApproveTotal);
+
+        uint256 amountToApprove1 = 25e18;
+        uint256 amountToApprove2 = amountToApproveTotal - amountToApprove1;
+
+        vm.prank(sendingUser);
+        rewardToken.increaseAllowance(spender, amountToApprove1);
+
+        assertEq(rewardToken.allowance(sendingUser, spender), amountToApprove1);
+
+        vm.prank(sendingUser);
+        rewardToken.increaseAllowance(spender, amountToApprove2);
+
+        assertEq(rewardToken.allowance(sendingUser, spender), amountToApproveTotal);
+    }
+
+    function test_decreaseAllowance() external {
+        uint256 amountToApproveTotal = 100e18;
+
+        underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
+        rewardToken.mint(sendingUser, amountToApproveTotal);
+        vm.prank(sendingUser);
+        rewardToken.approve(spender, amountToApproveTotal);
+
+        assertEq(rewardToken.balanceOf(sendingUser), amountToApproveTotal);
+        assertEq(rewardToken.balanceOf(receivingUser), 0);
+        assertEq(rewardToken.allowance(sendingUser, spender), amountToApproveTotal);
+        assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountToApproveTotal);
+        assertEq(underlying.balanceOf(address(rewardToken)), amountToApproveTotal);
+
+        address unapprovedSpender = address(14);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientAllowance.selector, unapprovedSpender, uint256(0), amountToApproveTotal
+            )
+        );
+        rewardToken.decreaseAllowance(unapprovedSpender, amountToApproveTotal);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientAllowance.selector, address(0), uint256(0), amountToApproveTotal
+            )
+        );
+        rewardToken.decreaseAllowance(address(0), amountToApproveTotal);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientAllowance.selector, spender, uint256(0), amountToApproveTotal
+            )
+        );
+        vm.prank(address(0));
+        rewardToken.decreaseAllowance(spender, amountToApproveTotal);
+
+        uint256 amountToDecreaseApprove1 = 25e18;
+        uint256 amountToDecreaseApprove2 = amountToApproveTotal - amountToDecreaseApprove1;
+
+        vm.prank(sendingUser);
+        rewardToken.decreaseAllowance(spender, amountToDecreaseApprove1);
+
+        assertEq(rewardToken.allowance(sendingUser, spender), amountToApproveTotal - amountToDecreaseApprove1);
+
+        vm.prank(sendingUser);
+        rewardToken.decreaseAllowance(spender, amountToDecreaseApprove2);
+
+        assertEq(rewardToken.allowance(sendingUser, spender), 0);
     }
 }
