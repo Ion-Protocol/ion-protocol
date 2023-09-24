@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {IIonPool} from "./interfaces/IIonPool.sol";
 import {Vat} from "./Vat.sol";
+import {RewardToken} from "./token/RewardToken.sol"; 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -11,7 +12,7 @@ interface IERC20Like is IERC20 {
     function decimals() external view returns (uint256);
 }
 
-contract IonPool is IIonPool {
+contract IonPool is Vat, RewardToken {
     using SafeERC20 for IERC20Like;
 
     Vat public vat;
@@ -24,13 +25,12 @@ contract IonPool is IIonPool {
 
     mapping (bytes32 ilk => Info info) public ilks; 
 
-    // mapping(bytes32 ilkId => IERC20 ilk) public ilks; // TODO: add this to the struct
-
-    constructor(Vat _vat) {
-        vat = _vat;
+    constructor() {
     }
 
     // --- Events ---
+    event Supply(address indexed sender, uint256 amt); 
+    event Redeem(address indexed sender, address receiver, uint256 amt); 
     event JoinGem(bytes32 indexed ilk, address indexed usr, uint256 indexed amt); 
     event ExitGem(bytes32 indexed ilk, address indexed usr, uint256 indexed amt); 
     event InitIlk(bytes32 indexed ilk, address indexed gem); 
@@ -42,7 +42,7 @@ contract IonPool is IIonPool {
      * @param ilk the name of the collateral  
      * @param gem the address of the ERC20
      */
-    function initIlk(bytes32 ilk, address gem) public { // TODO: add onlyOwner 
+    function addGemJoin(bytes32 ilk, address gem) public { // TODO: add onlyOwner 
         Info storage info = ilks[ilk]; 
         info.to18ConversionFactor = 10 ** (18 - IERC20Like(gem).decimals()); 
         info.gem = IERC20Like(gem); 
@@ -51,17 +51,42 @@ contract IonPool is IIonPool {
 
     /// --- Lender Operations --- 
 
-    function supply(uint256 amt) external {}
+    /**
+     * @dev Lenders transfer WETH to supply liquidity. Takes WETH and mints iWETH
+     * @param usr the address that receives the minted iWETH
+     * @param amt the amount of WETH to transfer [wad] 
+     */
+    function supply(address usr, uint256 amt) external {
+        _mint(usr, amt);
+        emit Supply(msg.sender, amt); 
+    }
 
-    function redeem(uint256 amt) external {}
+    /**
+     * @dev Lenders redeem their iWETH for the underlying WETH 
+     * @param usr the address that receives the underlying WETH 
+     * @param amt the amount of iWETH to transfer (non-normalized amount) [wad] 
+     */
+    function redeem(address usr, uint256 amt) external {
+        _burn(msg.sender, usr, amt); 
+        emit Redeem(); 
+    }
 
     // --- Borrower Operations --- 
 
     /**
-     * @dev exits internal base asset to ERC20 base asset  
+     * @dev exits internal base asset that was borrowed to ERC20 base asset  
+     * @param usr the address that receives the borrowed WETH 
+     * @param amt the amount of weth to tranfer [wad] 
      */
-    function exit(uint256 amt) external {
-
+    function exitBase(address usr, uint256 amt) external {
+        // dai is created when collateral is deposited
+        // exit this dai to WETH to be useful (lock dai and transfer WETH)
+        // when repaying, bring back WETH, get back the dai. And you can use the dai to pay down the debt. 
+        // reduce dai 
+        // transfer out the WETH from this protocol 
+        vat.move(msg.sender, address(this), amt * RAY); 
+        underlying.safeTransfer(usr, amt); 
+        emit ExitBase(); 
     }
 
     /**
