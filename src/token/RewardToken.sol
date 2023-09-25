@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Context} from "@openzeppelin/contracts/utils/Context.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IERC20Errors} from "./IERC20Errors.sol";
-import {IonPool} from "../IonPool.sol";
-import {RoundedMath, RAY} from "../math/RoundedMath.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IERC20Errors } from "./IERC20Errors.sol";
+import { IonPool } from "../IonPool.sol";
+import { RoundedMath, RAY } from "../math/RoundedMath.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title RewardToken
@@ -45,17 +45,20 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     error ERC2612InvalidSigner(address signer, address owner);
 
     /**
-     * @dev Emitted when `RewardToken`s are burned by `user` in exchange for `amount` underlying tokens redeemed to `target`. `supplyFactor` is the  supply factor at the time.
+     * @dev Emitted when `RewardToken`s are burned by `user` in exchange for `amount` underlying tokens redeemed to
+     * `target`. `supplyFactor` is the  supply factor at the time.
      */
     event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
 
     /**
-     * @dev Emitted when `RewardToken`s are minted by `user` in exchange for `amount` underlying tokens. `supplyFactor` is the  supply factor at the time.
+     * @dev Emitted when `RewardToken`s are minted by `user` in exchange for `amount` underlying tokens. `supplyFactor`
+     * is the  supply factor at the time.
      */
     event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
 
     /**
-     * @dev Emitted when `amount` of `RewardToken`s are transferred from `from` to `to`. `supplyFactor` is the  supply factor at the time.
+     * @dev Emitted when `amount` of `RewardToken`s are transferred from `from` to `to`. `supplyFactor` is the  supply
+     * factor at the time.
      */
     event BalanceTransfer(address indexed from, address indexed to, uint256 amount, uint256 supplyFactor);
 
@@ -148,7 +151,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     }
 
     /**
-     * 
+     *
      * @param account to increase balance of
      * @param amount of normalized tokens to mint
      */
@@ -161,7 +164,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     }
 
     /**
-     * @dev This function does not perform any rounding checks. 
+     * @dev This function does not perform any rounding checks.
      * @param amount of tokens to mint to treasury
      */
     function _mintToTreasury(uint256 amount) internal {
@@ -189,7 +192,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     }
 
     /**
-     * @dev Accounting is done in normalized balances 
+     * @dev Accounting is done in normalized balances
      * @param user to get normalized balance of
      */
     function normalizedBalanceOf(address user) external view returns (uint256) {
@@ -210,7 +213,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     }
 
     /**
-     * 
+     *
      * @param spender to approve
      * @param amount to approve
      */
@@ -230,7 +233,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     }
 
     /**
-     * 
+     *
      * @param spender to decrease allowance of
      * @param decreaseAmount to decrease by
      */
@@ -252,7 +255,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     }
 
     /**
-     * 
+     *
      * @param owner of tokens
      * @param spender of tokens
      * @param amount to approve
@@ -347,7 +350,15 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      * @param s Signature param
      * @param r Signature param
      */
-    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    )
         public
         virtual
     {

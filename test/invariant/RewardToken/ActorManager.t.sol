@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {safeconsole as console} from "forge-std/safeconsole.sol";
-import {RewardTokenSharedSetup} from "../../helpers/RewardTokenSharedSetup.sol";
-import {UserHandler, SupplyFactorIncreaseHandler} from "./Handlers.t.sol";
-import {RoundedMath} from "../../../src/math/RoundedMath.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
+import { UserHandler, SupplyFactorIncreaseHandler } from "./Handlers.t.sol";
+import { RoundedMath } from "../../../src/math/RoundedMath.sol";
 
-import {CommonBase} from "forge-std/Base.sol";
-import {StdCheats} from "forge-std/StdCheats.sol";
-import {StdUtils} from "forge-std/StdUtils.sol";
+import { CommonBase } from "forge-std/Base.sol";
+import { StdCheats } from "forge-std/StdCheats.sol";
+import { StdUtils } from "forge-std/StdUtils.sol";
 
 contract ActorManager is CommonBase, StdCheats, StdUtils {
     UserHandler[] public userHandlers;
@@ -75,7 +75,12 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         user.decreaseAllowance(address(user), spender, amount);
     }
 
-    function transferFrom(uint256 handlerIndex, uint256 spenderIndex, uint256 transferToIndex, uint256 amount)
+    function transferFrom(
+        uint256 handlerIndex,
+        uint256 spenderIndex,
+        uint256 transferToIndex,
+        uint256 amount
+    )
         external
     {
         handlerIndex = bound(handlerIndex, 0, userHandlers.length - 1);
@@ -104,7 +109,11 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
      * @param handlerIndex the index of the handler to exclude (bounded)
      * @param otherIndex the index of the handler to return (bounded)
      */
-    function _pickOther(UserHandler[] storage handlers, uint256 handlerIndex, uint256 otherIndex)
+    function _pickOther(
+        UserHandler[] storage handlers,
+        uint256 handlerIndex,
+        uint256 otherIndex
+    )
         internal
         view
         returns (UserHandler)

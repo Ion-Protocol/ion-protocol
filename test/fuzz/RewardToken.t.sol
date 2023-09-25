@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
-import {safeconsole as console} from "forge-std/safeconsole.sol";
-import {RewardToken} from "../../src/token/RewardToken.sol";
-import {RewardTokenSharedSetup} from "../helpers/RewardTokenSharedSetup.sol";
-import {RoundedMath} from "../../src/math/RoundedMath.sol";
-import {IERC20Errors} from "../../src/token/IERC20Errors.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { Test } from "forge-std/Test.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { RewardToken } from "../../src/token/RewardToken.sol";
+import { RewardTokenSharedSetup } from "../helpers/RewardTokenSharedSetup.sol";
+import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract RewardTokenFuzzTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
@@ -50,7 +50,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         assertEq(rewardToken.balanceOf(address(this)), 0);
     }
 
-    function testFuzz_mintRewardTokenWithSupplyFactorChange(uint256 amountOfRewardTokens, uint256 supplyFactorNew)
+    function testFuzz_mintRewardTokenWithSupplyFactorChange(
+        uint256 amountOfRewardTokens,
+        uint256 supplyFactorNew
+    )
         external
     {
         vm.assume(amountOfRewardTokens != 0);
@@ -93,7 +96,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         assertEq(underlying.balanceOf(address(rewardToken)), totalDeposited + interestCreated);
     }
 
-    function testFuzz_burnRewardTokenWithSupplyFactorChange(uint256 amountOfRewardTokens, uint256 supplyFactorNew)
+    function testFuzz_burnRewardTokenWithSupplyFactorChange(
+        uint256 amountOfRewardTokens,
+        uint256 supplyFactorNew
+    )
         external
     {
         vm.assume(amountOfRewardTokens != 0);
@@ -279,7 +285,11 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         uint256 amountOfRewardTokens;
     }
 
-    function testFuzz_permit(uint256 amountOfRewardTokens, uint256 nonSenderPrivateKey, uint256 deadlineTime)
+    function testFuzz_permit(
+        uint256 amountOfRewardTokens,
+        uint256 nonSenderPrivateKey,
+        uint256 deadlineTime
+    )
         external
     {
         vm.assume(amountOfRewardTokens != 0);
@@ -287,7 +297,7 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         nonSenderPrivateKey = bound(nonSenderPrivateKey, 100, 2 ** 128);
         deadlineTime = bound(deadlineTime, 1, 2 ** 128);
 
-        PermitLocals memory locals = PermitLocals({amountOfRewardTokens: amountOfRewardTokens});
+        PermitLocals memory locals = PermitLocals({ amountOfRewardTokens: amountOfRewardTokens });
         locals.amountOfRewardTokens = amountOfRewardTokens;
 
         underlying.mint(address(this), locals.amountOfRewardTokens);
