@@ -58,7 +58,7 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens < 2 ** 128);
         uint256 supplyFactorOld = rewardToken.getSupplyFactor();
         // supplyFactor greater than 10,000 is highly unlikely
-        supplyFactorNew = bound(supplyFactorNew, supplyFactorOld, 5_000e27);
+        supplyFactorNew = bound(supplyFactorNew, supplyFactorOld, 5000e27);
         vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
 
         underlying.mint(address(this), amountOfRewardTokens);
@@ -73,7 +73,7 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 interestCreated = _wadMul(amountOfRewardTokens, supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -101,7 +101,7 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens < 2 ** 128);
         uint256 supplyFactorOld = rewardToken.getSupplyFactor();
         // supplyFactor greater than 5,000 is highly unlikely
-        supplyFactorNew = bound(supplyFactorNew, supplyFactorOld + 1, 5_000e27);
+        supplyFactorNew = bound(supplyFactorNew, supplyFactorOld + 1, 5000e27);
         vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
 
         underlying.mint(address(this), amountOfRewardTokens);
@@ -116,7 +116,7 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 interestCreated = _wadMul(amountOfRewardTokens, supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -323,9 +323,9 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
 
             (v, r, s) = vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
             (uint8 vMalleable, bytes32 rMalleable, bytes32 sMalleable) = _calculateMalleableSignature(v, r, s);
-            console.log("vMalleable: %s", vMalleable);
 
-            // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay protection wasn't included
+            // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay
+            // protection wasn't included
             vm.expectRevert("ECDSA: invalid signature 's' value");
             rewardToken.permit(
                 sendingUser, spender, locals.amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable

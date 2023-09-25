@@ -1,7 +1,19 @@
 [profile.default]
+auto_detect_solc = false
 src = "src"
 out = "out"
+solc = "0.8.19"
 libs = ["lib"]
+verbosity = 3
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+
+[profile.default.fuzz]
+runs = 256
+
+[profile.default.invariant]
+runs = 256
+depth = 50
+fail_on_revert = true
+call_override = false   # reentrancy-check
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
