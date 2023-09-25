@@ -83,7 +83,7 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
         uint256 supplyFactorNew = 1.5e27;
-        uint256 interestCreated = _wadMul(amountOfRewardTokens, supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -102,7 +102,7 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         assertEq(underlying.balanceOf(address(rewardToken)), totalDeposited + interestCreated);
 
         uint256 supplyFactorSecondNew = 2.5e27; // 2.5
-        interestCreated = _wadMul(amountOfRewardTokens, supplyFactorSecondNew - supplyFactorNew);
+        interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorSecondNew - supplyFactorNew);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -127,7 +127,7 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
         uint256 supplyFactorNew = 2.5e27; // 2.5
-        uint256 interestCreated = _wadMul(amountOfRewardTokens, supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -326,9 +326,9 @@ contract RewardTokenUnitTest is RewardTokenSharedSetup {
 
             (v, r, s) = vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
             (uint8 vMalleable, bytes32 rMalleable, bytes32 sMalleable) = _calculateMalleableSignature(v, r, s);
-            console.log("vMalleable: %s", vMalleable);
 
-            // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay protection wasn't included
+            // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay
+            // protection wasn't included
             vm.expectRevert("ECDSA: invalid signature 's' value");
             rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable);
 

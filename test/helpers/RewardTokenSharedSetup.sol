@@ -64,12 +64,8 @@ abstract contract RewardTokenSharedSetup is Test {
 
     // --- Helpers ---
 
-    function _depositInterestGains(uint256 amount) internal {
+    function _depositInterestGains(uint256 amount) public {
         underlying.mint(address(rewardToken), amount);
-    }
-
-    function _wadMul(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a * b / 1e18;
     }
 
     function _calculateMalleableSignature(uint8 v, bytes32 r, bytes32 s)
