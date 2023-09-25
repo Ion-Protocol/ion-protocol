@@ -140,7 +140,7 @@ contract RewardTokenInvariantTest is RewardTokenSharedSetup {
             underlying.mint(address(user), USER_INITIAL_BALANCE);
 
             vm.prank(address(user));
-            underlying.approve(address(rewardToken), type(uint256).max);    // max approval
+            underlying.approve(address(rewardToken), type(uint256).max); // max approval
             unchecked {
                 ++i;
             }

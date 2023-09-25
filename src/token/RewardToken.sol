@@ -18,15 +18,46 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     using RoundedMath for uint256;
     using SafeERC20 for IERC20;
 
+    /**
+     * @dev Cannot burn amount whose normalized value is less than zero.
+     */
     error InvalidBurnAmount();
+
+    /**
+     * @dev Cannot mint amount whose normalized value is less than zero.
+     */
     error InvalidMintAmount();
-    error SelfTransfer(address addr);
+
+    /**
+     * @dev Cannot transfer the token to address `self`
+     */
+    error SelfTransfer(address self);
+
+    /**
+     * @dev Signature cannot be submitted after `deadline` has passed. Designed to
+     * mitigate replay attacks.
+     */
     error ERC2612ExpiredSignature(uint256 deadline);
+
+    /**
+     * @dev `signer` does not match the `owner` of the tokens. `owner` did not approve.
+     */
     error ERC2612InvalidSigner(address signer, address owner);
 
+    /**
+     * @dev Emitted when `RewardToken`s are burned by `user` in exchange for `amount` underlying tokens redeemed to `target`. `supplyFactor` is the  supply factor at the time.
+     */
     event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
+
+    /**
+     * @dev Emitted when `RewardToken`s are minted by `user` in exchange for `amount` underlying tokens. `supplyFactor` is the  supply factor at the time.
+     */
     event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
-    event BalanceTransfer(address indexed from, address indexed to, uint256 value, uint256 index);
+
+    /**
+     * @dev Emitted when `amount` of `RewardToken`s are transferred from `from` to `to`. `supplyFactor` is the  supply factor at the time.
+     */
+    event BalanceTransfer(address indexed from, address indexed to, uint256 amount, uint256 supplyFactor);
 
     // A user's true balance at any point will be the value in this mapping times the supplyFactor
     mapping(address account => uint256) _normalizedBalances; // [WAD]
@@ -63,6 +94,12 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         );
     }
 
+    /**
+     *
+     * @param user to burn tokens from
+     * @param receiverOfUnderlying to send underlying tokens to
+     * @param amount to burn
+     */
     function _burn(address user, address receiverOfUnderlying, uint256 amount) internal {
         uint256 _supplyFactor = supplyFactor;
         uint256 amountScaled = amount.roundedRayDiv(_supplyFactor);
@@ -75,6 +112,11 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         emit Burn(user, receiverOfUnderlying, amount, _supplyFactor);
     }
 
+    /**
+     *
+     * @param account to decrease balance of
+     * @param amount of normalized tokens to burn
+     */
     function _burnNormalized(address account, uint256 amount) private {
         if (account == address(0)) revert ERC20InvalidSender(address(0));
 
@@ -88,6 +130,11 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         normalizedTotalSupply -= amount;
     }
 
+    /**
+     *
+     * @param user to mint tokens to and transfer underlying tokens from
+     * @param amount of reward tokens to mint
+     */
     function _mint(address user, uint256 amount) internal {
         uint256 _supplyFactor = supplyFactor;
         uint256 amountScaled = amount.roundedRayDiv(_supplyFactor);
@@ -100,6 +147,11 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         emit Mint(user, amount, _supplyFactor);
     }
 
+    /**
+     * 
+     * @param account to increase balance of
+     * @param amount of normalized tokens to mint
+     */
     function _mintNormalized(address account, uint256 amount) private {
         if (account == address(0)) revert ERC20InvalidReceiver(address(0));
 
@@ -108,6 +160,10 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         _normalizedBalances[account] += amount;
     }
 
+    /**
+     * @dev This function does not perform any rounding checks. 
+     * @param amount of tokens to mint to treasury
+     */
     function _mintToTreasury(uint256 amount) internal {
         if (amount == 0) return;
 
@@ -124,14 +180,25 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         emit Mint(_treasury, amount, _supplyFactor);
     }
 
+    /**
+     * @dev Current token balance
+     * @param user to get balance of
+     */
     function balanceOf(address user) public view returns (uint256) {
         return _normalizedBalances[user].roundedRayMul(supplyFactor);
     }
 
+    /**
+     * @dev Accounting is done in normalized balances 
+     * @param user to get normalized balance of
+     */
     function normalizedBalanceOf(address user) external view returns (uint256) {
         return _normalizedBalances[user];
     }
 
+    /**
+     * @dev Current total supply
+     */
     function totalSupply() public view returns (uint256) {
         uint256 _normalizedTotalSupply = normalizedTotalSupply;
 
@@ -142,16 +209,31 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         return _normalizedTotalSupply.roundedRayMul(supplyFactor);
     }
 
+    /**
+     * 
+     * @param spender to approve
+     * @param amount to approve
+     */
     function approve(address spender, uint256 amount) external returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
+    /**
+     * @dev Front-running more likely to maintain user intent
+     * @param spender to increase allowance of
+     * @param increaseAmount to increase by
+     */
     function increaseAllowance(address spender, uint256 increaseAmount) external returns (bool) {
         _approve(_msgSender(), spender, allowance(_msgSender(), spender) + increaseAmount);
         return true;
     }
 
+    /**
+     * 
+     * @param spender to decrease allowance of
+     * @param decreaseAmount to decrease by
+     */
     function decreaseAllowance(address spender, uint256 decreaseAmount) public virtual returns (bool) {
         uint256 currentAllowance = allowance(_msgSender(), spender);
 
@@ -169,6 +251,12 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         return true;
     }
 
+    /**
+     * 
+     * @param owner of tokens
+     * @param spender of tokens
+     * @param amount to approve
+     */
     function _approve(address owner, address spender, uint256 amount) internal {
         if (owner == address(0)) revert ERC20InvalidApprover(address(0));
         if (spender == address(0)) revert ERC20InvalidSpender(address(0));
@@ -177,6 +265,9 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         emit Approval(owner, spender, amount);
     }
 
+    /**
+     * @dev Spends allowance
+     */
     function _spendAllowance(address owner, address spender, uint256 amount) private {
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance < amount) {
@@ -190,16 +281,32 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         _allowances[owner][spender] = newAllowance;
     }
 
+    /**
+     * @dev Returns current allowance
+     * @param owner of tokens
+     * @param spender of tokens
+     */
     function allowance(address owner, address spender) public view returns (uint256) {
         return _allowances[owner][spender];
     }
 
+    /**
+     * @dev Can only be called by owner of the tokens
+     * @param to transfer to
+     * @param amount to transfer
+     */
     function transfer(address to, uint256 amount) public returns (bool) {
         _transfer(_msgSender(), to, amount);
         emit Transfer(_msgSender(), to, amount);
         return true;
     }
 
+    /**
+     * @dev For use with `approve()`
+     * @param from to transfer from
+     * @param to to transfer to
+     * @param amount to transfer
+     */
     function transferFrom(address from, address to, uint256 amount) public returns (bool) {
         _spendAllowance(from, _msgSender(), amount);
         _transfer(from, to, amount);
@@ -229,6 +336,17 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         emit BalanceTransfer(from, to, amountNormalized, _supplyFactor);
     }
 
+    /**
+     * @dev implements the permit function as for
+     * https://github.com/ethereum/EIPs/blob/8a34d644aacf0f9f8f00815307fd7dd5da07655f/EIPS/eip-2612.md
+     * @param owner The owner of the funds
+     * @param spender The spender
+     * @param value The amount
+     * @param deadline The deadline timestamp, type(uint256).max for max deadline
+     * @param v Signature param
+     * @param s Signature param
+     * @param r Signature param
+     */
     function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         public
         virtual
