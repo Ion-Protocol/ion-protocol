@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
-import {RewardToken} from "../../src/token/RewardToken.sol";
-import {RoundedMath} from "../../src/math/RoundedMath.sol";
-import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { Test } from "forge-std/Test.sol";
+import { RewardToken } from "../../src/token/RewardToken.sol";
+import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 
 contract RewardTokenExternal is RewardToken {
-    constructor(address _underlying, address _treasury, uint8 decimals_, string memory name_, string memory symbol_)
+    constructor(
+        address _underlying,
+        address _treasury,
+        uint8 decimals_,
+        string memory name_,
+        string memory symbol_
+    )
         RewardToken(_underlying, _treasury, decimals_, name_, symbol_)
-    {}
+    { }
 
     // --- Cheats ---
     function setSupplyFactor(uint256 factor) external {
@@ -68,7 +74,11 @@ abstract contract RewardTokenSharedSetup is Test {
         underlying.mint(address(rewardToken), amount);
     }
 
-    function _calculateMalleableSignature(uint8 v, bytes32 r, bytes32 s)
+    function _calculateMalleableSignature(
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    )
         internal
         pure
         returns (uint8, bytes32, bytes32)

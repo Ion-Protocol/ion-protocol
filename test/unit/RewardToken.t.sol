@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {safeconsole as console} from "forge-std/safeconsole.sol";
-import {RewardTokenSharedSetup} from "../helpers/RewardTokenSharedSetup.sol";
-import {RewardToken} from "../../src/token/RewardToken.sol";
-import {IERC20Errors} from "../../src/token/IERC20Errors.sol";
-import {RoundedMath} from "../../src/math/RoundedMath.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { RewardTokenSharedSetup } from "../helpers/RewardTokenSharedSetup.sol";
+import { RewardToken } from "../../src/token/RewardToken.sol";
+import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
+import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract RewardTokenUnitTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IIonPool} from "./interfaces/IIonPool.sol";
 import {Vat} from "./Vat.sol";
 import {RewardToken} from "./token/RewardToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -82,6 +81,19 @@ contract IonPool is Vat, RewardToken {
     }
 
     // --- Borrower Operations ---
+
+    function borrow(uint256 id) {
+        // frob 
+        // accrue interest rates 
+        // slope = (APY - PM) / U_opt  
+        // u_c = (ilk.Art * ilk.rate) / (RewardToken.totalSupply() * distributionFactor)  
+        
+        // function returns what? 
+
+        = InterestRate.calculateInterestRate(id, ilks[i].Art, rates[i], totalSupply());
+
+
+    }
 
     /**
      * @dev Exits internal weth that was borrowed to ERC20 WETH
