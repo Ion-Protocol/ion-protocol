@@ -13,14 +13,29 @@ contract APYOracle {
     // where t0 is the length of the lookback period
     uint256[7] public historicalExchangeRates;
     // lido, stader, and swell contract addresses
-    address public constant LIDO_CONTRACT_ADDRESS = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant STADER_CONTRACT_ADDRESS = 0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737;
-    address public constant SWELL_CONTRACT_ADDRESS = 0xf951E335afb289353dc249e82926178EaC7DEd78;
+
+    // MAINNET ADDRESSES
+    // address public constant LIDO_CONTRACT_ADDRESS = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    // address public constant STADER_CONTRACT_ADDRESS = 0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737;
+    // address public constant SWELL_CONTRACT_ADDRESS = 0xf951E335afb289353dc249e82926178EaC7DEd78;
+
+    // TESTNET ADDRESSES (GOERLI)
+    address public constant LIDO_CONTRACT_ADDRESS = 0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f;
+    address public constant STADER_CONTRACT_ADDRESS = 0x22F8E700ff3912f3Caba5e039F6dfF1a24390E80;
+    address public constant SWELL_CONTRACT_ADDRESS = 0x8bb383A752Ff3c1d510625C6F536E3332327068F;
+
+
     // NOTE: the actual value is 52.142857
     uint32 public constant PERIODS = 52;
-    uint32 public constant DECIMAL_FACTOR = 10 ** 12;
+    uint256 public constant DECIMAL_FACTOR = 10 ** 12;
     uint32 public constant LOOK_BACK = 7;
     uint32 public constant ILKS = 3;
+
+    // EVENT TYPES
+    event LogExchangeRate(uint256 indexed providerId, uint256 exchangeRate, uint256 timestamp);
+    event LogFetchAPY(uint256 indexed providerId, uint32 apy, uint256 timestamp);
+    event LogUpdateAPYs(uint256 apys, uint256 timestamp);
+
 
     constructor(uint256[7] memory _historicalExchangeRates) {
         currentIndex = uint256(0);
@@ -46,7 +61,7 @@ contract APYOracle {
             ISwellETH swell = ISwellETH(SWELL_CONTRACT_ADDRESS);
             exchangeRate = uint32(swell.swETHToETHRate() / DECIMAL_FACTOR);
         } 
-        console.log("exchangeRate for", index, exchangeRate);
+        emit LogExchangeRate(index, exchangeRate, block.timestamp);
         return exchangeRate;
     }
 
@@ -91,11 +106,14 @@ contract APYOracle {
         apys = newAPY;
         historicalExchangeRates[memoryIndex] = newExchangeRates;
         currentIndex = (currentIndex + 1) % LOOK_BACK;
+        emit LogUpdateAPYs(newAPY, block.timestamp);
     }
 
-    function getAPY(uint32 providerId) external view returns (uint32) {
+    function getAPY(uint32 providerId) external returns (uint32) {
         // read provider apy by using bit shifting (1 READ)
-        return _getValueAtProviderIndex(providerId, apys);
+        uint32 apy = _getValueAtProviderIndex(providerId, apys);
+        emit LogFetchAPY(providerId, apy, block.timestamp);
+        return apy;
     }
 
     function getAll() external view returns (uint256) {
@@ -103,13 +121,17 @@ contract APYOracle {
         return apys;
     }
 
+    // These functions should not be exposed and are only used for testing purposes
+    /*
     function getHistory(uint256 lookBack) external view returns (uint256) {
-        // return historical exchange rates (1 READ)
+        // return all historical exchange rates at given look_back (1 READ)
         return historicalExchangeRates[lookBack];
     }
 
     function getHistoryByProvider(uint256 lookBack, uint32 providerId) external view returns (uint32) {
-        // return historical exchange rates (1 READ)
+        // return historical exchange rate for a provider (1 READ)
         return _getValueAtProviderIndex(providerId, historicalExchangeRates[lookBack]);
     }
+    */
+
 }
