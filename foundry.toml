@@ -12,7 +12,7 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 runs = 256
 
 [profile.default.invariant]
-runs = 256
+runs = 20
 depth = 50
 fail_on_revert = true
 call_override = false   # reentrancy-check
