@@ -2,8 +2,14 @@
 pragma solidity 0.8.19;
 
 import { IInterestRate } from "./interfaces/IInterestRate.sol";
-import { IAPYOracle } from "../src/interfaces/IAPYOracle.sol";
-import { RoundedMath } from "../src/math/RoundedMath.sol";
+import { IApyOracle } from "./interfaces/IApyOracle.sol";
+import { RoundedMath, RAY } from "../src/math/RoundedMath.sol";
+import { IonPool } from "../src/IonPool.sol";
+
+struct InterestRateData {
+    uint256 borrowRate;
+    uint256 reserveFactor;
+}
 
 struct IlkData {
     uint80 minimumProfitMargin; // 18 decimals
@@ -37,10 +43,7 @@ uint8 constant OPTIMAL_UTILIZATION_SHIFT = 80 + 64;
 uint8 constant DISTRIBUTION_FACTOR_SHIFT = 80 + 64 + 64;
 
 contract InterestRate {
-    struct InterestRateData {
-        uint256 borrowRate;
-        uint256 reserveFactor;
-    }
+    error DistributionFactorsDoNotSumToOne(uint256 sum);
 
     using RoundedMath for uint256;
 
@@ -59,12 +62,21 @@ contract InterestRate {
     uint256 internal immutable ilkConfig6;
     uint256 internal immutable ilkConfig7;
 
-    uint256 immutable collateralCount;
-    IAPYOracle immutable apyOracle;
+    uint256 public immutable collateralCount;
+    IApyOracle immutable apyOracle;
 
-    constructor(IlkData[] memory ilkDataList, IAPYOracle _apyOracle) {
+    constructor(IlkData[] memory ilkDataList, IApyOracle _apyOracle) {
         collateralCount = ilkDataList.length;
         apyOracle = _apyOracle;
+
+        uint256 distributionFactorSum = 0;
+        for (uint256 i = 0; i < ilkDataList.length;) {
+            distributionFactorSum += ilkDataList[i].distributionFactor;
+
+            // forgefmt: disable-next-line
+            unchecked { ++i; }
+        }
+        if (distributionFactorSum != 1e2) revert DistributionFactorsDoNotSumToOne(distributionFactorSum);
 
         ilkConfig0 = _packCollateralConfig(ilkDataList, 0);
         ilkConfig1 = _packCollateralConfig(ilkDataList, 1);
@@ -95,7 +107,7 @@ contract InterestRate {
         );
     }
 
-    function _unpackCollateralConfig(uint256 config, uint256 index) internal view returns (IlkData memory ilkData) {
+    function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
         if (index >= collateralCount - 1) revert CollateralIndexOutOfBounds();
 
         uint256 packedConfig;
@@ -118,10 +130,10 @@ contract InterestRate {
             packedConfig = ilkConfig7;
         }
 
-        uint80 minimumProfitMargin = uint80((config & PROFIT_MARGIN_MASK) >> PROFIT_MARGIN_SHIFT);
-        uint64 reserveFactor = uint64((config & RESERVE_FACTOR_MASK) >> RESERVE_FACTOR_SHIFT);
-        uint64 optimalUilization = uint64((config & OPTIMAL_UTILIZATION_MASK) >> OPTIMAL_UTILIZATION_SHIFT);
-        uint8 distributionFactor = uint8((config & DISTRIBUTION_FACTOR_MASK) >> DISTRIBUTION_FACTOR_SHIFT);
+        uint80 minimumProfitMargin = uint80((packedConfig & PROFIT_MARGIN_MASK) >> PROFIT_MARGIN_SHIFT);
+        uint64 reserveFactor = uint64((packedConfig & RESERVE_FACTOR_MASK) >> RESERVE_FACTOR_SHIFT);
+        uint64 optimalUilization = uint64((packedConfig & OPTIMAL_UTILIZATION_MASK) >> OPTIMAL_UTILIZATION_SHIFT);
+        uint8 distributionFactor = uint8((packedConfig & DISTRIBUTION_FACTOR_MASK) >> DISTRIBUTION_FACTOR_SHIFT);
 
         ilkData = IlkData({
             minimumProfitMargin: minimumProfitMargin,
@@ -132,7 +144,8 @@ contract InterestRate {
     }
 
     /**
-     *
+     * @param totalDebts total debts of the system (45 decimals)
+     * @param totalEthSupply total Eth in the system (18 decimals)
      */
     function calculateAllInterestRates(
         uint256[] memory totalDebts,
@@ -149,7 +162,7 @@ contract InterestRate {
         }
 
         for (uint256 i = 0; i < collateralCount;) {
-            IlkData memory ilkData = _unpackCollateralConfig(0, i);
+            IlkData memory ilkData = _unpackCollateralConfig(i);
 
             // TODO: Validate input
             uint256 collateralApy = apyOracle.getAPY(i);
@@ -172,19 +185,19 @@ contract InterestRate {
 
     /**
      * @param ilkIndex index of the collateral
-     * @param totalDebt total debt of the system (45 decimals)
+     * @param totalDebt total debt of the system (27 decimals)
      * @param totalEthSupply total eth supply of the system (18 decimals)
      */
     function calculateInterestRate(
         uint256 ilkIndex,
-        uint256 totalDebt, // art * rate [RAD]
+        uint256 totalDebt, // [RAY]
         uint256 totalEthSupply
     )
         external
         view
         returns (InterestRateData memory)
     {
-        IlkData memory ilkData = _unpackCollateralConfig(0, ilkIndex);
+        IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
 
         // TODO: Validate input
         uint256 collateralApy = apyOracle.getAPY(ilkIndex);
@@ -193,14 +206,24 @@ contract InterestRate {
             collateralApy,
             ilkData.minimumProfitMargin,
             ilkData.optimalUtilizationRate,
-            totalDebt, // WAD * RAY / WAD = RAY
+            totalDebt,
             totalEthSupply,
             ilkData.distributionFactor
         );
 
-        return InterestRateData({ borrowRate: borrowRate, reserveFactor: ilkData.reserveFactor });
+        return InterestRateData({ borrowRate: borrowRate, reserveFactor: _scaleToRay(ilkData.reserveFactor, 18) });
     }
 
+    /**
+     *
+     * @param collteralApy apy of the collateral (6 decimals)
+     * @param minimumProfitMargin minimum profit margin (18 decimals)
+     * @param optimalUtilizationRate kink of the curve (18 decimals)
+     * @param totalDebt against the collateral (27 decimals)
+     * @param totalEthSupply total eth supply of the system (18 decimals)
+     * @param distributionFactor collateral specific borrow cap (2 decimals)
+     * @return borrowRate borrow rate of the collateral (27 decimals)
+     */
     function _calculateBorrowRate(
         uint256 collteralApy,
         uint80 minimumProfitMargin,
@@ -213,6 +236,7 @@ contract InterestRate {
         pure
         returns (uint256 borrowRate)
     {
+        // TODO: Above kink rate borrow rate
         uint256 distributionFactorRay = _scaleToRay(uint256(distributionFactor), 2);
         uint256 collateralApyRay = _scaleToRay(collteralApy, 6);
         uint256 minimumProfitMarginRay = _scaleToRay(uint256(minimumProfitMargin), 18);
@@ -223,7 +247,7 @@ contract InterestRate {
 
         uint256 utilizationRate = totalDebt.roundedRayDiv(totalEthSupply.roundedRayMul(distributionFactorRay));
 
-        borrowRate = utilizationRate.roundedRayMul(slope);
+        borrowRate = utilizationRate.roundedRayMul(slope) + RAY;
     }
 
     function _scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
