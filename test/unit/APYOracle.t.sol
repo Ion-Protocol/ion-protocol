@@ -19,9 +19,9 @@ contract ApyOracleTest is Test {
     uint32 public constant LOOK_BACK = 7;
     uint32 public constant ILKS = 3;
     uint32 public constant APY_PRECISION = 6;
-    address public constant LIDO_CONTRACT_ADDRESS = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant STADER_CONTRACT_ADDRESS = 0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737;
-    address public constant SWELL_CONTRACT_ADDRESS = 0xf951E335afb289353dc249e82926178EaC7DEd78;
+    address public constant LIDO_CONTRACT_ADDRESS = 0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f;
+    address public constant STADER_CONTRACT_ADDRESS = 0x22F8E700ff3912f3Caba5e039F6dfF1a24390E80;
+    address public constant SWELL_CONTRACT_ADDRESS = 0x8bb383A752Ff3c1d510625C6F536E3332327068F;
 
     function setUp() public {
         uint256[7] memory historicalExchangeRates;
@@ -108,6 +108,12 @@ contract ApyOracleTest is Test {
         assertEq(oracle.getHistoryByProvider(0, 1), uint32(1008252));
         assertEq(oracle.getHistoryByProvider(0, 2), uint32(1037106));
         assertEq(oracle.getHistoryByProvider(0, 3), uint32(0));
+    }
+    
+    function testRevert() external {
+        oracle.updateAll();
+        oracle.updateAll();
+        vm.expectRevert("AlreadyUpdated");
     }
 
     function testBuffer() external {

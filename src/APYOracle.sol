@@ -49,7 +49,7 @@ contract ApyOracle is IApyOracle {
 
     constructor(uint256[7] memory _historicalExchangeRates) {
         historicalExchangeRates = _historicalExchangeRates;
-        lastUpdated = block.timestamp - UPDATE_LOCK_LENGTH;
+        lastUpdated = block.timestamp - 2 * (UPDATE_LOCK_LENGTH);
     }
 
     function _getProviderExchangeRate(uint256 ilkIndex) internal returns (uint32) {
@@ -89,7 +89,8 @@ contract ApyOracle is IApyOracle {
     }
 
     function updateAll() external {
-        if (lastUpdated + UPDATE_LOCK_LENGTH < block.timestamp) {
+        if (lastUpdated + UPDATE_LOCK_LENGTH > block.timestamp) {
+            console.log(lastUpdated, block.timestamp);
             revert AlreadyUpdated();
         }
 
