@@ -7,6 +7,8 @@ libs = ["lib"]
 verbosity = 3
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 fs_permissions = [{ access = "read-write", path = "./"}]
+optimizer = true
+optimizer_runs = 1000
 
 [profile.default.fuzz]
 runs = 256
