@@ -49,6 +49,7 @@ contract ApyOracle is IApyOracle {
 
     constructor(uint256[7] memory _historicalExchangeRates) {
         historicalExchangeRates = _historicalExchangeRates;
+        lastUpdated = block.timestamp - UPDATE_LOCK_LENGTH;
     }
 
     function _getProviderExchangeRate(uint256 ilkIndex) internal returns (uint32) {
@@ -88,7 +89,7 @@ contract ApyOracle is IApyOracle {
     }
 
     function updateAll() external {
-        if (lastUpdated + UPDATE_LOCK_LENGTH <= block.timestamp) {
+        if (lastUpdated + UPDATE_LOCK_LENGTH < block.timestamp) {
             revert AlreadyUpdated();
         }
 
@@ -132,6 +133,7 @@ contract ApyOracle is IApyOracle {
 
     function getApy(uint256 ilkIndex) external view returns (uint256) {
         // read provider apy by using bit shifting (1 READ)
+        assert(ilkIndex < 8);
         return uint256( _getValueAtProviderIndex(ilkIndex, apys));
     }
 
@@ -144,11 +146,14 @@ contract ApyOracle is IApyOracle {
     
     function getHistory(uint256 lookBack) external view returns (uint256) {
         // return all historical exchange rates at given look_back (1 READ)
+        assert(lookBack < LOOK_BACK);
         return historicalExchangeRates[lookBack];
     }
 
     function getHistoryByProvider(uint256 lookBack, uint32 ilkIndex) external view returns (uint32) {
         // return historical exchange rate for a provider (1 READ)
+        assert (ilkIndex < 8);
+        assert(lookBack < LOOK_BACK);
         return _getValueAtProviderIndex(ilkIndex, historicalExchangeRates[lookBack]);
     }
     
