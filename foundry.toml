@@ -6,6 +6,8 @@ solc = "0.8.19"
 libs = ["lib"]
 verbosity = 3
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+optimizer = true
+optimizer_runs = 1000
 
 [profile.default.fuzz]
 runs = 256
