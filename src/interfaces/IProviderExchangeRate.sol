@@ -6,7 +6,9 @@ interface ILidoWstETH {
 }
 
 interface IStaderOracle {
-    function exchangeRate() external returns (uint256 reportingBlockNumber, uint256 totalETHBalance, uint256 totalETHXSupply);
+    function exchangeRate()
+        external
+        returns (uint256 reportingBlockNumber, uint256 totalETHBalance, uint256 totalETHXSupply);
 }
 
 interface ISwellETH {

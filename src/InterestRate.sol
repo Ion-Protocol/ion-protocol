@@ -129,8 +129,6 @@ contract InterestRate is IInterestRate {
         for (uint256 i = 0; i < collateralCount;) {
             IlkData memory ilkData = _unpackCollateralConfig(0, i);
 
-            
-
             // forgefmt: disable-next-line
             unchecked { ++i; }
         }
@@ -140,7 +138,11 @@ contract InterestRate is IInterestRate {
         IlkData memory ilkData = _unpackCollateralConfig(0, ilkIndex);
     }
 
-    function calculateBorrowRate(uint256 collteralApy, uint80 minimumProfitMargin, uint64)
+    function calculateBorrowRate(
+        uint256 collteralApy,
+        uint80 minimumProfitMargin,
+        uint64
+    )
         internal
         pure
         returns (uint256 borrowRate)
