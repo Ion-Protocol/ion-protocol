@@ -21,7 +21,7 @@ contract MockStader {
         pure
         returns (uint256 reportingBlockNumber, uint256 totalETHBalance, uint256 totalETHXSupply)
     {
-        // should correspond to a 1.1... exchange rate
+        // should correspond to a 1.1 exchange rate
         return (uint256(0), uint256(1_320_000_000_000_000_000), uint256(1_200_000_000_000_000_000));
     }
 }
@@ -33,6 +33,13 @@ contract MockSwell {
     }
 }
 
+contract MockSwellzero {
+    function swETHToETHRate() external pure returns (uint256) {
+        // should correspond to a 1.15 exchange rate
+        return 0;
+    }
+}
+
 contract ApyOracleTest is Test {
     using RoundedMath for uint256;
     using SafeCast for uint256;
@@ -40,8 +47,11 @@ contract ApyOracleTest is Test {
     ApyOracle public oracle;
     uint256 public base;
     uint256 public firstRate;
+    address public mockSwell;
 
     error AlreadyUpdated();
+    error OutOfBounds();
+    error InvalidExchangeRate(uint256 ilkId);
 
     function setUp() public {
         uint256[7] memory historicalExchangeRates;
@@ -58,13 +68,14 @@ contract ApyOracleTest is Test {
             historicalExchangeRates[i] = base;
         }
         historicalExchangeRates[6] = firstRate;
-        vm.warp(block.timestamp + 10 days);
+        vm.warp(block.timestamp + 2 days);
         // init contract with mocks for lido, stader, swell
+        mockSwell = address(new MockSwell());
         oracle = new ApyOracle(
             historicalExchangeRates, 
             address(new MockLido()), 
             address(new MockStader()), 
-            address(new MockSwell())
+            mockSwell
         );
     }
 
@@ -93,6 +104,16 @@ contract ApyOracleTest is Test {
         assertEq(oracle.getHistoryByProvider(1, 1), uint32(1_000_000));
         assertEq(oracle.getHistoryByProvider(1, 2), uint32(1_000_000));
         assertEq(oracle.getHistoryByProvider(1, 3), uint32(0));
+
+        // check reverts
+        vm.expectRevert(OutOfBounds.selector);
+        oracle.getApy(8);
+        vm.expectRevert(OutOfBounds.selector);
+        oracle.getHistoryByProvider(7, 0);
+        vm.expectRevert(OutOfBounds.selector);
+        oracle.getHistoryByProvider(0, 8);
+        vm.expectRevert(OutOfBounds.selector);
+        oracle.getHistory(7);
     }
 
     function testUpdateAll() external {
@@ -131,5 +152,12 @@ contract ApyOracleTest is Test {
         assertEq(oracle.getApy(1), uint32(0));
         assertEq(oracle.getApy(2), uint32(0));
         assertEq(oracle.getAll(), uint256(0));
+    }
+
+    function testInvalidExchangeRate()  external {
+        MockSwellzero mock = new MockSwellzero();
+        vm.etch(mockSwell, address(mock).code);
+        vm.expectRevert(abi.encodeWithSelector(InvalidExchangeRate.selector, 2));
+        oracle.updateAll();
     }
 }
