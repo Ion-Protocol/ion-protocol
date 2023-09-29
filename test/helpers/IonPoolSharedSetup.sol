@@ -3,12 +3,20 @@ pragma solidity 0.8.19;
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { InterestRate, IlkData } from "../../src/InterestRate.sol";
 import { IApyOracle } from "../../src/interfaces/IApyOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { GemJoin } from "../../src/join/GemJoin.sol";
+
+// struct IlkData {
+//     uint80 minimumProfitMargin; // 18 decimals
+//     uint64 reserveFactor; // 18 decimals
+//     uint64 optimalUtilizationRate; // 18 decimals
+//     uint16 distributionFactor; // 2 decimals
+// }
 
 contract MockApyOracle is IApyOracle {
     uint256 APY = 3.45e6;
@@ -18,70 +26,115 @@ contract MockApyOracle is IApyOracle {
     }
 }
 
-// struct IlkData {
-//     uint80 minimumProfitMargin; // 18 decimals
-//     uint64 reserveFactor; // 18 decimals
-//     uint64 optimalUtilizationRate; // 18 decimals
-//     uint16 distributionFactor; // 2 decimals
-// }
+contract InterestRateExposed is InterestRate {
+    constructor(IlkData[] memory ilks, IApyOracle apyOracle) InterestRate(ilks, apyOracle) { }
 
-contract IonPoolTest is BaseTestSetup {
+    function unpackCollateralConfig(uint256 index) external view returns (IlkData memory ilkData) {
+        return _unpackCollateralConfig(index);
+    }
+}
+
+contract IonPoolSharedSetup is BaseTestSetup {
     IonPool ionPool;
 
-    InterestRate interestRateModule;
+    InterestRateExposed interestRateModule;
     IApyOracle apyOracle;
 
-    // --- Configs ---
-    uint256 public constant globalDebtCeiling = 100e45; // [rad]
+    mapping(address ilkAddress => uint8 ilkIndex) public ilkIndexes;
 
-    uint64 public stEthReserveFactor = 0.1e18; 
-    uint64 public swEthReserveFactor = 0.08e18;
-    uint64 public ethXReserveFactor = 0.05e18;
+    address immutable lender1 = vm.addr(1);
+    address immutable lender2 = vm.addr(2);
+    address immutable borrower1 = vm.addr(3);
+    address immutable borrower2 = vm.addr(4);
+
+    // --- Configs ---
+    uint256 public globalDebtCeiling = 100e45; // [rad]
+
+    uint256 internal constant SPOT = 1e27; // [ray]
+    uint80 internal constant minimumProfitMargin = 0.85e18;
+
+    uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
+    uint256 internal constant INITIAL_BORROWER_UNDERLYING_BALANCE = 100e18;
+
+    // Random collaterals
+    ERC20PresetMinterPauser immutable stEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
+    ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
+    ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
+
+    uint64 internal constant stEthReserveFactor = 0.1e18;
+    uint64 internal constant swEthReserveFactor = 0.08e18;
+    uint64 internal constant ethXReserveFactor = 0.05e18;
+
+    uint64 internal constant stEthOptimalUtilizationRate = 0.9e18;
+    uint64 internal constant swEthOptimalUtilizationRate = 0.92e18;
+    uint64 internal constant ethXOptimalUtilizationRate = 0.95e18;
+
+    uint16 internal stEthDistributionFactor = 0.2e2;
+    uint16 internal swEthDistributionFactor = 0.4e2;
+    uint16 internal ethXDistributionFactor = 0.4e2;
+
+    uint256 internal stEthDebtCeiling = 20e45;
+    uint256 internal swEthDebtCeiling = 40e45;
+    uint256 internal ethXDebtCeiling = 40e45;
+
+    ERC20PresetMinterPauser[] internal collaterals;
+    GemJoin[] internal gemJoins;
+    uint64[] internal reserveFactors = [stEthReserveFactor, swEthReserveFactor, ethXReserveFactor];
+    uint64[] internal optimalUtilizationRates =
+        [stEthOptimalUtilizationRate, swEthOptimalUtilizationRate, ethXOptimalUtilizationRate];
+    uint16[] internal distributionFactors = [stEthDistributionFactor, swEthDistributionFactor, ethXDistributionFactor];
+    uint256[] internal debtCeilings = [stEthDebtCeiling, swEthDebtCeiling, ethXDebtCeiling];
 
     function setUp() public override {
+        collaterals = [stEth, swEth, ethX];
+        assert(
+            collaterals.length == reserveFactors.length && reserveFactors.length == optimalUtilizationRates.length
+                && optimalUtilizationRates.length == distributionFactors.length
+                && distributionFactors.length == debtCeilings.length
+        );
         super.setUp();
         apyOracle = new MockApyOracle();
 
-        uint80 minimumProfitMargin = 0.85e18;
+        IlkData[] memory ilks = new IlkData[](collaterals.length);
 
-        IlkData memory stEthInterestConfig = IlkData({
-            minimumProfitMargin: minimumProfitMargin,
-            reserveFactor: stEthReserveFactor,
-            optimalUtilizationRate: 0.9e18,
-            distributionFactor: 0.2e2
-        });
+        uint256 distributionFactorSum;
+        uint256 debtCeilingSum;
 
-        IlkData memory swEthInterestConfig = IlkData({
-            minimumProfitMargin: minimumProfitMargin,
-            reserveFactor: swEthReserveFactor,
-            optimalUtilizationRate: 0.92e18,
-            distributionFactor: 0.4e2
-        });
+        IlkData memory ilkConfig;
+        for (uint256 i = 0; i < ilks.length; i++) {
+            ilkConfig = IlkData({
+                minimumProfitMargin: minimumProfitMargin,
+                reserveFactor: reserveFactors[i],
+                optimalUtilizationRate: optimalUtilizationRates[i],
+                distributionFactor: distributionFactors[i]
+            });
+            ilks[i] = ilkConfig;
 
-        IlkData memory ethXInterestConfig = IlkData({
-            minimumProfitMargin: minimumProfitMargin,
-            reserveFactor: 0.05e18,
-            optimalUtilizationRate: 0.95e18,
-            distributionFactor: 0.4e2
-        });
+            distributionFactorSum += distributionFactors[i];
+            debtCeilingSum += debtCeilings[i];
 
-        IlkData[] memory ilks = new IlkData[](3);
-        ilks[0] = stEthInterestConfig;
-        ilks[1] = swEthInterestConfig;
-        ilks[2] = ethXInterestConfig;
+            collaterals[i].mint(borrower1, INITIAL_BORROWER_UNDERLYING_BALANCE);
+            collaterals[i].mint(borrower2, INITIAL_BORROWER_UNDERLYING_BALANCE);
+        }
 
-        interestRateModule = new InterestRate(ilks, apyOracle);
+        assert(distributionFactorSum == 1e2);
+        assert(debtCeilingSum == globalDebtCeiling);
+
+        interestRateModule = new InterestRateExposed(ilks, apyOracle);
 
         ionPool = new IonPool(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool.grantRole(ionPool.ION(), address(this));
+        ionPool.updateGlobalDebtCeiling(globalDebtCeiling);
 
-        IonPool.Ilk memory stEthPoolConfig = IonPool.Ilk({
-            totalNormalizedDebt: 0, // ignored
-            lastRateUpdate: 0,  // ignored
-            rate: 0, // ignored
-            spot: 0, // [ray]
-            debtCeiling: 100e45, // [rad]
-            dust: 0 // [rad]
-        });
+        for (uint8 i = 0; i < collaterals.length; i++) {
+            ionPool.init(address(collaterals[i]));
+            ionPool.updateIlkConfig(i, SPOT, debtCeilings[i], 0);
+            gemJoins.push(new GemJoin(ionPool, collaterals[i], i));
+            ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i])); 
+        }
+
+        underlying.mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        underlying.mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
     }
 
     function test_setUp() external {
@@ -91,8 +144,41 @@ contract IonPoolTest is BaseTestSetup {
         assertEq(ionPool.name(), NAME);
         assertEq(ionPool.symbol(), SYMBOL);
         assertEq(ionPool.defaultAdmin(), address(this));
-        // assertEq(ionPool.interestRateModule(), address(interestRateModule));
-    }
 
-    function testBasicLend() external { }
+        assertEq(ionPool.ilkCount(), collaterals.length);
+
+
+        uint256 addressesLength = ionPool.addressesLength();
+        assertEq(addressesLength, collaterals.length);
+        for (uint8 i = 0; i < addressesLength; i++) {
+            assertEq(ionPool.getIlkAddress(i), address(collaterals[i]));
+
+            assertEq(ionPool.totalNormalizedDebt(i), 0);
+            assertEq(ionPool.rate(i), 1e27);
+            assertEq(ionPool.spot(i), SPOT);
+            assertEq(ionPool.debtCeiling(i), debtCeilings[i]);
+            assertEq(ionPool.dust(i), 0);
+
+            assertEq(ionPool.collateral(i, lender1), 0);
+            assertEq(ionPool.collateral(i, lender2), 0);
+            assertEq(ionPool.collateral(i, borrower1), 0);
+            assertEq(ionPool.collateral(i, borrower2), 0);
+            assertEq(ionPool.normalizedDebt(i, lender1), 0);
+            assertEq(ionPool.normalizedDebt(i, lender2), 0);
+            assertEq(ionPool.normalizedDebt(i, borrower1), 0);
+            assertEq(ionPool.normalizedDebt(i, borrower2), 0);
+
+            assertEq(collaterals[i].balanceOf(address(ionPool)), 0);
+            assertEq(collaterals[i].balanceOf(address(borrower1)), INITIAL_BORROWER_UNDERLYING_BALANCE);
+            assertEq(collaterals[i].balanceOf(address(borrower2)), INITIAL_BORROWER_UNDERLYING_BALANCE);
+
+            IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
+            assertEq(ilkConfig.minimumProfitMargin, minimumProfitMargin);
+            assertEq(ilkConfig.reserveFactor, reserveFactors[i]);
+            assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
+            assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
+        }
+
+        assertEq(interestRateModule.collateralCount(), collaterals.length);
+    }
 }

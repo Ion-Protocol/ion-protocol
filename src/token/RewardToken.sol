@@ -74,7 +74,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public immutable DOMAIN_SEPARATOR;
 
-    address public immutable underlying;
+    IERC20 public immutable underlying;
     uint8 public immutable decimals;
     string public name;
     string public symbol;
@@ -85,7 +85,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     uint256 internal supplyFactor; // [RAY]
 
     constructor(address _underlying, address _treasury, uint8 decimals_, string memory name_, string memory symbol_) {
-        underlying = _underlying;
+        underlying = IERC20(_underlying);
         treasury = _treasury;
         decimals = decimals_;
         name = name_;
@@ -109,7 +109,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         if (amountScaled == 0) revert InvalidBurnAmount();
         _burnNormalized(user, amountScaled);
 
-        IERC20(underlying).safeTransfer(receiverOfUnderlying, amount);
+        underlying.safeTransfer(receiverOfUnderlying, amount);
 
         emit Transfer(user, address(0), amount);
         emit Burn(user, receiverOfUnderlying, amount, _supplyFactor);
@@ -144,7 +144,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         if (amountScaled == 0) revert InvalidMintAmount();
         _mintNormalized(user, amountScaled);
 
-        IERC20(underlying).safeTransferFrom(_msgSender(), address(this), amount);
+        underlying.safeTransferFrom(_msgSender(), address(this), amount);
 
         emit Transfer(address(0), user, amount);
         emit Mint(user, amount, _supplyFactor);

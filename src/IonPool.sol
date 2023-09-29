@@ -11,8 +11,10 @@ import { AccessControlDefaultAdminRules as AccessControl } from
     "@openzeppelin/contracts/access/AccessControlDefaultAdminRules.sol";
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { InterestRate, InterestRateData } from "./InterestRate.sol";
+import { InterestRate } from "./InterestRate.sol";
 import { RoundedMath, RAY } from "./math/RoundedMath.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract IonPool is Pausable, AccessControl, RewardToken {
     error CeilingExceeded();
@@ -24,10 +26,12 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     error InvalidInterestRateModule();
     error ArithmeticError();
     error SpotUpdaterNotAuthorized();
+    error IlkAlreadyAdded();
 
-    using SafeERC20 for IERC20Metadata;
+    using SafeERC20 for IERC20;
     using SafeCast for *;
     using RoundedMath for uint256;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant ION = keccak256("ION");
     bytes32 public constant SPOT_ROLE = keccak256("SPOT_ROLE");
@@ -50,10 +54,15 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     }
 
     Ilk[] public ilks;
+    // Remove should never be called, it will mess up the ordering
+    EnumerableSet.AddressSet internal ilkAddresses;
+
     mapping(uint256 ilkIndex => mapping(address user => Vault)) public vaults;
     mapping(uint256 ilkIndex => mapping(address user => uint256)) public gem; // [wad]
     mapping(address => uint256) public weth; // [rad]
     mapping(address => uint256) public sin; // [rad]
+
+    mapping(address => mapping(address => uint256)) public can;
 
     uint256 public debt; // Total Dai Issued    [rad]
     uint256 public vice; // Total Unbacked Dai  [rad]
@@ -76,183 +85,16 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         interestRateModule = _interestRateModule;
     }
 
-    // TODO: Test which is more expensive, this implementation, or calling InterestRateModule in a loop
-    function _accrueInterest() internal {
-        uint256[] memory totalDebt = new uint256[](ilks.length);
-        for (uint256 i = 0; i < ilks.length;) {
-            totalDebt[i] = uint256(ilks[i].totalNormalizedDebt).roundedWadMul(ilks[i].rate);
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
-
-        InterestRateData[] memory interestRates = interestRateModule.calculateAllInterestRates(totalDebt, totalSupply());
-
-        // Sanity check
-        assert(interestRates.length == ilks.length);
-
-        for (uint256 i = 0; i < interestRates.length;) {
-            // TODO: Update supplyFactor once in end
-            _updateBorrowAndSupplyRates(
-                i, totalDebt[i], ilks[i].rate, interestRates[i].borrowRate, interestRates[i].reserveFactor
-            );
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
-    }
-
-    function _accrueInterestForIlk(uint8 ilkIndex) internal {
-        uint256 totalNormalizedDebt = ilks[ilkIndex].totalNormalizedDebt;
-        uint256 rate = ilks[ilkIndex].rate;
-
-        uint256 totalDebt = totalNormalizedDebt.roundedWadMul(rate); // [WAD] * [RAY] / [WAD] = [RAY]
-
-        InterestRateData memory interestRateData =
-            interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalSupply());
-
-        _updateBorrowAndSupplyRates(
-            ilkIndex, totalDebt, rate, interestRateData.borrowRate, interestRateData.reserveFactor
-        );
-    }
-
-    function _updateBorrowAndSupplyRates(
-        uint256 ilkIndex,
-        uint256 totalDebt,
-        uint256 rate,
-        uint256 borrowRate,
-        uint256 reserveFactor
-    )
-        internal
-    {
-        uint256 borrowRateExpT = _rpow(borrowRate, block.timestamp - ilks[ilkIndex].lastRateUpdate, RAY);
-        uint256 newRate = rate.roundedWadMul(borrowRateExpT).toUint128();
-
-        // Update borrow accumulator
-        ilks[ilkIndex].rate = newRate.toUint104();
-        ilks[ilkIndex].lastRateUpdate = block.timestamp.toUint48();
-
-        uint256 newDebtCreated = totalDebt.roundedRayMul(borrowRateExpT - RAY);
-        supplyFactor += newDebtCreated.roundedRayMul(RAY - reserveFactor).roundedRayDiv(normalizedTotalSupply);
-
-        _mintToTreasury(newDebtCreated.roundedRayMul(reserveFactor));
-    }
-
-    // --- Lender Operations ---
-
-    function supply(address user, uint256 amt) external whenNotPaused {
-        _accrueInterest();
-        _mint(user, amt);
-    }
-
-    function withdraw(address user, uint256 amt) external whenNotPaused {
-        _accrueInterest();
-        _burn(_msgSender(), user, amt);
-    }
-
-    // --- Borrower Operations ---
-
-    // TODO: Discuss borrower action flows. Should borrows convert all gem to
-    // vault collateral? Should repays convert all vault collateral to gem,
-    // making it available for withdrawal? 
-
-    /**
-     * @param ilkIndex index of the collateral to borrow again
-     * @param amt amount to borrow
-     */
-    function borrow(uint8 ilkIndex, uint256 amt) external whenNotPaused {
-        _accrueInterestForIlk(ilkIndex);
-        uint256 normalizedAmount = amt.roundedWadDiv(ilks[ilkIndex].rate);
-
-        // Moves all gem into the vault ink
-        _modifyPosition(ilkIndex, _msgSender(), _msgSender(), _msgSender(), gem[ilkIndex][_msgSender()].toInt256(), normalizedAmount.toInt256());
-    }
-
-    function repay(uint8 ilkIndex, uint256 amt) external whenNotPaused {
-        _accrueInterestForIlk(ilkIndex);
-        uint256 normalizedAmount = amt.roundedWadDiv(ilks[ilkIndex].rate);
-
-        _modifyPosition(ilkIndex, _msgSender(), _msgSender(), _msgSender(), 0, -normalizedAmount.toInt256());
-    }
-
-    // --- Auth ---
-    mapping(address => mapping(address => uint256)) public can;
-
-    function hope(address usr) external {
-        can[_msgSender()][usr] = 1;
-    }
-
-    function nope(address usr) external {
-        can[msg.sender][usr] = 0;
-    }
-
-    function wish(address bit, address usr) internal view returns (bool) {
-        return either(bit == usr, can[bit][usr] == 1);
-    }
-
-    // --- Math ---
-    function _add(uint256 x, int256 y) internal pure returns (uint256 z) {
-        unchecked {
-            z = x + uint256(y);
-        }
-        if (y < 0 && z > x) revert ArithmeticError();
-        if (y > 0 && z < x) revert ArithmeticError();
-    }
-
-    function _sub(uint256 x, int256 y) internal pure returns (uint256 z) {
-        // Underflow desirable
-        unchecked {
-            z = x - uint256(y);
-        }
-        if (y > 0 && z > x) revert ArithmeticError();
-        if (y < 0 && z < x) revert ArithmeticError();
-    }
-
-    /**
-     * @dev x and the returned value are to be interpreted as fixed-point
-     * integers with scaling factor b. For example, if b == 100, this specifies
-     * two decimal digits of precision and the normal decimal value 2.1 would be
-     * represented as 210; rpow(210, 2, 100) returns 441 (the two-decimal digit
-     * fixed-point representation of 2.1^2 = 4.41) (From MCD docs)
-     * @param x base
-     * @param n exponent
-     * @param b scaling factor
-     */
-    function _rpow(uint256 x, uint256 n, uint256 b) internal pure returns (uint256 z) {
-        assembly {
-            switch x
-            case 0 {
-                switch n
-                case 0 { z := b }
-                default { z := 0 }
-            }
-            default {
-                switch mod(n, 2)
-                case 0 { z := b }
-                default { z := x }
-                let half := div(b, 2) // for rounding.
-                for { n := div(n, 2) } n { n := div(n, 2) } {
-                    let xx := mul(x, x)
-                    if iszero(eq(div(xx, x), x)) { revert(0, 0) }
-                    let xxRound := add(xx, half)
-                    if lt(xxRound, xx) { revert(0, 0) }
-                    x := div(xxRound, b)
-                    if mod(n, 2) {
-                        let zx := mul(z, x)
-                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0, 0) }
-                        let zxRound := add(zx, half)
-                        if lt(zxRound, zx) { revert(0, 0) }
-                        z := div(zxRound, b)
-                    }
-                }
-            }
-        }
-    }
-
     // --- Administration ---
-    function init(uint8 ilkIndex) external onlyRole(ION) {
-        require(ilks[ilkIndex].rate == 0, "Vat/ilk-already-init");
+
+    function init(address ilkAddress) external onlyRole(ION) {
+        if (!ilkAddresses.add(ilkAddress)) revert IlkAlreadyAdded();
+
+        uint256 ilkIndex = ilks.length;
+        Ilk memory newIlk;
+        ilks.push(newIlk);
         Ilk storage ilk = ilks[ilkIndex];
+
         ilk.rate = 10 ** 27;
         ilk.lastRateUpdate = block.timestamp.toUint48();
     }
@@ -274,12 +116,21 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         ilks[ilkIndex].dust = newDust;
     }
 
-    function updateIlk(uint8 ilkIndex, Ilk calldata newIlk) external onlyRole(ION) whenNotPaused {
+    function updateIlkConfig(
+        uint8 ilkIndex,
+        uint256 newSpot,
+        uint256 newDebtCeiling,
+        uint256 newDust
+    )
+        external
+        onlyRole(ION)
+        whenNotPaused
+    {
         Ilk storage ilk = ilks[ilkIndex];
 
-        ilk.spot = newIlk.spot;
-        ilk.debtCeiling = newIlk.debtCeiling;
-        ilk.dust = newIlk.dust;
+        ilk.spot = newSpot;
+        ilk.debtCeiling = newDebtCeiling;
+        ilk.dust = newDust;
     }
 
     function setInterestRateModule(InterestRate _interestRateModule) external onlyRole(ION) {
@@ -297,46 +148,129 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         _unpause();
     }
 
-    // --- Fungibility ---
+    // --- Interest Calculations ---
+
+    function _accrueInterest() internal {
+        uint256 totalEthSupply = totalSupply();
+
+        uint256 totalSupplyFactorIncrease;
+        uint256 totalTreasuryMintAmount;
+        for (uint8 i = 0; i < ilks.length;) {
+            (uint256 supplyFactorIncrease, uint256 treasuryMintAmount) = _calculateRewardDistribution(i, totalEthSupply);
+
+            totalSupplyFactorIncrease += supplyFactorIncrease;
+            totalTreasuryMintAmount += treasuryMintAmount;
+
+            // forgefmt: disable-next-line
+            unchecked { ++i; }
+        }
+
+        supplyFactor += totalSupplyFactorIncrease;
+        _mintToTreasury(totalTreasuryMintAmount);
+    }
+
+    function _accrueInterestForIlk(uint8 ilkIndex) internal {
+        (uint256 supplyFactorIncrease, uint256 treasuryMintAmount) =
+            _calculateRewardDistribution(ilkIndex, totalSupply());
+
+        supplyFactor += supplyFactorIncrease;
+        _mintToTreasury(treasuryMintAmount);
+    }
+
+    function _calculateRewardDistribution(
+        uint8 ilkIndex,
+        uint256 totalEthSupply
+    )
+        internal
+        returns (uint256 supplyFactorIncrease, uint256 treasuryMintAmount)
+    {
+        uint256 _totalNormalizedDebt = ilks[ilkIndex].totalNormalizedDebt;
+        uint256 _rate = ilks[ilkIndex].rate;
+
+        uint256 totalDebt = _totalNormalizedDebt.roundedWadMul(_rate); // [WAD] * [RAY] / [WAD] = [RAY]
+
+        (uint256 borrowRate, uint256 reserveFactor) =
+            interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
+
+        uint256 borrowRateExpT = _rpow(borrowRate, block.timestamp - ilks[ilkIndex].lastRateUpdate, RAY);
+        uint104 newRate = _rate.roundedRayMul(borrowRateExpT).toUint104();
+
+        // Update borrow accumulator
+        ilks[ilkIndex].rate = newRate;
+        ilks[ilkIndex].lastRateUpdate = block.timestamp.toUint48();
+
+        uint256 newDebtCreated = totalDebt.roundedRayMul(borrowRateExpT - RAY);
+
+        // If there is no supply, then nothing is being lent out.
+        supplyFactorIncrease = normalizedTotalSupply == 0
+            ? 0
+            : newDebtCreated.roundedRayMul(RAY - reserveFactor).roundedRayDiv(normalizedTotalSupply);
+
+        treasuryMintAmount = newDebtCreated.roundedRayMul(reserveFactor);
+    }
+
+    // --- Lender Operations ---
+
+    // TODO: Supply caps
+    function supply(address user, uint256 amt) external whenNotPaused {
+        _accrueInterest();
+        _mint(user, amt);
+    }
+
+    function withdraw(address user, uint256 amt) external whenNotPaused {
+        _accrueInterest();
+        _burn(_msgSender(), user, amt);
+    }
+
+    // --- Borrower Operations ---
 
     /**
-     * @dev To be called by GemJoin contracts. After a user deposits collateral, credit the user with collateral
-     * internally
-     * @param ilkIndex collateral
-     * @param usr user
-     * @param wad amount to add or remove
+     * @param ilkIndex index of the collateral to borrow again
+     * @param amt amount to borrow
      */
-    function mintAndBurnGem(uint8 ilkIndex, address usr, int256 wad) external onlyRole(GEM_JOIN_ROLE) {
-        gem[ilkIndex][usr] = _add(gem[ilkIndex][usr], wad);
+    function borrow(uint8 ilkIndex, uint256 amt) external {
+        uint256 normalizedAmount = amt.roundedRayDiv(ilks[ilkIndex].rate);  // [WAD] * [RAY] / [RAY] = [WAD]
+
+        // Moves all gem into the vault ink
+        modifyPosition(
+            ilkIndex,
+            _msgSender(),
+            _msgSender(),
+            _msgSender(),
+            gem[ilkIndex][_msgSender()].toInt256(),
+            normalizedAmount.toInt256()
+        );
+
+        exitBase(_msgSender(), amt);
     }
 
-    function transferGem(uint8 ilkIndex, address src, address dst, uint256 wad) external whenNotPaused {
-        require(wish(src, msg.sender), "Vat/not-allowed");
-        gem[ilkIndex][src] -= wad;
-        gem[ilkIndex][dst] += wad;
+    function repay(uint8 ilkIndex, uint256 amt) external {
+        uint256 normalizedAmount = amt.roundedRayDiv(ilks[ilkIndex].rate);
+
+        joinBase(_msgSender(), amt);
+
+        modifyPosition(ilkIndex, _msgSender(), _msgSender(), _msgSender(), 0, -normalizedAmount.toInt256());
     }
 
-    function move(address src, address dst, uint256 rad) external whenNotPaused {
-        require(wish(src, msg.sender), "Vat/not-allowed");
-        weth[src] -= rad;
-        weth[dst] += rad;
+    /**
+     * @dev converts internal weth to the erc20 WETH
+     * @param amount of weth to exit in wad
+     */
+    function exitBase(address exitRecipient, uint256 amount) public whenNotPaused {
+        uint256 amountRay = amount * RAY;
+        weth[_msgSender()] -= amountRay;
+        underlying.safeTransfer(exitRecipient, amount);
     }
 
-    function either(bool x, bool y) internal pure returns (bool z) {
-        assembly {
-            z := or(x, y)
-        }
-    }
-
-    function both(bool x, bool y) internal pure returns (bool z) {
-        assembly {
-            z := and(x, y)
-        }
+    function joinBase(address wethRecipient, uint256 amount) public whenNotPaused {
+        uint256 amountRay = amount * RAY;
+        weth[wethRecipient] += amountRay;
+        underlying.safeTransferFrom(_msgSender(), address(this), amount);
     }
 
     // --- CDP Manipulation ---
 
-    function _modifyPosition(
+    function modifyPosition(
         uint8 ilkIndex,
         address u,
         address v,
@@ -344,9 +278,11 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         int256 changeInCollateral,
         int256 changeInNormalizedDebt
     )
-        private
+        public
         whenNotPaused
     {
+        _accrueInterestForIlk(ilkIndex);
+
         Vault memory vault = vaults[ilkIndex][u];
         Ilk memory ilk = ilks[ilkIndex];
         uint128 ilkRate = ilks[ilkIndex].rate;
@@ -365,7 +301,8 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         if (
             both(
                 changeInNormalizedDebt > 0,
-                either(ilk.totalNormalizedDebt * ilkRate > ilk.debtCeiling, debt > globalDebtCeiling)
+                // prevent intermediary overflow
+                either(uint256(ilk.totalNormalizedDebt) * uint256(ilkRate) > ilk.debtCeiling, debt > globalDebtCeiling)
             )
         ) revert CeilingExceeded();
         // vault is either less risky than before, or it is safe
@@ -430,6 +367,31 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         vice = _sub(vice, changeInDebt);
     }
 
+    // --- Fungibility ---
+
+    /**
+     * @dev To be called by GemJoin contracts. After a user deposits collateral, credit the user with collateral
+     * internally
+     * @param ilkIndex collateral
+     * @param usr user
+     * @param wad amount to add or remove
+     */
+    function mintAndBurnGem(uint8 ilkIndex, address usr, int256 wad) external onlyRole(GEM_JOIN_ROLE) {
+        gem[ilkIndex][usr] = _add(gem[ilkIndex][usr], wad);
+    }
+
+    function transferGem(uint8 ilkIndex, address src, address dst, uint256 wad) external whenNotPaused {
+        require(wish(src, msg.sender), "Vat/not-allowed");
+        gem[ilkIndex][src] -= wad;
+        gem[ilkIndex][dst] += wad;
+    }
+
+    function move(address src, address dst, uint256 rad) external whenNotPaused {
+        require(wish(src, msg.sender), "Vat/not-allowed");
+        weth[src] -= rad;
+        weth[dst] += rad;
+    }
+
     // --- Settlement ---
 
     /**
@@ -444,8 +406,139 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         debt -= rad;
     }
 
+    // --- Getters ---
+
     function ilkCount() public view returns (uint256) {
         return ilks.length;
+    }
+
+    function getIlkAddress(uint256 ilkIndex) public view returns (address) {
+        return ilkAddresses.at(ilkIndex);
+    }
+
+    function addressContains(address ilk) public view returns (bool) {
+        return ilkAddresses.contains(ilk);
+    }
+
+    function addressesLength() public view returns (uint256) {
+        return ilkAddresses.length();
+    }
+
+    function totalNormalizedDebt(uint8 ilkIndex) external view returns (uint256) {
+        return ilks[ilkIndex].totalNormalizedDebt;
+    }
+
+    function rate(uint8 ilkIndex) external view returns (uint256) {
+        return ilks[ilkIndex].rate;
+    }
+
+    function spot(uint8 ilkIndex) external view returns (uint256) {
+        return ilks[ilkIndex].spot;
+    }
+
+    function debtCeiling(uint8 ilkIndex) external view returns (uint256) {
+        return ilks[ilkIndex].debtCeiling;
+    }
+
+    function dust(uint8 ilkIndex) external view returns (uint256) {
+        return ilks[ilkIndex].dust;
+    }
+
+    function collateral(uint8 ilkIndex, address user) external view returns (uint256) {
+        return vaults[ilkIndex][user].collateral;
+    }
+
+    function normalizedDebt(uint8 ilkIndex, address user) external view returns (uint256) {
+        return vaults[ilkIndex][user].normalizedDebt;
+    }
+
+    // --- Auth ---
+
+    function hope(address usr) external {
+        can[_msgSender()][usr] = 1;
+    }
+
+    function nope(address usr) external {
+        can[msg.sender][usr] = 0;
+    }
+
+    function wish(address bit, address usr) internal view returns (bool) {
+        return either(bit == usr, can[bit][usr] == 1);
+    }
+
+    // --- Math ---
+
+    function _add(uint256 x, int256 y) internal pure returns (uint256 z) {
+        // Overflow desirable
+        unchecked {
+            z = x + uint256(y);
+        }
+        if (y < 0 && z > x) revert ArithmeticError();
+        if (y > 0 && z < x) revert ArithmeticError();
+    }
+
+    function _sub(uint256 x, int256 y) internal pure returns (uint256 z) {
+        // Underflow desirable
+        unchecked {
+            z = x - uint256(y);
+        }
+        if (y > 0 && z > x) revert ArithmeticError();
+        if (y < 0 && z < x) revert ArithmeticError();
+    }
+
+    /**
+     * @dev x and the returned value are to be interpreted as fixed-point
+     * integers with scaling factor b. For example, if b == 100, this specifies
+     * two decimal digits of precision and the normal decimal value 2.1 would be
+     * represented as 210; rpow(210, 2, 100) returns 441 (the two-decimal digit
+     * fixed-point representation of 2.1^2 = 4.41) (From MCD docs)
+     * @param x base
+     * @param n exponent
+     * @param b scaling factor
+     */
+    function _rpow(uint256 x, uint256 n, uint256 b) internal pure returns (uint256 z) {
+        assembly {
+            switch x
+            case 0 {
+                switch n
+                case 0 { z := b }
+                default { z := 0 }
+            }
+            default {
+                switch mod(n, 2)
+                case 0 { z := b }
+                default { z := x }
+                let half := div(b, 2) // for rounding.
+                for { n := div(n, 2) } n { n := div(n, 2) } {
+                    let xx := mul(x, x)
+                    if iszero(eq(div(xx, x), x)) { revert(0, 0) }
+                    let xxRound := add(xx, half)
+                    if lt(xxRound, xx) { revert(0, 0) }
+                    x := div(xxRound, b)
+                    if mod(n, 2) {
+                        let zx := mul(z, x)
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0, 0) }
+                        let zxRound := add(zx, half)
+                        if lt(zxRound, zx) { revert(0, 0) }
+                        z := div(zxRound, b)
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Boolean ---
+
+    function either(bool x, bool y) internal pure returns (bool z) {
+        assembly {
+            z := or(x, y)
+        }
+    }
+
+    function both(bool x, bool y) internal pure returns (bool z) {
+        assembly {
+            z := and(x, y)
+        }
     }
 
     // TODO: Which role can call this?

@@ -6,11 +6,6 @@ import { IApyOracle } from "./interfaces/IApyOracle.sol";
 import { RoundedMath, RAY } from "../src/math/RoundedMath.sol";
 import { IonPool } from "../src/IonPool.sol";
 
-struct InterestRateData {
-    uint256 borrowRate;
-    uint256 reserveFactor;
-}
-
 struct IlkData {
     uint80 minimumProfitMargin; // 18 decimals
     uint64 reserveFactor; // 18 decimals
@@ -93,22 +88,23 @@ contract InterestRate {
         uint256 index
     )
         internal
-        pure
+        view
         returns (uint256 packedConfig)
     {
-        if (index >= 0) return 0;
+        if (index >= collateralCount) return 0;
 
         IlkData memory ilkData = ilkDataList[index];
 
         packedConfig = (
-            ilkData.minimumProfitMargin << PROFIT_MARGIN_SHIFT | ilkData.reserveFactor << RESERVE_FACTOR_SHIFT
-                | ilkData.optimalUtilizationRate << OPTIMAL_UTILIZATION_SHIFT
-                | ilkData.distributionFactor << DISTRIBUTION_FACTOR_SHIFT
+            uint256(ilkData.minimumProfitMargin) << PROFIT_MARGIN_SHIFT
+                | uint256(ilkData.reserveFactor) << RESERVE_FACTOR_SHIFT
+                | uint256(ilkData.optimalUtilizationRate) << OPTIMAL_UTILIZATION_SHIFT
+                | uint256(ilkData.distributionFactor) << DISTRIBUTION_FACTOR_SHIFT
         );
     }
 
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
-        if (index >= collateralCount - 1) revert CollateralIndexOutOfBounds();
+        if (index > collateralCount - 1) revert CollateralIndexOutOfBounds();
 
         uint256 packedConfig;
 
@@ -144,46 +140,6 @@ contract InterestRate {
     }
 
     /**
-     * @param totalDebts total debts of the system (45 decimals)
-     * @param totalEthSupply total Eth in the system (18 decimals)
-     */
-    function calculateAllInterestRates(
-        uint256[] memory totalDebts,
-        uint256 totalEthSupply
-    )
-        external
-        view
-        returns (InterestRateData[] memory interestRates)
-    {
-        interestRates = new InterestRateData[](collateralCount);
-
-        if (totalDebts.length != collateralCount) {
-            revert TotalDebtsLength(collateralCount, totalDebts.length);
-        }
-
-        for (uint256 i = 0; i < collateralCount;) {
-            IlkData memory ilkData = _unpackCollateralConfig(i);
-
-            // TODO: Validate input
-            uint256 collateralApy = apyOracle.getAPY(i);
-
-            uint256 borrowRate = _calculateBorrowRate(
-                collateralApy,
-                ilkData.minimumProfitMargin,
-                ilkData.optimalUtilizationRate,
-                totalDebts[i], // WAD * RAY / WAD = RAY
-                totalEthSupply,
-                ilkData.distributionFactor
-            );
-
-            interestRates[i] = InterestRateData({ borrowRate: borrowRate, reserveFactor: ilkData.reserveFactor });
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
-    }
-
-    /**
      * @param ilkIndex index of the collateral
      * @param totalDebt total debt of the system (27 decimals)
      * @param totalEthSupply total eth supply of the system (18 decimals)
@@ -195,59 +151,28 @@ contract InterestRate {
     )
         external
         view
-        returns (InterestRateData memory)
+        returns (uint256 borrowRate, uint256 reserveFactor)
     {
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
 
         // TODO: Validate input
         uint256 collateralApy = apyOracle.getAPY(ilkIndex);
 
-        uint256 borrowRate = _calculateBorrowRate(
-            collateralApy,
-            ilkData.minimumProfitMargin,
-            ilkData.optimalUtilizationRate,
-            totalDebt,
-            totalEthSupply,
-            ilkData.distributionFactor
-        );
-
-        return InterestRateData({ borrowRate: borrowRate, reserveFactor: _scaleToRay(ilkData.reserveFactor, 18) });
-    }
-
-    /**
-     *
-     * @param collteralApy apy of the collateral (6 decimals)
-     * @param minimumProfitMargin minimum profit margin (18 decimals)
-     * @param optimalUtilizationRate kink of the curve (18 decimals)
-     * @param totalDebt against the collateral (27 decimals)
-     * @param totalEthSupply total eth supply of the system (18 decimals)
-     * @param distributionFactor collateral specific borrow cap (2 decimals)
-     * @return borrowRate borrow rate of the collateral (27 decimals)
-     */
-    function _calculateBorrowRate(
-        uint256 collteralApy,
-        uint80 minimumProfitMargin,
-        uint64 optimalUtilizationRate,
-        uint256 totalDebt,
-        uint256 totalEthSupply,
-        uint16 distributionFactor
-    )
-        internal
-        pure
-        returns (uint256 borrowRate)
-    {
         // TODO: Above kink rate borrow rate
-        uint256 distributionFactorRay = _scaleToRay(uint256(distributionFactor), 2);
-        uint256 collateralApyRay = _scaleToRay(collteralApy, 6);
-        uint256 minimumProfitMarginRay = _scaleToRay(uint256(minimumProfitMargin), 18);
-        uint256 optimalUtilizationRateRay = _scaleToRay(optimalUtilizationRate, 18);
+        uint256 distributionFactorRay = _scaleToRay(uint256(ilkData.distributionFactor), 2);
+        uint256 collateralApyRay = _scaleToRay(collateralApy, 6);
+        uint256 minimumProfitMarginRay = _scaleToRay(uint256(ilkData.minimumProfitMargin), 18);
+        uint256 optimalUtilizationRateRay = _scaleToRay(ilkData.optimalUtilizationRate, 18);
         totalEthSupply = _scaleToRay(totalEthSupply, 18);
 
         uint256 slope = (collateralApyRay - minimumProfitMarginRay).roundedRayDiv(optimalUtilizationRateRay);
 
-        uint256 utilizationRate = totalDebt.roundedRayDiv(totalEthSupply.roundedRayMul(distributionFactorRay));
+        uint256 utilizationRate =
+            totalEthSupply == 0 ? 0 : totalDebt.roundedRayDiv(totalEthSupply.roundedRayMul(distributionFactorRay));
 
         borrowRate = utilizationRate.roundedRayMul(slope) + RAY;
+
+        reserveFactor = ilkData.reserveFactor;
     }
 
     function _scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {

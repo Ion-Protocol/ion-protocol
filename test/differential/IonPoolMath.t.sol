@@ -3,7 +3,6 @@ pragma solidity 0.8.19;
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { InterestRate } from "../../src/InterestRate.sol";
@@ -35,7 +34,7 @@ contract IonPoolExposed is IonPool {
 /**
  * @dev Differential test of IonPool's math functions against the dss math functions
  */
-contract IonPoolMathDiffTest is BaseTestSetup {
+contract IonPool_MathDiffTest is BaseTestSetup {
     using SafeCast for uint256;
 
     IonPoolExposed ionPool;
@@ -69,8 +68,6 @@ contract IonPoolMathDiffTest is BaseTestSetup {
      * @dev Sub test
      */
     function testDifferential_sub(uint256 x, int256 y) external {
-        // Check if the
-        assert(ionPool.sub.address == address(ionPool));
         diffTest(this.subDss, ionPool.sub, x, y);
     }
 

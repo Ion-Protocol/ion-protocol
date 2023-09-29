@@ -1,124 +1,84 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
-import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
-import { IonPool } from "../../src/IonPool.sol";
-import { InterestRate, InterestRateData } from "../../src/InterestRate.sol";
-import { IApyOracle } from "../../src/interfaces/IApyOracle.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
+import { GemJoin } from "../../src/join/GemJoin.sol";
+import {IonPool} from "../../src/IonPool.sol";
+import {RAY} from "../../src/math/RoundedMath.sol";
 
-contract MockApyOracle is IApyOracle {
-    uint256 APY = 3.45e6;
+contract IonPoolTest is IonPoolSharedSetup {
+    function test_BasicLendAndWithdraw() external {
+        vm.startPrank(lender1);
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
 
-    function getAPY(uint256) external view returns (uint256) {
-        return APY;
-    }
-}
+        assertEq(ionPool.balanceOf(lender1), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(ionPool.totalSupply(), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(lender1), 0);
 
-contract IonPoolTest is BaseTestSetup {
-    IApyOracle apyOracle;
-    IonPool ionPool;
+        uint256 withdrawalAmount = INITIAL_LENDER_UNDERLYING_BALANCE / 2;
 
-    function setUp() public override {
-        super.setUp();
-        apyOracle = new MockApyOracle();
+        ionPool.withdraw(lender1, withdrawalAmount);
 
-        // ionPool = new IonPool(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), );
-    }
-
-    function testBasicLend() external { }
-}
-
-contract IonPoolBooleanTest is Test {
-    // Contract will use 128 bit types to avoid overflows
-
-    struct Ilk {
-        uint128 totalNormalizedDebt;
-        uint128 debtCeiling;
-        uint128 spot;
-        uint128 dust;
+        assertEq(ionPool.balanceOf(lender1), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
+        assertEq(ionPool.totalSupply(), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
+        assertEq(underlying.balanceOf(lender1), withdrawalAmount);
     }
 
-    struct Vault {
-        uint128 collateral;
-        uint128 normalizedDebt;
-    }
+    function test_BasicBorrowAndRepay() external {
+        uint8 stEthIndex = ilkIndexes[address(stEth)];
 
-    function testFuzz_FrobBoolean1(
-        int128 changeInNormalizedDebt,
-        uint128 ilkRate,
-        uint128 debt,
-        uint128 globalDebtCeiling,
-        Ilk memory ilk
-    )
-        external
-    {
-        assertEq(
-            either(
-                changeInNormalizedDebt <= 0,
-                both(uint256(ilk.totalNormalizedDebt) * uint256(ilkRate) <= ilk.debtCeiling, debt <= globalDebtCeiling)
-            ),
-            !both(
-                changeInNormalizedDebt > 0,
-                either(uint256(ilk.totalNormalizedDebt) * uint256(ilkRate) > ilk.debtCeiling, debt > globalDebtCeiling)
-            )
-        );
-    }
+        vm.startPrank(lender1);
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
 
-    function testFuzz_FrobBoolean2(
-        int128 changeInNormalizedDebt,
-        int128 changeInCollateral,
-        uint128 newDebtInVault,
-        Ilk memory ilk,
-        Vault memory vault
-    )
-        external
-    {
-        assertEq(
-            either(
-                both(changeInNormalizedDebt <= 0, changeInCollateral >= 0),
-                newDebtInVault <= uint256(vault.collateral) * uint256(ilk.spot)
-            ),
-            !both(
-                either(changeInNormalizedDebt > 0, changeInCollateral < 0), newDebtInVault > uint256(vault.collateral) * uint256(ilk.spot)
-            )
-        );
-    }
+        assertEq(ionPool.balanceOf(lender1), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(ionPool.totalSupply(), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(lender1), 0);
 
-    function testFuzz_FrobBoolean3(int128 changeInNormalizedDebt, int128 changeInCollateral, bool approved) external {
-        assertEq(
-            either(both(changeInNormalizedDebt <= 0, changeInCollateral >= 0), approved),
-            !both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !approved)
-        );
-    }
+        vm.stopPrank();
+        vm.startPrank(borrower1);
 
-    function testFuzz_FrobBoolean4(int128 changeInCollateral, bool approved) external {
-        assertEq(either(changeInCollateral <= 0, approved), !both(changeInCollateral > 0, !approved));
-    }
+        uint256 borrowAmount = 10e18;
+        GemJoin stEthJoin = gemJoins[stEthIndex];
+        collaterals[stEthIndex].approve(address(stEthJoin), type(uint256).max);
+        stEthJoin.join(borrower1, INITIAL_BORROWER_UNDERLYING_BALANCE);
 
-    function testFuzz_FrobBoolean5(int128 changeInNormalizedDebt, bool approved) external {
-        assertEq(either(changeInNormalizedDebt >= 0, approved), !both(changeInNormalizedDebt < 0, !approved));
-    }
+        assertEq(ionPool.gem(stEthIndex, borrower1), INITIAL_BORROWER_UNDERLYING_BALANCE);
+        assertEq(stEth.balanceOf(borrower1), 0);
+        assertEq(stEth.balanceOf(address(stEthJoin)), INITIAL_BORROWER_UNDERLYING_BALANCE);
 
-    function testFuzz_FrobBoolean6(uint256 newDebtInVault, Ilk memory ilk, Vault memory vault) external {
-        assertEq(
-            either(vault.normalizedDebt == 0, newDebtInVault >= ilk.dust),
-            !both(vault.normalizedDebt != 0, newDebtInVault < ilk.dust)
-        );
-    }
+        vm.expectRevert(IonPool.CeilingExceeded.selector);
+        ionPool.borrow(stEthIndex, debtCeilings[stEthIndex] / RAY + 1);  // [RAD] / [RAY] = [WAD]
+        ionPool.borrow(stEthIndex, borrowAmount);
 
-    function either(bool x, bool y) internal pure returns (bool z) {
-        assembly {
-            z := or(x, y)
-        }
-    }
+        assertEq(ionPool.gem(stEthIndex, borrower1), 0);
+        assertEq(underlying.balanceOf(borrower1), borrowAmount);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE - borrowAmount);
 
-    function both(bool x, bool y) internal pure returns (bool z) {
-        assembly {
-            z := and(x, y)
-        }
+        uint256 vaultCollateral = ionPool.collateral(stEthIndex, borrower1);
+        uint256 vaultNormalizedDebt = ionPool.normalizedDebt(stEthIndex, borrower1);
+
+        assertEq(vaultCollateral, INITIAL_BORROWER_UNDERLYING_BALANCE); 
+        assertEq(vaultNormalizedDebt, borrowAmount);
+        assertEq(ionPool.totalNormalizedDebt(stEthIndex), borrowAmount);
+
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.repay(stEthIndex, borrowAmount);
+
+        assertEq(ionPool.gem(stEthIndex, borrower1), 0);
+        assertEq(underlying.balanceOf(borrower1), 0);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        vaultCollateral = ionPool.collateral(stEthIndex, borrower1);
+        vaultNormalizedDebt = ionPool.normalizedDebt(stEthIndex, borrower1);
+
+        assertEq(vaultCollateral, INITIAL_BORROWER_UNDERLYING_BALANCE); 
+        assertEq(vaultNormalizedDebt, 0);
+        assertEq(ionPool.totalNormalizedDebt(stEthIndex), 0);
     }
 }
