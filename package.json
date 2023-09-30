@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPoolEchidna"
+  }
+}

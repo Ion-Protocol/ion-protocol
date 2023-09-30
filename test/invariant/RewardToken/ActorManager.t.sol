@@ -143,16 +143,13 @@ contract RewardTokenInvariantTest is RewardTokenSharedSetup {
     function setUp() public override {
         super.setUp();
 
-        for (uint256 i = 0; i < AMOUNT_USERS;) {
+        for (uint256 i = 0; i < AMOUNT_USERS; i++) {
             UserHandler user = new UserHandler(rewardToken, underlying);
             userHandlers.push(user);
             underlying.mint(address(user), USER_INITIAL_BALANCE);
 
             vm.prank(address(user));
             underlying.approve(address(rewardToken), type(uint256).max); // max approval
-            unchecked {
-                ++i;
-            }
         }
 
         supplyFactorIncreaseHandler = new SupplyFactorIncreaseHandler(rewardToken, underlying);
@@ -166,12 +163,9 @@ contract RewardTokenInvariantTest is RewardTokenSharedSetup {
     function invariant_userBalancesAlwaysAddToTotalSupply() external {
         // Accounting must be done in normalized fashion
         uint256 totalSupplyByBalances;
-        for (uint256 i = 0; i < userHandlers.length;) {
+        for (uint256 i = 0; i < userHandlers.length; i++) {
             UserHandler user = userHandlers[i];
             totalSupplyByBalances += rewardToken.normalizedBalanceOf(address(user));
-            unchecked {
-                ++i;
-            }
         }
 
         underlying.balanceOf(address(rewardToken)); // update underlying balance

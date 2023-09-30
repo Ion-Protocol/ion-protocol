@@ -1,0 +1,22 @@
+workers: 5
+
+testLimit: 5000
+
+solcArgs: "--optimize --optimize-runs 1000"
+
+cryticArgs: [
+    "--solc-remaps",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+    ds-test/=lib/forge-std/lib/ds-test/src/
+    forge-std/=lib/forge-std/src/
+    openzeppelin-contracts/=lib/openzeppelin-contracts/
+    openzeppelin/=lib/openzeppelin-contracts/contracts/",
+  ]
+
+prefix: "invariant_"
+
+corpusDir: echidna-corpus
+
+allContracts: false
+filterBlacklist: false
+filterFunctions: ["IonPoolEchidna.supply(uint256,uint256)"]

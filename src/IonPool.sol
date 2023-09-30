@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import { IIonPool } from "./interfaces/IIonPool.sol";
-import { Vat } from "./Vat.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -54,18 +53,18 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     }
 
     Ilk[] public ilks;
-    // Remove should never be called, it will mess up the ordering
+    // remove() should never be called, it will mess up the ordering
     EnumerableSet.AddressSet internal ilkAddresses;
 
     mapping(uint256 ilkIndex => mapping(address user => Vault)) public vaults;
     mapping(uint256 ilkIndex => mapping(address user => uint256)) public gem; // [wad]
     mapping(address => uint256) public weth; // [rad]
-    mapping(address => uint256) public sin; // [rad]
+    mapping(address => uint256) public unbackedDebt; // [rad]
 
     mapping(address => mapping(address => uint256)) public can;
 
     uint256 public debt; // Total Dai Issued    [rad]
-    uint256 public vice; // Total Unbacked Dai  [rad]
+    uint256 public totalUnbackedDebt; // Total Unbacked Dai  [rad]
     uint256 public globalDebtCeiling; // Total Debt Ceiling  [rad]
 
     InterestRate public interestRateModule;
@@ -229,7 +228,7 @@ contract IonPool is Pausable, AccessControl, RewardToken {
      * @param amt amount to borrow
      */
     function borrow(uint8 ilkIndex, uint256 amt) external {
-        uint256 normalizedAmount = amt.roundedRayDiv(ilks[ilkIndex].rate);  // [WAD] * [RAY] / [RAY] = [WAD]
+        uint256 normalizedAmount = amt.roundedRayDiv(ilks[ilkIndex].rate); // [WAD] * [RAY] / [RAY] = [WAD]
 
         // Moves all gem into the vault ink
         modifyPosition(
@@ -262,6 +261,10 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         underlying.safeTransfer(exitRecipient, amount);
     }
 
+    /**
+     * @notice To be used by borrowers to re-enter their debt into the system so
+     * that it can be paid off
+     */
     function joinBase(address wethRecipient, uint256 amount) public whenNotPaused {
         uint256 amountRay = amount * RAY;
         weth[wethRecipient] += amountRay;
@@ -314,17 +317,17 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         ) revert UnsafePositionChange();
 
         // vault is either more safe, or the owner consents
-        if (both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !wish(u, msg.sender))) {
+        if (both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !wish(u, _msgSender()))) {
             revert UnsafePositionChangeWithoutConsent();
         }
 
         // collateral src consents
-        if (both(changeInCollateral > 0, !wish(v, msg.sender))) {
+        if (both(changeInCollateral > 0, !wish(v, _msgSender()))) {
             revert UseOfCollateralWithoutConsent();
         }
 
         // debt dst consents
-        if (both(changeInNormalizedDebt < 0, !wish(w, msg.sender))) revert TakingWethWithoutConsent();
+        if (both(changeInNormalizedDebt < 0, !wish(w, _msgSender()))) revert TakingWethWithoutConsent();
 
         // vault has no debt, or a non-dusty amount
         if (both(vault.normalizedDebt != 0, newTotalDebtInVault < ilk.dust)) revert VaultCannotBeDusty();
@@ -363,8 +366,8 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         int256 changeInDebt = int256(uint256(ilkRate)) * changeInNormalizedDebt;
 
         gem[ilkIndex][v] = _sub(gem[ilkIndex][v], changeInCollateral);
-        sin[w] = _sub(sin[w], changeInDebt);
-        vice = _sub(vice, changeInDebt);
+        unbackedDebt[w] = _sub(unbackedDebt[w], changeInDebt);
+        totalUnbackedDebt = _sub(totalUnbackedDebt, changeInDebt);
     }
 
     // --- Fungibility ---
@@ -381,13 +384,13 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     }
 
     function transferGem(uint8 ilkIndex, address src, address dst, uint256 wad) external whenNotPaused {
-        require(wish(src, msg.sender), "Vat/not-allowed");
+        require(wish(src, _msgSender()), "Vat/not-allowed");
         gem[ilkIndex][src] -= wad;
         gem[ilkIndex][dst] += wad;
     }
 
     function move(address src, address dst, uint256 rad) external whenNotPaused {
-        require(wish(src, msg.sender), "Vat/not-allowed");
+        require(wish(src, _msgSender()), "Vat/not-allowed");
         weth[src] -= rad;
         weth[dst] += rad;
     }
@@ -399,10 +402,10 @@ contract IonPool is Pausable, AccessControl, RewardToken {
      * @param rad amount of debt to be repaid (45 decimals)
      */
     function repayBadDebt(uint256 rad) external whenNotPaused {
-        address u = msg.sender;
-        sin[u] -= rad;
+        address u = _msgSender();
+        unbackedDebt[u] -= rad;
         weth[u] -= rad;
-        vice -= rad;
+        totalUnbackedDebt -= rad;
         debt -= rad;
     }
 
@@ -452,6 +455,16 @@ contract IonPool is Pausable, AccessControl, RewardToken {
         return vaults[ilkIndex][user].normalizedDebt;
     }
 
+    function getCurrentBorrowRate(uint8 ilkIndex) public view returns (uint256 borrowRate, uint256 reserveFactor) {
+        uint256 totalEthSupply = totalSupply();
+        uint256 _totalNormalizedDebt = ilks[ilkIndex].totalNormalizedDebt;
+        uint256 _rate = ilks[ilkIndex].rate;
+
+        uint256 totalDebt = _totalNormalizedDebt.roundedWadMul(_rate); // [WAD] * [RAY] / [WAD] = [RAY]
+
+        (borrowRate, reserveFactor) = interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
+    }
+
     // --- Auth ---
 
     function hope(address usr) external {
@@ -459,7 +472,7 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     }
 
     function nope(address usr) external {
-        can[msg.sender][usr] = 0;
+        can[_msgSender()][usr] = 0;
     }
 
     function wish(address bit, address usr) internal view returns (bool) {
