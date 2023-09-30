@@ -9,6 +9,7 @@ remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
 optimizer_runs = 1000
+no_match_contract = "Echidna"
 
 [profile.default.fuzz]
 runs = 256

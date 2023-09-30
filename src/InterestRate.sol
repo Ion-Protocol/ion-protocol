@@ -156,7 +156,7 @@ contract InterestRate {
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
 
         // TODO: Validate input
-        uint256 collateralApy = apyOracle.getAPY(ilkIndex);
+        uint256 collateralApy = apyOracle.apys(ilkIndex);
 
         // TODO: Above kink rate borrow rate
         uint256 distributionFactorRay = _scaleToRay(uint256(ilkData.distributionFactor), 2);

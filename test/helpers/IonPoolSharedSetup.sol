@@ -5,11 +5,13 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
+import { IonHandler } from "../../src/periphery/IonHandler.sol";
 import { InterestRate, IlkData } from "../../src/InterestRate.sol";
 import { IApyOracle } from "../../src/interfaces/IApyOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
+import { RAY } from "../../src/math/RoundedMath.sol";
 
 // struct IlkData {
 //     uint80 minimumProfitMargin; // 18 decimals
@@ -19,9 +21,9 @@ import { GemJoin } from "../../src/join/GemJoin.sol";
 // }
 
 contract MockApyOracle is IApyOracle {
-    uint256 APY = 3.45e6;
+    uint32 APY = 3.45e6;
 
-    function getAPY(uint256) external view returns (uint256) {
+    function apys(uint256) external view returns (uint32) {
         return APY;
     }
 }
@@ -56,7 +58,6 @@ contract IonPoolSharedSetup is BaseTestSetup {
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_UNDERLYING_BALANCE = 100e18;
 
-    // Random collaterals
     ERC20PresetMinterPauser immutable stEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
     ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
@@ -85,7 +86,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
     uint16[] internal distributionFactors = [stEthDistributionFactor, swEthDistributionFactor, ethXDistributionFactor];
     uint256[] internal debtCeilings = [stEthDebtCeiling, swEthDebtCeiling, ethXDebtCeiling];
 
-    function setUp() public override {
+    function setUp() public virtual override {
         collaterals = [stEth, swEth, ethX];
         assert(
             collaterals.length == reserveFactors.length && reserveFactors.length == optimalUtilizationRates.length
@@ -130,14 +131,14 @@ contract IonPoolSharedSetup is BaseTestSetup {
             ionPool.init(address(collaterals[i]));
             ionPool.updateIlkConfig(i, SPOT, debtCeilings[i], 0);
             gemJoins.push(new GemJoin(ionPool, collaterals[i], i));
-            ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i])); 
+            ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
         }
 
         underlying.mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
         underlying.mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
     }
 
-    function test_setUp() external {
+    function test_setUp() external virtual {
         assertEq(address(ionPool.underlying()), address(underlying));
         assertEq(ionPool.treasury(), TREASURY);
         assertEq(ionPool.decimals(), DECIMALS);
@@ -146,7 +147,6 @@ contract IonPoolSharedSetup is BaseTestSetup {
         assertEq(ionPool.defaultAdmin(), address(this));
 
         assertEq(ionPool.ilkCount(), collaterals.length);
-
 
         uint256 addressesLength = ionPool.addressesLength();
         assertEq(addressesLength, collaterals.length);
@@ -167,6 +167,10 @@ contract IonPoolSharedSetup is BaseTestSetup {
             assertEq(ionPool.normalizedDebt(i, lender2), 0);
             assertEq(ionPool.normalizedDebt(i, borrower1), 0);
             assertEq(ionPool.normalizedDebt(i, borrower2), 0);
+
+            (uint256 borrowRate, uint256 reserveFactor) = ionPool.getCurrentBorrowRate(i);
+            assertEq(borrowRate, 1 * RAY);
+            assertEq(reserveFactor, reserveFactors[i]);
 
             assertEq(collaterals[i].balanceOf(address(ionPool)), 0);
             assertEq(collaterals[i].balanceOf(address(borrower1)), INITIAL_BORROWER_UNDERLYING_BALANCE);

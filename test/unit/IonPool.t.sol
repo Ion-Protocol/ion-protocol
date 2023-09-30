@@ -4,8 +4,8 @@ pragma solidity 0.8.19;
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
-import {IonPool} from "../../src/IonPool.sol";
-import {RAY} from "../../src/math/RoundedMath.sol";
+import { IonPool } from "../../src/IonPool.sol";
+import { RAY } from "../../src/math/RoundedMath.sol";
 
 contract IonPoolTest is IonPoolSharedSetup {
     function test_BasicLendAndWithdraw() external {
@@ -53,7 +53,7 @@ contract IonPoolTest is IonPoolSharedSetup {
         assertEq(stEth.balanceOf(address(stEthJoin)), INITIAL_BORROWER_UNDERLYING_BALANCE);
 
         vm.expectRevert(IonPool.CeilingExceeded.selector);
-        ionPool.borrow(stEthIndex, debtCeilings[stEthIndex] / RAY + 1);  // [RAD] / [RAY] = [WAD]
+        ionPool.borrow(stEthIndex, debtCeilings[stEthIndex] / RAY + 1); // [RAD] / [RAY] = [WAD]
         ionPool.borrow(stEthIndex, borrowAmount);
 
         assertEq(ionPool.gem(stEthIndex, borrower1), 0);
@@ -63,7 +63,7 @@ contract IonPoolTest is IonPoolSharedSetup {
         uint256 vaultCollateral = ionPool.collateral(stEthIndex, borrower1);
         uint256 vaultNormalizedDebt = ionPool.normalizedDebt(stEthIndex, borrower1);
 
-        assertEq(vaultCollateral, INITIAL_BORROWER_UNDERLYING_BALANCE); 
+        assertEq(vaultCollateral, INITIAL_BORROWER_UNDERLYING_BALANCE);
         assertEq(vaultNormalizedDebt, borrowAmount);
         assertEq(ionPool.totalNormalizedDebt(stEthIndex), borrowAmount);
 
@@ -77,8 +77,34 @@ contract IonPoolTest is IonPoolSharedSetup {
         vaultCollateral = ionPool.collateral(stEthIndex, borrower1);
         vaultNormalizedDebt = ionPool.normalizedDebt(stEthIndex, borrower1);
 
-        assertEq(vaultCollateral, INITIAL_BORROWER_UNDERLYING_BALANCE); 
+        assertEq(vaultCollateral, INITIAL_BORROWER_UNDERLYING_BALANCE);
         assertEq(vaultNormalizedDebt, 0);
         assertEq(ionPool.totalNormalizedDebt(stEthIndex), 0);
     }
 }
+
+contract IonPoolTestWithInterestChecks is IonPoolSharedSetup {
+    function test_basicLendAndWithdraw() external {
+        vm.startPrank(lender1);
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        assertEq(ionPool.balanceOf(lender1), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(ionPool.totalSupply(), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(lender1), 0);
+
+        uint256 withdrawalAmount = INITIAL_LENDER_UNDERLYING_BALANCE / 2;
+
+        ionPool.withdraw(lender1, withdrawalAmount);
+
+        assertEq(ionPool.balanceOf(lender1), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
+        assertEq(ionPool.totalSupply(), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
+        assertEq(underlying.balanceOf(lender1), withdrawalAmount);
+    }
+}
+
+contract IonPoolTestAdmin { }
+
+contract IonPoolTestPaused { }

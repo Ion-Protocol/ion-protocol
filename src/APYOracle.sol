@@ -76,8 +76,6 @@ contract ApyOracle is IApyOracle {
             uint32 newExchangeRate = _getExchangeRate(i);
             uint32 previousExchangeRate = previousExchangeRates[i];
 
-            console.log(block.number, block.timestamp, newExchangeRate);
-
             if (newExchangeRate == 0 || newExchangeRate < previousExchangeRate) revert InvalidExchangeRate(i);
 
             uint256 exchangeRateIncrease = uint256(newExchangeRate - previousExchangeRate).roundedDiv(
@@ -95,8 +93,6 @@ contract ApyOracle is IApyOracle {
                 ++i;
             }
         }
-
-        console.log("");
 
         // update Apy, history with new exchangeRates, and currentIndex
         currentIndex = (currentIndex + 1) % LOOK_BACK;

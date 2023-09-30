@@ -140,7 +140,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      */
     function _mint(address user, uint256 amount) internal {
         uint256 _supplyFactor = supplyFactor;
-        uint256 amountScaled = amount.roundedRayDiv(_supplyFactor);
+        uint256 amountScaled = amount.roundedRayDiv(_supplyFactor); // [WAD] * [RAY] / [RAY] = [WAD]
         if (amountScaled == 0) revert InvalidMintAmount();
         _mintNormalized(user, amountScaled);
 

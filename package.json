@@ -3,6 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
+    "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPoolEchidna",
     "ApyOracle:deployment:configure": "forge script script/DeployApyOracle.s.sol -s 'configureDeployment()' --ffi",
     "ApyOracle:deployment:deploy:testnet": "forge script script/DeployApyOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify",
     "ApyOracle:deployment:deploy:mainnet": "forge script script/DeployApyOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify"
