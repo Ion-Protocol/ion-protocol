@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import { Test } from "forge-std/Test.sol";
-import { ILidoWstETH, IStaderOracle, ISwellETH } from "../../src/interfaces/IProviderExchangeRate.sol";
 import { ApyOracle } from "../../src/ApyOracle.sol";
 import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -41,9 +40,6 @@ contract MockSwellzero {
 }
 
 contract ApyOracleTest is Test {
-    using RoundedMath for uint256;
-    using SafeCast for uint256;
-
     ApyOracle public oracle;
     uint256 public base;
     uint256 public firstRate;
