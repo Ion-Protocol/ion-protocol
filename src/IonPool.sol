@@ -342,7 +342,7 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     // --- CDP Confiscation ---
 
     // TODO: Implement liquidations
-    function grab(
+    function confiscateVault(
         uint8 ilkIndex,
         address u,
         address v,
@@ -400,10 +400,12 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     /**
      * @dev To be used by protocol to settle bad debt using reserves
      * @param rad amount of debt to be repaid (45 decimals)
+     * @param usr the usr address that owns the bad debt
+     * TODO: Allow a msg.sender to repay another address's unbackedDebt
      */
-    function repayBadDebt(uint256 rad) external whenNotPaused {
+    function repayBadDebt(uint256 rad, address usr) external whenNotPaused {
         address u = _msgSender();
-        unbackedDebt[u] -= rad;
+        unbackedDebt[usr] -= rad;
         weth[u] -= rad;
         totalUnbackedDebt -= rad;
         debt -= rad;
