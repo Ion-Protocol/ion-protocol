@@ -6,7 +6,7 @@ solc = "0.8.19"
 libs = ["lib"]
 verbosity = 3
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
-fs_permissions = [{ access = "read", path = "./"}]
+fs_permissions = [{ access = "read-write", path = "./"}]
 
 [profile.default.fuzz]
 runs = 256

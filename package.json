@@ -1,0 +1,17 @@
+{
+  "name": "offchain",
+  "module": "index.ts",
+  "type": "module",
+  "dependencies": {
+    "date-fns": "^2.30.0",
+    "ethers": "^6.7.1",
+    "viem": "^1.14.0",
+    "web3": "^4.1.2"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
