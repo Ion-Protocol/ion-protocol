@@ -1,22 +1,71 @@
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, stringToHex } from "viem";
 import { mainnet, goerli } from "viem/chains";
 import { format, subDays } from "date-fns";
 import { sleep } from "bun";
 
 const LOOK_BACK = 7;
 
+const CHAIN_ID = Bun.env.CHAIN_ID! as "1" | "5";
+const CHAIN = CHAIN_ID == "1" ? mainnet : goerli;
+const ETHERSCAN_URL =
+  CHAIN_ID! == "1"
+    ? Bun.env.MAINNET_ETHERSCAN_URL
+    : Bun.env.GOERLI_ETHERSCAN_URL;
+const RPC_URL =
+  CHAIN_ID == "1" ? Bun.env.MAINNET_RPC_URL : Bun.env.GOERLI_RPC_URL;
+
+const exchangeRateAddresses = {
+  lido: {
+    "1": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+    "5": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
+  },
+  stader: {
+    "1": "0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737",
+    "5": "0x22F8E700ff3912f3Caba5e039F6dfF1a24390E80",
+  },
+  swell: {
+    "1": "0xf951E335afb289353dc249e82926178EaC7DEd78",
+    "5": "0x8bb383A752Ff3c1d510625C6F536E3332327068F",
+  },
+};
+
 async function main() {
   // Set up RPC provider
-  const transport = http(`${Bun.env.RPC_URL}`);
+  const transport = http(`${RPC_URL}`);
 
   const client = createPublicClient({
     transport,
-    chain: Bun.env.CHAIN_ID! == "1" ? mainnet : goerli,
+    chain: CHAIN,
   });
+
+  const getBlockDataFromTimestamp = async (timestamp: number) => {
+    // Get around rate limit
+    await sleep(200);
+    const etherscanApiUrl = `${ETHERSCAN_URL}?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${Bun.env.ETHERSCAN_API_KEY}`;
+
+    const blockResult = await fetch(etherscanApiUrl);
+
+    let blockNumber;
+    let blockTimestamp;
+    const blockRes = await blockResult.json();
+    if (blockRes.status == "1") {
+      blockNumber = blockRes.result;
+      blockTimestamp = (await client.getBlock({ blockNumber })).timestamp;
+    } else {
+      const newestBlock = await client.getBlock();
+      blockNumber = newestBlock.number.toString();
+      blockTimestamp = newestBlock.timestamp;
+    }
+
+    return {
+      timestamp: blockTimestamp,
+      blockNumber,
+    };
+  };
 
   const exchangeRateContracts = {
     lido: {
-      address: "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
+      address: exchangeRateAddresses.lido[CHAIN_ID],
       abi: [
         {
           inputs: [],
@@ -28,7 +77,7 @@ async function main() {
       ],
     },
     stader: {
-      address: "0x22F8E700ff3912f3Caba5e039F6dfF1a24390E80",
+      address: exchangeRateAddresses.stader[CHAIN_ID],
       abi: [
         {
           inputs: [],
@@ -56,7 +105,7 @@ async function main() {
       ],
     },
     swell: {
-      address: "0x8bb383A752Ff3c1d510625C6F536E3332327068F",
+      address: exchangeRateAddresses.swell[CHAIN_ID],
       abi: [
         {
           inputs: [],
@@ -69,8 +118,17 @@ async function main() {
     },
   };
 
+  // If a third argument "x" is passed, run this scripts as if the current date
+  // was "x" days ago. This will allow for historic simulations
+  const warpDaysAmount = process.argv[2];
+
+  const timeNow = new Date();
+
   // Set the current date and time in UTC
-  const currentDateUTC = new Date();
+  let currentDateUTC = timeNow;
+  if (warpDaysAmount) {
+    currentDateUTC = subDays(currentDateUTC, Number(warpDaysAmount));
+  }
 
   // Get the current hour in UTC
   const currentHourUTC = currentDateUTC.getUTCHours();
@@ -91,6 +149,7 @@ async function main() {
 
   const timestampInSeconds = Math.floor(recentDateUTC.getTime() / 1000);
 
+  // We add one to get the next day's data as well.
   const relevantTimestamps = Array.from(
     { length: LOOK_BACK },
     (_, i) => timestampInSeconds - i * 86400
@@ -98,20 +157,9 @@ async function main() {
 
   const closestBlockData = [];
   for (let i = 0; i < relevantTimestamps.length; i++) {
-    const etherscanApiUrl = `${Bun.env.ETHERSCAN_URL}?module=block&action=getblocknobytime&timestamp=${relevantTimestamps[i]}&closest=before&apikey=${Bun.env.ETHERSCAN_API_KEY}`;
-
     let blockData;
     try {
-      // Get around rate limit
-      await sleep(200);
-      const blockResult = await fetch(etherscanApiUrl);
-      const blockNumber = (await blockResult.json()).result;
-      const blockTimestamp = (await client.getBlock({ blockNumber })).timestamp;
-
-      blockData = {
-        blockNumber,
-        timestamp: Number(blockTimestamp),
-      };
+      blockData = await getBlockDataFromTimestamp(relevantTimestamps[i]);
     } catch (err) {
       console.error("Etherscan fetch error:", err);
     }
@@ -128,7 +176,7 @@ async function main() {
 
     const exchangeRateData = await Promise.all(
       //@ts-ignore
-      closestBlockData.map(async ({ timestamp, blockNumber }) => {
+      closestBlockData.map(async ({ blockNumber }) => {
         let returnData = await client.readContract({
           address: address as `0x${string}`,
           abi,
@@ -161,7 +209,7 @@ async function main() {
     ({ timestamp, blockNumber }) => {
       return {
         humanTimestamp: format(
-          new Date(timestamp * 1000),
+          new Date(Number(timestamp) * 1000),
           "yyyy-MM-dd HH:mm:ss"
         ),
         timestamp,
@@ -171,6 +219,28 @@ async function main() {
   );
 
   historicalExchangeRates["dailyBlockData"] = formattedBlockData;
+
+  // If a warp simulation is being,
+  if (warpDaysAmount) {
+    let currentTimestamp = timestampInSeconds + 86400;
+    historicalExchangeRates["nextDaysBlockData"] = {};
+    historicalExchangeRates["nextDaysBlockData"]["blockNumbers"] = [];
+    historicalExchangeRates["nextDaysBlockData"]["timestamps"] = [];
+
+    while (currentTimestamp < Math.floor(timeNow.getTime() / 1000)) {
+      const { blockNumber: nextDayBlockNumber, timestamp: nextDayTimestamp } =
+        await getBlockDataFromTimestamp(currentTimestamp);
+
+      historicalExchangeRates["nextDaysBlockData"]["blockNumbers"].push(
+        nextDayBlockNumber
+      );
+      historicalExchangeRates["nextDaysBlockData"]["timestamps"].push(
+        nextDayTimestamp
+      );
+
+      currentTimestamp += 86400;
+    }
+  }
 
   console.log(
     JSON.stringify(historicalExchangeRates, (_, v) =>

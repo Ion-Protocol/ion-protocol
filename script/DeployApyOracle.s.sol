@@ -16,9 +16,9 @@ contract DeployApyOracleScript is Script {
     string configPath = "./deployment-config/ApyOracle.json";
     string config = vm.readFile(configPath);
 
-    function run() public {
-        uint256 scale = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
+    uint256 internal constant SCALE = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
 
+    function run() public returns (ApyOracle apyOracle) {
         string[] memory configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
         assert(configKeys.length == ILK_COUNT);
 
@@ -26,23 +26,25 @@ contract DeployApyOracleScript is Script {
         uint256[] memory staderRates = vm.parseJsonUintArray(config, ".exchangeRateData.stader.historicalExchangeRates");
         uint256[] memory swellRates = vm.parseJsonUintArray(config, ".exchangeRateData.swell.historicalExchangeRates");
 
-        uint32[ILK_COUNT][LOOK_BACK] memory historicalExchangeRates;
-
         address lidoExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.lido.address");
         address staderExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.stader.address");
         address swellExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.swell.address");
 
+        uint32[ILK_COUNT][LOOK_BACK] memory historicalExchangeRates;
+
         for (uint256 i = 0; i < LOOK_BACK; i++) {
-            uint32 lidoEr = (lidoRates[i] / scale).toUint32();
-            uint32 staderEr = (staderRates[i] / scale).toUint32();
-            uint32 swellEr = (swellRates[i] / scale).toUint32();
+            uint32 lidoEr = (lidoRates[i] / SCALE).toUint32();
+            uint32 staderEr = (staderRates[i] / SCALE).toUint32();
+            uint32 swellEr = (swellRates[i] / SCALE).toUint32();
 
             uint32[ILK_COUNT] memory exchangesRates = [lidoEr, staderEr, swellEr];
 
             historicalExchangeRates[i] = exchangesRates;
         }
+
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        ApyOracle oracle = new ApyOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
+        apyOracle =
+        new ApyOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
         vm.stopBroadcast();
     }
 

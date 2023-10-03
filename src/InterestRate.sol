@@ -12,7 +12,7 @@ struct IlkData {
 // forgefmt: disable-start
 
 //                                                      256         208              144             80                   0
-//                                                       |   empty   |    opt_util    |  reserve_fac |  min_profit_margin |
+//                                                       |   empty   |    opt_util    | reserve_fact |  min_profit_margin |
 //                                                       |           |                |              |                    |
 
 // 2 ** 80 - 1
