@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import { Script, console2 } from "forge-std/Script.sol";
+import { BaseScript } from "./Base.s.sol";
+import { console2 } from "forge-std/Script.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { ApyOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "src/APYOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { RoundedMath } from "src/math/RoundedMath.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-contract DeployApyOracleScript is Script {
+contract DeployApyOracleScript is BaseScript {
     using RoundedMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
@@ -18,7 +19,7 @@ contract DeployApyOracleScript is Script {
 
     uint256 internal constant SCALE = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
 
-    function run() public returns (ApyOracle apyOracle) {
+    function run() public broadcast returns (ApyOracle apyOracle) {
         string[] memory configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
         assert(configKeys.length == ILK_COUNT);
 
@@ -42,10 +43,8 @@ contract DeployApyOracleScript is Script {
             historicalExchangeRates[i] = exchangesRates;
         }
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         apyOracle =
         new ApyOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
-        vm.stopBroadcast();
     }
 
     function configureDeployment() external {
