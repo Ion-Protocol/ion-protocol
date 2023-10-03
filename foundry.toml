@@ -6,6 +6,7 @@ solc = "0.8.19"
 libs = ["lib"]
 verbosity = 3
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+fs_permissions = [{ access = "read-write", path = "./"}]
 
 [profile.default.fuzz]
 runs = 256
@@ -25,5 +26,8 @@ number_underscore = "thousands"
 quote_style = "double"
 tab_width = 4
 wrap_comments = true
+
+[rpc_endpoints]
+goerli = "${GOERLI_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
