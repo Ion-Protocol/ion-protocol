@@ -8,8 +8,14 @@ coverage/
 /broadcast/*/31337/
 /broadcast/**/dry-run/
 
-# Docs
-docs/
+# Dependency directories
 
-# Dotenv file
+node_modules/
+
+# dotenv environment variable files
+
 .env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local

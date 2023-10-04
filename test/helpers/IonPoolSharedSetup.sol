@@ -21,9 +21,9 @@ import { RAY } from "../../src/math/RoundedMath.sol";
 // }
 
 contract MockApyOracle is IApyOracle {
-    uint256 APY = 3.45e6;
+    uint32 APY = 3.45e6;
 
-    function getAPY(uint256) external view returns (uint256) {
+    function apys(uint256) external view returns (uint32) {
         return APY;
     }
 }
