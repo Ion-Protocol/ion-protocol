@@ -1,96 +1,110 @@
 pragma solidity ^0.8.13;
 
 import {IonPool} from "src//IonPool.sol"; 
+import { RoundedMath, WAD, RAY } from "../src/math/RoundedMath.sol"; 
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 
 // TODO: import instead when ReserveOracle is finished
 interface IReserveOracle {
-    function getExchangeRate(uint ilkId) external view returns (uint256 exchangeRate); 
+    function getExchangeRate(uint ilkIndex) external view returns (uint256 exchangeRate); 
 }
 
+// DEPLOY PARAMETERS
+// NOTE: Needs to be configured on each deployment along with constructor parameters
+uint32 constant ILK_COUNT = 8; 
+uint256 constant TARGET_HEALTH = 125 * WAD / 100; // 1.25 [wad]
+uint256 constant RESERVE_FACTOR = 2 * WAD / 100; // 0.02 [wad]
+uint256 constant MAX_DISCOUNT = 2 * WAD / 10; // 0.20 [wad]
+
 contract Liquidation is Pausable {  
+
+    using RoundedMath for uint256;
 
     error LiquidationThresholdCannotBeZero(uint256 liquidationThreshold); 
     error ExchangeRateCannotBeZero(uint256 exchangeRate); 
     error VaultIsNotUnsafe(uint256 healthRatio); 
 
-    // --- Math ---
-
-    uint256 constant RAY = 10 ** 27;
-    uint256 constant WAD = 10 ** 18;
-
     // --- parameters ---
 
-    // pack global variables into uint256?
-    uint64 public immutable targetHealth; // uint64 [wad] 
-    uint64 public immutable reserveFactor; // uint64 [wad]
-    uint64 public immutable maxDiscount; // uint64 [wad] 
-
     // ilk specific variable
-    uint64[] public immutable liquidationThresholds; // [wad] indexed by ilkId
+    uint64[ILK_COUNT] public liquidationThresholds; // [wad] indexed by ilkIndex
 
     address public immutable revenueRecipient; 
     
     IonPool public immutable ionPool;
     IReserveOracle public immutable reserveOracle; 
 
-    struct TakeArgs {
+    struct LiquidateArgs {
         uint256 repay;
         uint256 gemOut;
         uint256 dart;
+        uint256 fee; 
     }
 
     // --- Events ---
-    event Take(address kpr, uint256 indexed repay, uint256 indexed gemOutLessFee, uint256 fee);
+    event Liquidate(address kpr, uint256 indexed repay, uint256 indexed gemOutLessFee, uint256 fee);
 
-    constructor(address _ionPool, address _reserveOracle, address _revenueRecipient) {
+    constructor(address _ionPool, address _reserveOracle, address _revenueRecipient, uint64[ILK_COUNT] memory _liquidationThresholds) {
         ionPool = IonPool(_ionPool);
         reserveOracle = IReserveOracle(_reserveOracle); 
         revenueRecipient = _revenueRecipient;
-
-        // initial parameters
-        targetHealth = 125 * WAD / 100; // 1.25 [wad]
-        reserveFactor = 2 * WAD / 100; // 0.02 [wad]
-        maxDiscount = 2 * WAD / 10; // 0.20 [wad]
+        liquidationThresholds = _liquidationThresholds; 
     }
 
-    function _getRepayAmt(uint256 discount, uint256 tab, uint256 ink, uint256 spot, uint256 mat, uint256 dust)
+    function _scaleToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return value * (10 ** 18) / (10 ** scale);
+    }
+    
+    function _scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return value * (10 ** 27) / (10 ** scale);
+    }
+
+    function _scaleToRad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return value * (10 ** 45) / (10 ** scale); 
+    }
+
+    /**
+     * @dev internal helper function for liquidation math. Final repay amount 
+     * NOTE: find better way to handle precision 
+     * @param totalDebt [rad] this needs to be rad since repay can be set to totalDebt 
+     * @param dust [rad]
+     * @param collateral [wad] 
+     * @param exchangeRate [wad] 
+     * @param liquidationThreshold [wad]
+     * @param discount [wad] 
+     * @return repay [rad] 
+     * @return gemOut [wad] 
+     */
+    function _getRepayAmt(uint256 totalDebt, uint256 dust, uint256 collateral, uint256 exchangeRate, uint256 liquidationThreshold, uint256 discount)
         internal
         view
         returns (uint256 repay, uint256 gemOut)
     {
-        {
-            // [wad] * [ray] / RAY * [ray] = [rad]
-            // [wad] * [ray] / RAY * [ray] = [rad]
-            // [rad] - [rad] = [rad]
-            uint256 repayNum = (tab / RAY * targetHealth - ink * spot / RAY * mat); // [rad]
-            uint256 repayDen = targetHealth - (mat * RAY / (RAY - discount)); // [ray] - ([ray] * [ray] / [ray]) = [ray]
-            repay = repayNum / repayDen * RAY; // [rad] / [ray] * RAY = [rad]
+        // repayNum = (targetHealth * totalDebt - collateral * exchangeRate * liquidationThreshold)
+        // [wad] * _scaleToRay([wad]) -  [wad] * [wad] * [wad]
+        // repayDen = (targetHealth - (liquidationThreshold / (1 - discount)))
+        // [wad] - ([wad] / (1 - [wad]))
+        uint256 repayNum = TARGET_HEALTH.roundedWadMul(_scaleToRay(totalDebt, 45)) - collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold); // [wad] 
+        uint256 repayDen = TARGET_HEALTH - liquidationThreshold.roundedWadDiv((WAD - discount)); // [wad] 
+        repay = _scaleToRad(repayNum.roundedWadDiv(repayDen), 18); // [rad] 
 
-            // first branch: full liquidation
-            //   more debt needs to be paid off than available to go back to target health,
-            //   so all collateral is sold off and the alleth repay amount is readjusted
-            // second branch: resulting debt below dust
-            //   there is enough collateral to cover the debt and go back to target health,
-            //   but it would leave a debt amount less than dust. So just pay off all dust
-            //   and readjust the collateral
-            // third branch: soft liquidation to target health ratio
-
-            if (repay > tab) {
-                gemOut = ink; // [wad] sell all collateral
-                // RAY * RAY / RAY * WAD = RAD
-                repay = (RAY - discount) * spot / RAY * gemOut; // [wad] * [ray] / RAY * [ray] = [rad]
-            } else if (tab - repay < dust) {
-                repay = tab;
-                // gemOut = allETH / (ETH / LST)
-                // gemOut = repay (allETH amount) / discounted price
-                //        = repay / (spot * (1 - discount))
-                //        = [rad] / ([ray] * [ray] / RAY) = [wad]
-                gemOut = repay / (spot * (RAY - discount) / RAY);
-            } else {
-                // repay stays same
-                gemOut = repay / (spot * (RAY - discount) / RAY);
-            }
+        // first branch: full liquidation
+        //   more debt needs to be paid off than available to go back to target health,
+        //   so all collateral is sold off and the alleth repay amount is readjusted
+        // second branch: resulting debt below dust
+        //   there is enough collateral to cover the debt and go back to target health,
+        //   but it would leave a debt amount less than dust. So just pay off all dust
+        //   and readjust the collateral
+        // third branch: soft liquidation to target health ratio
+        if (repay > totalDebt) {
+            gemOut = collateral; // [wad] sell all collateral
+            repay = _scaleToRad(exchangeRate.roundedWadMul(WAD - discount).roundedWadMul(gemOut), 18); // [rad] readjust repay amount  
+        } else if (totalDebt - repay < dust) {
+            repay = totalDebt; // [rad] pay off all debt 
+            gemOut = _scaleToWad(repay, 45).roundedWadDiv(exchangeRate.roundedWadMul(WAD - discount)); // [wad] readjust collateral to sell
+        } else {
+            // repay stays same 
+            gemOut = _scaleToWad(repay, 45).roundedWadDiv(exchangeRate.roundedWadMul(WAD - discount)); // [wad] readjust collateral to sell
         }
     }
 
@@ -100,7 +114,7 @@ contract Liquidation is Pausable {
      *       and approved liq to move its alleth.
      */
     function liquidate(
-        uint ilkId,
+        uint8 ilkIndex,
         address vault, // urn to be liquidated
         address kpr // receiver of collateral
     ) external {
@@ -110,10 +124,10 @@ contract Liquidation is Pausable {
         LiquidateArgs memory liquidateArgs;
 
         // needs ink art rate 
-        (uint256 collateral, uint256 normalizedDebt) = ionPool.vaults(ilkId, vault);
-        (, uint104 rate, , , , uint256 dust) = ionPool.ilks(ilkId); // less reads? 
-        uint64 liquidationThreshold = liquidationThresholds[ilkId]; // []
-        uint64 exchangeRate = reserveOracle.getExchangeRate(ilkId); // [ray] 
+        (uint256 collateral, uint256 normalizedDebt) = ionPool.vaults(ilkIndex, vault);
+        (, uint104 rate, , , , uint256 dust) = ionPool.ilks(ilkIndex); // less reads? 
+        uint256 liquidationThreshold = liquidationThresholds[ilkIndex]; // []
+        uint256 exchangeRate = reserveOracle.getExchangeRate(ilkIndex); // [ray] 
         
         if (exchangeRate == 0) {
             revert ExchangeRateCannotBeZero(exchangeRate); 
@@ -127,29 +141,32 @@ contract Liquidation is Pausable {
          * [wad] * [ray] * [ray] / ([wad] * [ray]) = [ray]
          */
         
-        uint256 healthRatio = exchangeRate * liquidationThreshold / normalizedDebt * collateral / rate; 
-        
-        if (healthRatio < HEALTH_RATIO_ONE) {
+        // healthScore = collateral * exchangeRate * liquidationThreshold / (normalized Debt * rate)
+        //             = [wad] * [wad] * [wad] / ([wad] * [ray])   
+        // the rate gets scaled to [wad] and the healthScore output should be in [wad] 
+        uint256 healthRatio = collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold); // [wad] * [wad] * [wad] = [wad] 
+        healthRatio = healthRatio.roundedWadDiv(normalizedDebt).roundedWadDiv(_scaleToWad(rate, 27)); // [wad] / [wad] / [wad] = [wad] 
+
+        if (healthRatio < WAD) {
             revert VaultIsNotUnsafe(healthRatio); 
         }
 
-        uint256 discount = reserveFactor + (HEALTH_RATIO_ONE - healthRatio); // [ray] + ([ray] - [ray])
-        discount = discount <= maxDiscount ? discount : maxDiscount; // cap discount to maxDiscount
+        uint256 discount = RESERVE_FACTOR + (WAD - healthRatio); // [ray] + ([ray] - [ray])
+        discount = discount <= MAX_DISCOUNT ? discount : MAX_DISCOUNT; // cap discount to maxDiscount
 
-        // [rad] [wad]
         (liquidateArgs.repay, liquidateArgs.gemOut) = _getRepayAmt(discount, normalizedDebt * rate, collateral, exchangeRate, liquidationThreshold, dust);
         
         liquidateArgs.dart = liquidateArgs.gemOut >= collateral ? normalizedDebt : liquidateArgs.repay / rate; // normalize the repay amount by rate to get the actual dart to frob
 
-        uint256 fee = liquidateArgs.gemOut * reserveFactor / RAY; // [wad] * [ray] / [ray] = [wad]
+        liquidateArgs.fee = liquidateArgs.gemOut * RESERVE_FACTOR / RAY; // [wad] * [ray] / [ray] = [wad]
 
         // --- Storage Updates ---
 
         // move weth from kpr to liq
-        vat.move(kpr, address(this), liquidateArgs.repay);
+        ionPool.move(kpr, address(this), liquidateArgs.repay);
 
         // confiscate part of the urn
-        //  1. move art into liq's sin (unbacked debt) TODO: move into vow's sin 
+        //  1. move art into liq's sin (unbacked debt) 
         //  2. move ink into liq's gem (unlocked collateral)
         //  NOTE: if all collateral is sold (gemOut == ink), then (dart = art)
         //        this confiscates all debt. What doesn't get paid off by liquidation gets passed to the vow.
@@ -161,15 +178,15 @@ contract Liquidation is Pausable {
         ionPool.confiscateVault(ilkIndex, vault, address(this), address(this), -int256(liquidateArgs.gemOut), -int256(liquidateArgs.dart));
 
         // give the unlocked collateral minus the fee to the kpr
-        ionPool.transferGem(ilkIndex, address(this), kpr, liquidateArgs.gemOut - fee); 
+        ionPool.transferGem(ilkIndex, address(this), kpr, liquidateArgs.gemOut - liquidateArgs.fee); 
 
         // reserve fee: give the fee in collateral to the revenueRecipient
-        ionPool.transferGem(ilkIndex, address(this), revenueRecipient, fee);
+        ionPool.transferGem(ilkIndex, address(this), revenueRecipient, liquidateArgs.fee);
 
         // payback liquidation's unbacked debt with weth
         // if all collateral was sold and debt remains, this contract keeps the sin
         ionPool.repayBadDebt(liquidateArgs.repay, address(this)); 
 
-        emit Liquidate(kpr, liquidateArgs.repay, liquidateArgs.gemOut - fee, fee);
+        emit Liquidate(kpr, liquidateArgs.repay, liquidateArgs.gemOut - liquidateArgs.fee, liquidateArgs.fee);
     }
 }
