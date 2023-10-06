@@ -8,7 +8,7 @@ import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
 import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract RewardTokenUnitTest is RewardTokenSharedSetup {
+contract RewardToken_UnitTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
     uint256 internal constant INITIAL_UNDERYLING = 1000e18;

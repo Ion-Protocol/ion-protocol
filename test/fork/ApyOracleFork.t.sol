@@ -35,7 +35,7 @@ contract ApyOracleExposed is ApyOracle {
     }
 }
 
-contract ApyOracleForkTest is Test {
+contract ApyOracle_ForkTest is Test {
     using RoundedMath for uint256;
     using SafeCast for uint256;
     using Strings for *;

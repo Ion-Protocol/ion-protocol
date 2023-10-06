@@ -7,7 +7,7 @@ import { GemJoin } from "../../src/join/GemJoin.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { RAY } from "../../src/math/RoundedMath.sol";
 
-contract IonPoolTest is IonPoolSharedSetup {
+contract IonPool_UnitTest is IonPoolSharedSetup {
     function test_BasicLendAndWithdraw() external {
         vm.startPrank(lender1);
         underlying.approve(address(ionPool), type(uint256).max);
@@ -82,29 +82,8 @@ contract IonPoolTest is IonPoolSharedSetup {
         assertEq(ionPool.totalNormalizedDebt(stEthIndex), 0);
     }
 }
-
-contract IonPoolTestWithInterestChecks is IonPoolSharedSetup {
-    function test_basicLendAndWithdraw() external {
-        vm.startPrank(lender1);
-        underlying.approve(address(ionPool), type(uint256).max);
-        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-
-        assertEq(ionPool.balanceOf(lender1), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(ionPool.totalSupply(), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(underlying.balanceOf(lender1), 0);
-
-        uint256 withdrawalAmount = INITIAL_LENDER_UNDERLYING_BALANCE / 2;
-
-        ionPool.withdraw(lender1, withdrawalAmount);
-
-        assertEq(ionPool.balanceOf(lender1), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
-        assertEq(ionPool.totalSupply(), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
-        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE - withdrawalAmount);
-        assertEq(underlying.balanceOf(lender1), withdrawalAmount);
-    }
+contract IonPool_TestAdmin is IonPoolSharedSetup {
 }
 
-contract IonPoolTestAdmin { }
-
-contract IonPoolTestPaused { }
+contract IonPool_TestPaused is IonPoolSharedSetup { 
+}

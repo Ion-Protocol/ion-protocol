@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import { Test } from "forge-std/Test.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract IonPoolFrobBooleanTest is Test {
+contract IonPool_FrobBooleanTest is Test {
     // Contract will use 128 bit types to avoid overflows
     using SafeCast for uint256;
 

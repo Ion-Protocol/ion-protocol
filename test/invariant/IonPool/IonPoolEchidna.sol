@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import { IonPoolInvariantTest } from "./ActorManager.t.sol";
+import { IonPool_InvariantTest } from "./ActorManager.t.sol";
 
-contract IonPoolEchidna is IonPoolInvariantTest {
+contract IonPool_Echidna is IonPool_InvariantTest {
     constructor() {
         setUp();
     }

@@ -13,7 +13,7 @@ import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-contract ApyOracleTest is ApyOracleSharedSetup {
+contract ApyOracle_UnitTest is ApyOracleSharedSetup {
     function test_UpdatingWithChangingExchangeRates() external {
         uint256 increaseInExchangeRate = 0.072935829352e18;
         uint256 amountOfUpdatesToTest = 10;

@@ -9,7 +9,9 @@ import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract RewardTokenFuzzTest is RewardTokenSharedSetup {
+contract RewardToken_FuzzRoundingErrorTest is RewardTokenSharedSetup {
+}
+contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
     function testFuzz_mintRewardTokenBasic(uint256 amountOfRewardTokens) external {

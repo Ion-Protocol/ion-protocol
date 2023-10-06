@@ -130,7 +130,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
  * contract's underlying balance since the last time `supplyFactor` was
  * increased.
  */
-contract RewardTokenInvariantTest is RewardTokenSharedSetup {
+contract RewardToken_InvariantTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
     ActorManager public actorManager;
