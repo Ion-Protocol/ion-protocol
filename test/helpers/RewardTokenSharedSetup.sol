@@ -5,7 +5,7 @@ import { RewardToken } from "../../src/token/RewardToken.sol";
 import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 
-contract RewardTokenExternal is RewardToken {
+abstract contract RewardTokenExternal is RewardToken {
     constructor(
         address _underlying,
         address _treasury,

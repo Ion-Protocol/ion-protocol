@@ -36,7 +36,7 @@ contract InterestRateExposed is InterestRate {
     }
 }
 
-contract IonPoolSharedSetup is BaseTestSetup {
+abstract contract IonPoolSharedSetup is BaseTestSetup {
     IonPool ionPool;
 
     InterestRateExposed interestRateModule;

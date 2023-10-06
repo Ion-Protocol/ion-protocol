@@ -46,7 +46,7 @@ contract MockSwell is ISwellEth {
     }
 }
 
-contract ApyOracleSharedSetup is Test {
+abstract contract ApyOracleSharedSetup is Test {
     ApyOracle public oracle;
 
     uint32 internal constant baseRate = 1e6;
