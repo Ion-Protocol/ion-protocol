@@ -352,7 +352,6 @@ contract IonPool is Pausable, AccessControl, RewardToken {
     )
         external
         onlyRole(LIQUIDATOR_ROLE)
-        whenNotPaused
     {
         Vault storage vault = vaults[ilkIndex][u];
         Ilk storage ilk = ilks[ilkIndex];

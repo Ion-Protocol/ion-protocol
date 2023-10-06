@@ -1,8 +1,9 @@
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import {IonPool} from "src//IonPool.sol"; 
 import { RoundedMath, WAD, RAY } from "../src/math/RoundedMath.sol"; 
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
+import "forge-std/console.sol";
 
 // TODO: import instead when ReserveOracle is finished
 interface IReserveOracle {
@@ -126,6 +127,10 @@ contract Liquidation is Pausable {
         // needs ink art rate 
         (uint256 collateral, uint256 normalizedDebt) = ionPool.vaults(ilkIndex, vault);
         (, uint104 rate, , , , uint256 dust) = ionPool.ilks(ilkIndex); // less reads? 
+       
+        console.log("liqThres 0: ", liquidationThresholds[0]); 
+        console.log("liqThres 1: ", liquidationThresholds[1]); 
+        console.log("liqThres 2: ", liquidationThresholds[2]); 
         uint256 liquidationThreshold = liquidationThresholds[ilkIndex]; // []
         uint256 exchangeRate = reserveOracle.getExchangeRate(ilkIndex); // [ray] 
         
@@ -144,10 +149,15 @@ contract Liquidation is Pausable {
         // healthScore = collateral * exchangeRate * liquidationThreshold / (normalized Debt * rate)
         //             = [wad] * [wad] * [wad] / ([wad] * [ray])   
         // the rate gets scaled to [wad] and the healthScore output should be in [wad] 
+        console.log("collateral: ", collateral); 
+        console.log("exchangeRate: ", exchangeRate); 
+        console.log("liquidationThreshold: ", liquidationThreshold); 
+        console.log("collateral * exchangeRate: ", collateral.roundedWadMul(exchangeRate)); 
+        console.log("collateral * exchangeRate * liquidationThreshold: ", collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold));
         uint256 healthRatio = collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold); // [wad] * [wad] * [wad] = [wad] 
         healthRatio = healthRatio.roundedWadDiv(normalizedDebt).roundedWadDiv(_scaleToWad(rate, 27)); // [wad] / [wad] / [wad] = [wad] 
 
-        if (healthRatio < WAD) {
+        if (healthRatio >= WAD) {
             revert VaultIsNotUnsafe(healthRatio); 
         }
 
