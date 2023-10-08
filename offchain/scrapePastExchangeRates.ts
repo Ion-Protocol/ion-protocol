@@ -1,18 +1,19 @@
-import { createPublicClient, http, stringToHex } from "viem";
+import { createPublicClient, http } from "viem";
 import { mainnet, goerli } from "viem/chains";
 import { format, subDays } from "date-fns";
-import { sleep } from "bun";
+import dotenv from "dotenv";
+dotenv.config();
 
 const LOOK_BACK = 7;
 
-const CHAIN_ID = Bun.env.CHAIN_ID! as "1" | "5";
+const CHAIN_ID = process.env.CHAIN_ID! as "1" | "5";
 const CHAIN = CHAIN_ID == "1" ? mainnet : goerli;
 const ETHERSCAN_URL =
   CHAIN_ID! == "1"
-    ? Bun.env.MAINNET_ETHERSCAN_URL
-    : Bun.env.GOERLI_ETHERSCAN_URL;
+    ? process.env.MAINNET_ETHERSCAN_URL
+    : process.env.GOERLI_ETHERSCAN_URL;
 const RPC_URL =
-  CHAIN_ID == "1" ? Bun.env.MAINNET_RPC_URL : Bun.env.GOERLI_RPC_URL;
+  CHAIN_ID == "1" ? process.env.MAINNET_RPC_URL : process.env.GOERLI_RPC_URL;
 
 const exchangeRateAddresses = {
   lido: {
@@ -40,8 +41,8 @@ async function main() {
 
   const getBlockDataFromTimestamp = async (timestamp: number) => {
     // Get around rate limit
-    await sleep(200);
-    const etherscanApiUrl = `${ETHERSCAN_URL}?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${Bun.env.ETHERSCAN_API_KEY}`;
+    await new Promise((res, _) => setTimeout(res, 200));
+    const etherscanApiUrl = `${ETHERSCAN_URL}?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${process.env.ETHERSCAN_API_KEY}`;
 
     const blockResult = await fetch(etherscanApiUrl);
 
@@ -177,6 +178,7 @@ async function main() {
     const exchangeRateData = await Promise.all(
       //@ts-ignore
       closestBlockData.map(async ({ blockNumber }) => {
+        //@ts-ignore
         let returnData = await client.readContract({
           address: address as `0x${string}`,
           abi,
