@@ -2,7 +2,7 @@
 auto_detect_solc = false
 src = "src"
 out = "out"
-solc = "0.8.19"
+solc = "0.8.21"
 libs = ["lib"]
 verbosity = 3
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]

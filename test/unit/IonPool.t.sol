@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";

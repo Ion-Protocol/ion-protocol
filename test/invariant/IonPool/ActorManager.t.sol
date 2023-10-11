@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { IonPoolSharedSetup } from "../../helpers/IonPoolSharedSetup.sol";
 import { IHevm } from "../../echidna/IHevm.sol";
