@@ -3,9 +3,9 @@ pragma solidity 0.8.21;
 
 import { ILidoWstEth, IStaderOracle, ISwellEth } from "./interfaces/ProviderInterfaces.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { RoundedMath } from "./math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { IApyOracle } from "./interfaces/IApyOracle.sol";
+import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
 // storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
@@ -28,8 +28,8 @@ uint32 constant ILK_COUNT = 3;
 // Seconds in 23.5 hours. This will allow for updates around the same time of day
 uint256 constant UPDATE_LOCK_LENGTH = 84_600;
 
-contract ApyOracle is IApyOracle {
-    using RoundedMath for uint256;
+contract YieldOracle is IYieldOracle {
+    using Math for uint256;
     using SafeCast for uint256;
 
     // --- Errors ---
@@ -43,7 +43,7 @@ contract ApyOracle is IApyOracle {
 
     uint32[ILK_COUNT] public apys;
 
-    uint32[ILK_COUNT][LOOK_BACK] public historicalExchangeRates;
+    uint64[ILK_COUNT][LOOK_BACK] public historicalExchangeRates;
     address public immutable address0;
     address public immutable address1;
     address public immutable address2;
@@ -52,7 +52,7 @@ contract ApyOracle is IApyOracle {
     uint48 public lastUpdated;
 
     constructor(
-        uint32[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
+        uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
         address _lido,
         address _stader,
         address _swell
@@ -70,17 +70,16 @@ contract ApyOracle is IApyOracle {
         if (lastUpdated + UPDATE_LOCK_LENGTH > block.timestamp) revert AlreadyUpdated();
 
         uint256 _currentIndex = currentIndex;
-        uint32[ILK_COUNT] storage previousExchangeRates = historicalExchangeRates[_currentIndex];
+        uint64[ILK_COUNT] storage previousExchangeRates = historicalExchangeRates[_currentIndex];
 
         for (uint256 i = 0; i < ILK_COUNT;) {
-            uint32 newExchangeRate = _getExchangeRate(i);
-            uint32 previousExchangeRate = previousExchangeRates[i];
+            uint64 newExchangeRate = _getExchangeRate(i);
+            uint64 previousExchangeRate = previousExchangeRates[i];
 
             if (newExchangeRate == 0 || newExchangeRate < previousExchangeRate) revert InvalidExchangeRate(i);
 
-            uint256 exchangeRateIncrease = uint256(newExchangeRate - previousExchangeRate).roundedDiv(
-                previousExchangeRate, 10 ** (APY_PRECISION + 2)
-            );
+            uint256 exchangeRateIncrease =
+                uint256(newExchangeRate - previousExchangeRate).mulDiv(previousExchangeRate, 10 ** (APY_PRECISION + 2));
 
             uint32 newApy = ((exchangeRateIncrease * PERIODS) / (10 ** APY_PRECISION)).toUint32();
             apys[i] = newApy;
@@ -89,9 +88,8 @@ contract ApyOracle is IApyOracle {
 
             emit ApyUpdate(i, newApy);
 
-            unchecked {
-                ++i;
-            }
+            // forgefmt: disable-next-line
+            unchecked { ++i; }
         }
 
         // update Apy, history with new exchangeRates, and currentIndex
@@ -99,18 +97,17 @@ contract ApyOracle is IApyOracle {
         lastUpdated = block.timestamp.toUint48();
     }
 
-    function _getExchangeRate(uint256 ilkIndex) internal view returns (uint32 exchangeRate) {
-        uint256 scale = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
+    function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
             ILidoWstEth lido = ILidoWstEth(address0);
-            exchangeRate = (lido.stEthPerToken() / scale).toUint32();
+            exchangeRate = (lido.stEthPerToken()).toUint64();
         } else if (ilkIndex == 1) {
             IStaderOracle stader = IStaderOracle(address1);
             (, uint256 totalETHBalance, uint256 totalETHXSupply) = stader.exchangeRate();
-            exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply) / scale).toUint32();
+            exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply)).toUint64();
         } else {
             ISwellEth swell = ISwellEth(address2);
-            exchangeRate = (swell.swETHToETHRate() / scale).toUint32();
+            exchangeRate = (swell.swETHToETHRate()).toUint64();
         }
     }
 

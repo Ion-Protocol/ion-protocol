@@ -2,18 +2,39 @@
 pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
-import { ApyOracle, LOOK_BACK, ILK_COUNT } from "../../src/ApyOracle.sol";
+import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
 import {
-    ApyOracleSharedSetup,
+    YieldOracleSharedSetup,
     WST_ETH_EXCHANGE_RATE,
     STADER_ETH_EXCHANGE_RATE,
     SWELL_ETH_EXCHANGE_RATE
-} from "../helpers/ApyOracleSharedSetup.sol";
+} from "../helpers/YieldOracleSharedSetup.sol";
 import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-contract ApyOracle_UnitTest is ApyOracleSharedSetup {
+contract YieldOracle_UnitTest is YieldOracleSharedSetup {
+    function test_Basic() external {
+        vm.warp(block.timestamp + 1 days);
+
+        oracle.updateAll();
+        assertEq(oracle.currentIndex(), 2);
+
+        assertEq(oracle.historicalExchangeRates(0, 0), uint32(1_200_000));
+        assertEq(oracle.historicalExchangeRates(0, 1), uint32(1_100_000));
+        assertEq(oracle.historicalExchangeRates(0, 2), uint32(1_150_000));
+
+        assertEq(oracle.historicalExchangeRates(0, 0), uint32(1_200_000));
+        assertEq(oracle.historicalExchangeRates(0, 1), uint32(1_100_000));
+        assertEq(oracle.historicalExchangeRates(0, 2), uint32(1_150_000));
+
+        for (uint256 i = 2; i < LOOK_BACK; i++) {
+            for (uint256 j = 0; j < ILK_COUNT; j++) {
+                assertEq(oracle.historicalExchangeRates(i, j), uint32(1_000_000));
+            }
+        }
+    }
+
     function test_UpdatingWithChangingExchangeRates() external {
         uint256 increaseInExchangeRate = 0.072935829352e18;
         uint256 amountOfUpdatesToTest = 10;
@@ -33,7 +54,7 @@ contract ApyOracle_UnitTest is ApyOracleSharedSetup {
 
             uint256 indexToUpdate = oracle.currentIndex();
 
-            uint32[ILK_COUNT][LOOK_BACK] memory ratesBefore;
+            uint64[ILK_COUNT][LOOK_BACK] memory ratesBefore;
             for (uint256 j = 0; j < ILK_COUNT; j++) {
                 for (uint256 k = 0; k < LOOK_BACK; k++) {
                     ratesBefore[k][j] = oracle.historicalExchangeRates(k, j);
@@ -65,7 +86,7 @@ contract ApyOracle_UnitTest is ApyOracleSharedSetup {
         vm.warp(block.timestamp + 1 days);
 
         lidoOracle.setNewRate(0);
-        vm.expectRevert(abi.encodeWithSelector(ApyOracle.InvalidExchangeRate.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(YieldOracle.InvalidExchangeRate.selector, 0));
         oracle.updateAll();
     }
 
@@ -73,12 +94,12 @@ contract ApyOracle_UnitTest is ApyOracleSharedSetup {
         vm.warp(block.timestamp + 1 days);
 
         lidoOracle.setNewRate(2 wei);
-        vm.expectRevert(abi.encodeWithSelector(ApyOracle.InvalidExchangeRate.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(YieldOracle.InvalidExchangeRate.selector, 0));
         oracle.updateAll();
     }
 
     function test_RevertWhen_UpdatingMoreThanOnceADay() external {
-        vm.expectRevert(ApyOracle.AlreadyUpdated.selector);
+        vm.expectRevert(YieldOracle.AlreadyUpdated.selector);
         oracle.updateAll();
     }
 

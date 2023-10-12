@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IInterestRate } from "./interfaces/IInterestRate.sol";
-import { IApyOracle } from "./interfaces/IApyOracle.sol";
+import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { RoundedMath, RAY } from "../src/math/RoundedMath.sol";
 import { IonPool } from "../src/IonPool.sol";
 
@@ -58,9 +58,9 @@ contract InterestRate {
     uint256 internal immutable ilkConfig7;
 
     uint256 public immutable collateralCount;
-    IApyOracle immutable apyOracle;
+    IYieldOracle immutable apyOracle;
 
-    constructor(IlkData[] memory ilkDataList, IApyOracle _apyOracle) {
+    constructor(IlkData[] memory ilkDataList, IYieldOracle _apyOracle) {
         collateralCount = ilkDataList.length;
         apyOracle = _apyOracle;
 

@@ -7,7 +7,7 @@ import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
 // import { IonHandler } from "../../src/periphery/IonHandler.sol";
 import { InterestRate, IlkData } from "../../src/InterestRate.sol";
-import { IApyOracle } from "../../src/interfaces/IApyOracle.sol";
+import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
@@ -20,7 +20,7 @@ import { RAY } from "../../src/math/RoundedMath.sol";
 //     uint16 distributionFactor; // 2 decimals
 // }
 
-contract MockApyOracle is IApyOracle {
+contract MockYieldOracle is IYieldOracle {
     uint32 APY = 3.45e6;
 
     function apys(uint256) external view returns (uint32) {
@@ -29,7 +29,7 @@ contract MockApyOracle is IApyOracle {
 }
 
 contract InterestRateExposed is InterestRate {
-    constructor(IlkData[] memory ilks, IApyOracle apyOracle) InterestRate(ilks, apyOracle) { }
+    constructor(IlkData[] memory ilks, IYieldOracle apyOracle) InterestRate(ilks, apyOracle) { }
 
     function unpackCollateralConfig(uint256 index) external view returns (IlkData memory ilkData) {
         return _unpackCollateralConfig(index);
@@ -60,7 +60,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
     // IonHandler ionHandler;
 
     InterestRateExposed interestRateModule;
-    IApyOracle apyOracle;
+    IYieldOracle apyOracle;
 
     mapping(address ilkAddress => uint8 ilkIndex) public ilkIndexes;
 
@@ -116,7 +116,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
                 && distributionFactors.length == debtCeilings.length
         );
         super.setUp();
-        apyOracle = new MockApyOracle();
+        apyOracle = new MockYieldOracle();
 
         uint256 distributionFactorSum;
         uint256 debtCeilingSum;

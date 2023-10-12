@@ -7,7 +7,7 @@ import { IonPool } from "../../src/IonPool.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { InterestRate } from "../../src/InterestRate.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
-import { IApyOracle } from "../.././src/interfaces/IApyOracle.sol";
+import { IYieldOracle } from "../.././src/interfaces/IYieldOracle.sol";
 
 contract IonPoolExposed is IonPool {
     constructor(
@@ -18,8 +18,8 @@ contract IonPoolExposed is IonPool {
         string memory symbol_,
         address initialDefaultAdmin,
         InterestRate _interestRateModule
-    )
-        // IonPool(_underlying, _treasury, decimals_, name_, symbol_, initialDefaultAdmin, _interestRateModule)
+    ) 
+    // IonPool(_underlying, _treasury, decimals_, name_, symbol_, initialDefaultAdmin, _interestRateModule)
     { }
 
     function add(uint256 x, int256 y) external pure returns (uint256 z) {
