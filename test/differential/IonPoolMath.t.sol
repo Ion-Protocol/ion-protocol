@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
@@ -19,7 +19,7 @@ contract IonPoolExposed is IonPool {
         address initialDefaultAdmin,
         InterestRate _interestRateModule
     )
-        IonPool(_underlying, _treasury, decimals_, name_, symbol_, initialDefaultAdmin, _interestRateModule)
+        // IonPool(_underlying, _treasury, decimals_, name_, symbol_, initialDefaultAdmin, _interestRateModule)
     { }
 
     function add(uint256 x, int256 y) external pure returns (uint256 z) {

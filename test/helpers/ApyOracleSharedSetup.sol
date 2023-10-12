@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ApyOracle, LOOK_BACK, ILK_COUNT } from "../../src/ApyOracle.sol";
@@ -46,7 +46,7 @@ contract MockSwell is ISwellEth {
     }
 }
 
-contract ApyOracleSharedSetup is Test {
+abstract contract ApyOracleSharedSetup is Test {
     ApyOracle public oracle;
 
     uint32 internal constant baseRate = 1e6;

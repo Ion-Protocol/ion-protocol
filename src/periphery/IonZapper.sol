@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { IonPool } from "../IonPool.sol";
 import { IWETH9 } from "../interfaces/IWETH9.sol";

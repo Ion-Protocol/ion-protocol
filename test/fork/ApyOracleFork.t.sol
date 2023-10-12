@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { console2 } from "forge-std/console2.sol";
@@ -35,7 +35,7 @@ contract ApyOracleExposed is ApyOracle {
     }
 }
 
-contract ApyOracleForkTest is Test {
+contract ApyOracle_ForkTest is Test {
     using RoundedMath for uint256;
     using SafeCast for uint256;
     using Strings for *;

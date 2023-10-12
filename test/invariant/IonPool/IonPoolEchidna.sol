@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
-import { IonPoolInvariantTest } from "./ActorManager.t.sol";
+import { IonPool_InvariantTest } from "./ActorManager.t.sol";
 
-contract IonPoolEchidna is IonPoolInvariantTest {
+contract IonPool_Echidna is IonPool_InvariantTest {
     constructor() {
         setUp();
     }
 
-    function supply(uint256 index, uint256 amount) external {
-        manager.supply(index, amount);
+    function supply(uint8 index, uint88 amount) external {
+        actorManager.supply(index, amount);
     }
 }

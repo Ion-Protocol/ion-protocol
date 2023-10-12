@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
-import { IonPool } from "../../../src/IonPool.sol";
-import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import {IHevm} from "../../echidna/IHevm.sol";
+import { IonPoolExposed } from "../../helpers/IonPoolSharedSetup.sol";
+// import { IonHandler } from "../../../src/periphery/IonHandler.sol";
+import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
+import { IHevm } from "../../echidna/IHevm.sol";
+import { RoundedMath } from "../../../src/math/RoundedMath.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
@@ -11,50 +14,85 @@ import { StdUtils } from "forge-std/StdUtils.sol";
 
 IHevm constant hevm = IHevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
+using RoundedMath for uint256;
+
 abstract contract Handler is CommonBase, StdCheats, StdUtils {
-    IonPool internal immutable ionPool;
+    IonPoolExposed internal immutable ionPool;
     ERC20PresetMinterPauser internal immutable underlying;
 
-    constructor(IonPool _ionPool, ERC20PresetMinterPauser _underlying) {
+    constructor(IonPoolExposed _ionPool, ERC20PresetMinterPauser _underlying) {
         ionPool = _ionPool;
         underlying = _underlying;
     }
 }
 
 contract LenderHandler is Handler {
-    constructor(IonPool _ionPool, ERC20PresetMinterPauser _underlying) Handler(_ionPool, _underlying) { }
+    uint256 public totalHoldingsNormalized;
 
-    function supply(address lender, uint256 amount) public {
-        hevm.prank(lender);
+    constructor(IonPoolExposed _ionPool, ERC20PresetMinterPauser _underlying) Handler(_ionPool, _underlying) {
         underlying.approve(address(ionPool), type(uint256).max);
-        hevm.prank(lender);
-        ionPool.supply(lender, amount);
     }
-    
-    function withdraw(address lender, uint256 amount) public {
-        hevm.prank(lender);
-        ionPool.withdraw(lender, amount);
+
+    function supply(uint256 amount) public {
+        amount = bound(amount, 0, type(uint128).max);
+        uint256 amountNormalized = amount.roundedRayDiv(ionPool.getSupplyFactor());
+
+        if (amountNormalized == 0) return;
+        totalHoldingsNormalized += amountNormalized;
+
+        underlying.mint(address(this), amount);
+        ionPool.supply(address(this), amount);
+    }
+
+    function withdraw(uint256 amount) public {
+        // To prevent reverts, limit withdraw amounts to the available liquidity in the pool
+        uint256 balance = Math.min(underlying.balanceOf(address(ionPool)), ionPool.balanceOf(address(this)));
+        amount = bound(amount, 0, balance);
+
+        uint256 amountNormalized = amount.roundedRayDiv(ionPool.getSupplyFactor());
+        if (amountNormalized == 0) return;
+
+        totalHoldingsNormalized -= amountNormalized;
+
+        ionPool.withdraw(address(this), amount);
     }
 }
 
 contract BorrowerHandler is Handler {
-    constructor(IonPool _ionPool, ERC20PresetMinterPauser _underlying) Handler(_ionPool, _underlying) { }
+    // IonHandler internal immutable ionHandler;
 
-    function borrow(address borrower, uint8 ilkIndex, uint256 amount) public {
-        hevm.prank(borrower);
-        ionPool.borrow(ilkIndex, amount);
+    constructor(
+        IonPoolExposed _ionPool,
+        // IonHandler _ionHandler,
+        ERC20PresetMinterPauser _underlying
+    )
+        Handler(_ionPool, _underlying)
+    {
+        // underlying.approve(address(ionPool), type(uint256).max);
+        // ionPool.hope(address(_ionHandler));
+        // ionHandler = _ionHandler;
     }
 
-    function repay(address borrower, uint8 ilkIndex, uint256 amount) public {
-        hevm.prank(borrower);
-        underlying.approve(address(ionPool), type(uint256).max);
-        hevm.prank(borrower);
-        ionPool.repay(ilkIndex, amount);
-    }
+    // function borrow(uint8 ilkIndex, uint256 amount) public {
+    //     uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+    //     ionHandler.borrow(_ilkIndex, amount);
+    // }
 
-    function modifyPosition(address borrower, uint8 ilkIndex, address collateralSource, address debtDestination, int256 changeInCollateral, int256 changeInNormalizedDebt) public {
+    // function repay(address borrower, uint8 ilkIndex, uint256 amount) public {
+    //     uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+    //     ionHandler.repay(_ilkIndex, amount);
+    // }
 
-    }
+    // function modifyPosition(
+    //     address borrower,
+    //     uint8 ilkIndex,
+    //     address collateralSource,
+    //     address debtDestination,
+    //     int256 changeInCollateral,
+    //     int256 changeInNormalizedDebt
+    // )
+    //     public
+    // { }
 
     // function gemJoin(address borrower, uint8 ilkIndex, uint256 amount) public {
     //     hevm.prank(borrower);
@@ -62,9 +100,8 @@ contract BorrowerHandler is Handler {
     //     hevm.prank(borrower);
     //     ionPool.gemJoin(ilkIndex, amount);
     // }
-
 }
 
 contract LiquidatorHandler is Handler {
-    constructor(IonPool _ionPool, ERC20PresetMinterPauser _underlying) Handler(_ionPool, _underlying) { }
+    constructor(IonPoolExposed _ionPool, ERC20PresetMinterPauser _underlying) Handler(_ionPool, _underlying) { }
 }

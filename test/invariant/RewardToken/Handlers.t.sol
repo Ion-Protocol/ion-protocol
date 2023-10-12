@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
-import { RewardTokenExternal } from "../../helpers/RewardTokenSharedSetup.sol";
+import { RewardTokenExposed } from "../../helpers/RewardTokenSharedSetup.sol";
 import { RoundedMath } from "../../../src/math/RoundedMath.sol";
-import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
 
 abstract contract Handler is CommonBase, StdCheats, StdUtils {
-    RewardTokenExternal public immutable rewardToken;
+    RewardTokenExposed public immutable rewardToken;
     ERC20PresetMinterPauser public immutable underlying;
 
-    constructor(RewardTokenExternal _rewardToken, ERC20PresetMinterPauser _underlying) {
+    constructor(RewardTokenExposed _rewardToken, ERC20PresetMinterPauser _underlying) {
         rewardToken = _rewardToken;
         underlying = _underlying;
     }
@@ -23,10 +23,10 @@ contract UserHandler is Handler {
     using RoundedMath for uint256;
 
     constructor(
-        RewardTokenExternal _rewardToken,
+        RewardTokenExposed _rewardToken,
         ERC20PresetMinterPauser _underlying
     )
-        Handler(RewardTokenExternal(_rewardToken), _underlying)
+        Handler(RewardTokenExposed(_rewardToken), _underlying)
     { }
 
     function mint(address account, uint256 amount) external {
@@ -94,10 +94,10 @@ contract SupplyFactorIncreaseHandler is Handler {
     using RoundedMath for uint256;
 
     constructor(
-        RewardTokenExternal _rewardToken,
+        RewardTokenExposed _rewardToken,
         ERC20PresetMinterPauser _underlying
     )
-        Handler(RewardTokenExternal(_rewardToken), _underlying)
+        Handler(RewardTokenExposed(_rewardToken), _underlying)
     { }
 
     function increaseSupplyFactor(uint256 amount) external {

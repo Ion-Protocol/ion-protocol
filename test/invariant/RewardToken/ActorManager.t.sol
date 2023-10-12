@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
@@ -130,7 +130,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
  * contract's underlying balance since the last time `supplyFactor` was
  * increased.
  */
-contract RewardTokenInvariantTest is RewardTokenSharedSetup {
+contract RewardToken_InvariantTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
     ActorManager public actorManager;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ApyOracle, LOOK_BACK, ILK_COUNT } from "../../src/ApyOracle.sol";
@@ -13,7 +13,7 @@ import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-contract ApyOracleTest is ApyOracleSharedSetup {
+contract ApyOracle_UnitTest is ApyOracleSharedSetup {
     function test_UpdatingWithChangingExchangeRates() external {
         uint256 increaseInExchangeRate = 0.072935829352e18;
         uint256 amountOfUpdatesToTest = 10;

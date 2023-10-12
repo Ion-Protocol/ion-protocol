@@ -1,15 +1,124 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardToken } from "../../src/token/RewardToken.sol";
 import { RewardTokenSharedSetup } from "../helpers/RewardTokenSharedSetup.sol";
-import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, RAY } from "../../src/math/RoundedMath.sol";
 import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract RewardTokenFuzzTest is RewardTokenSharedSetup {
+contract RewardToken_FuzzRoundingErrorTest is RewardTokenSharedSetup {
+    using RoundedMath for uint256;
+
+    function setUp() public override {
+        super.setUp();
+        underlying.approve(address(rewardToken), type(uint256).max);
+    }
+
+    /// forge-config: default.fuzz.runs = 10000
+    function testFuzz_mint(uint256 amount1, uint256 supplyFactor) external {
+        vm.assume(amount1 != 0);
+        // Prevent overflow
+        vm.assume(amount1 < 2 ** 128);
+        supplyFactor = bound(supplyFactor, 1e27, 5000e27);
+        vm.assume(amount1.roundedRayDiv(supplyFactor) != 0);
+
+        uint256 roundingError = ((supplyFactor / RAY) + 1) / 2;
+
+        rewardToken.setSupplyFactor(supplyFactor);
+
+        assertEq(rewardToken.balanceOf(address(this)), 0);
+
+        underlying.mint(address(this), amount1);
+        rewardToken.mint(address(this), amount1);
+
+        assertApproxEqAbs(rewardToken.balanceOf(address(this)), amount1, roundingError);
+        assertEq(underlying.balanceOf(address(rewardToken)), amount1);
+    }
+
+    /// forge-config: default.fuzz.runs = 10000
+    function testFuzz_burn(uint256 amount1, uint256 supplyFactor) external {
+        vm.assume(amount1 != 0);
+        // Prevent overflow
+        vm.assume(amount1 < 2 ** 128);
+        supplyFactor = bound(supplyFactor, 1e27, 5000e27);
+        vm.assume(amount1.roundedRayDiv(supplyFactor) != 0);
+
+        underlying.mint(address(this), amount1);
+        rewardToken.mint(address(this), amount1);
+
+        uint256 roundingError = (((supplyFactor / RAY) + 1) / 2) + 1; // Round up the rounding error
+        uint256 burnAmount1 = bound(amount1, 0, amount1);
+
+        rewardToken.setSupplyFactor(supplyFactor);
+        uint256 interestCreated = rewardToken.totalSupply() - underlying.balanceOf(address(rewardToken)) + roundingError;
+        _depositInterestGains(interestCreated);
+        uint256 balanceAfterRebase = rewardToken.balanceOf(address(this));
+
+        rewardToken.burn(address(this), address(this), burnAmount1);
+
+        uint256 balanceAfterBurn1 = rewardToken.balanceOf(address(this));
+
+        assertApproxEqAbs(balanceAfterBurn1, balanceAfterRebase - burnAmount1, roundingError);
+        assertEq(underlying.balanceOf(address(rewardToken)), amount1 + interestCreated - burnAmount1);
+
+        uint256 burnAmount2 = bound(balanceAfterBurn1, 0, balanceAfterBurn1 / 2);
+        vm.assume(burnAmount2.roundedRayDiv(supplyFactor) != 0);
+
+        rewardToken.burn(address(this), address(this), burnAmount2);
+
+        uint256 balanceAfterBurn2 = rewardToken.balanceOf(address(this));
+
+        assertApproxEqAbs(balanceAfterBurn2, balanceAfterBurn1 - burnAmount2, roundingError);
+        assertEq(underlying.balanceOf(address(rewardToken)), amount1 + interestCreated - burnAmount1 - burnAmount2);
+    }
+
+    address internal immutable TRANSFER_RECEIVER = vm.addr(98);
+
+    /// forge-config: default.fuzz.runs = 10000
+    function testFuzz_transfer(uint256 amount1, uint256 supplyFactor) external {
+        vm.assume(amount1 != 0);
+        // Prevent overflow
+        vm.assume(amount1 < 2 ** 128);
+        supplyFactor = bound(supplyFactor, 1e27, 10e27);
+        vm.assume(amount1.roundedRayDiv(supplyFactor) != 0);
+
+        underlying.mint(address(this), amount1);
+        rewardToken.mint(address(this), amount1);
+
+        uint256 roundingError = (((supplyFactor / RAY) + 1) / 2) + 1; // Round up the rounding error
+        uint256 transferAmount1 = bound(amount1, 0, amount1);
+
+        rewardToken.setSupplyFactor(supplyFactor);
+        uint256 interestCreated = rewardToken.totalSupply() - underlying.balanceOf(address(rewardToken)) + roundingError;
+        _depositInterestGains(interestCreated);
+        uint256 balanceAfterRebase = rewardToken.balanceOf(address(this));
+
+        rewardToken.transfer(TRANSFER_RECEIVER, transferAmount1);
+
+        uint256 balanceAfterTransfer1 = rewardToken.balanceOf(address(this));
+        uint256 receiverBalanceAfterTransfer1 = rewardToken.balanceOf(TRANSFER_RECEIVER);
+
+        assertApproxEqAbs(balanceAfterTransfer1, balanceAfterRebase - transferAmount1, roundingError);
+        assertApproxEqAbs(receiverBalanceAfterTransfer1, transferAmount1, roundingError - 1);
+
+        uint256 transferAmount2 = bound(balanceAfterTransfer1, 0, balanceAfterTransfer1 / 2);
+        vm.assume(transferAmount2.roundedRayDiv(supplyFactor) != 0);
+
+        rewardToken.transfer(TRANSFER_RECEIVER, transferAmount2);
+
+        uint256 balanceAfterTransfer2 = rewardToken.balanceOf(address(this));
+        uint256 receiverBalanceAfterTransfer2 = rewardToken.balanceOf(TRANSFER_RECEIVER);
+
+        assertApproxEqAbs(balanceAfterTransfer2, balanceAfterTransfer1 - transferAmount2, roundingError);
+        assertApproxEqAbs(receiverBalanceAfterTransfer2, receiverBalanceAfterTransfer1 + transferAmount2, roundingError);
+    }
+}
+
+contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
     function testFuzz_mintRewardTokenBasic(uint256 amountOfRewardTokens) external {
@@ -248,10 +357,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
 
             bytes32 structHash =
                 keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, amountOfRewardTokens, 0, deadline));
-            ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
+            MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
             (uint8 v, bytes32 r, bytes32 s) =
-                vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+                vm.sign(sendingUserPrivateKey, MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
             rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, v, r, s);
         }
@@ -319,10 +428,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
             // Have spender try to sign on behalf of sendingUser (should fail)
             bytes32 structHash =
                 keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, locals.amountOfRewardTokens, 0, deadline));
-            ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
+            MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
             (uint8 v, bytes32 r, bytes32 s) =
-                vm.sign(nonSenderPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+                vm.sign(nonSenderPrivateKey, MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
             vm.expectRevert(
                 abi.encodeWithSelector(
@@ -331,7 +440,7 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
             );
             rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, v, r, s);
 
-            (v, r, s) = vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+            (v, r, s) = vm.sign(sendingUserPrivateKey, MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
             (uint8 vMalleable, bytes32 rMalleable, bytes32 sMalleable) = _calculateMalleableSignature(v, r, s);
 
             // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay

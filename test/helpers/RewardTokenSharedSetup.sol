@@ -1,28 +1,18 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { RewardToken } from "../../src/token/RewardToken.sol";
 import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 
-contract RewardTokenExternal is RewardToken {
-    constructor(
-        address _underlying,
-        address _treasury,
-        uint8 decimals_,
-        string memory name_,
-        string memory symbol_
-    )
-        RewardToken(_underlying, _treasury, decimals_, name_, symbol_)
+contract RewardTokenExposed is RewardToken {
+    constructor(address _underlying, address _treasury, uint8 decimals_, string memory name_, string memory symbol_) 
+    // RewardToken(_underlying, _treasury, decimals_, name_, symbol_)
     { }
 
     // --- Cheats ---
     function setSupplyFactor(uint256 factor) external {
-        supplyFactor = factor;
-    }
-
-    function getSupplyFactor() external view returns (uint256) {
-        return supplyFactor;
+        _setSupplyFactor(factor);
     }
 
     // --- Expose Internal ---
@@ -48,7 +38,7 @@ abstract contract RewardTokenSharedSetup is BaseTestSetup {
     event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    RewardTokenExternal rewardToken;
+    RewardTokenExposed rewardToken;
 
     uint256 sendingUserPrivateKey = 16;
     uint256 receivingUserPrivateKey = 17;
@@ -59,7 +49,7 @@ abstract contract RewardTokenSharedSetup is BaseTestSetup {
 
     function setUp() public virtual override {
         super.setUp();
-        rewardToken = new RewardTokenExternal(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
+        rewardToken = new RewardTokenExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
     }
 
     // --- Helpers ---

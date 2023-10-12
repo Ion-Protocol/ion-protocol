@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
-import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IERC20Errors } from "./IERC20Errors.sol";
 import { IonPool } from "../IonPool.sol";
 import { RoundedMath, RAY } from "../math/RoundedMath.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 /**
  * @title RewardToken
  * @notice Heavily inspired by Aave's `AToken`
  */
-contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
+contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
     using RoundedMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -44,6 +46,9 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      */
     error ERC2612InvalidSigner(address signer, address owner);
 
+    error InvalidUnderlyingAddress();
+    error InvalidTreasuryAddress();
+
     /**
      * @dev Emitted when `RewardToken`s are burned by `user` in exchange for `amount` underlying tokens redeemed to
      * `target`. `supplyFactor` is the  supply factor at the time.
@@ -62,41 +67,65 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      */
     event BalanceTransfer(address indexed from, address indexed to, uint256 amount, uint256 supplyFactor);
 
-    // A user's true balance at any point will be the value in this mapping times the supplyFactor
-    mapping(address account => uint256) _normalizedBalances; // [WAD]
-    mapping(address account => mapping(address spender => uint256)) _allowances;
-    mapping(address account => uint256) public nonces;
-
     bytes private constant EIP712_REVISION = bytes("1");
     bytes32 private constant EIP712_DOMAIN =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 public constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-    bytes32 public immutable DOMAIN_SEPARATOR;
+    bytes32 public DOMAIN_SEPARATOR;
 
-    IERC20 public immutable underlying;
-    uint8 public immutable decimals;
-    string public name;
-    string public symbol;
+    struct RewardTokenStorage {
+        IERC20 underlying;
+        uint8 decimals;
+        // A user's true balance at any point will be the value in this mapping times the supplyFactor
+        mapping(address account => uint256) _normalizedBalances; // [WAD]
+        mapping(address account => mapping(address spender => uint256)) _allowances;
+        mapping(address account => uint256) nonces;
+        string name;
+        string symbol;
+        address treasury;
+        uint256 normalizedTotalSupply; // [WAD]
+        uint256 supplyFactor; // [RAY]
+    }
 
-    address public treasury;
-    uint256 public normalizedTotalSupply; // [WAD]
+    // keccak256(abi.encode(uint256(keccak256("ion.storage.RewardToken")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant RewardTokenStorageLocation =
+        0xe67839269f312704c9976b7a04f41bb97402897b34aca7a5cf2bb59c89583000;
 
-    uint256 internal supplyFactor; // [RAY]
+    function _getRewardTokenStorage() private pure returns (RewardTokenStorage storage $) {
+        assembly {
+            $.slot := RewardTokenStorageLocation
+        }
+    }
 
-    constructor(address _underlying, address _treasury, uint8 decimals_, string memory name_, string memory symbol_) {
-        underlying = IERC20(_underlying);
-        treasury = _treasury;
-        decimals = decimals_;
-        name = name_;
-        symbol = symbol_;
+    function initialize(
+        address _underlying,
+        address _treasury,
+        uint8 decimals_,
+        string memory name_,
+        string memory symbol_
+    )
+        internal
+        onlyInitializing
+    {
+        if (_underlying == address(0)) revert InvalidUnderlyingAddress();
+        if (_treasury == address(0)) revert InvalidTreasuryAddress();
 
-        supplyFactor = RAY;
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        $.underlying = IERC20(_underlying);
+        $.treasury = _treasury;
+        $.decimals = decimals_;
+        $.name = name_;
+        $.symbol = symbol_;
+
+        $.supplyFactor = RAY;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(EIP712_DOMAIN, keccak256(bytes(name_)), keccak256(EIP712_REVISION), block.chainid, address(this))
         );
     }
 
+    // TODO: Do rounding in protocol's favor
     /**
      *
      * @param user to burn tokens from
@@ -104,12 +133,14 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      * @param amount to burn
      */
     function _burn(address user, address receiverOfUnderlying, uint256 amount) internal {
-        uint256 _supplyFactor = supplyFactor;
-        uint256 amountScaled = amount.roundedRayDiv(_supplyFactor);
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        uint256 _supplyFactor = $.supplyFactor;
+        uint256 amountScaled = amount.rayDivUp(_supplyFactor);
         if (amountScaled == 0) revert InvalidBurnAmount();
         _burnNormalized(user, amountScaled);
 
-        underlying.safeTransfer(receiverOfUnderlying, amount);
+        $.underlying.safeTransfer(receiverOfUnderlying, amount);
 
         emit Transfer(user, address(0), amount);
         emit Burn(user, receiverOfUnderlying, amount, _supplyFactor);
@@ -121,16 +152,18 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      * @param amount of normalized tokens to burn
      */
     function _burnNormalized(address account, uint256 amount) private {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
         if (account == address(0)) revert ERC20InvalidSender(address(0));
 
-        uint256 oldAccountBalance = _normalizedBalances[account];
+        uint256 oldAccountBalance = $._normalizedBalances[account];
         if (oldAccountBalance < amount) revert ERC20InsufficientBalance(account, oldAccountBalance, amount);
         // Underflow impossible
         unchecked {
-            _normalizedBalances[account] = oldAccountBalance - amount;
+            $._normalizedBalances[account] = oldAccountBalance - amount;
         }
 
-        normalizedTotalSupply -= amount;
+        $.normalizedTotalSupply -= amount;
     }
 
     /**
@@ -139,12 +172,14 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      * @param amount of reward tokens to mint
      */
     function _mint(address user, uint256 amount) internal {
-        uint256 _supplyFactor = supplyFactor;
-        uint256 amountScaled = amount.roundedRayDiv(_supplyFactor); // [WAD] * [RAY] / [RAY] = [WAD]
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        uint256 _supplyFactor = $.supplyFactor;
+        uint256 amountScaled = amount.rayDivDown(_supplyFactor); // [WAD] * [RAY] / [RAY] = [WAD]
         if (amountScaled == 0) revert InvalidMintAmount();
         _mintNormalized(user, amountScaled);
 
-        underlying.safeTransferFrom(_msgSender(), address(this), amount);
+        $.underlying.safeTransferFrom(_msgSender(), address(this), amount);
 
         emit Transfer(address(0), user, amount);
         emit Mint(user, amount, _supplyFactor);
@@ -158,9 +193,11 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     function _mintNormalized(address account, uint256 amount) private {
         if (account == address(0)) revert ERC20InvalidReceiver(address(0));
 
-        normalizedTotalSupply += amount;
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
-        _normalizedBalances[account] += amount;
+        $.normalizedTotalSupply += amount;
+
+        $._normalizedBalances[account] += amount;
     }
 
     /**
@@ -170,8 +207,10 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     function _mintToTreasury(uint256 amount) internal {
         if (amount == 0) return;
 
-        uint256 _supplyFactor = supplyFactor;
-        address _treasury = treasury;
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        uint256 _supplyFactor = $.supplyFactor;
+        address _treasury = $.treasury;
 
         // Compared to the normal mint, we don't check for rounding errors.
         // The amount to mint can easily be very small since it is a fraction of the interest accrued.
@@ -183,12 +222,26 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         emit Mint(_treasury, amount, _supplyFactor);
     }
 
+    function name() public view returns (string memory) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $.name;
+    }
+
+    function symbol() public view returns (string memory) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $.symbol;
+    }
+
     /**
      * @dev Current token balance
      * @param user to get balance of
      */
     function balanceOf(address user) public view returns (uint256) {
-        return _normalizedBalances[user].roundedRayMul(supplyFactor);
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $._normalizedBalances[user].roundedRayMul($.supplyFactor);
     }
 
     /**
@@ -196,20 +249,36 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      * @param user to get normalized balance of
      */
     function normalizedBalanceOf(address user) external view returns (uint256) {
-        return _normalizedBalances[user];
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $._normalizedBalances[user];
     }
 
     /**
      * @dev Current total supply
      */
     function totalSupply() public view returns (uint256) {
-        uint256 _normalizedTotalSupply = normalizedTotalSupply;
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
 
         if (_normalizedTotalSupply == 0) {
             return 0;
         }
 
-        return _normalizedTotalSupply.roundedRayMul(supplyFactor);
+        return _normalizedTotalSupply.roundedRayMul($.supplyFactor);
+    }
+
+    function normalizedTotalSupply() public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $.normalizedTotalSupply;
+    }
+
+    function decimals() public view returns (uint8) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $.decimals;
     }
 
     /**
@@ -264,7 +333,9 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         if (owner == address(0)) revert ERC20InvalidApprover(address(0));
         if (spender == address(0)) revert ERC20InvalidSpender(address(0));
 
-        _allowances[owner][spender] = amount;
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        $._allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
@@ -281,7 +352,10 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         unchecked {
             newAllowance = currentAllowance - amount;
         }
-        _allowances[owner][spender] = newAllowance;
+
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        $._allowances[owner][spender] = newAllowance;
     }
 
     /**
@@ -290,7 +364,9 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
      * @param spender of tokens
      */
     function allowance(address owner, address spender) public view returns (uint256) {
-        return _allowances[owner][spender];
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $._allowances[owner][spender];
     }
 
     /**
@@ -323,18 +399,20 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
         if (to == address(0)) revert ERC20InvalidReceiver(address(0));
         if (from == to) revert SelfTransfer(from);
 
-        uint256 _supplyFactor = supplyFactor;
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        uint256 _supplyFactor = $.supplyFactor;
         uint256 amountNormalized = amount.roundedRayDiv(_supplyFactor);
 
-        uint256 oldSenderBalance = _normalizedBalances[from];
+        uint256 oldSenderBalance = $._normalizedBalances[from];
         if (oldSenderBalance < amountNormalized) {
             revert ERC20InsufficientBalance(from, oldSenderBalance, amountNormalized);
         }
         // Underflow impossible
         unchecked {
-            _normalizedBalances[from] = oldSenderBalance - amountNormalized;
+            $._normalizedBalances[from] = oldSenderBalance - amountNormalized;
         }
-        _normalizedBalances[to] += amountNormalized;
+        $._normalizedBalances[to] += amountNormalized;
 
         emit BalanceTransfer(from, to, amountNormalized, _supplyFactor);
     }
@@ -368,7 +446,7 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
 
         bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));
 
-        bytes32 hash = ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
+        bytes32 hash = MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
         address signer = ECDSA.recover(hash, v, r, s);
         if (signer != owner) {
@@ -386,9 +464,29 @@ contract RewardToken is Context, IERC20, IERC20Metadata, IERC20Errors {
     function _useNonce(address owner) internal virtual returns (uint256) {
         // For each account, the nonce has an initial value of 0, can only be incremented by one, and cannot be
         // decremented or reset. This guarantees that the nonce never overflows.
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
         unchecked {
             // It is important to do x++ and not ++x here.
-            return nonces[owner]++;
+            return $.nonces[owner]++;
         }
+    }
+
+    function _setSupplyFactor(uint256 newSupplyFactor) internal {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        $.supplyFactor = newSupplyFactor;
+    }
+
+    function getSupplyFactor() public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $.supplyFactor;
+    }
+
+    function getUnderlying() public view returns (IERC20) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        return $.underlying;
     }
 }

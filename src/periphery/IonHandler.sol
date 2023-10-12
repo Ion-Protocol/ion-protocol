@@ -1,47 +1,45 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+// // SPDX-License-Identifier: MIT
+// pragma solidity 0.8.21;
 
-import { IonPool } from "../IonPool.sol";
-import { RoundedMath } from "../math/RoundedMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+// import { IonPool } from "../IonPool.sol";
+// import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+// import { RoundedMath } from "../math/RoundedMath.sol";
+// import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+// import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-contract IonHandler {
-    using RoundedMath for uint256;
-    using SafeCast for uint256;
+// // TODO: DELETE
+// contract IonHandler {
+//     using RoundedMath for uint256;
+//     using SafeCast for uint256;
 
-    IonPool immutable ionPool;
+//     IonPool immutable ionPool;
+//     IERC20 immutable base;
 
-    constructor(IonPool _ionPool) {
-        ionPool = _ionPool;
-    }
+//     constructor(IonPool _ionPool) {
+//         ionPool = _ionPool;
+//         IERC20 _base = ionPool.underlying();
+//         base = _base;
 
-    // --- Borrower Operations ---
+//         _base.approve(address(ionPool), type(uint256).max);
+//     }
 
-    /**
-     * @param ilkIndex index of the collateral to borrow again
-     * @param amount amount to borrow
-     */
-    function borrow(uint8 ilkIndex, uint256 amount) external {
-        uint256 normalizedAmount = amount.roundedRayDiv(ionPool.rate(ilkIndex)); // [WAD] * [RAY] / [RAY] = [WAD]
+//     // --- Borrower Operations ---
 
-        // Moves all gem into the vault ink
-        ionPool.modifyPosition(
-            ilkIndex,
-            msg.sender,
-            msg.sender,
-            msg.sender,
-            ionPool.gem(ilkIndex, msg.sender).toInt256(), // Move all gem into the vault as collateral
-            normalizedAmount.toInt256()
-        );
+//     /**
+//      * @param ilkIndex index of the collateral to borrow again
+//      * @param amount amount to borrow
+//      */
+//     function borrow(uint8 ilkIndex, uint256 amount) external {
+//         uint256 _rate = ionPool.rate(ilkIndex);
+//         uint256 normalizedAmount = amount.rayDivDown(_rate); // [WAD] * [RAY] / [RAY] = [WAD]
 
-        ionPool.exitBase(msg.sender, amount);
-    }
+//     }
 
-    function repay(uint8 ilkIndex, uint256 amount) external {
-        uint256 normalizedAmount = amount.roundedRayDiv(ionPool.rate(ilkIndex));
+//     function repay(uint8 ilkIndex, uint256 amount) external {
+//         uint256 _rate = ionPool.rate(ilkIndex);
+//         uint256 normalizedAmount = amount.rayDivDown(_rate);
+//         uint256 trueAmount = normalizedAmount.rayMulDown(_rate);
 
-        ionPool.joinBase(msg.sender, amount);
-
-        ionPool.modifyPosition(ilkIndex, msg.sender, msg.sender, msg.sender, 0, -normalizedAmount.toInt256());
-    }
-}
+//         base.transferFrom(msg.sender, address(this), trueAmount);
+//     }
+// }

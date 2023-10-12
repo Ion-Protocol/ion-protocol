@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+
 uint256 constant WAD = 1e18;
 uint256 constant RAY = 1e27;
+uint256 constant RAD = 1e45;
 
 library RoundedMath {
+    using Math for uint256;
+
     error MultiplicationOverflow(uint256 a, uint256 b);
     error DivisionByZero();
 
@@ -79,5 +84,37 @@ library RoundedMath {
         if (a > (type(uint256).max - halfB) / scale) revert MultiplicationOverflow(a, b);
 
         return (a * scale + halfB) / b;
+    }
+
+    function wadMulDown(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(b, WAD);
+    }
+
+    function wadMulUp(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(b, WAD, Math.Rounding.Ceil);
+    }
+
+    function wadDivDown(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(WAD, b);
+    }
+
+    function wadDivUp(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(WAD, b, Math.Rounding.Ceil);
+    }
+
+    function rayMulDown(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(b, RAY);
+    }
+
+    function rayMulUp(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(b, RAY, Math.Rounding.Ceil);
+    }
+
+    function rayDivDown(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(RAY, b);
+    }
+
+    function rayDivUp(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(RAY, b, Math.Rounding.Ceil);
     }
 }
