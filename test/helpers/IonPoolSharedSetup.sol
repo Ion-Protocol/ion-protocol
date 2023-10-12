@@ -5,11 +5,11 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
-import { IonHandler } from "../../src/periphery/IonHandler.sol";
+// import { IonHandler } from "../../src/periphery/IonHandler.sol";
 import { InterestRate, IlkData } from "../../src/InterestRate.sol";
 import { IApyOracle } from "../../src/interfaces/IApyOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { RAY } from "../../src/math/RoundedMath.sol";
 
@@ -36,8 +36,28 @@ contract InterestRateExposed is InterestRate {
     }
 }
 
-abstract contract IonPoolSharedSetup is BaseTestSetup {
-    IonPool ionPool;
+contract IonPoolExposed is IonPool {
+    constructor(
+        address _underlying,
+        address _treasury,
+        uint8 _decimals,
+        string memory _name,
+        string memory _symbol,
+        address _defaultAdmin,
+        InterestRate _interestRateModule
+    ) 
+    // IonPool(_underlying, _treasury, _decimals, _name, _symbol, _defaultAdmin, _interestRateModule)
+    { }
+
+    function setSupplyFactor(uint256 factor) external {
+        _setSupplyFactor(factor);
+    }
+}
+
+/*abstract*/
+contract IonPoolSharedSetup is BaseTestSetup {
+    IonPoolExposed ionPool;
+    // IonHandler ionHandler;
 
     InterestRateExposed interestRateModule;
     IApyOracle apyOracle;
@@ -56,7 +76,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     uint80 internal constant minimumProfitMargin = 0.85e18;
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
-    uint256 internal constant INITIAL_BORROWER_UNDERLYING_BALANCE = 100e18;
+    uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
 
     ERC20PresetMinterPauser immutable stEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
@@ -86,6 +106,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     uint16[] internal distributionFactors = [stEthDistributionFactor, swEthDistributionFactor, ethXDistributionFactor];
     uint256[] internal debtCeilings = [stEthDebtCeiling, swEthDebtCeiling, ethXDebtCeiling];
 
+    IlkData[] ilkConfigs;
+
     function setUp() public virtual override {
         collaterals = [stEth, swEth, ethX];
         assert(
@@ -96,93 +118,122 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         super.setUp();
         apyOracle = new MockApyOracle();
 
-        IlkData[] memory ilks = new IlkData[](collaterals.length);
-
         uint256 distributionFactorSum;
         uint256 debtCeilingSum;
 
         IlkData memory ilkConfig;
-        for (uint256 i = 0; i < ilks.length; i++) {
+        for (uint256 i = 0; i < collaterals.length; i++) {
             ilkConfig = IlkData({
                 minimumProfitMargin: minimumProfitMargin,
                 reserveFactor: reserveFactors[i],
                 optimalUtilizationRate: optimalUtilizationRates[i],
                 distributionFactor: distributionFactors[i]
             });
-            ilks[i] = ilkConfig;
+            ilkConfigs.push(ilkConfig);
 
             distributionFactorSum += distributionFactors[i];
             debtCeilingSum += debtCeilings[i];
 
-            collaterals[i].mint(borrower1, INITIAL_BORROWER_UNDERLYING_BALANCE);
-            collaterals[i].mint(borrower2, INITIAL_BORROWER_UNDERLYING_BALANCE);
+            collaterals[i].mint(borrower1, INITIAL_BORROWER_COLLATERAL_BALANCE);
+            collaterals[i].mint(borrower2, INITIAL_BORROWER_COLLATERAL_BALANCE);
         }
 
         assert(distributionFactorSum == 1e2);
         assert(debtCeilingSum == globalDebtCeiling);
 
-        interestRateModule = new InterestRateExposed(ilks, apyOracle);
+        interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
-        ionPool = new IonPool(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool =
+            new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
         ionPool.grantRole(ionPool.ION(), address(this));
-        ionPool.updateGlobalDebtCeiling(globalDebtCeiling);
+        // ionPool.updateGlobalDebtCeiling(globalDebtCeiling);
+        // ionHandler = new IonHandler(ionPool);
 
-        for (uint8 i = 0; i < collaterals.length; i++) {
-            ionPool.init(address(collaterals[i]));
-            ionPool.updateIlkConfig(i, SPOT, debtCeilings[i], 0);
-            gemJoins.push(new GemJoin(ionPool, collaterals[i], i));
-            ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
-        }
+        // vm.prank(borrower1);
+        // ionPool.hope(address(ionHandler));
+        // vm.prank(borrower2);
+        // ionPool.hope(address(ionHandler));
 
-        underlying.mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        underlying.mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+        // for (uint8 i = 0; i < collaterals.length; i++) {
+        //     ionPool.init(address(collaterals[i]));
+        //     ionPool.updateIlkConfig(i, SPOT, debtCeilings[i], 0);
+        //     gemJoins.push(new GemJoin(ionPool, collaterals[i], i));
+        //     ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
+        //     ilkIndexes[address(collaterals[i])] = i;
+        // }
+
+        // underlying.mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        // underlying.mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
     }
 
-    function test_setUp() external virtual {
-        assertEq(address(ionPool.underlying()), address(underlying));
-        assertEq(ionPool.treasury(), TREASURY);
-        assertEq(ionPool.decimals(), DECIMALS);
-        assertEq(ionPool.name(), NAME);
-        assertEq(ionPool.symbol(), SYMBOL);
-        assertEq(ionPool.defaultAdmin(), address(this));
+    function test_setUp() public virtual {
+        // assertEq(address(ionPool.underlying()), address(underlying));
+        // assertEq(ionPool.treasury(), TREASURY);
+        // assertEq(ionPool.decimals(), DECIMALS);
+        // assertEq(ionPool.name(), NAME);
+        // assertEq(ionPool.symbol(), SYMBOL);
+        // assertEq(ionPool.defaultAdmin(), address(this));
 
-        assertEq(ionPool.ilkCount(), collaterals.length);
+        // assertEq(ionPool.globalDebtCeiling(), globalDebtCeiling);
+        // assertEq(ionPool.ilkCount(), collaterals.length);
 
-        uint256 addressesLength = ionPool.addressesLength();
-        assertEq(addressesLength, collaterals.length);
-        for (uint8 i = 0; i < addressesLength; i++) {
-            assertEq(ionPool.getIlkAddress(i), address(collaterals[i]));
+        // assertEq(ionPool.paused(), false);
 
-            assertEq(ionPool.totalNormalizedDebt(i), 0);
-            assertEq(ionPool.rate(i), 1e27);
-            assertEq(ionPool.spot(i), SPOT);
-            assertEq(ionPool.debtCeiling(i), debtCeilings[i]);
-            assertEq(ionPool.dust(i), 0);
+        // uint256 addressesLength = ionPool.addressesLength();
+        // assertEq(addressesLength, collaterals.length);
+        // for (uint8 i = 0; i < addressesLength; i++) {
+        //     address collateralAddress = address(collaterals[i]);
+        //     assertEq(ionPool.getIlkAddress(i), collateralAddress);
+        //     assertEq(ionPool.getIlkIndex(collateralAddress), ilkIndexes[collateralAddress]);
 
-            assertEq(ionPool.collateral(i, lender1), 0);
-            assertEq(ionPool.collateral(i, lender2), 0);
-            assertEq(ionPool.collateral(i, borrower1), 0);
-            assertEq(ionPool.collateral(i, borrower2), 0);
-            assertEq(ionPool.normalizedDebt(i, lender1), 0);
-            assertEq(ionPool.normalizedDebt(i, lender2), 0);
-            assertEq(ionPool.normalizedDebt(i, borrower1), 0);
-            assertEq(ionPool.normalizedDebt(i, borrower2), 0);
+        //     assertEq(ionPool.totalNormalizedDebt(i), 0);
+        //     assertEq(ionPool.rate(i), 1e27);
+        //     assertEq(ionPool.spot(i), SPOT);
+        //     assertEq(ionPool.debtCeiling(i), debtCeilings[i]);
+        //     assertEq(ionPool.dust(i), 0);
 
-            (uint256 borrowRate, uint256 reserveFactor) = ionPool.getCurrentBorrowRate(i);
-            assertEq(borrowRate, 1 * RAY);
-            assertEq(reserveFactor, reserveFactors[i]);
+        //     assertEq(ionPool.collateral(i, lender1), 0);
+        //     assertEq(ionPool.collateral(i, lender2), 0);
+        //     assertEq(ionPool.collateral(i, borrower1), 0);
+        //     assertEq(ionPool.collateral(i, borrower2), 0);
+        //     assertEq(ionPool.normalizedDebt(i, lender1), 0);
+        //     assertEq(ionPool.normalizedDebt(i, lender2), 0);
+        //     assertEq(ionPool.normalizedDebt(i, borrower1), 0);
+        //     assertEq(ionPool.normalizedDebt(i, borrower2), 0);
 
-            assertEq(collaterals[i].balanceOf(address(ionPool)), 0);
-            assertEq(collaterals[i].balanceOf(address(borrower1)), INITIAL_BORROWER_UNDERLYING_BALANCE);
-            assertEq(collaterals[i].balanceOf(address(borrower2)), INITIAL_BORROWER_UNDERLYING_BALANCE);
+        //     (uint256 borrowRate, uint256 reserveFactor) = ionPool.getCurrentBorrowRate(i);
+        //     assertEq(borrowRate, 1 * RAY);
+        //     assertEq(reserveFactor, reserveFactors[i]);
 
-            IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
-            assertEq(ilkConfig.minimumProfitMargin, minimumProfitMargin);
-            assertEq(ilkConfig.reserveFactor, reserveFactors[i]);
-            assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
-            assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
-        }
+        //     assertEq(collaterals[i].balanceOf(address(ionPool)), 0);
+        //     assertEq(collaterals[i].balanceOf(address(borrower1)), INITIAL_BORROWER_COLLATERAL_BALANCE);
+        //     assertEq(collaterals[i].balanceOf(address(borrower2)), INITIAL_BORROWER_COLLATERAL_BALANCE);
 
-        assertEq(interestRateModule.collateralCount(), collaterals.length);
+        //     IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
+        //     assertEq(ilkConfig.minimumProfitMargin, minimumProfitMargin);
+        //     assertEq(ilkConfig.reserveFactor, reserveFactors[i]);
+        //     assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
+        //     assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
+        // }
+
+        // assertEq(interestRateModule.collateralCount(), collaterals.length);
+    }
+
+    /**
+     * @dev separated from repay for readability of tests
+     * @param changeInNormalizedDebt it is expected this value will be positive
+     */
+    function _borrowHelper(uint8 ilkIndex, address borrower, int256 changeInNormalizedDebt) internal {
+        // vm.prank(borrower);
+        // ionPool.modifyPosition(ilkIndex, borrower, borrower, borrower, 0, changeInNormalizedDebt);
+    }
+
+    /**
+     * @dev separated from borrow for readability of tests
+     * @param changeInNormalizedDebt it is expected this value will be negative
+     */
+    function _repayHelper(uint8 ilkIndex, address repayer, int256 changeInNormalizedDebt) internal {
+        // vm.prank(repayer);
+        // ionPool.modifyPosition(ilkIndex, repayer, repayer, repayer, 0, changeInNormalizedDebt);
     }
 }

@@ -8,7 +8,7 @@ contract IonPool_Echidna is IonPool_InvariantTest {
         setUp();
     }
 
-    function supply(uint256 index, uint256 amount) external {
-        manager.supply(index, amount);
+    function supply(uint8 index, uint88 amount) external {
+        actorManager.supply(index, amount);
     }
 }
