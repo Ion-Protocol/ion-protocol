@@ -117,4 +117,19 @@ library RoundedMath {
     function rayDivUp(uint256 a, uint256 b) internal pure returns (uint256) {
         return a.mulDiv(RAY, b, Math.Rounding.Ceil);
     }
+
+    // --- Scalers --- 
+
+    function scaleToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return value * (10 ** 18) / (10 ** scale);
+    }
+    
+    function scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return value * (10 ** 27) / (10 ** scale);
+    }
+
+    function scaleToRad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return value * (10 ** 45) / (10 ** scale); 
+    }
+
 }

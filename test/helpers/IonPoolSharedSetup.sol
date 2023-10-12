@@ -12,6 +12,8 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { RAY } from "../../src/math/RoundedMath.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
 // struct IlkData {
 //     uint80 minimumProfitMargin; // 18 decimals
@@ -51,6 +53,12 @@ contract IonPoolExposed is IonPool {
 
     function setSupplyFactor(uint256 factor) external {
         _setSupplyFactor(factor);
+    }
+}
+
+contract EmptyContract {
+    function foo() public pure returns (uint256) {
+        return 0;
     }
 }
 
@@ -143,27 +151,36 @@ contract IonPoolSharedSetup is BaseTestSetup {
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
-        ionPool =
-            new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        // Instantiate upgradeable IonPool 
+        ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(101));
+        IonPoolExposed logicIonPool = new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool = IonPoolExposed(
+            address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), ""))
+        );        
+        
+        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule); 
         ionPool.grantRole(ionPool.ION(), address(this));
-        // ionPool.updateGlobalDebtCeiling(globalDebtCeiling);
-        // ionHandler = new IonHandler(ionPool);
+        
+        // attempt to initialize again 
+        vm.expectRevert(IonPool.InvalidInitialization.selector); 
+        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule); 
 
+        // ionHandler = new IonHandler(ionPool);
         // vm.prank(borrower1);
         // ionPool.hope(address(ionHandler));
         // vm.prank(borrower2);
         // ionPool.hope(address(ionHandler));
 
-        // for (uint8 i = 0; i < collaterals.length; i++) {
-        //     ionPool.init(address(collaterals[i]));
-        //     ionPool.updateIlkConfig(i, SPOT, debtCeilings[i], 0);
-        //     gemJoins.push(new GemJoin(ionPool, collaterals[i], i));
-        //     ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
-        //     ilkIndexes[address(collaterals[i])] = i;
-        // }
+        for (uint8 i = 0; i < collaterals.length; i++) {
+            ionPool.initializeIlk(address(collaterals[i]));
+            ionPool.updateIlkConfig(i, SPOT, debtCeilings[i], 0);
+            gemJoins.push(new GemJoin(ionPool, collaterals[i], i, address(this)));
+            ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
+            ilkIndexes[address(collaterals[i])] = i;
+        }
 
-        // underlying.mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        // underlying.mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+        underlying.mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        underlying.mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
     }
 
     function test_setUp() public virtual {

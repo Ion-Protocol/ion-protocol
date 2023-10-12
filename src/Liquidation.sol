@@ -13,6 +13,7 @@ interface IReserveOracle {
 
 // DEPLOY PARAMETERS
 // NOTE: Needs to be configured on each deployment along with constructor parameters
+// TODO: Can this be inside the constructor? 
 uint32 constant ILK_COUNT = 8; 
 uint256 constant TARGET_HEALTH = 125 * WAD / 100; // 1.25 [wad]
 uint256 constant RESERVE_FACTOR = 2 * WAD / 100; // 0.02 [wad]
@@ -56,18 +57,6 @@ contract Liquidation {
         underlying = ionPool.getUnderlying(); 
     }
 
-    function _scaleToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
-        return value * (10 ** 18) / (10 ** scale);
-    }
-    
-    function _scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
-        return value * (10 ** 27) / (10 ** scale);
-    }
-
-    function _scaleToRad(uint256 value, uint256 scale) internal pure returns (uint256) {
-        return value * (10 ** 45) / (10 ** scale); 
-    }
-
     /**
      * @dev internal helper function for liquidation math. Final repay amount 
      * NOTE: find better way to handle precision 
@@ -89,9 +78,9 @@ contract Liquidation {
         // [wad] * _scaleToRay([wad]) -  [wad] * [wad] * [wad]
         // repayDen = (targetHealth - (liquidationThreshold / (1 - discount)))
         // [wad] - ([wad] / (1 - [wad]))
-        uint256 repayNum = TARGET_HEALTH.roundedWadMul(_scaleToRay(totalDebt, 45)) - collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold); // [wad] 
+        uint256 repayNum = TARGET_HEALTH.roundedWadMul(totalDebt.scaleToRay(45)) - collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold); // [wad] 
         uint256 repayDen = TARGET_HEALTH - liquidationThreshold.roundedWadDiv((WAD - discount)); // [wad] 
-        repay = _scaleToRad(repayNum.roundedWadDiv(repayDen), 18); // [rad] 
+        repay = repayNum.roundedWadDiv(repayDen).scaleToRad(18); // [rad] 
 
         // first branch: full liquidation
         //   more debt needs to be paid off than available to go back to target health,
@@ -103,13 +92,13 @@ contract Liquidation {
         // third branch: soft liquidation to target health ratio
         if (repay > totalDebt) {
             gemOut = collateral; // [wad] sell all collateral
-            repay = _scaleToRad(exchangeRate.roundedWadMul(WAD - discount).roundedWadMul(gemOut), 18); // [rad] readjust repay amount  
+            repay = exchangeRate.roundedWadMul(WAD - discount).roundedWadMul(gemOut).scaleToRad(18); // [rad] readjust repay amount  
         } else if (totalDebt - repay < dust) {
             repay = totalDebt; // [rad] pay off all debt 
-            gemOut = _scaleToWad(repay, 45).roundedWadDiv(exchangeRate.roundedWadMul(WAD - discount)); // [wad] readjust collateral to sell
+            gemOut = repay.scaleToWad(45).roundedWadDiv(exchangeRate.roundedWadMul(WAD - discount)); // [wad] readjust collateral to sell
         } else {
             // repay stays same 
-            gemOut = _scaleToWad(repay, 45).roundedWadDiv(exchangeRate.roundedWadMul(WAD - discount)); // [wad] readjust collateral to sell
+            gemOut = repay.scaleToWad(45).roundedWadDiv(exchangeRate.roundedWadMul(WAD - discount)); // [wad] readjust collateral to sell
         }
     }
 
@@ -162,7 +151,7 @@ contract Liquidation {
         console.log("collateral * exchangeRate: ", collateral.roundedWadMul(exchangeRate)); 
         console.log("collateral * exchangeRate * liquidationThreshold: ", collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold));
         uint256 healthRatio = collateral.roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold); // [wad] * [wad] * [wad] = [wad] 
-        healthRatio = healthRatio.roundedWadDiv(normalizedDebt).roundedWadDiv(_scaleToWad(rate, 27)); // [wad] / [wad] / [wad] = [wad] 
+        healthRatio = healthRatio.roundedWadDiv(normalizedDebt).roundedWadDiv(rate.scaleToWad(27)); // [wad] / [wad] / [wad] = [wad] 
 
         if (healthRatio >= WAD) {
             revert VaultIsNotUnsafe(healthRatio); 

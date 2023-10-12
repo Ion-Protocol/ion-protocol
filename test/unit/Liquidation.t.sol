@@ -39,6 +39,16 @@ contract LiquidationTest is IonPoolSharedSetup {
     address immutable keeper1 = vm.addr(99); 
     address immutable revenueRecipient = vm.addr(100); 
 
+    struct LiquidationArgs {
+        uint256 collateral; 
+        uint256 liquidationThreshold; 
+        uint256 exchangeRate; 
+        uint256 debt; 
+        uint256 targetHealth; 
+        uint256 reserveFactor; 
+        uint256 maxDiscount; 
+    }
+
     function setUp() public override {
         super.setUp();
 
@@ -104,6 +114,44 @@ contract LiquidationTest is IonPoolSharedSetup {
         vm.startPrank(usr); 
 
         vm.stopPrank(); 
+    }
+
+    /** 
+     * Helper function to calculate the resulting collateral and debt after a successful partial liquidation
+     * NOTE: should not be used when testing full liquidation scenarios
+     */
+    function calculateExpectedLiquidationResults(LiquidationArgs memory args) internal returns (uint256 resultingCollateral, uint256 resultingDebt) {
+        uint256 collateralValue = args.collateral * args.liquidationThreshold / WAD * args.exchangeRate / WAD;
+        uint256 healthRatio = collateralValue * WAD / args.debt.scaleToWad(45); // debt is [rad] 
+        uint256 discount = args.reserveFactor + (WAD - healthRatio); // [wad] 
+        discount = discount <= args.maxDiscount ? discount : args.maxDiscount; // [wad] 
+        uint256 repayNum = args.targetHealth * args.liquidationThreshold / WAD; // [wad] 
+        uint256 repayDen = args.targetHealth - (args.liquidationThreshold * WAD / (WAD - discount)); // [wad]
+        uint256 repay = repayNum * WAD / repayDen; // [wad]
+        uint256 collateralSalePrice = args.exchangeRate * (WAD - discount) / WAD; // [wad]
+        uint256 gemOut = repay * WAD / collateralSalePrice;
+
+        resultingCollateral = args.collateral - gemOut; // [wad]
+        resultingDebt = args.debt - repay.scaleToRad(18); // [rad] 
+    }
+
+    // tests the helper function for calculating expected liquidation results 
+    function test_CalculateExpectedLiquidationResults() public {
+        LiquidationArgs memory args; 
+
+        args.collateral = 100 ether; // [wad] 
+        args.liquidationThreshold = 0.5 ether; // [wad]  
+        args.exchangeRate = 0.95 ether; 
+        args.debt = (50 * WAD).scaleToRad(18); // [rad] 
+        args.targetHealth = 1.25 ether ; // [wad] 
+        args.reserveFactor = 0.02 ether; // [wad] 
+        args.maxDiscount = 0.2 ether; // [wad] 
+
+        (uint256 resultingCollateral, uint256 resultingDebt) = calculateExpectedLiquidationResults(args);
+        console.log("resultingCollateral: ", resultingCollateral); 
+        console.log("resultingDebt: ", resultingDebt);
+        assertEq(resultingCollateral, 100); 
+        assertEq(resultingDebt, 100); 
     }
 
     function test_ExchangeRateCannotBeZero() public {
@@ -189,13 +237,25 @@ contract LiquidationTest is IonPoolSharedSetup {
      * repayNum = (1.25 * 50) - 47.5 = 15 
      * repayDen = 1.25 - (0.5 / (1 - 0.07)) = 0.71236559139
      * repay = 21.0566037 
+     * collateralSalePrice = 0.95 * 0.93 = 0.8835 ETH / LST 
+     * gemOut = 21.0566037 / 0.8835 = 23.8331677
      * 
      * Resulting Values: 
-     * debt = 50 -  
-     * 
-     * 
+     * debt = 50 - 21.0566037 = 28.9433963
+     * collateral = 100 - 23.8331677 = 76.1668323  
      */
     function test_PartialLiquidationSuccess() public {
+        // calculating resulting state after liquidations  
+        // {
+        //     uint256 collateral = 100 ether; // [wad] 
+        //     uint256 liquidationThreshold = 0.5 ether; // [wad]  
+        //     uint256 exchangeRate = 0.95 ether; // 
+        //     uint256 collateralValue * liquidationThreshold / WAD * exchangeRate / WAD;  
+        //     uint256 debt = 50 ether; 
+        //     uint256 healthRatio = collateralValue / debt; 
+        // }
+        
+
         uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([50, 0, 0, 0, 0, 0, 0, 0]);
         liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds); 
         // create position 
