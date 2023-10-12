@@ -69,7 +69,7 @@ abstract contract ReserveOracle is Ownable {
         return _getProtocolExchangeRate(); 
     }
 
-    constructor(address _token) {
+    constructor(address _token) Ownable(msg.sender) {
         token = _token;
     }
 

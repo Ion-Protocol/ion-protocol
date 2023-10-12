@@ -79,17 +79,30 @@ contract LiquidationTest is IonPoolSharedSetup {
      */
     function borrow(address borrower, uint256 ilkIndex, uint256 depositAmt, uint256 borrowAmt) internal {
         vm.startPrank(borrower);
+        // join 
         stEthJoin = gemJoins[stEthIndex]; 
         collaterals[stEthIndex].approve(address(stEthJoin), depositAmt); 
         stEthJoin.join(borrower, depositAmt); 
-        ionPool.modifyPosition(
+        // move collateral to vault 
+        ionPool.moveGemToVault(
+            stEthIndex,
+            borrower,
+            borrower,
+            depositAmt 
+        );
+        ionPool.borrow(
             stEthIndex,
             borrower, 
             borrower, 
-            borrower, 
-            int256(depositAmt), 
-            int256(borrowAmt) 
+            borrowAmt 
         ); 
+        vm.stopPrank(); 
+    }
+
+    function fundEth(address usr, uint256 amount) public {
+        underlying.mint(usr, amount); 
+        vm.startPrank(usr); 
+
         vm.stopPrank(); 
     }
 
@@ -138,6 +151,87 @@ contract LiquidationTest is IonPoolSharedSetup {
         liquidation.liquidate(stEthIndex, borrower1, keeper1); 
         vm.stopPrank(); 
     }   
+
+    /**
+     * @dev Test that vault with health ratio exactly one can't be liquidated
+     * healthRatio = 10 ether * 0.5 ether * 1 / 5 ether / 1 ether 
+     */
+    function test_HealthRatioIsExactlyOne() public {
+        // deploy liquidations contract 
+        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([100, 100, 100, 100, 100, 100, 100, 100]);
+
+        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds); 
+
+        // set exchange rate 
+        reserveOracle.setExchangeRate(0.5 ether);
+
+        // create borrow position 
+        borrow(borrower1, stEthIndex, 10 ether, 5 ether); 
+
+        // liquidate call 
+        vm.startPrank(keeper1);
+        vm.expectRevert(
+            abi.encodeWithSelector(Liquidation.VaultIsNotUnsafe.selector, 1 ether) 
+        );
+        liquidation.liquidate(stEthIndex, borrower1, keeper1); 
+        vm.stopPrank(); 
+    }
+
+    /**
+     * @dev Partial Liquidation 
+     * collateral = 100 ether 
+     * liquidationThreshold = 0.5
+     * exchangeRate becomes 0.95 
+     * collateralValue = 100 * 0.95 * 0.5 = 47.5  
+     * debt = 50 
+     * healthRatio = 47.5 / 50 = 0.95 
+     * discount = 0.02 + (1 - 0.5) = 0.07 
+     * repayNum = (1.25 * 50) - 47.5 = 15 
+     * repayDen = 1.25 - (0.5 / (1 - 0.07)) = 0.71236559139
+     * repay = 21.0566037 
+     * 
+     * Resulting Values: 
+     * debt = 50 -  
+     * 
+     * 
+     */
+    function test_PartialLiquidationSuccess() public {
+        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([50, 0, 0, 0, 0, 0, 0, 0]);
+        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds); 
+        // create position 
+        borrow(borrower1, stEthIndex, 100 ether, 50 ether); 
+        // exchangeRate drops 
+        reserveOracle.setExchangeRate(0.95 ether);
+
+
+        vm.startPrank(keeper1); 
+        liquidation.liquidate(stEthIndex, borrower1, keeper1); 
+        vm.stopPrank(); 
+
+        // 
+    }
+
+    /**
+     * @dev Partial liquidation fails and protocol takes debt
+     * 
+     * 10 ETH on 10 stETH 
+     * stETH exchangeRate decreases to 0.9 
+     * health ratio is now less than 1 
+     * collateralValue = collateral * exchangeRate * liquidationThreshold = 10 * 0.9 * 1
+     * debtValue = 10 
+     * healthRatio = 9 / 10 = 0.9 
+     * discount = 0.02 + (1 - 0.9) = 0.12 
+     * repayNum = (1.25 * 10) - 9 = 3.5 
+     * repayDen = 1.25 - (1 / (1 - 0.12)) = 0.11363636 
+     * repay = 30.8000
+     * since repay is over 10, gemOut is capped to 10
+     * Partial Liquidation not possible, so move position to the vow
+     */
+    function test_ProtocolTakesDebt() public {
+        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([100, 100, 100, 100, 100, 100, 100, 100]);
+        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds); 
+    }
+
 
 
 }

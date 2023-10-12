@@ -1,8 +1,9 @@
 pragma solidity ^0.8.19;
 
-import {IonPool} from "src//IonPool.sol"; 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { RoundedMath, WAD, RAY } from "../src/math/RoundedMath.sol"; 
-import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
+import {IonPool} from "src//IonPool.sol"; 
 import "forge-std/console.sol";
 
 // TODO: import instead when ReserveOracle is finished
@@ -17,8 +18,9 @@ uint256 constant TARGET_HEALTH = 125 * WAD / 100; // 1.25 [wad]
 uint256 constant RESERVE_FACTOR = 2 * WAD / 100; // 0.02 [wad]
 uint256 constant MAX_DISCOUNT = 2 * WAD / 10; // 0.20 [wad]
 
-contract Liquidation is Pausable {  
+contract Liquidation {  
 
+    using SafeERC20 for IERC20; 
     using RoundedMath for uint256;
 
     error LiquidationThresholdCannotBeZero(uint256 liquidationThreshold); 
@@ -34,6 +36,7 @@ contract Liquidation is Pausable {
     
     IonPool public immutable ionPool;
     IReserveOracle public immutable reserveOracle; 
+    IERC20 public immutable underlying; 
 
     struct LiquidateArgs {
         uint256 repay;
@@ -50,6 +53,7 @@ contract Liquidation is Pausable {
         reserveOracle = IReserveOracle(_reserveOracle); 
         revenueRecipient = _revenueRecipient;
         liquidationThresholds = _liquidationThresholds; 
+        underlying = ionPool.getUnderlying(); 
     }
 
     function _scaleToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
@@ -125,8 +129,11 @@ contract Liquidation is Pausable {
         LiquidateArgs memory liquidateArgs;
 
         // needs ink art rate 
-        (uint256 collateral, uint256 normalizedDebt) = ionPool.vaults(ilkIndex, vault);
-        (, uint104 rate, , , , uint256 dust) = ionPool.ilks(ilkIndex); // less reads? 
+        // TODO: multiple external calls vs. calling one getter that returns all 
+        uint256 collateral = ionPool.collateral(ilkIndex, vault); 
+        uint256 normalizedDebt = ionPool.normalizedDebt(ilkIndex, vault); 
+        uint256 rate = ionPool.rate(ilkIndex); 
+        uint256 dust = ionPool.dust(ilkIndex); 
        
         console.log("liqThres 0: ", liquidationThresholds[0]); 
         console.log("liqThres 1: ", liquidationThresholds[1]); 
@@ -173,7 +180,7 @@ contract Liquidation is Pausable {
         // --- Storage Updates ---
 
         // move weth from kpr to liq
-        ionPool.move(kpr, address(this), liquidateArgs.repay);
+        underlying.safeTransferFrom(kpr, address(this), liquidateArgs.repay);
 
         // confiscate part of the urn
         //  1. move art into liq's sin (unbacked debt) 
@@ -193,9 +200,9 @@ contract Liquidation is Pausable {
         // reserve fee: give the fee in collateral to the revenueRecipient
         ionPool.transferGem(ilkIndex, address(this), revenueRecipient, liquidateArgs.fee);
 
-        // payback liquidation's unbacked debt with weth
+        // payback liquidation's unbacked debt with the underlying ERC20 
         // if all collateral was sold and debt remains, this contract keeps the sin
-        ionPool.repayBadDebt(liquidateArgs.repay, address(this)); 
+        ionPool.repayBadDebt(liquidateArgs.repay); 
 
         emit Liquidate(kpr, liquidateArgs.repay, liquidateArgs.gemOut - liquidateArgs.fee, liquidateArgs.fee);
     }

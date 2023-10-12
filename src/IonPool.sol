@@ -3,7 +3,6 @@ pragma solidity 0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { RewardToken } from "./token/RewardToken.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
@@ -13,7 +12,6 @@ import { RoundedMath, RAY } from "./math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
 
 contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardToken {
     using SafeERC20 for IERC20;
@@ -382,7 +380,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     /**
      * @dev Moves collateral from `gem` balances to internal `vault.collateral`
      */
-    function moveCollateralToVault(
+    function moveGemToVault(
         uint8 ilkIndex,
         address user,
         address v,
@@ -397,7 +395,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     /**
      * @dev Moves collateral from internal `vault.collateral` balances to `gem`
      */
-    function moveCollateralFromVault(
+    function moveGemFromVault(
         uint8 ilkIndex,
         address user,
         address v,
@@ -590,20 +588,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         $.gem[ilkIndex][src] -= wad;
         $.gem[ilkIndex][dst] += wad;
-
-    /**
-     * @dev To be used by protocol to settle bad debt using reserves
-     * @param rad amount of debt to be repaid (45 decimals)
-     * @param usr the usr address that owns the bad debt
-     * TODO: Allow a msg.sender to repay another address's unbackedDebt
-     */
-    function repayBadDebt(uint256 rad, address usr) external whenNotPaused {
-        address u = _msgSender();
-        unbackedDebt[usr] -= rad;
-        weth[u] -= rad;
-        totalUnbackedDebt -= rad;
-        debt -= rad;
         emit TransferGem(ilkIndex, src, dst, wad);
+
     }
 
     // --- Getters ---
