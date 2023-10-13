@@ -12,6 +12,7 @@ import { RoundedMath, RAY } from "./math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardToken {
     using SafeERC20 for IERC20;
@@ -361,6 +362,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         external
         whenNotPaused(Pauses.UNSAFE)
     {
+        console.log("amountOfNormalizedDebt: ", amountOfNormalizedDebt); 
+        console2.log("amountOfNormalizedDebt.toInt256(): ", amountOfNormalizedDebt.toInt256()); 
         _modifyPosition(ilkIndex, user, address(0), w, 0, amountOfNormalizedDebt.toInt256());
 
         emit Borrow(ilkIndex, user, w, amountOfNormalizedDebt);
@@ -436,6 +439,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         ilk.totalNormalizedDebt = _add(uint256(ilk.totalNormalizedDebt), changeInNormalizedDebt).toUint104();
 
         int256 changeInDebt = ilkRate.toInt256() * changeInNormalizedDebt;
+        console2.log("changeInDebt: ", changeInDebt); 
         uint256 newTotalDebtInVault = ilkRate * vault.normalizedDebt;
         $.debt = _add($.debt, changeInDebt);
 
@@ -481,6 +485,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
         // If changeInDebt < 0, it is a repayment and WETH is being transferred
         // into the protocol
+        // console.log("changeInDebt: ", changeInDebt); 
         _borrowWeth(w, changeInDebt);
     }
 
@@ -513,6 +518,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
      * @param amount amount to transfer
      */
     function _borrowWeth(address user, int256 amount) internal {
+        console2.log("_borrowETH amount: ", amount); 
+        
         if (amount == 0) return;
 
         if (amount < 0) {
@@ -522,7 +529,10 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
             getUnderlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
-            uint256 amountWad = uint256(-amount) / RAY;
+            console2.log("borrow weth amount: ", amount); 
+            console2.log("total supplied weth: ", totalSupply()); 
+            uint256 amountWad = uint256(amount) / RAY;
+            console.log("amountWad: ", amountWad); 
             getUnderlying().safeTransfer(user, amountWad);
         }
     }

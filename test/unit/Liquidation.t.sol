@@ -88,6 +88,8 @@ contract LiquidationTest is IonPoolSharedSetup {
      * NOTE: does not normalize. Assumes the rate is 1. 
      */
     function borrow(address borrower, uint256 ilkIndex, uint256 depositAmt, uint256 borrowAmt) internal {
+        // mint 
+        collaterals[stEthIndex].mint(address(this), depositAmt);
         vm.startPrank(borrower);
         // join 
         stEthJoin = gemJoins[stEthIndex]; 
@@ -100,6 +102,7 @@ contract LiquidationTest is IonPoolSharedSetup {
             borrower,
             depositAmt 
         );
+        console.log("borrowAmt: ", borrowAmt); 
         ionPool.borrow(
             stEthIndex,
             borrower, 
