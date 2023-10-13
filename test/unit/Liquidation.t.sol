@@ -263,12 +263,9 @@ contract LiquidationTest is IonPoolSharedSetup {
         // exchangeRate drops 
         reserveOracle.setExchangeRate(0.95 ether);
 
-
         vm.startPrank(keeper1); 
         liquidation.liquidate(stEthIndex, borrower1, keeper1); 
         vm.stopPrank(); 
-
-        // 
     }
 
     /**

@@ -7,6 +7,8 @@ import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC1967 } from "@openzeppelin/contracts/interfaces/IERC1967.sol";
 import { ProxyAdmin } from "./ProxyAdmin.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 
 /**
  * @notice Copy of OpenZeppelin's `TransparentUpgradeableProxy` that exposes `implementation()` and uses alternative
@@ -94,6 +96,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * @dev If caller is the admin process the call internally, otherwise transparently fallback to the proxy behavior.
      */
     function _fallback() internal virtual override {
+        console.log("hit proxy fallback"); 
         if (msg.sender == _proxyAdmin()) {
             if (msg.sig != ITransparentUpgradeableProxy.upgradeToAndCall.selector) {
                 revert ProxyDeniedAdminAccess();

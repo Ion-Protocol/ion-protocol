@@ -14,6 +14,8 @@ import { GemJoin } from "../../src/join/GemJoin.sol";
 import { RAY } from "../../src/math/RoundedMath.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
 
 // struct IlkData {
 //     uint80 minimumProfitMargin; // 18 decimals
@@ -39,6 +41,7 @@ contract InterestRateExposed is InterestRate {
 }
 
 contract IonPoolExposed is IonPool {
+
     constructor(
         address _underlying,
         address _treasury,
@@ -162,7 +165,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
         ionPool.grantRole(ionPool.ION(), address(this));
         
         // attempt to initialize again 
-        vm.expectRevert(IonPool.InvalidInitialization.selector); 
+        vm.expectRevert(Initializable.InvalidInitialization.selector); 
         ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule); 
 
         // ionHandler = new IonHandler(ionPool);
@@ -184,14 +187,13 @@ contract IonPoolSharedSetup is BaseTestSetup {
     }
 
     function test_setUp() public virtual {
-        // assertEq(address(ionPool.underlying()), address(underlying));
+        assertEq(address(ionPool.getUnderlying()), address(underlying));
         // assertEq(ionPool.treasury(), TREASURY);
         // assertEq(ionPool.decimals(), DECIMALS);
         // assertEq(ionPool.name(), NAME);
         // assertEq(ionPool.symbol(), SYMBOL);
         // assertEq(ionPool.defaultAdmin(), address(this));
 
-        // assertEq(ionPool.globalDebtCeiling(), globalDebtCeiling);
         // assertEq(ionPool.ilkCount(), collaterals.length);
 
         // assertEq(ionPool.paused(), false);
