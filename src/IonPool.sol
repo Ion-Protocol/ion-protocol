@@ -3,7 +3,6 @@ pragma solidity 0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { RewardToken } from "./token/RewardToken.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
@@ -13,7 +12,6 @@ import { RoundedMath, RAY } from "./math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
 
 contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardToken {
     using SafeERC20 for IERC20;
@@ -109,13 +107,16 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         external
         initializer
     {
+        console.log("ionPool initialize"); 
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
+        // console.log("after access control default admin rules"); 
         RewardToken.initialize(_underlying, _treasury, decimals_, name_, symbol_);
-
+        console.log("after reward token initialize"); 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.interestRateModule = _interestRateModule;
         emit InterestRateModuleUpdated(address(0), address(_interestRateModule));
+        console.log("after initialize"); 
     }
 
     // --- Administration ---
@@ -382,7 +383,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     /**
      * @dev Moves collateral from `gem` balances to internal `vault.collateral`
      */
-    function moveCollateralToVault(
+    function moveGemToVault(
         uint8 ilkIndex,
         address user,
         address v,
@@ -397,7 +398,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     /**
      * @dev Moves collateral from internal `vault.collateral` balances to `gem`
      */
-    function moveCollateralFromVault(
+    function moveGemFromVault(
         uint8 ilkIndex,
         address user,
         address v,
@@ -529,7 +530,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     // --- CDP Confiscation ---
 
     // TODO: Implement liquidations
-    function grab(
+    function confiscateVault(
         uint8 ilkIndex,
         address u,
         address v,
@@ -590,8 +591,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         $.gem[ilkIndex][src] -= wad;
         $.gem[ilkIndex][dst] += wad;
-
         emit TransferGem(ilkIndex, src, dst, wad);
+
     }
 
     // --- Getters ---
