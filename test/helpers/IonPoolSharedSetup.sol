@@ -6,7 +6,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
 // import { IonHandler } from "../../src/periphery/IonHandler.sol";
-import { InterestRate, IlkData } from "../../src/InterestRate.sol";
+import { InterestRate, IlkData, SECONDS_IN_A_DAY } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
@@ -17,11 +17,20 @@ import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 // struct IlkData {
-//     uint80 minimumProfitMargin; // 18 decimals
-//     uint64 reserveFactor; // 18 decimals
-//     uint64 optimalUtilizationRate; // 18 decimals
-//     uint16 distributionFactor; // 2 decimals
+//                                                        _
+//     uint96 adjustedProfitMargin; // 27 decimals         |
+//     uint96 minimumKinkRate; // 27 decimals              |
+//     uint24 adjustedAboveKinkSlope; // 4 decimals        |   256 bits
+//     uint24 minimumAboveKinkSlope; // 4 decimals         |
+//     uint16 adjustedReserveFactor; // 4 decimals        _|
+//                                                         |
+//     uint16 minimumReserveFactor; // 4 decimals          |
+//     uint96 adjustedBaseRate; // 27 decimals             |   240 bits
+//     uint96 minimumBaseRate; // 27 decimals              |
+//     uint16 optimalUtilizationRate; // 4 decimals        |
+//     uint16 distributionFactor; // 4 decimals           _|
 // }
+
 
 contract MockYieldOracle is IYieldOracle {
     uint32 APY = 3.45e6;
@@ -79,10 +88,8 @@ contract IonPoolSharedSetup is BaseTestSetup {
     address immutable borrower2 = vm.addr(4);
 
     // --- Configs ---
-    uint256 public globalDebtCeiling = 100e45; // [rad]
-
     uint256 internal constant SPOT = 1e27; // [ray]
-    uint80 internal constant minimumProfitMargin = 0.85e18;
+    uint80 internal constant minimumProfitMargin = 0.85e18 / SECONDS_IN_A_DAY;
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
@@ -91,17 +98,17 @@ contract IonPoolSharedSetup is BaseTestSetup {
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
     ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
 
-    uint64 internal constant stEthReserveFactor = 0.1e18;
-    uint64 internal constant swEthReserveFactor = 0.08e18;
-    uint64 internal constant ethXReserveFactor = 0.05e18;
+    uint16 internal constant stEthAdjustedReserveFactor = 0.1e4;
+    uint16 internal constant swEthAdjustedReserveFactor = 0.08e4;
+    uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
 
-    uint64 internal constant stEthOptimalUtilizationRate = 0.9e18;
-    uint64 internal constant swEthOptimalUtilizationRate = 0.92e18;
-    uint64 internal constant ethXOptimalUtilizationRate = 0.95e18;
+    uint16 internal constant stEthOptimalUtilizationRate = 0.9e4;
+    uint16 internal constant swEthOptimalUtilizationRate = 0.92e4;
+    uint16 internal constant ethXOptimalUtilizationRate = 0.95e4;
 
-    uint16 internal stEthDistributionFactor = 0.2e2;
-    uint16 internal swEthDistributionFactor = 0.4e2;
-    uint16 internal ethXDistributionFactor = 0.4e2;
+    uint16 internal stEthDistributionFactor = 0.2e4;
+    uint16 internal swEthDistributionFactor = 0.4e4;
+    uint16 internal ethXDistributionFactor = 0.4e4;
 
     uint256 internal stEthDebtCeiling = 20e45;
     uint256 internal swEthDebtCeiling = 40e45;
@@ -109,8 +116,8 @@ contract IonPoolSharedSetup is BaseTestSetup {
 
     ERC20PresetMinterPauser[] internal collaterals;
     GemJoin[] internal gemJoins;
-    uint64[] internal reserveFactors = [stEthReserveFactor, swEthReserveFactor, ethXReserveFactor];
-    uint64[] internal optimalUtilizationRates =
+    uint16[] internal adjustedReserveFactors = [stEthAdjustedReserveFactor, swEthAdjustedReserveFactor, ethXAdjustedReserveFactor];
+    uint16[] internal optimalUtilizationRates =
         [stEthOptimalUtilizationRate, swEthOptimalUtilizationRate, ethXOptimalUtilizationRate];
     uint16[] internal distributionFactors = [stEthDistributionFactor, swEthDistributionFactor, ethXDistributionFactor];
     uint256[] internal debtCeilings = [stEthDebtCeiling, swEthDebtCeiling, ethXDebtCeiling];
@@ -120,7 +127,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
     function setUp() public virtual override {
         collaterals = [stEth, swEth, ethX];
         assert(
-            collaterals.length == reserveFactors.length && reserveFactors.length == optimalUtilizationRates.length
+            collaterals.length == adjustedReserveFactors.length && adjustedReserveFactors.length == optimalUtilizationRates.length
                 && optimalUtilizationRates.length == distributionFactors.length
                 && distributionFactors.length == debtCeilings.length
         );
@@ -128,27 +135,31 @@ contract IonPoolSharedSetup is BaseTestSetup {
         apyOracle = new MockYieldOracle();
 
         uint256 distributionFactorSum;
-        uint256 debtCeilingSum;
 
         IlkData memory ilkConfig;
         for (uint256 i = 0; i < collaterals.length; i++) {
             ilkConfig = IlkData({
-                minimumProfitMargin: minimumProfitMargin,
-                reserveFactor: reserveFactors[i],
+                adjustedProfitMargin: minimumProfitMargin,
+                minimumKinkRate: 0,
+                adjustedAboveKinkSlope: 700E4,
+                minimumAboveKinkSlope: 700E4,
+                adjustedReserveFactor: adjustedReserveFactors[i],
+
+                minimumReserveFactor: adjustedReserveFactors[i],
+                minimumBaseRate: 0,
+                adjustedBaseRate: 0,
                 optimalUtilizationRate: optimalUtilizationRates[i],
                 distributionFactor: distributionFactors[i]
             });
             ilkConfigs.push(ilkConfig);
 
             distributionFactorSum += distributionFactors[i];
-            debtCeilingSum += debtCeilings[i];
 
             collaterals[i].mint(borrower1, INITIAL_BORROWER_COLLATERAL_BALANCE);
             collaterals[i].mint(borrower2, INITIAL_BORROWER_COLLATERAL_BALANCE);
         }
 
         assert(distributionFactorSum == 1e2);
-        assert(debtCeilingSum == globalDebtCeiling);
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
@@ -220,7 +231,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
 
         //     (uint256 borrowRate, uint256 reserveFactor) = ionPool.getCurrentBorrowRate(i);
         //     assertEq(borrowRate, 1 * RAY);
-        //     assertEq(reserveFactor, reserveFactors[i]);
+        //     assertEq(reserveFactor, adjustedReserveFactors[i]);
 
         //     assertEq(collaterals[i].balanceOf(address(ionPool)), 0);
         //     assertEq(collaterals[i].balanceOf(address(borrower1)), INITIAL_BORROWER_COLLATERAL_BALANCE);
@@ -228,7 +239,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
 
         //     IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
         //     assertEq(ilkConfig.minimumProfitMargin, minimumProfitMargin);
-        //     assertEq(ilkConfig.reserveFactor, reserveFactors[i]);
+        //     assertEq(ilkConfig.reserveFactor, adjustedReserveFactors[i]);
         //     assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
         //     assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
         // }
