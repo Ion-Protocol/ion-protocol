@@ -1,7 +1,7 @@
 pragma solidity ^0.8.19;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IReserveFeed} from "src/interfaces/IReserveFeed.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
 
 abstract contract ReserveOracle is Ownable {
     uint256 public exchangeRate; // final value to be reported
@@ -44,7 +44,7 @@ abstract contract ReserveOracle is Ownable {
                 emit RemoveFeed(_addr);
             }
             unchecked {
-                ++i; 
+                ++i;
             }
         }
     }
@@ -64,9 +64,10 @@ abstract contract ReserveOracle is Ownable {
     }
 
     // --- Override ---
-    function _getProtocolExchangeRate() internal virtual returns (uint256) {}
+    function _getProtocolExchangeRate() internal virtual returns (uint256) { }
+
     function getProtocolExchangeRate() external virtual returns (uint256) {
-        return _getProtocolExchangeRate(); 
+        return _getProtocolExchangeRate();
     }
 
     constructor(address _token) Ownable(msg.sender) {

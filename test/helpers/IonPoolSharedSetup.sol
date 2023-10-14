@@ -14,8 +14,7 @@ import { GemJoin } from "../../src/join/GemJoin.sol";
 import { RAY } from "../../src/math/RoundedMath.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 // struct IlkData {
 //     uint80 minimumProfitMargin; // 18 decimals
@@ -41,7 +40,6 @@ contract InterestRateExposed is InterestRate {
 }
 
 contract IonPoolExposed is IonPool {
-
     constructor(
         address _underlying,
         address _treasury,
@@ -154,19 +152,19 @@ contract IonPoolSharedSetup is BaseTestSetup {
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
-        // Instantiate upgradeable IonPool 
+        // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(101));
-        IonPoolExposed logicIonPool = new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
-        ionPool = IonPoolExposed(
-            address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), ""))
-        );        
-        
-        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule); 
+        IonPoolExposed logicIonPool =
+            new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool =
+            IonPoolExposed(address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), "")));
+
+        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
         ionPool.grantRole(ionPool.ION(), address(this));
-        
-        // attempt to initialize again 
-        vm.expectRevert(Initializable.InvalidInitialization.selector); 
-        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule); 
+
+        // attempt to initialize again
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
 
         // ionHandler = new IonHandler(ionPool);
         // vm.prank(borrower1);
