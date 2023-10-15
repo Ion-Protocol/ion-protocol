@@ -71,7 +71,7 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
 
     function test_mintRewardTokenWithSupplyFactorChange() external {
         uint256 amountOfRewardTokens = 100e18;
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
 
         underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
         rewardToken.mint(address(this), amountOfRewardTokens);
@@ -115,7 +115,7 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
 
     function test_burnRewardTokenWithSupplyFactorChange() external {
         uint256 amountOfRewardTokens = 100e18;
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
 
         underlying.approve(address(rewardToken), INITIAL_UNDERYLING);
         rewardToken.mint(address(this), amountOfRewardTokens);

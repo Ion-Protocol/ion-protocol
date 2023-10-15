@@ -196,7 +196,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
     }
 
     function test_setUp() public virtual {
-        assertEq(address(ionPool.getUnderlying()), address(underlying));
+        assertEq(address(ionPool.underlying()), address(underlying));
         // assertEq(ionPool.treasury(), TREASURY);
         // assertEq(ionPool.decimals(), DECIMALS);
         // assertEq(ionPool.name(), NAME);

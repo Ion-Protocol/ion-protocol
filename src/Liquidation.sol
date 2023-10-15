@@ -58,7 +58,7 @@ contract Liquidation {
         reserveOracle = IReserveOracle(_reserveOracle);
         revenueRecipient = _revenueRecipient;
         liquidationThresholds = _liquidationThresholds;
-        underlying = ionPool.getUnderlying();
+        underlying = ionPool.underlying();
     }
 
     /**

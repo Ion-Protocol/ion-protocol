@@ -31,7 +31,7 @@ contract UserHandler is Handler {
 
     function mint(address account, uint256 amount) external {
         amount = bound(amount, 0, underlying.balanceOf(address(this)));
-        uint256 currentSupplyFactor = rewardToken.getSupplyFactor();
+        uint256 currentSupplyFactor = rewardToken.supplyFactor();
 
         if (amount.rayDivDown(currentSupplyFactor) == 0) return;
         rewardToken.mint(account, amount);
@@ -39,7 +39,7 @@ contract UserHandler is Handler {
 
     function burn(address account, uint256 amount) external {
         amount = bound(amount, 0, rewardToken.balanceOf(account));
-        uint256 currentSupplyFactor = rewardToken.getSupplyFactor();
+        uint256 currentSupplyFactor = rewardToken.supplyFactor();
 
         uint256 amountNormalized = amount.rayDivUp(currentSupplyFactor);
         if (amountNormalized == 0 || amountNormalized > rewardToken.normalizedBalanceOf(account)) return;
@@ -102,7 +102,7 @@ contract SupplyFactorIncreaseHandler is Handler {
     { }
 
     function increaseSupplyFactor(uint256 amount) external {
-        uint256 oldSupplyFactor = rewardToken.getSupplyFactor();
+        uint256 oldSupplyFactor = rewardToken.supplyFactor();
         amount = bound(amount, 1.1e27, 1.25e27); // between 1E-16 and 15%
 
         uint256 oldTotalSupply = rewardToken.totalSupply();

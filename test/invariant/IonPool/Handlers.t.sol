@@ -35,7 +35,7 @@ contract LenderHandler is Handler {
 
     function supply(uint256 amount) public {
         amount = bound(amount, 0, type(uint128).max);
-        uint256 amountNormalized = amount.roundedRayDiv(ionPool.getSupplyFactor());
+        uint256 amountNormalized = amount.roundedRayDiv(ionPool.supplyFactor());
 
         if (amountNormalized == 0) return;
         totalHoldingsNormalized += amountNormalized;
@@ -49,7 +49,7 @@ contract LenderHandler is Handler {
         uint256 balance = Math.min(underlying.balanceOf(address(ionPool)), ionPool.balanceOf(address(this)));
         amount = bound(amount, 0, balance);
 
-        uint256 amountNormalized = amount.roundedRayDiv(ionPool.getSupplyFactor());
+        uint256 amountNormalized = amount.roundedRayDiv(ionPool.supplyFactor());
         if (amountNormalized == 0) return;
 
         totalHoldingsNormalized -= amountNormalized;

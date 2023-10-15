@@ -60,7 +60,7 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens != 0);
         // Prevent overflow
         vm.assume(amountOfRewardTokens < 2 ** 128);
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
         // supplyFactor greater than 10,000 is highly unlikely
         supplyFactorNew = bound(supplyFactorNew, supplyFactorOld, 5000e27);
         vm.assume(amountOfRewardTokens.rayDivDown(supplyFactorNew) != 0);
@@ -106,7 +106,7 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens != 0);
         // Prevent overflow
         vm.assume(amountOfRewardTokens < 2 ** 128);
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
         // supplyFactor greater than 5,000 is highly unlikely
         supplyFactorNew = bound(supplyFactorNew, supplyFactorOld + 1, 5000e27);
         vm.assume(amountOfRewardTokens.rayDivDown(supplyFactorNew) != 0);
