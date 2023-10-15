@@ -20,17 +20,17 @@ contract YieldOracle_UnitTest is YieldOracleSharedSetup {
         oracle.updateAll();
         assertEq(oracle.currentIndex(), 2);
 
-        assertEq(oracle.historicalExchangeRates(0, 0), uint32(1_200_000));
-        assertEq(oracle.historicalExchangeRates(0, 1), uint32(1_100_000));
-        assertEq(oracle.historicalExchangeRates(0, 2), uint32(1_150_000));
+        assertEq(oracle.historicalExchangeRates(0, 0), uint64(1.2e18));
+        assertEq(oracle.historicalExchangeRates(0, 1), uint64(1.1e18));
+        assertEq(oracle.historicalExchangeRates(0, 2), uint64(1.15e18));
 
-        assertEq(oracle.historicalExchangeRates(0, 0), uint32(1_200_000));
-        assertEq(oracle.historicalExchangeRates(0, 1), uint32(1_100_000));
-        assertEq(oracle.historicalExchangeRates(0, 2), uint32(1_150_000));
+        assertEq(oracle.historicalExchangeRates(1, 0), uint64(1.2e18));
+        assertEq(oracle.historicalExchangeRates(1, 1), uint64(1.1e18));
+        assertEq(oracle.historicalExchangeRates(1, 2), uint64(1.15e18));
 
         for (uint256 i = 2; i < LOOK_BACK; i++) {
             for (uint256 j = 0; j < ILK_COUNT; j++) {
-                assertEq(oracle.historicalExchangeRates(i, j), uint32(1_000_000));
+                assertEq(oracle.historicalExchangeRates(i, j), uint64(1.0e18));
             }
         }
     }
@@ -70,7 +70,7 @@ contract YieldOracle_UnitTest is YieldOracleSharedSetup {
             for (uint256 j = 0; j < ILK_COUNT; j++) {
                 for (uint256 k = 0; k < LOOK_BACK; k++) {
                     if (k == indexToUpdate) {
-                        assertEq(oracle.historicalExchangeRates(k, j), newRates[j] / 10 ** 12);
+                        assertEq(oracle.historicalExchangeRates(k, j), newRates[j]);
                     } else {
                         assertEq(oracle.historicalExchangeRates(k, j), ratesBefore[k][j]);
                     }

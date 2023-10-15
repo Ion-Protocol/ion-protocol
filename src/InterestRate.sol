@@ -246,8 +246,9 @@ contract InterestRate {
         // Prevent division by 0
          totalEthSupply == 0 ? 0 : totalDebt.rayDivDown(totalEthSupply.rayMulDown(distributionFactorRay));
 
-        uint256 adjustedBelowKinkSlope =
-            (collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate).rayDivDown(optimalUtilizationRateRay);
+        uint256 adjustedBelowKinkSlope = (
+            collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate
+        ).rayDivDown(optimalUtilizationRateRay);
 
         uint256 minimumBelowKinkSlope =
             (ilkData.minimumKinkRate - ilkData.minimumBaseRate).rayDivDown(optimalUtilizationRateRay);
@@ -266,7 +267,8 @@ contract InterestRate {
 
             uint256 adjustedNormalRate =
                 adjustedBelowKinkSlope.rayMulDown(optimalUtilizationRateRay) + ilkData.adjustedBaseRate;
-            uint256 minimumNormalRate = minimumBelowKinkSlope.rayMulDown(optimalUtilizationRateRay) + ilkData.minimumBaseRate;
+            uint256 minimumNormalRate =
+                minimumBelowKinkSlope.rayMulDown(optimalUtilizationRateRay) + ilkData.minimumBaseRate;
 
             // [WAD] * [RAY] / [WAD] = [RAY]
             uint256 adjustedBorrowRate =

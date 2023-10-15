@@ -49,12 +49,9 @@ contract MockSwell is ISwellEth {
 abstract contract YieldOracleSharedSetup is Test {
     YieldOracle public oracle;
 
-    uint32 internal constant baseRate = 1e6;
-    uint32[ILK_COUNT] internal recentPostUpdateRates = [
-        uint32(WST_ETH_EXCHANGE_RATE / 10 ** 12),
-        uint32(STADER_ETH_EXCHANGE_RATE / 10 ** 12),
-        uint32(SWELL_ETH_EXCHANGE_RATE / 10 ** 12)
-    ];
+    uint64 internal constant baseRate = 1e18;
+    uint64[ILK_COUNT] internal recentPostUpdateRates =
+        [uint64(WST_ETH_EXCHANGE_RATE), uint64(STADER_ETH_EXCHANGE_RATE), uint64(SWELL_ETH_EXCHANGE_RATE)];
 
     MockLido lidoOracle;
     MockStader staderOracle;

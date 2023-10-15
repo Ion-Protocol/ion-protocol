@@ -6,6 +6,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { WAD } from "./math/RoundedMath.sol";
 
 // historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
 // storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
@@ -19,11 +20,11 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 //       ...        |    n + ...    ||  |       |       |       |       |       |       |       |
 //        n         |     n + n     ||  |       |       |       |       |       |       |       |
 
-uint8 constant APY_PRECISION = 6;
+uint8 constant APY_PRECISION = 8;
 uint8 constant PROVIDER_PRECISION = 18;
 
 uint32 constant LOOK_BACK = 7;
-uint256 constant PERIODS = 365 * (10 ** APY_PRECISION) / LOOK_BACK;
+uint256 constant PERIODS = 365 * (10 ** APY_PRECISION) / LOOK_BACK; // 52.142... eAPY_PRECISION
 uint32 constant ILK_COUNT = 3;
 // Seconds in 23.5 hours. This will allow for updates around the same time of day
 uint256 constant UPDATE_LOCK_LENGTH = 84_600;
@@ -78,11 +79,12 @@ contract YieldOracle is IYieldOracle {
 
             if (newExchangeRate == 0 || newExchangeRate < previousExchangeRate) revert InvalidExchangeRate(i);
 
-            uint256 exchangeRateIncrease =
-                uint256(newExchangeRate - previousExchangeRate).mulDiv(previousExchangeRate, 10 ** (APY_PRECISION + 2));
+            uint256 exchangeRateIncrease = newExchangeRate - previousExchangeRate;
 
-            uint32 newApy = ((exchangeRateIncrease * PERIODS) / (10 ** APY_PRECISION)).toUint32();
+            // [WAD] * [APY_PRECISION] / [WAD] = [APY_PRECISION]
+            uint32 newApy = exchangeRateIncrease.mulDiv(PERIODS, previousExchangeRate).toUint32();
             apys[i] = newApy;
+
             // Replace previous exchange rates with new exchange rates
             previousExchangeRates[i] = newExchangeRate;
 
