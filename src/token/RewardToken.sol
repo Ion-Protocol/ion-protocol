@@ -15,7 +15,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
  * @title RewardToken
  * @notice Heavily inspired by Aave's `AToken`
  */
-contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
+abstract contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
     using RoundedMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -215,7 +215,7 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
         // The amount to mint can easily be very small since it is a fraction of the interest accrued.
         // In that case, the treasury will experience a (very small) loss, but it
         // wont cause potentially valid transactions to fail.
-        _mintNormalized(_treasury, amount.roundedRayDiv(_supplyFactor));
+        _mintNormalized(_treasury, amount.rayDivDown(_supplyFactor));
 
         emit Transfer(address(0), _treasury, amount);
         emit Mint(_treasury, amount, _supplyFactor);
@@ -240,7 +240,7 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
     function balanceOf(address user) public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
-        return $._normalizedBalances[user].roundedRayMul($.supplyFactor);
+        return $._normalizedBalances[user].rayMulDown($.supplyFactor);
     }
 
     /**
@@ -265,7 +265,7 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
             return 0;
         }
 
-        return _normalizedTotalSupply.roundedRayMul($.supplyFactor);
+        return _normalizedTotalSupply.rayMulDown($.supplyFactor);
     }
 
     function normalizedTotalSupply() public view returns (uint256) {
@@ -401,7 +401,7 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
-        uint256 amountNormalized = amount.roundedRayDiv(_supplyFactor);
+        uint256 amountNormalized = amount.rayDivDown(_supplyFactor);
 
         uint256 oldSenderBalance = $._normalizedBalances[from];
         if (oldSenderBalance < amountNormalized) {

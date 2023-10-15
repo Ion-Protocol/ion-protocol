@@ -6,9 +6,18 @@ import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 
 contract RewardTokenExposed is RewardToken {
-    constructor(address _underlying, address _treasury, uint8 decimals_, string memory name_, string memory symbol_) 
-    // RewardToken(_underlying, _treasury, decimals_, name_, symbol_)
-    { }
+    function init(
+        address _underlying,
+        address _treasury,
+        uint8 decimals_,
+        string memory name_,
+        string memory symbol_
+    )
+        public
+        initializer
+    {
+        initialize(_underlying, _treasury, decimals_, name_, symbol_);
+    }
 
     // --- Cheats ---
     function setSupplyFactor(uint256 factor) external {
@@ -49,7 +58,8 @@ abstract contract RewardTokenSharedSetup is BaseTestSetup {
 
     function setUp() public virtual override {
         super.setUp();
-        rewardToken = new RewardTokenExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
+        rewardToken = new RewardTokenExposed();
+        rewardToken.init(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
     }
 
     // --- Helpers ---

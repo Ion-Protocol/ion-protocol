@@ -173,4 +173,12 @@ contract RewardToken_InvariantTest is RewardTokenSharedSetup {
 
         assertEq(rewardToken.normalizedTotalSupply(), totalSupplyByBalances);
     }
+
+    function invariant_totalSupplyAlwaysBacked() external {
+        uint256 totalSupply = rewardToken.totalSupply();
+
+        uint256 underlyingBalance = underlying.balanceOf(address(rewardToken));
+
+        assertGe(underlyingBalance, totalSupply);
+    }
 }

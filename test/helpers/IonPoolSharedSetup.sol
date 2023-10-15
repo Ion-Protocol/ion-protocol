@@ -31,7 +31,6 @@ import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable
 //     uint16 distributionFactor; // 4 decimals           _|
 // }
 
-
 contract MockYieldOracle is IYieldOracle {
     uint32 APY = 3.45e6;
 
@@ -116,7 +115,8 @@ contract IonPoolSharedSetup is BaseTestSetup {
 
     ERC20PresetMinterPauser[] internal collaterals;
     GemJoin[] internal gemJoins;
-    uint16[] internal adjustedReserveFactors = [stEthAdjustedReserveFactor, swEthAdjustedReserveFactor, ethXAdjustedReserveFactor];
+    uint16[] internal adjustedReserveFactors =
+        [stEthAdjustedReserveFactor, swEthAdjustedReserveFactor, ethXAdjustedReserveFactor];
     uint16[] internal optimalUtilizationRates =
         [stEthOptimalUtilizationRate, swEthOptimalUtilizationRate, ethXOptimalUtilizationRate];
     uint16[] internal distributionFactors = [stEthDistributionFactor, swEthDistributionFactor, ethXDistributionFactor];
@@ -127,7 +127,8 @@ contract IonPoolSharedSetup is BaseTestSetup {
     function setUp() public virtual override {
         collaterals = [stEth, swEth, ethX];
         assert(
-            collaterals.length == adjustedReserveFactors.length && adjustedReserveFactors.length == optimalUtilizationRates.length
+            collaterals.length == adjustedReserveFactors.length
+                && adjustedReserveFactors.length == optimalUtilizationRates.length
                 && optimalUtilizationRates.length == distributionFactors.length
                 && distributionFactors.length == debtCeilings.length
         );
@@ -141,10 +142,9 @@ contract IonPoolSharedSetup is BaseTestSetup {
             ilkConfig = IlkData({
                 adjustedProfitMargin: minimumProfitMargin,
                 minimumKinkRate: 0,
-                adjustedAboveKinkSlope: 700E4,
-                minimumAboveKinkSlope: 700E4,
+                adjustedAboveKinkSlope: 700e4,
+                minimumAboveKinkSlope: 700e4,
                 adjustedReserveFactor: adjustedReserveFactors[i],
-
                 minimumReserveFactor: adjustedReserveFactors[i],
                 minimumBaseRate: 0,
                 adjustedBaseRate: 0,
