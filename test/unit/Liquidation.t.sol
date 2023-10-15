@@ -1,16 +1,17 @@
-pragma solidity ^0.8.19;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.21;
 
 // import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
-import { RoundedMath } from "src/math/RoundedMath.sol";
-import { ReserveOracle } from "src/ReserveOracles/ReserveOracle.sol";
-import { stEthReserveOracle } from "src/ReserveOracles/stEthReserveOracle.sol";
+import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { ReserveOracle } from "../../src/oracle/ReserveOracle.sol";
+import { StEthReserveOracle } from "../../src/oracle/StEthReserveOracle.sol";
 import "forge-std/console.sol";
 
-contract MockstEthReserveOracle {
+contract MockStEthReserveOracle {
     uint256 public exchangeRate;
 
     function setExchangeRate(uint256 _exchangeRate) public {
@@ -33,7 +34,7 @@ contract LiquidationTest is IonPoolSharedSetup {
 
     Liquidation public liquidation;
     GemJoin public stEthJoin;
-    MockstEthReserveOracle public reserveOracle;
+    MockStEthReserveOracle public reserveOracle;
 
     uint8 public stEthIndex;
 
@@ -59,7 +60,7 @@ contract LiquidationTest is IonPoolSharedSetup {
         supply(lender1, 100 ether);
 
         // TODO: Make ReserveOracleSharedSetUp
-        reserveOracle = new MockstEthReserveOracle();
+        reserveOracle = new MockStEthReserveOracle();
     }
 
     /**
