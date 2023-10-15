@@ -5,7 +5,9 @@ out = "out"
 solc = "0.8.21"
 libs = ["lib"]
 verbosity = 3
-remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+remappings = [
+                "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/", 
+                "@balancer-labs/v2-interfaces/=lib/balancer-v2-monorepo/pkg/interfaces/"]
 fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
 optimizer_runs = 1000
