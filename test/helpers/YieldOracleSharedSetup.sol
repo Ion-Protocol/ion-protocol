@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "../../src/interfaces/ProviderInterfaces.sol";
+import { ILidoWstEth, IStaderOracle, ISwellEth } from "../../src/interfaces/OracleInterfaces.sol";
 
 uint256 constant WST_ETH_EXCHANGE_RATE = 1.2e18;
 uint256 constant STADER_ETH_EXCHANGE_RATE = 1.1e18;

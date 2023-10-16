@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 import { IInterestRate } from "./interfaces/IInterestRate.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
-import { RoundedMath, RAY } from "../src/math/RoundedMath.sol";
-import { IonPool } from "../src/IonPool.sol";
+import { RoundedMath, RAY } from "./math/RoundedMath.sol";
+import { IonPool } from "./IonPool.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 struct IlkData {
@@ -284,6 +284,7 @@ contract InterestRate {
         }
     }
 
+    // TODO: Use library function
     function _scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
         return value * (10 ** 27) / (10 ** scale);
     }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "./interfaces/ProviderInterfaces.sol";
+import { ILidoWstEth, IStaderOracle, ISwellEth } from "./interfaces/OracleInterfaces.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
@@ -99,6 +99,7 @@ contract YieldOracle is IYieldOracle {
         lastUpdated = block.timestamp.toUint48();
     }
 
+    // TODO: Move to a library
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
             ILidoWstEth lido = ILidoWstEth(address0);
