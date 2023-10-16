@@ -35,7 +35,7 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
 
     // }
 
-    function testFuzz_AssertCheckFixedConfigsNoRate(
+    function testFuzz_CheckAllAssertsFixedConfigsNoRate(
         uint256 exchangeRate, 
         uint256 depositAmt, 
         uint256 borrowAmt
@@ -164,7 +164,85 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
 
         // results 
         // if bad debt => protocol confiscates, resulting normalized and collateral is both zero 
+        console.log("collateral: ", ionPool.collateral(ilkIndex, BORROWER));
+        console.log("debt: ", ionPool.normalizedDebt(ilkIndex, BORROWER));
         assert(ionPool.collateral(ilkIndex, BORROWER) == 0); 
+        assert(ionPool.normalizedDebt(ilkIndex, BORROWER) == 0); 
+    }
+
+    function testFuzz_DustLiquidationFixedConfigsNoRate(
+        uint256 exchangeRate, 
+        uint256 depositAmt,
+        uint256 borrowAmt
+    ) public {
+        LiquidationArgs memory args; 
+        uint256 startingExchangeRate = 1 ether; 
+
+        // update dust
+        ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleToRad(18)); // [rad] 
+        uint256 dust = ionPool.dust(ilkIndex); 
+        
+        depositAmt = bound(depositAmt, 1 ether, 100 ether); 
+        borrowAmt = bound(borrowAmt, dust.scaleToWad(45), 100 ether); // dust is minimum borrow
+        exchangeRate = bound(exchangeRate, 1, startingExchangeRate);
+
+        args.targetHealth = 1.25 ether; 
+        args.liquidationThreshold = 0.8 ether; 
+        args.maxDiscount = 0.2 ether; 
+        args.reserveFactor = 0;
+
+        args.collateral = depositAmt; 
+        args.exchangeRate = exchangeRate; 
+        args.normalizedDebt = borrowAmt; 
+        args.rate = 1 * RAY; 
+
+        // starting position must be safe 
+        vm.assume(borrowAmt * WAD / depositAmt < args.liquidationThreshold); 
+
+        // to avoid overflow in calculateExpectedLiquidationResults, healthRatio must be less than 1 
+        vm.assume(depositAmt * exchangeRate / WAD * args.liquidationThreshold / borrowAmt < 1 ether); 
+        
+        // expected results
+        Results memory results = calculateExpectedLiquidationResults(args);
+        results.gemOut = results.gemOut.scaleToWad(27); 
+        results.repay = results.repay.scaleToWad(27); 
+
+        // should not be a protocol liquidation (i.e. no bad debt)
+        vm.assume(results.repay <= borrowAmt); 
+        vm.assume(results.gemOut <= depositAmt); 
+
+        // but should leave dust
+        console.log("borrowAmt * args.rate: ", borrowAmt * args.rate); 
+        console.log("results.repay rad: ", results.repay.scaleToRad(18)); 
+        console.log("dust: ", dust); 
+        vm.assume(borrowAmt * args.rate - results.repay.scaleToRad(18) < dust);
+
+        // actions 
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+        liquidation = new Liquidation(
+            address(ionPool), 
+            address(reserveOracle), 
+            REVENUE_RECIPIENT, 
+            liquidationThresholds,
+            args.targetHealth,
+            args.reserveFactor,  
+            args.maxDiscount 
+        );
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation)); 
+
+        // lender 
+        supply(LENDER, borrowAmt);
+
+        // borrower makes a SAFE position
+        borrow(BORROWER, ILK_INDEX, depositAmt, borrowAmt); 
+
+        // exchangeRate changes based on fuzz 
+        reserveOracle.setExchangeRate(exchangeRate);
+
+        // keeper
+        liquidate(KEEPER, ILK_INDEX, BORROWER);  
+
+        // results
         assert(ionPool.normalizedDebt(ilkIndex, BORROWER) == 0); 
     }
 
@@ -184,68 +262,14 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
 
     }
 
-    /**
-     * Assumes that the target health, liquidation threshold, and discount is correctly set. 
-     * Assume targetHealth is above 1. 
-     * Assume targetHealth - (liquidationThreshold / 1 - discount) > 0 
 
-     * Set maxDiscount = 1 - 1 / targetHealth 
-     * What is the bound for exchangeRate? 
-     * How to make sure this is a partial liquidation scenario? 
-     * Bound using the partial liquidation math
-     * Bound assuming dust exists 
-     * Bound assuming partial liquidation is not possible 
-     */
-    // function testFuzz_PartialLiquidationWithoutReserveFactor(
-    //     uint256 targetHealth,
-    //     uint256 liquidationThreshold, 
-    //     uint256 discount
+    function testFuzz_FuzzAllVariablesForAllBranches ()
 
-        
-    //     ) external {
-    //     uint256 reserveFactor = 0; 
+    public {
 
-    //     vm.assume(liquidationThreshold < 1 ether && liquidationThreshold > 0 ether); 
-    //     vm.assume(targetHealth > 1 ether  && targetHealth < 1.25 ether); 
-    //     uint256 maxDiscount = WAD - WAD.wadDivDown(targetHealth);
-
-    //     vm.assume(discount < maxDiscount);  
-    //     vm.assume(targetHealth - liquidationThreshold.wadDivDown(WAD - discount) > 0); 
-
-    //     // instantiate liquidations contract 
-    //     uint64[ILK_COUNT] memory liquidationThresholds = [uint64(liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
-    //     liquidation = new Liquidation(
-    //         address(ionPool), 
-    //         address(reserveOracle), 
-    //         revenueRecipient, 
-    //         liquidationThresholds,
-    //         targetHealth,
-    //         reserveFactor,  
-    //         maxDiscount 
-    //     );
-
-    //     // liquidate 
-    //     vm.prank()
-
-    // }
-
-    // function testFuzz_PartialLiquidationWithReserveFactor() external {
-
-    // }
-
-    // property that is maintained right after liquidations 
-    // function invariant_property() public returns (bool) {
-
-    // }
-
-    // // resulting health ratio after liquidation must be the targetHealth parameter
-    // // targetHealth, maxDiscount, and [] has a relationship  
-    // // collateral, rate, normalized debt, exchange rate can be anything
-    // function invariant_TargetHealthRatioReached() public returns (bool) {
-    //     uint256 healthRatio = 1.25 ether; 
-    // }
-
-    // check assertion that after liquidations, the healthRatio is 1.25 
-    // but it's only 1.25 under certain constraints 
-
+        // bound each variable to realistic numberes 
+        // if partial liquidation then assert 
+        // if dust lquidation then assert
+        // if protocol liquidation then assert 
+    }
 }

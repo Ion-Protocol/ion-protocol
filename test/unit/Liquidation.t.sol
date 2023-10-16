@@ -320,13 +320,17 @@ contract LiquidationTest is LiquidationSharedSetup {
 
     }
   
-    function test_Sample() public {
+    function test_FuzzSample() public {
+
+        // set dust
+        ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleToRad(18)); // [rad]
+
         // calculating resulting state after liquidations  
         LiquidationArgs memory args;  
-        args.collateral = 67.681212123694099575 ether ; // [wad] 
+        args.collateral = 1.292632255018899780 ether ; // [wad] 
         args.liquidationThreshold = 0.8 ether; // [wad]  
-        args.exchangeRate =  0.834828901491962684 ether; // [wad] 
-        args.normalizedDebt = 45.201785575094441585 ether; // [wad] 
+        args.exchangeRate =  0.432464060992175961 ether; // [wad] 
+        args.normalizedDebt = 0.500000000000000001 ether; // [wad] 
         args.rate = RAY; // [ray] 
         args.targetHealth = 1.25 ether ; // [wad] 
         args.reserveFactor = 0 ether; // [wad] 
@@ -358,14 +362,11 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1); 
         uint256 rate = ionPool.rate(ilkIndex); 
 
-        // resulting vault collateral and debt 
-        assertEq(actualResultingCollateral, results.collateral, "resulting collateral"); 
-        assertEq(actualResultingNormalizedDebt, results.normalizedDebt, "resulting normalizedDebt"); 
+        // health ratio is collateral / debt 
+        // resulting debt is zero, so health ratio will give divide by zero 
 
-        // resulting health ratio is target health ratio 
-        uint256 healthRatio = actualResultingCollateral.roundedWadMul(args.exchangeRate).roundedWadMul(args.liquidationThreshold); 
-        healthRatio = healthRatio.roundedWadDiv(actualResultingNormalizedDebt).roundedWadDiv(rate.scaleToWad(27)); 
-        console.log('new healthRatio: ', healthRatio); 
-        assertEq(healthRatio, args.targetHealth, "resulting health ratio"); 
+        // resulting vault collateral and debt 
+        assertEq(actualResultingNormalizedDebt, 0, "resulting normalizedDebt should be zero"); 
+
     }
 }

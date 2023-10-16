@@ -183,6 +183,8 @@ contract Liquidation {
 
         liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, dust.scaleToRay(18), collateral.scaleToRay(18), exchangeRate.scaleToRay(18), liquidationThreshold.scaleToRay(18), discount.scaleToRay(18));
         console.log("repay: ", liquidateArgs.repay); 
+        console.log("normalizedDebt * rate: ", normalizedDebt * rate); 
+        console.log("dust: ", dust); 
         
         // liquidateArgs.dart = liquidateArgs.gemOut >= collateral ? normalizedDebt : liquidateArgs.repay / rate; // normalize the repay amount by rate to get the actual dart to frob
         // console.log("dart: ", liquidateArgs.dart); 
@@ -206,27 +208,27 @@ contract Liquidation {
         
         // NOTE: could also add gemOut > collateral check
         if (liquidateArgs.repay > normalizedDebt.rayMulDown(rate)) { // [wad] * [ray] / [ray] = [wad] 
+            console.log("PROTOCOL LIQUIDATION"); 
             liquidateArgs.dart = normalizedDebt; 
             liquidateArgs.gemOut = collateral; 
             ionPool.confiscateVault(ilkIndex, vault, address(this), address(this), -int256(liquidateArgs.gemOut), -int256(liquidateArgs.dart));     
             
             // NOTE: Echidna Assertions 
-            console.log("PROTOCOL LIQUIDATION"); 
             assert(ionPool.normalizedDebt(ilkIndex, vault) == 0);
             assert(ionPool.collateral(ilkIndex, vault) == 0);
 
             // TODO: emit protocol liquidation event 
             return; 
-        } else if (normalizedDebt * rate - liquidateArgs.repay < dust) {
+        } else if (normalizedDebt.rayMulDown(rate) - liquidateArgs.repay < dust.scaleToWad(45)) {
+            console.log("DUST LIQUIDATION"); 
             // NOTE: we transfer with repay, pay down with dart  
             liquidateArgs.repay = normalizedDebt.rayMulDown(rate); // [wad] * [ray] / [ray] = [wad] pay off all debt  
             liquidateArgs.dart = normalizedDebt; 
             liquidateArgs.gemOut = liquidateArgs.repay.wadDivDown(liquidateArgs.price); // readjust amount of collateral to sell 
         
-            // NOTE: Echidna Assertions 
-            console.log("DUST LIQUIDATION"); 
-            assert(ionPool.normalizedDebt(ilkIndex, vault) == 0); 
+            // assert(ionPool.normalizedDebt(ilkIndex, vault) == 0); 
         } else {
+            console.log("PARTIAL LIQUIDATION"); 
             // repay stays unchanged  
             liquidateArgs.dart = liquidateArgs.repay.rayDivDown(rate); // normalized  
             liquidateArgs.gemOut = liquidateArgs.repay.wadDivDown(liquidateArgs.price); // readjust amount of collateral to sell 
@@ -234,7 +236,6 @@ contract Liquidation {
             // NOTE: healthRatio is 1.25 
             uint256 newHealthRatio = (collateral - liquidateArgs.gemOut).roundedWadMul(exchangeRate).roundedWadMul(liquidationThreshold); // [wad] * [wad] * [wad] = [wad] 
             newHealthRatio = newHealthRatio.roundedWadDiv(normalizedDebt - liquidateArgs.dart).roundedWadDiv(rate.scaleToWad(27)); // [wad] / [wad] / [wad] = [wad] 
-            console.log("PARTIAL LIQUIDATION"); 
             console.log("newHealthRatio: ", newHealthRatio); 
             assert(newHealthRatio >= 1.24 ether && newHealthRatio < 1.26 ether); 
         }
