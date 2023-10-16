@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import {LiquidationSharedSetup} from "test/helpers/LiquidationSharedSetup.sol";
-// import { RoundedMath, WAD, RAY } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, WAD, RAY } from "src/math/RoundedMath.sol";
 import { Liquidation } from "src/Liquidation.sol"; 
 import "forge-std/console.sol";
 
@@ -18,7 +18,7 @@ import "forge-std/console.sol";
 // depositAmt, borrowAmt, exchangeRate 
 // depositAmt, borrowAmt, exchangeRate 
 contract LiquidationFuzzTest is LiquidationSharedSetup {
-    // using RoundedMath for uint256; 
+    using RoundedMath for uint256; 
     address constant REVENUE_RECIPIENT = address(1);
     address constant BORROWER = address(2);  
     address constant LENDER = address(3);  
@@ -28,6 +28,12 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
     function getHealthRatio() public view {
 
     }
+
+    // function testFuzz_GemOutAndRepay(
+
+    // ) external {
+
+    // }
 
     function testFuzz_AssertCheckFixedConfigsNoRate(
         uint256 exchangeRate, 
@@ -53,7 +59,7 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
         args.normalizedDebt = borrowAmt; // No rate 
         args.rate = 1 * RAY; 
 
-        // constraints 
+        // starting position must be safe 
         vm.assume(borrowAmt * WAD / depositAmt < args.liquidationThreshold); 
 
         // new exchangeRate needs to result in healthRatio < 1 
@@ -93,10 +99,73 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
         liquidate(KEEPER, ILK_INDEX, BORROWER);  
     }
 
-    function testFuzz_ProtocolLiquidation(
-
+    function testFuzz_ProtocolLiquidationFixedConfigsNoRate(
+        uint256 exchangeRate,
+        uint256 depositAmt,
+        uint256 borrowAmt 
     ) public {
+        LiquidationArgs memory args; 
+        // protocol liquidations occur in cases of bad debt 
+        // if (gemOut > collateral) then (repay == normalizedDebt * rate) 
+        
+        uint256 startingExchangeRate = 1 ether; 
 
+        depositAmt = bound(depositAmt, 1 ether, 100 ether); 
+        borrowAmt = bound(borrowAmt, 1 ether, 100 ether); 
+        exchangeRate = bound(exchangeRate, 1, startingExchangeRate);
+
+        args.targetHealth = 1.25 ether; 
+        args.liquidationThreshold = 0.8 ether; 
+        args.maxDiscount = 0.2 ether; 
+        args.reserveFactor = 0;
+
+        args.collateral = depositAmt; 
+        args.exchangeRate = exchangeRate; 
+        args.normalizedDebt = borrowAmt; 
+        args.rate = 1 * RAY; 
+
+        // starting position must be safe 
+        vm.assume(borrowAmt * WAD / depositAmt < args.liquidationThreshold); 
+
+        // to avoid overflow in calculateExpectedLiquidationResults, healthRatio must be less than 1 
+        vm.assume(depositAmt * exchangeRate / WAD * args.liquidationThreshold / borrowAmt < 1 ether); 
+        
+        // should generate bad debt 
+        Results memory results = calculateExpectedLiquidationResults(args);
+        results.gemOut = results.gemOut.scaleToWad(27); 
+        results.repay = results.repay.scaleToWad(27); 
+
+        vm.assume(results.gemOut >= depositAmt); 
+        vm.assume(results.repay > borrowAmt); // NOTE: actual condition being checked in liquidations 
+
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+        liquidation = new Liquidation(
+            address(ionPool), 
+            address(reserveOracle), 
+            REVENUE_RECIPIENT, 
+            liquidationThresholds,
+            args.targetHealth,
+            args.reserveFactor,  
+            args.maxDiscount 
+        );
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation)); 
+
+        // lender 
+        supply(LENDER, borrowAmt);
+
+        // borrower makes a SAFE position
+        borrow(BORROWER, ILK_INDEX, depositAmt, borrowAmt); 
+
+        // exchangeRate changes based on fuzz 
+        reserveOracle.setExchangeRate(exchangeRate);
+
+        // keeper
+        liquidate(KEEPER, ILK_INDEX, BORROWER);  
+
+        // results 
+        // if bad debt => protocol confiscates, resulting normalized and collateral is both zero 
+        assert(ionPool.collateral(ilkIndex, BORROWER) == 0); 
+        assert(ionPool.normalizedDebt(ilkIndex, BORROWER) == 0); 
     }
 
     // function testFuzz_AllOutputBranchesFixedConfigNoRate(

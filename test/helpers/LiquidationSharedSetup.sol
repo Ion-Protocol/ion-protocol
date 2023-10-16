@@ -139,7 +139,10 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     struct Results {
         uint256 collateral; 
         uint256 normalizedDebt;
+        uint256 gemOut; 
+        uint256 repay;
     }
+
     function calculateExpectedLiquidationResults(
         LiquidationArgs memory _args
     )
@@ -151,28 +154,13 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
 
         // give every variable more precision during the calculation
         args.collateral = _args.collateral.scaleToRay(18);
-        console.log("hi"); 
         args.liquidationThreshold = _args.liquidationThreshold.scaleToRay(18);
-        console.log("hi"); 
-
         args.exchangeRate = _args.exchangeRate.scaleToRay(18);
-        console.log("hi"); 
-
         args.normalizedDebt = _args.normalizedDebt.scaleToRay(18);
-        console.log("hi"); 
-
         args.rate = _args.rate;
-        console.log("hi"); 
-
         args.targetHealth = _args.targetHealth.scaleToRay(18);
-        console.log("hi"); 
-
         args.reserveFactor = _args.reserveFactor.scaleToRay(18);
-              console.log("hi"); 
-
         args.maxDiscount = _args.maxDiscount.scaleToRay(18);
-        console.log("hi"); 
-
 
         console.log("args.collateral: ", args.collateral);
         console.log("args.liquidationThreshold: ", args.liquidationThreshold);
@@ -205,31 +193,37 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             (((args.liquidationThreshold) * RAY) / (RAY - discount)); // [ray]
         console.log("repayDen: ", repayDen);
 
-        uint256 repay = (repayNum * RAY) / repayDen; // [ray]
-        console.log("repay: ", repay);
+        results.repay = (repayNum * RAY) / repayDen; // [ray]
+        console.log("repay: ", results.repay);
 
         uint256 collateralSalePrice = (args.exchangeRate * (RAY - discount)) /
             RAY; // [ray] ETH / LST
         console.log("collateralSalePrice: ", collateralSalePrice);
 
-        uint256 gemOut = (repay * RAY) / collateralSalePrice; // [ray]
-        console.log("gemOut: ", gemOut);
+        results.gemOut = (results.repay * RAY) / collateralSalePrice; // [ray]
+        console.log("gemOut: ", results.gemOut);
 
-        if (gemOut > args.collateral) {
+        if (results.gemOut > args.collateral) {
             console.log("not enough collateral to sell"); 
         } else {
-            results.collateral = args.collateral - gemOut; // [ray]
+            console.log("gemOut <= collateral"); 
+            results.collateral = args.collateral - results.gemOut; // [ray]
         }
 
-        if (repay > liabilityValue) {
+        if (results.repay > liabilityValue) {
             console.log("repay greater than liabilityValue"); 
         } else {
-            results.normalizedDebt = ((liabilityValue - repay) * RAY) / args.rate; // [ray]
+            console.log("repay <= liabilityValue"); 
+            results.normalizedDebt = ((liabilityValue - results.repay) * RAY) / args.rate; // [ray]
         }
 
-        uint256 resultingHealthRatio = results.collateral.roundedWadMul(args.exchangeRate).roundedWadMul(args.liquidationThreshold); 
-        resultingHealthRatio = resultingHealthRatio.roundedWadDiv(results.normalizedDebt).roundedWadDiv(args.rate.scaleToWad(27)); 
-        console.log("resultingHealthRatio: ", resultingHealthRatio); 
+        if (!(results.gemOut > args.collateral && results.repay > liabilityValue)) {
+            uint256 resultingHealthRatio = results.collateral.roundedRayMul(args.exchangeRate).roundedRayMul(args.liquidationThreshold); 
+            console.log("col exchangeRate liqThreshold:", resultingHealthRatio); 
+            console.log("first div: ", resultingHealthRatio.roundedRayDiv(results.normalizedDebt));
+            resultingHealthRatio = resultingHealthRatio.roundedRayDiv(results.normalizedDebt).roundedRayDiv(args.rate); 
+            console.log("resultingHealthRatio: ", resultingHealthRatio);  
+        }
 
         console.log("---");
     }

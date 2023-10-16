@@ -179,7 +179,7 @@ contract LiquidationTest is LiquidationSharedSetup {
     // results in number slightly less than 1.25 
     function test_PartialLiquidationSuccessBelowTarget() public {
         // calculating resulting state after liquidations  
-        LiquidationArgs memory args; 
+        LiquidationArgs memory args;  
         args.collateral = 4.895700865128650483 ether; // [wad] 
         args.liquidationThreshold = 0.8 ether; // [wad]  
         args.exchangeRate = 0.238671394775725980 ether; // [wad] 
@@ -319,7 +319,53 @@ contract LiquidationTest is LiquidationSharedSetup {
     function test_LiquidatorPaysForDust() public {
 
     }
+  
+    function test_Sample() public {
+        // calculating resulting state after liquidations  
+        LiquidationArgs memory args;  
+        args.collateral = 67.681212123694099575 ether ; // [wad] 
+        args.liquidationThreshold = 0.8 ether; // [wad]  
+        args.exchangeRate =  0.834828901491962684 ether; // [wad] 
+        args.normalizedDebt = 45.201785575094441585 ether; // [wad] 
+        args.rate = RAY; // [ray] 
+        args.targetHealth = 1.25 ether ; // [wad] 
+        args.reserveFactor = 0 ether; // [wad] 
+        args.maxDiscount = 0.2 ether; // [wad] 
+        
+        Results memory results = calculateExpectedLiquidationResults(args);
+        console.log("expectedResultingCollateral: ", results.collateral); 
+        console.log("expectedResultingDebt: ", results.normalizedDebt); 
+        console.log("liquidation threshold: ", args.liquidationThreshold); 
+        console.log("liquidation threshold: ", uint64(args.liquidationThreshold)); 
+        console.log("uint64 max: ", type(uint64).max);
+        
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+       
+        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds, args.targetHealth, args.reserveFactor, args.maxDiscount); 
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation)); 
 
+        // create position 
+        borrow(borrower1, ilkIndex, args.collateral, args.normalizedDebt); 
 
+        // exchangeRate drops 
+        reserveOracle.setExchangeRate(args.exchangeRate);
 
+        // liquidate
+        liquidate(keeper1, ilkIndex, borrower1); 
+
+        // results 
+        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1); 
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1); 
+        uint256 rate = ionPool.rate(ilkIndex); 
+
+        // resulting vault collateral and debt 
+        assertEq(actualResultingCollateral, results.collateral, "resulting collateral"); 
+        assertEq(actualResultingNormalizedDebt, results.normalizedDebt, "resulting normalizedDebt"); 
+
+        // resulting health ratio is target health ratio 
+        uint256 healthRatio = actualResultingCollateral.roundedWadMul(args.exchangeRate).roundedWadMul(args.liquidationThreshold); 
+        healthRatio = healthRatio.roundedWadDiv(actualResultingNormalizedDebt).roundedWadDiv(rate.scaleToWad(27)); 
+        console.log('new healthRatio: ', healthRatio); 
+        assertEq(healthRatio, args.targetHealth, "resulting health ratio"); 
+    }
 }

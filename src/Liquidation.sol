@@ -203,6 +203,8 @@ contract Liquidation {
         // Third branch: soft liquidation to target health ratio 
         //    There is enough collateral to be sold to pay off debt. 
         //    The resulting health ratio equals targetHealthRatio. 
+        
+        // NOTE: could also add gemOut > collateral check
         if (liquidateArgs.repay > normalizedDebt.rayMulDown(rate)) { // [wad] * [ray] / [ray] = [wad] 
             liquidateArgs.dart = normalizedDebt; 
             liquidateArgs.gemOut = collateral; 
