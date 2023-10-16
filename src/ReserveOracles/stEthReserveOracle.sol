@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.13;
 
 import {ReserveOracle} from "src/ReserveOracles/ReserveOracle.sol";

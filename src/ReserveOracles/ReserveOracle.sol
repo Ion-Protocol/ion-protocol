@@ -1,4 +1,6 @@
-pragma solidity ^0.8.19;
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.21;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IReserveFeed} from "src/interfaces/IReserveFeed.sol";

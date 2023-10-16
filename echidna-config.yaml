@@ -4,6 +4,16 @@ testLimit: 5000
 
 solcArgs: "--optimize --optimize-runs 1000"
 
+# cryticArgs: [
+#     "--solc-remaps",
+#     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+#     @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+#     ds-test/=lib/forge-std/lib/ds-test/src/
+#     forge-std/=lib/forge-std/src/
+#     openzeppelin-contracts/=lib/openzeppelin-contracts/
+#     openzeppelin/=lib/openzeppelin-contracts/contracts/"
+#   ]
+
 cryticArgs: [
     "--solc-remaps",
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
@@ -11,12 +21,18 @@ cryticArgs: [
     forge-std/=lib/forge-std/src/
     openzeppelin-contracts/=lib/openzeppelin-contracts/
     openzeppelin/=lib/openzeppelin-contracts/contracts/",
-  ]
+]
+
 
 prefix: "invariant_"
 
 corpusDir: echidna-corpus
 
+# testMode: assertion # turn off for properties
+
 allContracts: false
-filterBlacklist: false
-filterFunctions: ["IonPoolEchidna.supply(uint256,uint256)"]
+filterBlacklist: false # if false, allows filterFunctions 
+filterFunctions: [
+  "IonPoolEchidna.supply(uint256,uint256)",
+  ""
+  ]

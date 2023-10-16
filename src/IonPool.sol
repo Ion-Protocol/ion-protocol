@@ -52,7 +52,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     bytes32 public constant ION = keccak256("ION");
     bytes32 public constant SPOT_ROLE = keccak256("SPOT_ROLE");
-    bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
+bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
     // --- Data ---
@@ -493,20 +493,21 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     /**
      * @dev To be used by protocol to settle bad debt using reserves
+     * NOTE: Can pay another user's bad debt with the sender's asset 
+     * @param user the address that owns the bad debt being paid off 
      * @param rad amount of debt to be repaid (45 decimals)
      */
-    function repayBadDebt(uint256 rad) external {
+    function repayBadDebt(address user, uint256 rad) external {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        address u = _msgSender();
-        $.unbackedDebt[u] -= rad;
+        $.unbackedDebt[user] -= rad;
         $.totalUnbackedDebt -= rad;
         $.debt -= rad;
 
         // Must be negative since it is a repayment
-        _borrowWeth(u, -(rad.toInt256()));
+        _borrowWeth(_msgSender(), -(rad.toInt256()));
 
-        emit RepayBadDebt(u, rad);
+        emit RepayBadDebt(user, rad);
     }
 
     // --- Helpers ---
@@ -524,8 +525,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         if (amount < 0) {
             // Round up in protocol's favor
-            // TODO: This isn't actually right, round properly
-            uint256 amountWad = uint256(-amount) / RAY + 1;
+            uint256 amountWad = uint256(-amount) / RAY;
+            amountWad = amountWad * RAY < uint256(-amount) ? amountWad + 1 : amountWad; 
             getUnderlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
