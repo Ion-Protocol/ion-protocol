@@ -54,6 +54,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
+    address private immutable addressThis = address(this);
+
     // --- Data ---
     struct Ilk {
         uint104 totalNormalizedDebt; // Total Normalised Debt     [wad]
@@ -713,6 +715,10 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         returns (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRate, uint48 newTimestamp)
     {
         return _calculateRewardAndDebtDistribution(ilkIndex, totalSupply());
+    }
+
+    function implementation() external view returns (address) {
+        return addressThis;
     }
 
     // --- Auth ---
