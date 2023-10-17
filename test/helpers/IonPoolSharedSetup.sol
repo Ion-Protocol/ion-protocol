@@ -5,7 +5,8 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
-// import { IonHandler } from "../../src/periphery/IonHandler.sol";
+import { IonHandler } from "../../src/periphery/IonHandler.sol";
+import { IonRegistry } from "../../src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_DAY } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -15,6 +16,7 @@ import { RAY } from "../../src/math/RoundedMath.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 // struct IlkData {
 //                                                        _
@@ -71,10 +73,10 @@ contract EmptyContract {
     }
 }
 
-/*abstract*/
-contract IonPoolSharedSetup is BaseTestSetup {
+abstract contract IonPoolSharedSetup is BaseTestSetup {
     IonPoolExposed ionPool;
-    // IonHandler ionHandler;
+    IonHandler ionHandler;
+    IonRegistry ionRegistry;
 
     InterestRateExposed interestRateModule;
     IYieldOracle apyOracle;
@@ -113,7 +115,7 @@ contract IonPoolSharedSetup is BaseTestSetup {
     uint256 internal swEthDebtCeiling = 40e45;
     uint256 internal ethXDebtCeiling = 40e45;
 
-    ERC20PresetMinterPauser[] internal collaterals;
+    IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
     uint16[] internal adjustedReserveFactors =
         [stEthAdjustedReserveFactor, swEthAdjustedReserveFactor, ethXAdjustedReserveFactor];
@@ -125,7 +127,9 @@ contract IonPoolSharedSetup is BaseTestSetup {
     IlkData[] ilkConfigs;
 
     function setUp() public virtual override {
-        collaterals = [stEth, swEth, ethX];
+        collaterals = _getCollaterals();
+        address[] memory depositContracts = _getDepositContracts();
+
         assert(
             collaterals.length == adjustedReserveFactors.length
                 && adjustedReserveFactors.length == optimalUtilizationRates.length
@@ -155,29 +159,28 @@ contract IonPoolSharedSetup is BaseTestSetup {
 
             distributionFactorSum += distributionFactors[i];
 
-            collaterals[i].mint(borrower1, INITIAL_BORROWER_COLLATERAL_BALANCE);
-            collaterals[i].mint(borrower2, INITIAL_BORROWER_COLLATERAL_BALANCE);
+            // collaterals[i].mint(borrower1, INITIAL_BORROWER_COLLATERAL_BALANCE);
+            // collaterals[i].mint(borrower2, INITIAL_BORROWER_COLLATERAL_BALANCE);
         }
-
-        assert(distributionFactorSum == 1e2);
+        assert(distributionFactorSum == 1e4);
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(101));
+        // Instantiate upgradeable IonPool
         IonPoolExposed logicIonPool =
-            new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+            new IonPoolExposed(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
         ionPool =
             IonPoolExposed(address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), "")));
 
-        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
         ionPool.grantRole(ionPool.ION(), address(this));
 
         // attempt to initialize again
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
 
-        // ionHandler = new IonHandler(ionPool);
         // vm.prank(borrower1);
         // ionPool.hope(address(ionHandler));
         // vm.prank(borrower2);
@@ -186,17 +189,23 @@ contract IonPoolSharedSetup is BaseTestSetup {
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
             ionPool.updateIlkConfig(i, SPOT, debtCeilings[i], 0);
+
             gemJoins.push(new GemJoin(ionPool, collaterals[i], i, address(this)));
+
             ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
             ilkIndexes[address(collaterals[i])] = i;
         }
 
-        underlying.mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        underlying.mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
+
+        ionHandler = new IonHandler(ionPool, ionRegistry);
+
+        // ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        // ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
     }
 
     function test_setUp() public virtual {
-        assertEq(address(ionPool.underlying()), address(underlying));
+        assertEq(address(ionPool.underlying()), _getUnderlying());
         // assertEq(ionPool.treasury(), TREASURY);
         // assertEq(ionPool.decimals(), DECIMALS);
         // assertEq(ionPool.name(), NAME);
@@ -263,5 +272,21 @@ contract IonPoolSharedSetup is BaseTestSetup {
     function _repayHelper(uint8 ilkIndex, address repayer, int256 changeInNormalizedDebt) internal {
         // vm.prank(repayer);
         // ionPool.modifyPosition(ilkIndex, repayer, repayer, repayer, 0, changeInNormalizedDebt);
+    }
+
+    function _getUnderlying() internal view virtual returns (address) {
+        return address(underlying);
+    }
+
+    function _getCollaterals() internal view virtual returns (IERC20[] memory _collaterals) {
+        _collaterals = new IERC20[](3);
+
+        _collaterals[0] = IERC20(address(stEth));
+        _collaterals[1] = IERC20(address(ethX));
+        _collaterals[2] = IERC20(address(swEth));
+    }
+
+    function _getDepositContracts() internal view virtual returns (address[] memory) {
+        return new address[](3);
     }
 }

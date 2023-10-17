@@ -112,7 +112,7 @@ contract InterestRate {
             // forgefmt: disable-next-line
             unchecked { ++i; }
         }
-        if (distributionFactorSum != 1e2) revert DistributionFactorsDoNotSumToOne(distributionFactorSum);
+        if (distributionFactorSum != 1e4) revert DistributionFactorsDoNotSumToOne(distributionFactorSum);
 
         (ilkConfig0_a, ilkConfig0_b) = _packCollateralConfig(ilkDataList, 0);
         (ilkConfig1_a, ilkConfig1_b) = _packCollateralConfig(ilkDataList, 1);

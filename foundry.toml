@@ -5,9 +5,12 @@ out = "out"
 solc = "0.8.21"
 libs = ["lib"]
 verbosity = 3
-remappings = [
-                "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/", 
-                "@balancer-labs/v2-interfaces/=lib/balancer-v2-monorepo/pkg/interfaces/"]
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/", 
+                "@balancer-labs/v2-interfaces/=lib/balancer-v2-monorepo/pkg/interfaces/",
+                "@balancer-labs/v2-pool-stable/=lib/balancer-v2-monorepo/pkg/pool-stable/",
+                "@chainlink/contracts/=lib/chainlink/contracts/",
+                "@uniswap/v3-periphery/=lib/v3-periphery/contracts/",
+                "@uniswap/v3-core/=lib/v3-core/contracts/",]
 fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
 optimizer_runs = 1000

@@ -11,6 +11,8 @@ import { GemJoin } from "../join/GemJoin.sol";
 import {
     ILidoStEthDeposit, ILidoWStEthDeposit, IStaderDeposit, ISwellDeposit
 } from "../interfaces/DepositInterfaces.sol";
+import { IERC20 as IERC20OZ } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @dev There a couple things to consider here from a security perspective. The
@@ -24,16 +26,20 @@ import {
  * and set to 1 once the callback execution terminates. If the lock is not 2
  * when the callback is called, then the flashloan was not initiated by this
  * contract and the tx is reverted.
- * 
+ *
  * This contract currently deposits directly into LST contract 1:1. It should be
  * noted that a more favorable trade could be possible via DEXs.
  */
 contract IonHandler is IFlashLoanRecipient {
+    using SafeERC20 for IERC20OZ;
+
     error ReceiveCallerNotVault();
     error FlashLoanedTooManyTokens();
     error FlashLoanedInvalidToken();
     error InsufficientLiquidityForFlashloan();
     error ExternalFlashloanNotAllowed();
+    error CannotSendEthToContract();
+    error WstEthDepositFailed();
 
     IonPool immutable ionPool;
     IonRegistry immutable ionRegistry;
@@ -51,6 +57,16 @@ contract IonHandler is IFlashLoanRecipient {
         weth = _weth;
 
         _weth.approve(address(ionPool), type(uint256).max);
+
+        for (uint8 i = 0; i < ionPool.ilkCount();) {
+            IERC20(ionPool.getIlkAddress(i)).approve(address(ionPool), type(uint256).max);
+            IERC20(ionPool.getIlkAddress(i)).approve(address(ionRegistry.depositContracts(i)), type(uint256).max);
+            IERC20(ionPool.getIlkAddress(i)).approve(address(ionRegistry.gemJoins(i)), type(uint256).max);
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /**
@@ -70,7 +86,9 @@ contract IonHandler is IFlashLoanRecipient {
         IERC20 ilkAddress = IERC20(ionPool.getIlkAddress(ilkIndex));
 
         uint256 leverageAmountInCollateralUnits = _getLstAmountOut(ilkIndex, leverageAmount);
-        if (ilkAddress.balanceOf(address(vault)) < leverageAmountInCollateralUnits) revert InsufficientLiquidityForFlashloan();
+        if (ilkAddress.balanceOf(address(vault)) < leverageAmountInCollateralUnits) {
+            revert InsufficientLiquidityForFlashloan();
+        }
 
         IERC20[] memory addresses = new IERC20[](1);
         addresses[0] = ilkAddress;
@@ -150,16 +168,16 @@ contract IonHandler is IFlashLoanRecipient {
             abi.decode(userData, (uint8, address, uint256, uint256, bool));
 
         // Flashloaned WETH needs to be wrapped into collateral asset
-        if (address(token) == address(weth)) { 
+        if (address(token) == address(weth)) {
             // Sanity check
             assert(leverageAmount == amounts[0]);
 
             // WETH will be transferred from the user and wrapped into collateral asset
             if (depositIsWeth) {
-                weth.transferFrom(user, address(this), depositAmount);  
+                weth.transferFrom(user, address(this), depositAmount);
                 // (leverageAmount + depositAmount) WETH
 
-                _depositWethForLst(ilkIndex, leverageAmount + depositAmount);               
+                _depositWethForLst(ilkIndex, leverageAmount + depositAmount);
                 // (leverageAmount + depositAmount) collateral token
             }
             // Collateral asset will be transferred from the user
@@ -168,11 +186,13 @@ contract IonHandler is IFlashLoanRecipient {
                 ilkAddress.transferFrom(user, address(this), _getLstAmountOut(ilkIndex, depositAmount));
                 // (leverageAmount) WETH + (depositAmount) collateral token
 
-                _depositWethForLst(ilkIndex, leverageAmount);               
+                _depositWethForLst(ilkIndex, leverageAmount);
                 // (leverageAmount + depositAmount) collateral token
             }
 
-            _depositAndBorrow(ilkIndex, user, _getLstAmountOut(ilkIndex, depositAmount + leverageAmount), leverageAmount);
+            _depositAndBorrow(
+                ilkIndex, user, address(this), _getLstAmountOut(ilkIndex, depositAmount + leverageAmount), leverageAmount
+            );
             // leverageAmount of WETH with (depositAmount + leverageAmount) of collateral token inside vault
 
             weth.transfer(address(vault), leverageAmount);
@@ -181,21 +201,22 @@ contract IonHandler is IFlashLoanRecipient {
             if (ionPool.getIlkAddress(ilkIndex) != address(token)) revert FlashLoanedInvalidToken();
 
             if (depositIsWeth) {
-                weth.transferFrom(user, address(this), depositAmount);  
+                weth.transferFrom(user, address(this), depositAmount);
                 // (depositAmount) WETH + (leverageAmount) collateral token
 
-                _depositWethForLst(ilkIndex, depositAmount);               
+                _depositWethForLst(ilkIndex, depositAmount);
                 // (leverageAmount + depositAmount) collateral token
-
             } else {
                 IERC20 ilkAddress = IERC20(ionPool.getIlkAddress(ilkIndex));
                 ilkAddress.transferFrom(user, address(this), _getLstAmountOut(ilkIndex, depositAmount));
                 // (depositAmount + leverageAmount) collateral token
             }
 
-            _depositAndBorrow(ilkIndex, user, _getLstAmountOut(ilkIndex, depositAmount + leverageAmount), leverageAmount);
+            _depositAndBorrow(
+                ilkIndex, user, address(this), _getLstAmountOut(ilkIndex, depositAmount + leverageAmount), leverageAmount
+            );
 
-            weth.transfer(address(vault), depositAmount);   
+            weth.transfer(address(vault), depositAmount);
         }
 
         flashLoanInitiated = 1;
@@ -204,11 +225,20 @@ contract IonHandler is IFlashLoanRecipient {
     function depositAndBorrow(uint8 ilkIndex, uint256 amountCollateral, uint256 amountToBorrow) external {
         IERC20 ilkAddress = IERC20(ionPool.getIlkAddress(ilkIndex));
         ilkAddress.transferFrom(msg.sender, address(this), amountCollateral);
-        _depositAndBorrow(ilkIndex, msg.sender, amountCollateral, amountToBorrow);
+        _depositAndBorrow(ilkIndex, msg.sender, msg.sender, amountCollateral, amountToBorrow);
     }
 
+    /**
+     * 
+     * @param ilkIndex of the collateral
+     * @param vaultHolder the user who will be responsible for repaying debt
+     * @param receiver the user who receives the borrowed funds
+     * @param amountCollateral to move into vault
+     * @param amountToBorrow out of the vault
+     */
     function _depositAndBorrow(
         uint8 ilkIndex,
+        address vaultHolder,
         address receiver,
         uint256 amountCollateral,
         uint256 amountToBorrow
@@ -218,17 +248,18 @@ contract IonHandler is IFlashLoanRecipient {
         GemJoin gemJoin = GemJoin(ionRegistry.gemJoins(ilkIndex));
 
         gemJoin.join(address(this), amountCollateral);
-        ionPool.moveGemToVault(ilkIndex, receiver, address(this), amountCollateral);
+        ionPool.moveGemToVault(ilkIndex, vaultHolder, address(this), amountCollateral);
 
-        ionPool.borrow(ilkIndex, receiver, receiver, amountToBorrow);
+        ionPool.borrow(ilkIndex, vaultHolder, receiver, amountToBorrow);
     }
 
     function _depositWethForLst(uint8 ilkIndex, uint256 amount) internal {
         weth.withdraw(amount);
-        address depositContract = ionRegistry.depositContracts(ilkIndex);
+        address payable depositContract = payable(ionRegistry.depositContracts(ilkIndex));
 
         if (ilkIndex == 0) {
-            ILidoWStEthDeposit(depositContract).wrap(amount);
+            (bool success,) = depositContract.call{ value: amount }("");
+            if (!success) revert WstEthDepositFailed();
         } else if (ilkIndex == 1) {
             IStaderDeposit(depositContract).deposit{ value: amount }(address(this));
         } else if (ilkIndex == 2) {
@@ -242,13 +273,17 @@ contract IonHandler is IFlashLoanRecipient {
         address depositContract = ionRegistry.depositContracts(ilkIndex);
 
         if (ilkIndex == 0) {
-            return ILidoStEthDeposit(depositContract).getWstETHByStETH(amountWeth);
+            return ILidoWStEthDeposit(depositContract).getWstETHByStETH(amountWeth);
         } else if (ilkIndex == 1) {
-            return IStaderDeposit(depositContract).previewDeposit(amountWeth); 
+            return IStaderDeposit(depositContract).previewDeposit(amountWeth);
         } else if (ilkIndex == 2) {
             return ISwellDeposit(depositContract).ethToSwETHRate() * amountWeth;
         } else {
             revert("Invalid ilkIndex");
         }
+    }
+
+    receive() external payable {
+        if (msg.sender != address(weth)) revert CannotSendEthToContract();
     }
 }

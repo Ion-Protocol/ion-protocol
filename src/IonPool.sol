@@ -109,16 +109,12 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         external
         initializer
     {
-        console.log("ionPool initialize");
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
-        // console.log("after access control default admin rules");
         RewardToken.initialize(_underlying, _treasury, decimals_, name_, symbol_);
-        console.log("after reward token initialize");
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.interestRateModule = _interestRateModule;
         emit InterestRateModuleUpdated(address(0), address(_interestRateModule));
-        console.log("after initialize");
     }
 
     // --- Administration ---
@@ -518,7 +514,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
             underlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
-            uint256 amountWad = uint256(-amount) / RAY;
+            uint256 amountWad = uint256(amount) / RAY;
             underlying().safeTransfer(user, amountWad);
         }
     }
