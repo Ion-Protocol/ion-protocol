@@ -167,19 +167,26 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
         // Instantiate upgradeable IonPool
-        ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(101));
+        ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
         // Instantiate upgradeable IonPool
         IonPoolExposed logicIonPool =
             new IonPoolExposed(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
-        ionPool =
-            IonPoolExposed(address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), "")));
 
-        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        bytes memory initializeBytes = abi.encodeWithSelector(
+            IonPool.initialize.selector,
+            _getUnderlying(),
+            TREASURY,
+            DECIMALS,
+            NAME,
+            SYMBOL,
+            address(this),
+            interestRateModule
+        );
+        ionPool = IonPoolExposed(
+            address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), initializeBytes))
+        );
+
         ionPool.grantRole(ionPool.ION(), address(this));
-
-        // attempt to initialize again
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
-        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
 
         // vm.prank(borrower1);
         // ionPool.hope(address(ionHandler));
@@ -197,7 +204,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         }
 
         ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
-
         ionHandler = new IonHandler(ionPool, ionRegistry);
 
         // ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
@@ -206,6 +212,11 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
     function test_setUp() public virtual {
         assertEq(address(ionPool.underlying()), _getUnderlying());
+
+        // attempt to initialize again
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+
         // assertEq(ionPool.treasury(), TREASURY);
         // assertEq(ionPool.decimals(), DECIMALS);
         // assertEq(ionPool.name(), NAME);

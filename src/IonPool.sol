@@ -21,7 +21,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     // --- Errors ---
     error CeilingExceeded();
-    error UnsafePositionChange();
+    error UnsafePositionChange(uint256 newTotalDebtInVault, uint256 collateral, uint256 spot);
     error UnsafePositionChangeWithoutConsent();
     error UseOfCollateralWithoutConsent();
     error TakingWethWithoutConsent();
@@ -111,6 +111,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     {
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
         RewardToken.initialize(_underlying, _treasury, decimals_, name_, symbol_);
+
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.interestRateModule = _interestRateModule;
@@ -445,7 +446,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
                 either(changeInNormalizedDebt > 0, changeInCollateral < 0),
                 newTotalDebtInVault > vault.collateral * ilk.spot
             )
-        ) revert UnsafePositionChange();
+        ) revert UnsafePositionChange(newTotalDebtInVault, vault.collateral, ilk.spot);
 
         // vault is either more safe, or the owner consents
         if (both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !isAllowed(u, _msgSender()))) {

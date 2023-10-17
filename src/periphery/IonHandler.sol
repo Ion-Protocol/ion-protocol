@@ -60,7 +60,6 @@ contract IonHandler is IFlashLoanRecipient {
 
         for (uint8 i = 0; i < ionPool.ilkCount();) {
             IERC20(ionPool.getIlkAddress(i)).approve(address(ionPool), type(uint256).max);
-            IERC20(ionPool.getIlkAddress(i)).approve(address(ionRegistry.depositContracts(i)), type(uint256).max);
             IERC20(ionPool.getIlkAddress(i)).approve(address(ionRegistry.gemJoins(i)), type(uint256).max);
 
             unchecked {
@@ -191,7 +190,11 @@ contract IonHandler is IFlashLoanRecipient {
             }
 
             _depositAndBorrow(
-                ilkIndex, user, address(this), _getLstAmountOut(ilkIndex, depositAmount + leverageAmount), leverageAmount
+                ilkIndex,
+                user,
+                address(this),
+                _getLstAmountOut(ilkIndex, depositAmount + leverageAmount),
+                leverageAmount
             );
             // leverageAmount of WETH with (depositAmount + leverageAmount) of collateral token inside vault
 
@@ -212,11 +215,19 @@ contract IonHandler is IFlashLoanRecipient {
                 // (depositAmount + leverageAmount) collateral token
             }
 
+            address payable depositContract = payable(ionRegistry.depositContracts(ilkIndex));
             _depositAndBorrow(
-                ilkIndex, user, address(this), _getLstAmountOut(ilkIndex, depositAmount + leverageAmount), leverageAmount
+                ilkIndex,
+                user,
+                address(this),
+                _getLstAmountOut(ilkIndex, depositAmount + leverageAmount),
+                leverageAmount
             );
 
-            weth.transfer(address(vault), depositAmount);
+            _depositWethForLst(ilkIndex, leverageAmount);
+            // Convert borrowed WETH back to collateral token
+
+            IERC20(depositContract).transfer(address(vault), _getLstAmountOut(ilkIndex, leverageAmount));
         }
 
         flashLoanInitiated = 1;
@@ -229,7 +240,7 @@ contract IonHandler is IFlashLoanRecipient {
     }
 
     /**
-     * 
+     *
      * @param ilkIndex of the collateral
      * @param vaultHolder the user who will be responsible for repaying debt
      * @param receiver the user who receives the borrowed funds
