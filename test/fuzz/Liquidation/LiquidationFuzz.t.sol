@@ -246,26 +246,9 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
         assert(ionPool.normalizedDebt(ilkIndex, BORROWER) == 0); 
     }
 
-    // function testFuzz_AllOutputBranchesFixedConfigNoRate(
+    function testFuzz_FuzzAllVariablesForAllOutcomesWithRate(
 
-    // ) {
-    //     // if partial liquidation 
-    //     // if dust liquidation 
-    //     // if protocol liquidation 
-    // }
-
-    function testFuzz_AssertCheckFuzzedConfigsNoRate(
-        uint256 exchangeRate, 
-        uint256 depositAmt, 
-        uint256 borrowAmt
     ) public {
-
-    }
-
-
-    function testFuzz_FuzzAllVariablesForAllBranches ()
-
-    public {
 
         // bound each variable to realistic numberes 
         // if partial liquidation then assert 

@@ -4,9 +4,8 @@ pragma solidity ^0.8.21;
 
 import {LiquidationSharedSetup} from "test/helpers/LiquidationSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol"; 
-import { GemJoin } from "../../src/join/GemJoin.sol";
 import { RoundedMath } from "src/math/RoundedMath.sol";
-import { ReserveOracle } from "src/ReserveOracles/ReserveOracle.sol";
+import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
 import "forge-std/console.sol"; 
 
 contract MockstEthReserveOracle {
@@ -318,10 +317,6 @@ contract LiquidationTest is LiquidationSharedSetup {
      */
     function test_LiquidatorPaysForDust() public {
 
-    }
-  
-    function test_FuzzSample() public {
-
         // set dust
         ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleToRad(18)); // [rad]
 
@@ -367,6 +362,5 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         // resulting vault collateral and debt 
         assertEq(actualResultingNormalizedDebt, 0, "resulting normalizedDebt should be zero"); 
-
     }
 }

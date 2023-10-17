@@ -6,8 +6,7 @@ import {IonPoolSharedSetup} from "../helpers/IonPoolSharedSetup.sol";
 import {Liquidation} from "src/Liquidation.sol";
 import {GemJoin} from "../../src/join/GemJoin.sol";
 import {RoundedMath} from "src/math/RoundedMath.sol";
-import {ReserveOracle} from "src/ReserveOracles/ReserveOracle.sol";
-import {stEthReserveOracle} from "src/ReserveOracles/stEthReserveOracle.sol";
+import {ReserveOracle} from "src/oracles/reserve-oracles/ReserveOracle.sol";
 import "forge-std/console.sol";
 
 contract MockstEthReserveOracle {
@@ -217,6 +216,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             results.normalizedDebt = ((liabilityValue - results.repay) * RAY) / args.rate; // [ray]
         }
 
+        // both else statements above is true 
         if (!(results.gemOut > args.collateral && results.repay > liabilityValue)) {
             uint256 resultingHealthRatio = results.collateral.roundedRayMul(args.exchangeRate).roundedRayMul(args.liquidationThreshold); 
             console.log("col exchangeRate liqThreshold:", resultingHealthRatio); 

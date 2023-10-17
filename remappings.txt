@@ -4,4 +4,6 @@ erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
 forge-std/=lib/forge-std/src/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 openzeppelin/=lib/openzeppelin-contracts/contracts/
+@uniswap/v3-core/contracts/=lib/v3-core/contracts/
+@uniswap/v3-periphery/contracts/=lib/v3-periphery/contracts/
 
