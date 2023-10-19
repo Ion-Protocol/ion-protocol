@@ -510,8 +510,9 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         if (amount < 0) {
             // Round up in protocol's favor
-            // TODO: This isn't actually right, round properly
-            uint256 amountWad = uint256(-amount) / RAY + 1;
+            // TODO: Round up using mulmod
+            uint256 amountWad = uint256(-amount) / RAY;
+            amountWad = amountWad * RAY < uint256(-amount) ? amountWad + 1 : amountWad;
             underlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor

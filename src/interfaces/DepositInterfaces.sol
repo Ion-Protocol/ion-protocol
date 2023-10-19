@@ -32,5 +32,7 @@ interface IStaderDeposit {
 interface ISwellDeposit {
     function deposit() external payable;
 
+    function swETHToETHRate() external view returns (uint256);
+
     function ethToSwETHRate() external view returns (uint256);
 }

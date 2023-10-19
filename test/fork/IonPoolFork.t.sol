@@ -3,13 +3,17 @@ pragma solidity 0.8.21;
 
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
-import { RoundedMath, WAD } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, WAD, RAY } from "../../src/math/RoundedMath.sol";
 import { ILidoWStEthDeposit, IStaderDeposit, ISwellDeposit } from "../../src/interfaces/DepositInterfaces.sol";
-import { IUniswapV3Pool } from "@uniswap/v3-core/interfaces/IUniswapV3Pool.sol";
+import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import {console2} from "forge-std/console2.sol";
+import { console2 } from "forge-std/console2.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { SwEthHandler } from "../../src/periphery/handlers/SwEthHandler.sol";
+import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 struct Slot0 {
     // the current price
@@ -34,25 +38,31 @@ interface IComposableStableSwapPool {
 }
 
 abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
-
     uint256 constant INITIAL_THIS_UNDERLYING_BALANCE = 20e18;
+
+    ILidoWStEthDeposit constant MAINNET_WSTETH = ILidoWStEthDeposit(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    IStaderDeposit constant MAINNET_STADER = IStaderDeposit(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
+    ISwellDeposit constant MAINNET_SWELL = ISwellDeposit(0xf951E335afb289353dc249e82926178EaC7DEd78);
+
+    AggregatorV2V3Interface constant STETH_ETH_CHAINLINK =
+        AggregatorV2V3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
+    IComposableStableSwapPool constant STADER_POOL =
+        IComposableStableSwapPool(0x37b18B10ce5635a84834b26095A0AE5639dCB752);
+    IUniswapV3Pool constant SWETH_ETH_POOL = IUniswapV3Pool(0x30eA22C879628514f1494d4BBFEF79D21A6B49A2);
+
+    address constant MAINNET_ETHX = 0xA35b1B31Ce002FBF2058D22F30f95D405200A15b;
+
+    IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     function setUp() public virtual override {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
         super.setUp();
 
-        // Set deposit contracts
-        ionRegistry.setDepositContract(0, address(MAINNET_WSTETH));
-        ionRegistry.setDepositContract(1, address(MAINNET_STADER));
-        ionRegistry.setDepositContract(2, address(MAINNET_SWELL));
-
         // TODO: Replace with real spotter
         // Simulate spotter
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();
         uint256 wstEthInEthSpot = MAINNET_WSTETH.getStETHByWstETH(uint256(stEthSpot));
-        console.log(wstEthInEthSpot);
         uint256 riskAdjustedWstEthSpot = wstEthInEthSpot * STETH_LTV / 1e9; // [WAD] * [WAD] / [1e9] = [RAY]
-        console.log(riskAdjustedWstEthSpot);
         ionPool.updateIlkSpot(0, riskAdjustedWstEthSpot);
 
         uint256 rate = STADER_POOL.getRate();
@@ -83,20 +93,14 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
 
         vm.deal(address(this), INITIAL_THIS_UNDERLYING_BALANCE);
         weth.deposit{ value: INITIAL_THIS_UNDERLYING_BALANCE }();
+
+        IERC20[] memory _collaterals = _getCollaterals();
+        for (uint256 i = 0; i < _collaterals.length; i++) {
+            vm.deal(address(this), INITIAL_BORROWER_COLLATERAL_BALANCE);
+
+            _collaterals[i].approve(address(gemJoins[i]), type(uint256).max);
+        }
     }
-    ILidoWStEthDeposit constant MAINNET_WSTETH = ILidoWStEthDeposit(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    IStaderDeposit constant MAINNET_STADER = IStaderDeposit(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
-    ISwellDeposit constant MAINNET_SWELL = ISwellDeposit(0xf951E335afb289353dc249e82926178EaC7DEd78);
-
-    AggregatorV2V3Interface constant STETH_ETH_CHAINLINK =
-        AggregatorV2V3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
-    IComposableStableSwapPool constant STADER_POOL =
-        IComposableStableSwapPool(0x37b18B10ce5635a84834b26095A0AE5639dCB752);
-    IUniswapV3Pool constant SWETH_ETH_POOL = IUniswapV3Pool(0x30eA22C879628514f1494d4BBFEF79D21A6B49A2);
-
-    address constant MAINNET_ETHX = 0xA35b1B31Ce002FBF2058D22F30f95D405200A15b;
-
-    IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     uint256 constant STETH_LTV = 0.92e18;
     uint256 constant STADER_LTV = 0.95e18;
@@ -121,155 +125,111 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
         depositContracts[2] = address(MAINNET_SWELL);
     }
 
+    function _getPools() internal pure override returns (address[] memory pools) {
+        pools = new address[](3);
+        pools[0] = address(0);
+        pools[1] = address(0);
+        pools[2] = address(SWETH_ETH_POOL);
+    }
+
     receive() external payable { }
 }
 
-contract IonHandler_ForkTestFlashLeverage is IonHandler_ForkBase {
+contract IonHandler_FlashLeverageSwEth is IonHandler_ForkBase {
     using RoundedMath for uint256;
 
-    function testFork_depositEthFlashLeverageEth() external {
-        uint8 ilkIndex = 0;
-
-        uint256 depositAmount = 1e18;
-        uint256 leverageAmount = 6e18;
-
-        weth.approve(address(ionHandler), type(uint256).max);
-        ionPool.addOperator(address(ionHandler));
-
-        uint256 gasBefore = gasleft();
-        ionHandler.flashLeverageWeth(ilkIndex, depositAmount, leverageAmount, true);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-
-        address depositContract = ionRegistry.depositContracts(ilkIndex);
-        assertApproxEqAbs(
-            ILidoWStEthDeposit(depositContract).getStETHByWstETH(ionPool.collateral(ilkIndex, address(this))),
-            depositAmount + leverageAmount,
-            2
-        );
-    }
-
-    function testFork_depositCollateralFlashLeverageEth() external {
-        uint8 ilkIndex = 0;
-
-        uint256 depositAmount = 1e18;
-        uint256 leverageAmount = 5e18;
-
-        _depositWethForLst(ilkIndex, depositAmount);
-        address depositContract = ionRegistry.depositContracts(ilkIndex);
-        IERC20(depositContract).approve(address(ionHandler), type(uint256).max);
-
-        ionPool.addOperator(address(ionHandler));
-
-        uint256 gasBefore = gasleft();
-        ionHandler.flashLeverageWeth(ilkIndex, depositAmount, leverageAmount, false);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-
-        assertApproxEqAbs(
-            ILidoWStEthDeposit(depositContract).getStETHByWstETH(ionPool.collateral(ilkIndex, address(this))),
-            depositAmount + leverageAmount,
-            2
-        );
-    }
-
-    function testFork_depositEthFlashLeverageCollateral() external {
-        uint8 ilkIndex = 0;
-
-        uint256 depositAmount = 1e18;
-        uint256 leverageAmount = 5e18;
-
-        weth.approve(address(ionHandler), type(uint256).max);
-        ionPool.addOperator(address(ionHandler));
-
-        uint256 gasBefore = gasleft();
-        ionHandler.flashLeverageCollateral(ilkIndex, depositAmount, leverageAmount, true);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-
-        address depositContract = ionRegistry.depositContracts(ilkIndex);
-        assertApproxEqAbs(
-            ILidoWStEthDeposit(depositContract).getStETHByWstETH(ionPool.collateral(ilkIndex, address(this))),
-            depositAmount + leverageAmount,
-            2
-        );
-    }
-
-    function testFork_depositCollateralFlashLeverageCollateral() external {
-        uint8 ilkIndex = 0;
-
-        uint256 depositAmount = 1e18;
-        uint256 leverageAmount = 5e18;
-
-        _depositWethForLst(ilkIndex, depositAmount);
-        address depositContract = ionRegistry.depositContracts(ilkIndex);
-        IERC20(depositContract).approve(address(ionHandler), type(uint256).max);
-
-        ionPool.addOperator(address(ionHandler));
-
-        uint256 gasBefore = gasleft();
-        ionHandler.flashLeverageCollateral(ilkIndex, depositAmount, leverageAmount, false);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-
-        assertApproxEqAbs(
-            ILidoWStEthDeposit(depositContract).getStETHByWstETH(ionPool.collateral(ilkIndex, address(this))),
-            depositAmount + leverageAmount,
-            2
-        );
-    }
-
-    function _depositWethForLst(uint8 ilkIndex, uint256 amount) internal {
-        weth.withdraw(amount);
-        address payable depositContract = payable(ionRegistry.depositContracts(ilkIndex));
-
-        if (ilkIndex == 0) {
-            (bool success,) = depositContract.call{ value: amount }("");
-            require(success);
-        } else if (ilkIndex == 1) {
-            IStaderDeposit(depositContract).deposit{ value: amount }(address(this));
-        } else if (ilkIndex == 2) {
-            ISwellDeposit(depositContract).deposit{ value: amount }();
-        } else {
-            revert("Invalid ilkIndex");
-        }
-    }
-
-}
-
-contract IonHandler_ForkFuzzTestFlashLeverage is IonHandler_ForkBase {
-    using RoundedMath for uint256;
+    IUniswapV3Factory private constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    uint8 private constant ilkIndex = 2;
+    SwEthHandler swEthHandler;
 
     function setUp() public override {
         super.setUp();
+        swEthHandler = new SwEthHandler(ilkIndex, ionPool, ionRegistry, FACTORY, SWETH_ETH_POOL);
+
+        IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
+
+        ISwellDeposit(MAINNET_SWELL).deposit{ value: INITIAL_BORROWER_COLLATERAL_BALANCE }();
     }
 
-    /// forge-config: default.fuzz.runs = 10000
-    function testForkFuzz_depositEthFlashLeverageEth(uint256 depositAmount, uint256 leverageMultiplier) external {
-        uint8 ilkIndex = 0;
+    function test_flashLoanCollateral() external {
+        uint256 initialDeposit = 1e18; // in swEth
+        uint256 resultingCollateral = 5e18; // in swEth
+        uint256 resultingDebt = _getLstAmountIn(resultingCollateral - initialDeposit);
 
-        depositAmount = bound(depositAmount, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);
-        leverageMultiplier = bound(leverageMultiplier, 1, 8);
-        uint256 leverageAmount = depositAmount * leverageMultiplier;
-
-        weth.approve(address(ionHandler), type(uint256).max);
-        ionPool.addOperator(address(ionHandler));
+        weth.approve(address(swEthHandler), type(uint256).max);
+        ionPool.addOperator(address(swEthHandler));
 
         uint256 gasBefore = gasleft();
-        ionHandler.flashLeverageWeth(ilkIndex, depositAmount, leverageAmount, true);
+        swEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
+        uint256 gasAfter = gasleft();
+        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
+    }
+
+    function test_flashLoanWeth() external {
+        uint256 initialDeposit = 1e18; // in swEth
+        uint256 resultingCollateral = 5e18; // in swEth
+        uint256 resultingDebt = _getLstAmountIn(resultingCollateral - initialDeposit);
+
+        weth.approve(address(swEthHandler), type(uint256).max);
+        ionPool.addOperator(address(swEthHandler));
+
+        uint256 gasBefore = gasleft();
+        swEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
+        uint256 gasAfter = gasleft();
+        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
+    }
+
+    function test_flashSwapLeverage() external {
+        uint256 initialDeposit = 1e18;
+        uint256 resultingCollateral = 5e18;
+        uint256 maxResultingDebt = type(uint256).max;
+
+        weth.approve(address(swEthHandler), type(uint256).max);
+        ionPool.addOperator(address(swEthHandler));
+
+        uint256 gasBefore = gasleft();
+        swEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
-        address depositContract = ionRegistry.depositContracts(ilkIndex);
-        assertApproxEqAbs(
-            ILidoWStEthDeposit(depositContract).getStETHByWstETH(ionPool.collateral(ilkIndex, address(this))),
-            depositAmount + leverageAmount,
-            2
-        );
-    } 
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
+    }
+
+    function test_flashSwapDeleverage() external {
+        uint256 initialDeposit = 1e18;
+        uint256 resultingCollateral = 5e18;
+        uint256 maxResultingDebt = type(uint256).max;
+
+        weth.approve(address(swEthHandler), type(uint256).max);
+        ionPool.addOperator(address(swEthHandler));
+
+        swEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt);
+
+        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        // Want to completely deleverage position and only leave initial capital
+        // in vault
+        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        // Remove all debt
+        uint256 debtToRemove = ionPool.normalizedDebt(ilkIndex, address(this)) * ionPool.rate(ilkIndex) / RAY;
+
+        uint256 gasBefore = gasleft();
+        swEthHandler.flashSwapDeleverage(maxCollateralToRemove, debtToRemove);
+        uint256 gasAfter = gasleft();
+        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
+    }
+
+    function test_swap() external {
+        SWETH_ETH_POOL.swap(address(this), false, 300e18, 1461446703485210103287273052203988822378723970342 - 1, "");
+    }
+
+    function _getLstAmountIn(uint256 amountLst) internal view returns (uint256) {
+        return amountLst.wadDivUp(ISwellDeposit(MAINNET_SWELL).ethToSwETHRate());
+    }
 }
+
+contract IonHandler_ForkFuzzTestFlashLeverageSwEth { }
