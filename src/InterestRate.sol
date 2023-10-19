@@ -137,19 +137,19 @@ contract InterestRate {
         IlkData memory ilkData = ilkDataList[index];
 
         packedConfig_a = (
-            uint256(ilkData.adjustedProfitMargin) << ADJUSTED_PROFIT_MARGIN_MASK
-                | uint256(ilkData.minimumKinkRate) << MINIMUM_KINK_RATE_MASK
-                | uint256(ilkData.adjustedAboveKinkSlope) << ADJUSTED_ABOVE_KINK_SLOPE_MASK
-                | uint256(ilkData.minimumAboveKinkSlope) << MINIMUM_ABOVE_KINK_SLOPE_MASK
-                | uint256(ilkData.adjustedReserveFactor) << ADJUSTED_RESERVE_FACTOR_MASK
+            uint256(ilkData.adjustedProfitMargin) << ADJUSTED_PROFIT_MARGIN_SHIFT
+                | uint256(ilkData.minimumKinkRate) << MINIMUM_KINK_RATE_SHIFT
+                | uint256(ilkData.adjustedAboveKinkSlope) << ADJUSTED_ABOVE_KINK_SLOPE_SHIFT
+                | uint256(ilkData.minimumAboveKinkSlope) << MINIMUM_ABOVE_KINK_SLOPE_SHIFT
+                | uint256(ilkData.adjustedReserveFactor) << ADJUSTED_RESERVE_FACTOR_SHIFT
         );
 
         packedConfig_b = (
-            uint256(ilkData.minimumReserveFactor) << MINIMUM_RESERVE_FACTOR_MASK
-                | uint256(ilkData.adjustedBaseRate) << ADJUSTED_BASE_RATE_MASK
-                | uint256(ilkData.minimumBaseRate) << MINIMUM_BASE_RATE_MASK
-                | uint256(ilkData.optimalUtilizationRate) << OPTIMAL_UTILIZATION_MASK
-                | uint256(ilkData.distributionFactor) << DISTRIBUTION_FACTOR_MASK
+            uint256(ilkData.minimumReserveFactor) << MINIMUM_RESERVE_FACTOR_SHIFT
+                | uint256(ilkData.adjustedBaseRate) << ADJUSTED_BASE_RATE_SHIFT
+                | uint256(ilkData.minimumBaseRate) << MINIMUM_BASE_RATE_SHIFT
+                | uint256(ilkData.optimalUtilizationRate) << OPTIMAL_UTILIZATION_SHIFT
+                | uint256(ilkData.distributionFactor) << DISTRIBUTION_FACTOR_SHIFT
         );
     }
 
@@ -164,25 +164,25 @@ contract InterestRate {
             packedConfig_b = ilkConfig0_b;
         } else if (index == 1) {
             packedConfig_a = ilkConfig1_a;
-            packedConfig_b = ilkConfig0_b;
+            packedConfig_b = ilkConfig1_b;
         } else if (index == 2) {
             packedConfig_a = ilkConfig2_a;
-            packedConfig_b = ilkConfig1_b;
+            packedConfig_b = ilkConfig2_b;
         } else if (index == 3) {
             packedConfig_a = ilkConfig3_a;
-            packedConfig_b = ilkConfig1_b;
+            packedConfig_b = ilkConfig3_b;
         } else if (index == 4) {
             packedConfig_a = ilkConfig4_a;
-            packedConfig_b = ilkConfig2_b;
+            packedConfig_b = ilkConfig4_b;
         } else if (index == 5) {
             packedConfig_a = ilkConfig5_a;
-            packedConfig_b = ilkConfig2_b;
+            packedConfig_b = ilkConfig5_b;
         } else if (index == 6) {
             packedConfig_a = ilkConfig6_a;
-            packedConfig_b = ilkConfig3_b;
+            packedConfig_b = ilkConfig6_b;
         } else if (index == 7) {
             packedConfig_a = ilkConfig7_a;
-            packedConfig_b = ilkConfig3_b;
+            packedConfig_b = ilkConfig7_b;
         }
 
         uint72 adjustedProfitMargin =
@@ -191,13 +191,13 @@ contract InterestRate {
         uint24 adjustedAboveKinkSlope =
             uint24((packedConfig_a & ADJUSTED_ABOVE_KINK_SLOPE_MASK) >> ADJUSTED_ABOVE_KINK_SLOPE_SHIFT);
         uint24 minimumAboveKinkSlope =
-            uint24((packedConfig_b & MINIMUM_ABOVE_KINK_SLOPE_MASK) >> MINIMUM_ABOVE_KINK_SLOPE_SHIFT);
+            uint24((packedConfig_a & MINIMUM_ABOVE_KINK_SLOPE_MASK) >> MINIMUM_ABOVE_KINK_SLOPE_SHIFT);
         uint16 adjustedReserveFactor =
             uint16((packedConfig_a & ADJUSTED_RESERVE_FACTOR_MASK) >> ADJUSTED_RESERVE_FACTOR_SHIFT);
 
         uint16 minimumReserveFactor =
             uint16((packedConfig_b & MINIMUM_RESERVE_FACTOR_MASK) >> MINIMUM_RESERVE_FACTOR_SHIFT);
-        uint72 adjustedBaseRate = uint72((packedConfig_a & ADJUSTED_BASE_RATE_MASK) >> ADJUSTED_BASE_RATE_SHIFT);
+        uint72 adjustedBaseRate = uint72((packedConfig_b & ADJUSTED_BASE_RATE_MASK) >> ADJUSTED_BASE_RATE_SHIFT);
         uint72 minimumBaseRate = uint72((packedConfig_b & MINIMUM_BASE_RATE_MASK) >> MINIMUM_BASE_RATE_SHIFT);
         uint16 optimalUtilizationRate = uint16((packedConfig_b & OPTIMAL_UTILIZATION_MASK) >> OPTIMAL_UTILIZATION_SHIFT);
         uint16 distributionFactor = uint16((packedConfig_b & DISTRIBUTION_FACTOR_MASK) >> DISTRIBUTION_FACTOR_SHIFT);
