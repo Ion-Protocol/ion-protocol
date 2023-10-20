@@ -68,24 +68,21 @@ contract SpotOracleTest is IonPoolSharedSetup {
         assertEq(price, 1_142_869_193_361_749_358, "ETH per wstETH price");
     }
 
-    function test_StEthSpotPushToIonPool() public {
+    function test_StEthSpotOracleViewSpot() public {
         uint64 ltv = 0.8 ether;
 
         stEthSpotOracle = new StEthSpotOracle(
             STETH_ILK_INDEX, 
-            address(ionPool), 
+            address(ionPool),
             ltv, 
             MAINNET_ETH_PER_STETH_CHAINLINK, 
             MAINNET_WSTETH
         );
-        ionPool.grantRole(ionPool.SPOT_ROLE(), address(stEthSpotOracle));
 
-        uint256 price = stEthSpotOracle.getPrice();
-        uint256 spot = (ltv * price).scaleToRay(36);
+        uint256 expectedPrice = stEthSpotOracle.getPrice();
+        uint256 expectedSpot = (ltv * expectedPrice).scaleToRay(36);
 
-        stEthSpotOracle.updateSpot();
-
-        assertEq(ionPool.spot(STETH_ILK_INDEX), spot, "spot");
+        assertEq(stEthSpotOracle.getSpot(), expectedSpot, "spot");
     }
 
     // --- swETH Spot Oracle Test ---
@@ -110,19 +107,17 @@ contract SpotOracleTest is IonPoolSharedSetup {
         assertEq(price, 1_007_326_342_304_993_374, "ETH per swETH price");
     }
 
-    function test_SwEthSpotPushToIonPool() public {
+    function test_SwEthSpotOracleViewSpot() public {
         uint64 ltv = 0.95 ether;
         uint32 secondsAgo = 100;
 
         SwEthSpotOracle swEthSpotOracle =
             new SwEthSpotOracle(SWETH_ILK_INDEX, address(ionPool), ltv, MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
-        ionPool.grantRole(ionPool.SPOT_ROLE(), address(swEthSpotOracle));
 
-        uint256 price = swEthSpotOracle.getPrice();
-        uint256 spot = (ltv * price).scaleToRay(36);
-        swEthSpotOracle.updateSpot();
+        uint256 expectedPrice = swEthSpotOracle.getPrice();
+        uint256 expectedSpot = (ltv * expectedPrice).scaleToRay(36);
 
-        assertEq(ionPool.spot(SWETH_ILK_INDEX), spot, "spot");
+        assertEq(swEthSpotOracle.getSpot(), expectedSpot, "spot");
     }
 
     // // --- ETHx Spot Oracle Test ---
@@ -148,7 +143,7 @@ contract SpotOracleTest is IonPoolSharedSetup {
         assertEq(price, 1_011_332_125_111_408_905, "ETH per ETHx price");
     }
 
-    function test_EthXSpotPushToIonPool() public {
+    function test_EthXSpotOracleViewSpot() public {
         uint64 ltv = 0.85 ether;
 
         EthXSpotOracle ethXSpotOracle = new EthXSpotOracle(
@@ -158,12 +153,10 @@ contract SpotOracleTest is IonPoolSharedSetup {
             MAINNET_USD_PER_ETHX_REDSTONE, 
             MAINNET_USD_PER_ETH_CHAINLINK
         );
-        ionPool.grantRole(ionPool.SPOT_ROLE(), address(ethXSpotOracle));
 
-        uint256 price = ethXSpotOracle.getPrice();
-        uint256 spot = (ltv * price).scaleToRay(36);
-        ethXSpotOracle.updateSpot();
+        uint256 expectedPrice = ethXSpotOracle.getPrice();
+        uint256 expectedSpot = (ltv * expectedPrice).scaleToRay(36);
 
-        assertEq(ionPool.spot(ETHX_ILK_INDEX), spot, "spot");
+        assertEq(ethXSpotOracle.getSpot(), expectedSpot, "spot");
     }
 }

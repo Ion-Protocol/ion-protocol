@@ -6,10 +6,7 @@ import { TickMath } from "src/oracles/spot-oracles/TickMath.sol";
 import { UniswapOracleLibrary } from "src/oracles/spot-oracles/UniswapOracleLibrary.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SpotOracle } from "./SpotOracle.sol";
-import { RoundedMath, WAD, RAY } from "src/math/RoundedMath.sol";
-
-string constant path = "./twap.txt";
-string constant pricePath = "./twap-price.txt";
+import { WAD } from "src/math/RoundedMath.sol";
 
 contract UniswapHelper {
     function _getPriceX96FromSqrtPriceX96(uint256 sqrtPriceX96) public pure returns (uint256 priceX96) {
@@ -38,7 +35,7 @@ contract SwEthSpotOracle is SpotOracle, UniswapHelper {
 
     // @dev
     // NOTE: Uniswap returns price in swETH per ETH. This needs to be reciprocaled.
-    function _getPrice() internal view override returns (uint256 ethPerSwEth) {
+    function getPrice() public view override returns (uint256 ethPerSwEth) {
         (int24 arithmeticMeanTick,) = UniswapOracleLibrary.consult(address(uniswapPool), secondsAgo);
         uint256 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
         // swETH per ETH

@@ -34,7 +34,7 @@ contract EthXSpotOracle is SpotOracle {
 
     // @dev redstone oracle returns dollar value per ETHx with 6 decimals.
     //      This needs to be converted to [wad] and to ETH denomination.
-    function _getPrice() internal view override returns (uint256 ethPerEthX) {
+    function getPrice() public view override returns (uint256 ethPerEthX) {
         // get price from the protocol feed
         // usd per ETHx
         uint256 usdPerEthX = uint256(redstoneEthXPriceFeed.latestAnswer()).scaleToWad(redstoneDecimals); //

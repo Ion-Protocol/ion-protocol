@@ -18,7 +18,6 @@ abstract contract SpotOracle {
     IonPool public immutable ionPool;
 
     // --- Events ---
-    event UpdateSpot(uint256 indexed spot);
 
     constructor(uint8 _ilkIndex, address _ionPool, uint64 _ltv) {
         ilkIndex = _ilkIndex;
@@ -28,25 +27,20 @@ abstract contract SpotOracle {
     }
 
     // @dev overridden by collateral specific spot oracle contracts
-    // @return price in [wad]
-    function _getPrice() internal view virtual returns (uint256 price) { }
-
-    // @dev external view function to see what value it would read
-    // TODO: can this be `view`?
-    function getPrice() external view returns (uint256 price) {
-        price = _getPrice();
-    }
+    // @return price of the asset in ETH [wad]
+    function getPrice() public view virtual returns (uint256 price) { }
 
     // @dev pushes market price multiplied by the liquidation threshold
-    function updateSpot() external {
-        console2.log("update spot");
-        uint256 price = _getPrice(); // must be [wad]
-        console2.log("price: ", price);
-        uint256 spot = (ltv * price).scaleToRay(36); // [ray]
+    function getSpot() external view returns (uint256 spot) {
+        uint256 price = getPrice(); // must be [wad]
+        spot = (ltv * price).scaleToRay(36); // [ray]
         require(spot > 0);
-        console2.log("spot: ", spot);
-        ionPool.updateIlkSpot(ilkIndex, spot);
-
-        emit UpdateSpot(spot);
     }
+
+    // reserveOracle
+    // getExchangeRate
+    
+    // spotOracle
+    // getPrice
+    // getSpot 
 }

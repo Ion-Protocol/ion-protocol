@@ -13,14 +13,6 @@ interface IReserveOracle {
     function getExchangeRate(uint256 ilkIndex) external view returns (uint256 exchangeRate);
 }
 
-// DEPLOY PARAMETERS
-// NOTE: Needs to be configured on each deployment along with constructor parameters
-
-// uint256 constant TARGET_HEALTH = 125 * WAD / 100; // 1.25 [wad]
-// uint256 constant RESERVE_FACTOR = 2 * WAD / 100; // 0.02 [wad]
-// uint256 constant MAX_DISCOUNT = 2 * WAD / 10; // 0.20 [wad]
-
-// TODO: can this be configured inside of the constructor?
 uint32 constant ILK_COUNT = 8;
 
 contract Liquidation {
@@ -38,6 +30,7 @@ contract Liquidation {
     uint256 immutable MAX_DISCOUNT;
 
     // ilk specific variable
+    // TODO: could this be immutable? 
     uint64[ILK_COUNT] public liquidationThresholds; // [wad] indexed by ilkIndex
 
     address public immutable revenueRecipient;
