@@ -12,8 +12,8 @@ import { GemJoin } from "../../src/join/GemJoin.sol";
 import { RAY } from "../../src/math/RoundedMath.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "forge-std/console.sol";
 
 // struct IlkData {
 //     uint80 minimumProfitMargin; // 18 decimals
@@ -39,7 +39,6 @@ contract InterestRateExposed is InterestRate {
 }
 
 contract IonPoolExposed is IonPool {
-
     constructor(
         address _underlying,
         address _treasury,
@@ -54,12 +53,6 @@ contract IonPoolExposed is IonPool {
 
     function setSupplyFactor(uint256 factor) external {
         _setSupplyFactor(factor);
-    }
-}
-
-contract EmptyContract {
-    function foo() public pure returns (uint256) {
-        return 0;
     }
 }
 
@@ -87,9 +80,9 @@ contract IonPoolSharedSetup is BaseTestSetup {
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
 
-    ERC20PresetMinterPauser immutable stEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
-    ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
-    ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
+    // ERC20PresetMinterPauser immutable stEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
+    // ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
+    // ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
 
     uint64 internal constant stEthReserveFactor = 0.1e18;
     uint64 internal constant swEthReserveFactor = 0.08e18;
@@ -118,7 +111,12 @@ contract IonPoolSharedSetup is BaseTestSetup {
     IlkData[] ilkConfigs;
 
     function setUp() public virtual override {
+        ERC20PresetMinterPauser stEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
+        ERC20PresetMinterPauser swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
+        ERC20PresetMinterPauser ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
+
         collaterals = [stEth, swEth, ethX];
+
         assert(
             collaterals.length == reserveFactors.length && reserveFactors.length == optimalUtilizationRates.length
                 && optimalUtilizationRates.length == distributionFactors.length
@@ -138,33 +136,34 @@ contract IonPoolSharedSetup is BaseTestSetup {
                 optimalUtilizationRate: optimalUtilizationRates[i],
                 distributionFactor: distributionFactors[i]
             });
+
             ilkConfigs.push(ilkConfig);
 
             distributionFactorSum += distributionFactors[i];
             debtCeilingSum += debtCeilings[i];
-
+            stEth.mint(address(this), 100 ether);
+            collaterals[i].mint(address(1), uint256(10));
             collaterals[i].mint(borrower1, INITIAL_BORROWER_COLLATERAL_BALANCE);
             collaterals[i].mint(borrower2, INITIAL_BORROWER_COLLATERAL_BALANCE);
         }
-
         assert(distributionFactorSum == 1e2);
         assert(debtCeilingSum == globalDebtCeiling);
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
-        // Instantiate upgradeable IonPool 
+        // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(101));
-        IonPoolExposed logicIonPool = new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
-        ionPool = IonPoolExposed(
-            address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), ""))
-        );        
-        
-        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule); 
+        IonPoolExposed logicIonPool =
+            new IonPoolExposed(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool =
+            IonPoolExposed(address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), "")));
+
+        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
         ionPool.grantRole(ionPool.ION(), address(this));
-        
-        // attempt to initialize again 
-        vm.expectRevert(Initializable.InvalidInitialization.selector); 
-        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule); 
+
+        // attempt to initialize again
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        ionPool.initialize(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
 
         // ionHandler = new IonHandler(ionPool);
         // vm.prank(borrower1);

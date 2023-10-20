@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.21;
+
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 /// @title Oracle library
 /// @notice Provides functions to integrate with V3 pool oracle
@@ -12,12 +13,15 @@ library UniswapOracleLibrary {
     /// @param secondsAgo Number of seconds in the past from which to calculate the time-weighted means
     /// @return arithmeticMeanTick The arithmetic mean tick from (block.timestamp - secondsAgo) to block.timestamp
     /// @return harmonicMeanLiquidity The harmonic mean liquidity from (block.timestamp - secondsAgo) to block.timestamp
-    function consult(address pool, uint32 secondsAgo)
+    function consult(
+        address pool,
+        uint32 secondsAgo
+    )
         internal
         view
         returns (int24 arithmeticMeanTick, uint128 harmonicMeanLiquidity)
     {
-        require(secondsAgo != 0, 'BP');
+        require(secondsAgo != 0, "BP");
 
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = secondsAgo;
@@ -30,16 +34,15 @@ library UniswapOracleLibrary {
         uint160 secondsPerLiquidityCumulativesDelta =
             secondsPerLiquidityCumulativeX128s[1] - secondsPerLiquidityCumulativeX128s[0];
 
-        // NOTE: Changed to match versions 
+        // NOTE: Changed to match versions
         // arithmeticMeanTick = int24(tickCumulativesDelta / secondsAgo);
         arithmeticMeanTick = int24(tickCumulativesDelta) / int24(int32(secondsAgo));
 
         // Always round to negative infinity
 
-        // NOTE: Changed to match versions 
+        // NOTE: Changed to match versions
         // if (tickCumulativesDelta < 0 && (tickCumulativesDelta % secondsAgo != 0)) arithmeticMeanTick--;
         if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int56(int32(secondsAgo)) != 0)) arithmeticMeanTick--;
-
 
         // We are multiplying here instead of shifting to ensure that harmonicMeanLiquidity doesn't overflow uint128
         uint192 secondsAgoX160 = uint192(secondsAgo) * type(uint160).max;
@@ -140,7 +143,8 @@ library UniswapOracleLibrary {
     // /// @notice Given an array of ticks and weights, calculates the weighted arithmetic mean tick
     // /// @param weightedTickData An array of ticks and weights
     // /// @return weightedArithmeticMeanTick The weighted arithmetic mean tick
-    // /// @dev Each entry of `weightedTickData` should represents ticks from pools with the same underlying pool tokens. If they do not,
+    // /// @dev Each entry of `weightedTickData` should represents ticks from pools with the same underlying pool
+    // tokens. If they do not,
     // /// extreme care must be taken to ensure that ticks are comparable (including decimal differences).
     // /// @dev Note that the weighted arithmetic mean tick corresponds to the weighted geometric mean price.
     // function getWeightedArithmeticMeanTick(WeightedTickData[] memory weightedTickData)

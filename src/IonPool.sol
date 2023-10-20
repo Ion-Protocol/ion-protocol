@@ -52,7 +52,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     bytes32 public constant ION = keccak256("ION");
     bytes32 public constant SPOT_ROLE = keccak256("SPOT_ROLE");
-bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
+    bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
     // --- Data ---
@@ -108,16 +108,16 @@ bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
         external
         initializer
     {
-        console.log("ionPool initialize"); 
+        console.log("ionPool initialize");
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
-        // console.log("after access control default admin rules"); 
+        // console.log("after access control default admin rules");
         RewardToken.initialize(_underlying, _treasury, decimals_, name_, symbol_);
-        console.log("after reward token initialize"); 
+        console.log("after reward token initialize");
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.interestRateModule = _interestRateModule;
         emit InterestRateModuleUpdated(address(0), address(_interestRateModule));
-        console.log("after initialize"); 
+        console.log("after initialize");
     }
 
     // --- Administration ---
@@ -362,8 +362,8 @@ bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
         external
         whenNotPaused(Pauses.UNSAFE)
     {
-        console.log("amountOfNormalizedDebt: ", amountOfNormalizedDebt); 
-        console2.log("amountOfNormalizedDebt.toInt256(): ", amountOfNormalizedDebt.toInt256()); 
+        console.log("amountOfNormalizedDebt: ", amountOfNormalizedDebt);
+        console2.log("amountOfNormalizedDebt.toInt256(): ", amountOfNormalizedDebt.toInt256());
         _modifyPosition(ilkIndex, user, address(0), w, 0, amountOfNormalizedDebt.toInt256());
 
         emit Borrow(ilkIndex, user, w, amountOfNormalizedDebt);
@@ -439,7 +439,7 @@ bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
         ilk.totalNormalizedDebt = _add(uint256(ilk.totalNormalizedDebt), changeInNormalizedDebt).toUint104();
 
         int256 changeInDebt = ilkRate.toInt256() * changeInNormalizedDebt;
-        console2.log("changeInDebt: ", changeInDebt); 
+        console2.log("changeInDebt: ", changeInDebt);
         uint256 newTotalDebtInVault = ilkRate * vault.normalizedDebt;
         $.debt = _add($.debt, changeInDebt);
 
@@ -485,7 +485,7 @@ bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
         // If changeInDebt < 0, it is a repayment and WETH is being transferred
         // into the protocol
-        // console.log("changeInDebt: ", changeInDebt); 
+        // console.log("changeInDebt: ", changeInDebt);
         _borrowWeth(w, changeInDebt);
     }
 
@@ -493,8 +493,8 @@ bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
 
     /**
      * @dev To be used by protocol to settle bad debt using reserves
-     * NOTE: Can pay another user's bad debt with the sender's asset 
-     * @param user the address that owns the bad debt being paid off 
+     * NOTE: Can pay another user's bad debt with the sender's asset
+     * @param user the address that owns the bad debt being paid off
      * @param rad amount of debt to be repaid (45 decimals)
      */
     function repayBadDebt(address user, uint256 rad) external {
@@ -519,21 +519,16 @@ bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
      * @param amount amount to transfer
      */
     function _borrowWeth(address user, int256 amount) internal {
-        console2.log("_borrowETH amount: ", amount); 
-        
         if (amount == 0) return;
 
         if (amount < 0) {
             // Round up in protocol's favor
             uint256 amountWad = uint256(-amount) / RAY;
-            amountWad = amountWad * RAY < uint256(-amount) ? amountWad + 1 : amountWad; 
+            amountWad = amountWad * RAY < uint256(-amount) ? amountWad + 1 : amountWad;
             getUnderlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
-            console2.log("borrow weth amount: ", amount); 
-            console2.log("total supplied weth: ", totalSupply()); 
             uint256 amountWad = uint256(amount) / RAY;
-            console.log("amountWad: ", amountWad); 
             getUnderlying().safeTransfer(user, amountWad);
         }
     }
@@ -603,7 +598,6 @@ bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
         $.gem[ilkIndex][src] -= wad;
         $.gem[ilkIndex][dst] += wad;
         emit TransferGem(ilkIndex, src, dst, wad);
-
     }
 
     // --- Getters ---
