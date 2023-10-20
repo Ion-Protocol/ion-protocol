@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "../../IonPool.sol";
-import { IonRegistry } from "./../IonRegistry.sol";
-import { IWETH9 } from "../../interfaces/IWETH9.sol";
+import { IonPool } from "../../../IonPool.sol";
+import { IonRegistry } from "./../../IonRegistry.sol";
+import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 import {
     ILidoStEthDeposit,
     ILidoWStEthDeposit,
     IStaderDeposit,
     ISwellDeposit
-} from "../../interfaces/DepositInterfaces.sol";
-import { GemJoin } from "../../join/GemJoin.sol";
-import { WAD } from "../../math/RoundedMath.sol";
+} from "../../../interfaces/DepositInterfaces.sol";
+import { GemJoin } from "../../../join/GemJoin.sol";
+import { WAD } from "../../../math/RoundedMath.sol";
 
 import { IVault, IERC20 } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
@@ -40,13 +40,15 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 abstract contract IonHandlerBase is IFlashLoanRecipient {
     using SafeERC20 for IERC20OZ;
 
+    error InvalidFactoryAddress();
+    error InvalidSwEthPoolAddress();
+
     error ReceiveCallerNotVault();
     error FlashLoanedTooManyTokens();
     error FlashLoanedInvalidToken();
     error InsufficientLiquidityForFlashloan();
     error ExternalFlashloanNotAllowed();
     error CannotSendEthToContract();
-    error WstEthDepositFailed();
     error SwapNotAvailableForIlk();
 
     IWETH9 immutable weth;
@@ -96,6 +98,8 @@ abstract contract IonHandlerBase is IFlashLoanRecipient {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amountToLeverage;
 
+        lstToken.transferFrom(msg.sender, address(this), initialDeposit);
+
         // Prevents attacked from initiating flashloan and passing malicious data through callback
         flashLoanInitiated = 2;
 
@@ -130,6 +134,8 @@ abstract contract IonHandlerBase is IFlashLoanRecipient {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = resultingDebt;
 
+        lstToken.transferFrom(msg.sender, address(this), initialDeposit);
+
         flashLoanInitiated = 2;
 
         vault.flashLoan(
@@ -143,7 +149,14 @@ abstract contract IonHandlerBase is IFlashLoanRecipient {
     }
 
     /**
-     * @notice Code assumes Balancer flashloans remain free
+     * @notice Code assumes Balancer flashloans remain free.
+     * @dev This function is intended to never be called directly. It should
+     * only be called by the Balancer vault during a flashloan initiated by this
+     * contract. This callback logic only handles the creation of leverage
+     * positions by minting. Since not all tokens have withdrawable liquidity
+     * via the LST protocol directly, deleverage through the protocol will need to be
+     * implemented in the inheriting contract.
+     *
      * @param tokens Array of tokens flash loaned
      * @param amounts amounts flash loaned
      * @param userData arbitrary data passed from initiator of flash loan
@@ -165,14 +178,17 @@ abstract contract IonHandlerBase is IFlashLoanRecipient {
         (address user, uint256 initialDeposit, uint256 resultingCollateral, uint256 resultingDebt) =
             abi.decode(userData, (address, uint256, uint256, uint256));
 
+        if (resultingDebt == 0) {
+            _depositAndBorrow(user, address(this), resultingCollateral, 0);
+            return;
+        }
+
         // Flashloaned WETH needs to be wrapped into collateral asset
         if (address(token) == address(weth)) {
             uint256 collateralFromDeposit = _depositWethForLst(amounts[0]);
 
             // Sanity check
             assert(collateralFromDeposit + initialDeposit == resultingCollateral);
-
-            lstToken.transferFrom(user, address(this), initialDeposit);
 
             _depositAndBorrow(user, address(this), resultingCollateral, resultingDebt);
 
@@ -182,8 +198,6 @@ abstract contract IonHandlerBase is IFlashLoanRecipient {
             assert(amounts[0] + initialDeposit == resultingCollateral);
 
             if (address(lstToken) != address(token)) revert FlashLoanedInvalidToken();
-
-            lstToken.transferFrom(user, address(this), initialDeposit);
 
             _depositAndBorrow(user, address(this), resultingCollateral, resultingDebt);
 
@@ -219,7 +233,7 @@ abstract contract IonHandlerBase is IFlashLoanRecipient {
 
         ionPool.moveGemToVault(ilkIndex, vaultHolder, address(this), amountCollateral);
 
-        ionPool.borrow(ilkIndex, vaultHolder, receiver, amountToBorrow);
+        if (amountToBorrow != 0) ionPool.borrow(ilkIndex, vaultHolder, receiver, amountToBorrow);
     }
 
     function repayAndWithdraw(uint256 collateralToWithdraw, uint256 debtToRepay) external {

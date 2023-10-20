@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { IonPoolExposed } from "../../helpers/IonPoolSharedSetup.sol";
 // import { IonHandler } from "../../../src/periphery/IonHandler.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
-import { IHevm } from "../../echidna/IHevm.sol";
+import { IHevm } from "../../helpers/echidna/IHevm.sol";
 import { RoundedMath } from "../../../src/math/RoundedMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 

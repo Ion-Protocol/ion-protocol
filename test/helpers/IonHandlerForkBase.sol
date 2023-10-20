@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
-import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
-import { RoundedMath, WAD, RAY } from "../../src/math/RoundedMath.sol";
 import { ILidoWStEthDeposit, IStaderDeposit, ISwellDeposit } from "../../src/interfaces/DepositInterfaces.sol";
+import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
+import { IonPoolSharedSetup } from "./IonPoolSharedSetup.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
-import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { SwEthHandler } from "../../src/periphery/handlers/SwEthHandler.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { RoundedMath, WAD, RAY } from "../../src/math/RoundedMath.sol";
 
 struct Slot0 {
     // the current price
@@ -52,6 +47,7 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
 
     address constant MAINNET_ETHX = 0xA35b1B31Ce002FBF2058D22F30f95D405200A15b;
 
+    IUniswapV3Factory internal constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     function setUp() public virtual override {
@@ -96,8 +92,6 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
 
         IERC20[] memory _collaterals = _getCollaterals();
         for (uint256 i = 0; i < _collaterals.length; i++) {
-            vm.deal(address(this), INITIAL_BORROWER_COLLATERAL_BALANCE);
-
             _collaterals[i].approve(address(gemJoins[i]), type(uint256).max);
         }
     }
@@ -134,102 +128,3 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
 
     receive() external payable { }
 }
-
-contract IonHandler_FlashLeverageSwEth is IonHandler_ForkBase {
-    using RoundedMath for uint256;
-
-    IUniswapV3Factory private constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-    uint8 private constant ilkIndex = 2;
-    SwEthHandler swEthHandler;
-
-    function setUp() public override {
-        super.setUp();
-        swEthHandler = new SwEthHandler(ilkIndex, ionPool, ionRegistry, FACTORY, SWETH_ETH_POOL);
-
-        IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
-
-        // Remove debt ceiling for this test
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
-            ionPool.updateIlkDebtCeiling(i, type(uint256).max);
-        }
-
-        ISwellDeposit(MAINNET_SWELL).deposit{ value: INITIAL_BORROWER_COLLATERAL_BALANCE }();
-    }
-
-    function test_flashLoanCollateral() external {
-        uint256 initialDeposit = 1e18; // in swEth
-        uint256 resultingCollateral = 5e18; // in swEth
-        uint256 resultingDebt = _getLstAmountIn(resultingCollateral - initialDeposit);
-
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
-
-        uint256 gasBefore = gasleft();
-        swEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-    }
-
-    function test_flashLoanWeth() external {
-        uint256 initialDeposit = 1e18; // in swEth
-        uint256 resultingCollateral = 5e18; // in swEth
-        uint256 resultingDebt = _getLstAmountIn(resultingCollateral - initialDeposit);
-
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
-
-        uint256 gasBefore = gasleft();
-        swEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-    }
-
-    function test_flashSwapLeverage() external {
-        uint256 initialDeposit = 1e18;
-        uint256 resultingCollateral = 5e18;
-        uint256 maxResultingDebt = type(uint256).max;
-
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
-
-        uint256 gasBefore = gasleft();
-        swEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-
-        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
-    }
-
-    function test_flashSwapDeleverage() external {
-        uint256 initialDeposit = 1e18;
-        uint256 resultingCollateral = 5e18;
-        uint256 maxResultingDebt = type(uint256).max;
-
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
-
-        swEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt);
-
-        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
-        // Want to completely deleverage position and only leave initial capital
-        // in vault
-        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
-        // Remove all debt
-        uint256 debtToRemove = ionPool.normalizedDebt(ilkIndex, address(this)) * ionPool.rate(ilkIndex) / RAY;
-
-        uint256 gasBefore = gasleft();
-        swEthHandler.flashSwapDeleverage(maxCollateralToRemove, debtToRemove);
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
-    }
-
-    function test_swap() external {
-        SWETH_ETH_POOL.swap(address(this), false, 300e18, 1461446703485210103287273052203988822378723970342 - 1, "");
-    }
-
-    function _getLstAmountIn(uint256 amountLst) internal view returns (uint256) {
-        return amountLst.wadDivUp(ISwellDeposit(MAINNET_SWELL).ethToSwETHRate());
-    }
-}
-
-contract IonHandler_ForkFuzzTestFlashLeverageSwEth { }
