@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { IonPool } from "../../../IonPool.sol";
 import { IonRegistry } from "./../../IonRegistry.sol";
 import { IonHandlerBase } from "./IonHandlerBase.sol";
-import { RoundedMath, WAD } from "../../../math/RoundedMath.sol";
+import { RoundedMath } from "../../../libraries/math/RoundedMath.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";

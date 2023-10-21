@@ -9,7 +9,7 @@ import {
     STADER_ETH_EXCHANGE_RATE,
     SWELL_ETH_EXCHANGE_RATE
 } from "../helpers/YieldOracleSharedSetup.sol";
-import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 

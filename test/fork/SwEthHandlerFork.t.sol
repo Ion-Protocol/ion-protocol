@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RoundedMath, WAD, RAY } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, WAD, RAY } from "../../src/libraries/math/RoundedMath.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SwEthHandler } from "../../src/periphery/handlers/SwEthHandler.sol";

@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IInterestRate } from "./interfaces/IInterestRate.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
-import { RoundedMath, RAY } from "./math/RoundedMath.sol";
-import { IonPool } from "./IonPool.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { RoundedMath } from "./libraries/math/RoundedMath.sol";
 
 struct IlkData {
     //                                                 _

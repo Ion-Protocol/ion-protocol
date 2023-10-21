@@ -12,7 +12,7 @@ import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
-import { RAY } from "../../src/math/RoundedMath.sol";
+import { RAY } from "../../src/libraries/math/RoundedMath.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";

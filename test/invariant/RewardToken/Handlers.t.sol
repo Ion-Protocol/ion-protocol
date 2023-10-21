@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardTokenExposed } from "../../helpers/RewardTokenSharedSetup.sol";
-import { RoundedMath } from "../../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 
 import { CommonBase } from "forge-std/Base.sol";

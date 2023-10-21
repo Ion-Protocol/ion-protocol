@@ -5,7 +5,7 @@ import { IonPool } from "../../IonPool.sol";
 import { IonRegistry } from "./../IonRegistry.sol";
 import { UniswapHandler } from "./base/UniswapHandler.sol";
 import { ISwellDeposit } from "../../interfaces/DepositInterfaces.sol";
-import { RoundedMath } from "../../math/RoundedMath.sol";
+import { RoundedMath } from "../../libraries/math/RoundedMath.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";

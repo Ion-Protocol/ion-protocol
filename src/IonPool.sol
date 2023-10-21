@@ -8,7 +8,7 @@ import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { InterestRate } from "./InterestRate.sol";
-import { RoundedMath, RAY } from "./math/RoundedMath.sol";
+import { RoundedMath, RAY } from "./libraries/math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";

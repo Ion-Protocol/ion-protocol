@@ -6,7 +6,7 @@ pragma solidity 0.8.21;
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
-import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
 import { ReserveOracle } from "../../src/oracle/ReserveOracle.sol";
 import { StEthReserveOracle } from "../../src/oracle/StEthReserveOracle.sol";
 import "forge-std/console.sol";
