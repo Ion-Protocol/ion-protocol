@@ -6,7 +6,6 @@ import { IonRegistry } from "./../../IonRegistry.sol";
 import { IonHandlerBase } from "./IonHandlerBase.sol";
 import { RoundedMath } from "../../../libraries/math/RoundedMath.sol";
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 as IERC20OZ } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -30,7 +29,7 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
     using SafeCast for uint256;
     using SafeERC20 for IERC20OZ;
 
-    error FlashswapRepaymentTooExpensive();
+    error FlashswapRepaymentTooExpensive(uint256 amountIn, uint256 maxAmountIn);
     error CallbackOnlyCallableByPool();
     error InsufficientBalance();
 
@@ -39,8 +38,7 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
     /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
     uint160 internal constant MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342;
 
-    uint24 public constant POOL_FEE = 500;
-
+    uint24 public immutable poolFee;
     IUniswapV3Factory immutable factory;
     IUniswapV3Pool immutable pool;
     bool immutable wethIsToken0;
@@ -53,6 +51,7 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
         IonRegistry _ionRegistry,
         IUniswapV3Factory _factory,
         IUniswapV3Pool _pool,
+        uint24 _poolFee,
         bool _wethIsToken0
     )
         IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry)
@@ -62,6 +61,7 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
 
         factory = _factory;
         pool = _pool;
+        poolFee = _poolFee;
         wethIsToken0 = _wethIsToken0;
     }
 
@@ -117,7 +117,9 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
         flashSwapInitiated = 1;
 
         // This protects against a potential sandwhich attack
-        if (amountIn > maxResultingAdditionalDebt) revert FlashswapRepaymentTooExpensive();
+        if (amountIn > maxResultingAdditionalDebt) {
+            revert FlashswapRepaymentTooExpensive(amountIn, maxResultingAdditionalDebt);
+        }
     }
 
     // TODO: Reentrancy possibility with leverage and deleverage?
@@ -135,6 +137,8 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
     )
         external
     {
+        if (debtToRemove == 0) return;
+
         // collateral -> WETH
         bool zeroForOne = !wethIsToken0;
 
@@ -152,7 +156,7 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
         uint256 amountIn = _initiateFlashSwap(zeroForOne, wethRequired, address(this), sqrtPriceLimitX96, flashSwapData);
         flashSwapInitiated = 1;
 
-        if (amountIn > maxCollateralToRemove) revert FlashswapRepaymentTooExpensive();
+        if (amountIn > maxCollateralToRemove) revert FlashswapRepaymentTooExpensive(amountIn, maxCollateralToRemove);
     }
 
     function _initiateFlashSwap(
@@ -202,7 +206,12 @@ abstract contract UniswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
         (address tokenIn, address tokenOut) =
             data.zeroForOne ? (address(weth), address(lstToken)) : (address(lstToken), address(weth));
 
-        CallbackValidation.verifyCallback(address(factory), tokenIn, tokenOut, POOL_FEE);
+        CallbackValidation.verifyCallback(address(factory), tokenIn, tokenOut, poolFee);
+
+        if (!wethIsToken0) {
+            (amount0Delta, amount1Delta) = (amount1Delta, amount0Delta);
+            (tokenIn, tokenOut) = (tokenOut, tokenIn);
+        }
 
         uint256 amountToPay;
         if (amount0Delta > 0) {

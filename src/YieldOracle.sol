@@ -6,7 +6,6 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { WAD } from "./math/RoundedMath.sol";
 
 // historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
 // storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
@@ -105,6 +104,7 @@ contract YieldOracle is IYieldOracle {
             ILidoWstEth lido = ILidoWstEth(address0);
             exchangeRate = (lido.stEthPerToken()).toUint64();
         } else if (ilkIndex == 1) {
+            // TODO: Use stader deposit contract `getExchangeRate()` instead
             IStaderOracle stader = IStaderOracle(address1);
             (, uint256 totalETHBalance, uint256 totalETHXSupply) = stader.exchangeRate();
             exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply)).toUint64();

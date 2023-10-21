@@ -4,14 +4,7 @@ pragma solidity 0.8.21;
 import { IonPool } from "../../../IonPool.sol";
 import { IonRegistry } from "./../../IonRegistry.sol";
 import { IWETH9 } from "../../../interfaces/IWETH9.sol";
-import {
-    ILidoStEthDeposit,
-    ILidoWStEthDeposit,
-    IStaderDeposit,
-    ISwellDeposit
-} from "../../../interfaces/DepositInterfaces.sol";
 import { GemJoin } from "../../../join/GemJoin.sol";
-import { WAD } from "../../../math/RoundedMath.sol";
 
 import { IVault, IERC20 } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
