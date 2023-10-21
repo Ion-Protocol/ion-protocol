@@ -3,6 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
+    "solhint": "solhint 'src/**/*.sol'",
     "slither": "slither src",
     "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPoolEchidna",
     "YieldOracle:deployment:configure": "forge script script/DeployYieldOracle.s.sol -s 'configureDeployment()' --ffi",
@@ -13,6 +14,7 @@
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.7.1",
+    "solhint": "^3.6.2",
     "viem": "^1.14.0",
     "web3": "^4.1.2"
   },
