@@ -3,6 +3,14 @@ pragma solidity 0.8.21;
 
 interface ILidoStEthDeposit {
     function submit(address _referral) external payable returns (uint256);
+
+    function getTotalPooledEther() external view returns (uint256);
+
+    function getTotalShares() external view returns (uint256);
+
+    function getSharesByPooledEth(uint256 _ethAmount) external view returns (uint256);
+
+    function getCurrentStakeLimit() external view returns (uint256);
 }
 
 interface ILidoWStEthDeposit {
@@ -21,6 +29,8 @@ interface ILidoWStEthDeposit {
     function getStETHByWstETH(uint256 _ETHAmount) external view returns (uint256);
 
     function getWstETHByStETH(uint256 _stETHAmount) external view returns (uint256);
+
+    function stETH() external view returns (address);
 }
 
 interface IStaderDeposit {
