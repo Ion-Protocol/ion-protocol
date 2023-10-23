@@ -11,6 +11,7 @@ import { InterestRate } from "./InterestRate.sol";
 import { RoundedMath, RAY } from "./libraries/math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol"; 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
 
@@ -35,6 +36,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     error InvalidAccountingModule();
     error InvalidInterestRateModule();
+
+    error InvalidWhitelistMerkleProof(); 
 
     // --- Events ---
     event IlkInitialized(uint8 indexed ilkIndex, address indexed ilkAddress);
@@ -83,6 +86,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 debt; // Total Dai Issued    [rad]
         uint256 totalUnbackedDebt; // Total Unbacked Dai  [rad]
         InterestRate interestRateModule;
+        bytes32 whitelistMerkleRoot;  
     }
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~bytes32(uint256(0xff))
@@ -93,6 +97,34 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
             $.slot := IonPoolStorageLocation
         }
     }
+
+    // --- Whitelist --- 
+
+    // TODO: remove all getters and expose storage 
+    function getWhitelistMerkleRoot() external view returns (bytes32) {
+        uint256 startGas = gasleft();  
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.whitelistMerkleRoot; 
+    }
+
+    function updateWhitelistMerkleRoot(bytes32 rootHash) external onlyRole(ION) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        $.whitelistMerkleRoot = rootHash; 
+    }
+
+    function _verifyWhitelist(bytes32[] memory proof, bytes32 leaf) internal view returns (bool) {
+        IonPoolStorage storage $ = _getIonPoolStorage(); 
+        return MerkleProof.verify(proof, $.whitelistMerkleRoot, leaf); 
+    }
+
+    modifier onlyWhitelist(bytes32[] memory proof) {
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender)))); 
+        if (!_verifyWhitelist(proof, leaf)) {
+            revert InvalidWhitelistMerkleProof(); 
+        }
+        _; 
+    }
+
 
     constructor() {
         _disableInitializers();
