@@ -76,6 +76,11 @@ contract WhitelistTest is IonPoolSharedSetup {
     }
 
     // --- Mock Tests --- 
+
+    function test_WhitelistMockBorrowerUninitializedMerkleRoot() public {
+
+    }
+
     function test_WhitelistMockBorrowerModifiers() public {
         // generate merkle root 
         // [["0x1111111111111111111111111111111111111111"],
@@ -114,13 +119,32 @@ contract WhitelistTest is IonPoolSharedSetup {
         proof[0] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192); 
         proof[1] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192); 
         vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, addr)); 
-
         mockModifiers.onlyBorrowersFunction(proof); 
         vm.stopPrank(); 
     }
-    function test_WhitelistMockLenderModifiers() public {
 
+    function test_WhitelistMockBorrowerInvalidAddress() public {
+        // generate merkle root 
+        // [["0x1111111111111111111111111111111111111111"],
+        // ["0x2222222222222222222222222222222222222222"],
+        // ["0x3333333333333333333333333333333333333333"]];
+        // => 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11
+
+        whitelist.updateBorrowersWhitelistMerkleRoot(0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11);
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist));
+
+        // wrong address 
+        address addr = 0x4444444444444444444444444444444444444444;
+        vm.startPrank(addr); 
+        bytes32[] memory proof = new bytes32[](2); 
+        // valid proof for 0x111... 
+        proof[0] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192); 
+        proof[1] = bytes32(0xcef861ae49469220eac9703d1077fa45b0a3ae990e4a8a7d325472f93cbca30e); 
+        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, addr)); 
+        mockModifiers.onlyBorrowersFunction(proof); 
+        vm.stopPrank(); 
     }
+
     // --- Ion Pool --- 
 
 
