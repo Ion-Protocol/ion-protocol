@@ -18,7 +18,8 @@ no_match_contract = "Echidna"
 gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy"]
 
 [profile.default.fuzz]
-runs = 256
+runs = 100000
+max_test_rejects = 10000000
 
 [profile.default.invariant]
 runs = 20

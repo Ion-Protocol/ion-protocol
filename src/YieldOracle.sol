@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "./interfaces/OracleInterfaces.sol";
+import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
@@ -101,7 +101,7 @@ contract YieldOracle is IYieldOracle {
     // TODO: Move to a library
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            ILidoWstEth lido = ILidoWstEth(address0);
+            IWstEth lido = IWstEth(address0);
             exchangeRate = (lido.stEthPerToken()).toUint64();
         } else if (ilkIndex == 1) {
             // TODO: Use stader deposit contract `getExchangeRate()` instead
@@ -109,7 +109,7 @@ contract YieldOracle is IYieldOracle {
             (, uint256 totalETHBalance, uint256 totalETHXSupply) = stader.exchangeRate();
             exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply)).toUint64();
         } else {
-            ISwellEth swell = ISwellEth(address2);
+            ISwEth swell = ISwEth(address2);
             exchangeRate = (swell.swETHToETHRate()).toUint64();
         }
     }

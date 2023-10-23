@@ -1,17 +1,13 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.21;
+pragma solidity ^0.8.21;
 
 // import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
+import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
-import { GemJoin } from "../../src/join/GemJoin.sol";
-import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
-import { ReserveOracle } from "../../src/oracle/ReserveOracle.sol";
-import { StEthReserveOracle } from "../../src/oracle/StEthReserveOracle.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import "forge-std/console.sol";
 
-contract MockStEthReserveOracle {
+contract MockstEthReserveOracle {
     uint256 public exchangeRate;
 
     function setExchangeRate(uint256 _exchangeRate) public {
@@ -19,154 +15,35 @@ contract MockStEthReserveOracle {
     }
     // @dev called by Liquidation.sol
 
-    function getExchangeRate(uint256 ilkIndex) public returns (uint256) {
+    function getExchangeRate(uint256 ilkIndex) public view returns (uint256) {
         return exchangeRate;
     }
 }
 
-contract LiquidationTest is IonPoolSharedSetup {
+contract LiquidationTest is LiquidationSharedSetup {
     using RoundedMath for uint256;
-
-    uint256 constant WAD = 1e18;
-    uint256 constant RAY = 1e27;
-
-    uint32 constant ILK_COUNT = 8; // NOTE: Need to match with the ILK_COUNT in Liquidation.sol
-
-    Liquidation public liquidation;
-    GemJoin public stEthJoin;
-    MockStEthReserveOracle public reserveOracle;
-
-    uint8 public stEthIndex;
-
-    address immutable keeper1 = vm.addr(99);
-    address immutable revenueRecipient = vm.addr(100);
-
-    struct LiquidationArgs {
-        uint256 collateral;
-        uint256 liquidationThreshold;
-        uint256 exchangeRate;
-        uint256 debt;
-        uint256 targetHealth;
-        uint256 reserveFactor;
-        uint256 maxDiscount;
-    }
-
-    function setUp() public override {
-        super.setUp();
-
-        stEthIndex = ilkIndexes[address(stEth)];
-
-        // create supply position
-        supply(lender1, 100 ether);
-
-        // TODO: Make ReserveOracleSharedSetUp
-        reserveOracle = new MockStEthReserveOracle();
-    }
-
-    /**
-     * @dev Converts percentage to WAD. Used for instantiating liquidationThreshold arrays
-     * @param percentages number out of 100 ex) 75 input will return
-     */
-    function getPercentageInWad(uint8[ILK_COUNT] memory percentages)
-        internal
-        returns (uint64[ILK_COUNT] memory results)
-    {
-        for (uint8 i = 0; i < ILK_COUNT; i++) {
-            console.log("percentages[i]: ", percentages[i]);
-            results[i] = uint64(uint256(percentages[i]) * WAD / 100);
-            console.log("result[i]: ", results[i]);
-        }
-    }
-
-    /**
-     * @dev Helper function to create supply positions. Approves and calls Supply
-     */
-    function supply(address lender, uint256 supplyAmt) internal {
-        vm.startPrank(lender);
-        underlying.approve(address(ionPool), supplyAmt);
-        ionPool.supply(lender, supplyAmt);
-        vm.stopPrank();
-    }
-
-    /**
-     * @dev Helper function to create borrow positions. Call gemJoin and modifyPosition.
-     * NOTE: does not normalize. Assumes the rate is 1.
-     */
-    function borrow(address borrower, uint256 ilkIndex, uint256 depositAmt, uint256 borrowAmt) internal {
-        vm.startPrank(borrower);
-        // join
-        stEthJoin = gemJoins[stEthIndex];
-        collaterals[stEthIndex].approve(address(stEthJoin), depositAmt);
-        stEthJoin.join(borrower, depositAmt);
-        // move collateral to vault
-        ionPool.moveGemToVault(stEthIndex, borrower, borrower, depositAmt);
-        ionPool.borrow(stEthIndex, borrower, borrower, borrowAmt);
-        vm.stopPrank();
-    }
-
-    function fundEth(address usr, uint256 amount) public {
-        underlying.mint(usr, amount);
-        vm.startPrank(usr);
-
-        vm.stopPrank();
-    }
-
-    /**
-     * Helper function to calculate the resulting collateral and debt after a successful partial liquidation
-     * NOTE: should not be used when testing full liquidation scenarios
-     */
-    function calculateExpectedLiquidationResults(LiquidationArgs memory args)
-        internal
-        returns (uint256 resultingCollateral, uint256 resultingDebt)
-    {
-        uint256 collateralValue = args.collateral * args.liquidationThreshold / WAD * args.exchangeRate / WAD;
-        uint256 healthRatio = collateralValue * WAD / args.debt.scaleToWad(45); // debt is [rad]
-        uint256 discount = args.reserveFactor + (WAD - healthRatio); // [wad]
-        discount = discount <= args.maxDiscount ? discount : args.maxDiscount; // [wad]
-        uint256 repayNum = args.targetHealth * args.liquidationThreshold / WAD; // [wad]
-        uint256 repayDen = args.targetHealth - (args.liquidationThreshold * WAD / (WAD - discount)); // [wad]
-        uint256 repay = repayNum * WAD / repayDen; // [wad]
-        uint256 collateralSalePrice = args.exchangeRate * (WAD - discount) / WAD; // [wad]
-        uint256 gemOut = repay * WAD / collateralSalePrice;
-
-        resultingCollateral = args.collateral - gemOut; // [wad]
-        resultingDebt = args.debt - repay.scaleToRad(18); // [rad]
-    }
-
-    // tests the helper function for calculating expected liquidation results
-    function test_CalculateExpectedLiquidationResults() public {
-        LiquidationArgs memory args;
-
-        args.collateral = 100 ether; // [wad]
-        args.liquidationThreshold = 0.5 ether; // [wad]
-        args.exchangeRate = 0.95 ether;
-        args.debt = (50 * WAD).scaleToRad(18); // [rad]
-        args.targetHealth = 1.25 ether; // [wad]
-        args.reserveFactor = 0.02 ether; // [wad]
-        args.maxDiscount = 0.2 ether; // [wad]
-
-        (uint256 resultingCollateral, uint256 resultingDebt) = calculateExpectedLiquidationResults(args);
-        console.log("resultingCollateral: ", resultingCollateral);
-        console.log("resultingDebt: ", resultingDebt);
-        assertEq(resultingCollateral, 100);
-        assertEq(resultingDebt, 100);
-    }
 
     function test_ExchangeRateCannotBeZero() public {
         // deploy liquidations contract
-        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([75, 75, 75, 75, 75, 75, 75, 75]);
-        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds);
+        uint64[ILK_COUNT] memory liquidationThresholds = [0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether];
+
+        uint256 _targetHealth = 1.25 ether;
+        uint256 _reserveFactor = 0.02 ether;
+        uint256 _maxDiscount = 0.2 ether;
+
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
         // set exchange rate to zero
-        reserveOracle.setExchangeRate(0);
+        reserveOracle1.setExchangeRate(0);
 
         // create borrow position
-        borrow(borrower1, stEthIndex, 10 ether, 5 ether);
+        borrow(borrower1, ilkIndex, 10 ether, 5 ether);
 
         // liquidate call
         vm.startPrank(keeper1);
         vm.expectRevert(abi.encodeWithSelector(Liquidation.ExchangeRateCannotBeZero.selector, 0));
-        liquidation.liquidate(stEthIndex, borrower1, keeper1);
+        liquidation.liquidate(ilkIndex, borrower1, keeper1);
         vm.stopPrank();
     }
 
@@ -177,20 +54,24 @@ contract LiquidationTest is IonPoolSharedSetup {
      */
     function test_VaultIsNotUnsafe() public {
         // deploy liquidations contract
-        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([75, 75, 75, 75, 75, 75, 75, 75]);
+        uint64[ILK_COUNT] memory liquidationThresholds = [0.75 ether, 0, 0, 0, 0, 0, 0, 0];
+        uint256 _targetHealth = 1.25 ether;
+        uint256 _reserveFactor = 0.02 ether;
+        uint256 _maxDiscount = 0.2 ether;
 
-        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds);
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
         // set exchange rate
-        reserveOracle.setExchangeRate(1 ether);
+        reserveOracle1.setExchangeRate(1 ether);
 
         // create borrow position
-        borrow(borrower1, stEthIndex, 10 ether, 5 ether);
+        borrow(borrower1, ilkIndex, 10 ether, 5 ether);
 
         // liquidate call
         vm.startPrank(keeper1);
         vm.expectRevert(abi.encodeWithSelector(Liquidation.VaultIsNotUnsafe.selector, 1.5 ether));
-        liquidation.liquidate(stEthIndex, borrower1, keeper1);
+        liquidation.liquidate(ilkIndex, borrower1, keeper1);
         vm.stopPrank();
     }
 
@@ -200,20 +81,23 @@ contract LiquidationTest is IonPoolSharedSetup {
      */
     function test_HealthRatioIsExactlyOne() public {
         // deploy liquidations contract
-        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([100, 100, 100, 100, 100, 100, 100, 100]);
-
-        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds);
+        uint64[ILK_COUNT] memory liquidationThresholds = [1 ether, 0, 0, 0, 0, 0, 0, 0];
+        uint256 _targetHealth = 1.25 ether;
+        uint256 _reserveFactor = 0.02 ether;
+        uint256 _maxDiscount = 0.2 ether;
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
         // set exchange rate
-        reserveOracle.setExchangeRate(0.5 ether);
+        reserveOracle1.setExchangeRate(0.5 ether);
 
         // create borrow position
-        borrow(borrower1, stEthIndex, 10 ether, 5 ether);
+        borrow(borrower1, ilkIndex, 10 ether, 5 ether);
 
         // liquidate call
         vm.startPrank(keeper1);
         vm.expectRevert(abi.encodeWithSelector(Liquidation.VaultIsNotUnsafe.selector, 1 ether));
-        liquidation.liquidate(stEthIndex, borrower1, keeper1);
+        liquidation.liquidate(ilkIndex, borrower1, keeper1);
         vm.stopPrank();
     }
 
@@ -236,27 +120,165 @@ contract LiquidationTest is IonPoolSharedSetup {
      * debt = 50 - 21.0566037 = 28.9433963
      * collateral = 100 - 23.8331677 = 76.1668323
      */
-    function test_PartialLiquidationSuccess() public {
+    function test_PartialLiquidationSuccessBasic() public {
         // calculating resulting state after liquidations
-        // {
-        //     uint256 collateral = 100 ether; // [wad]
-        //     uint256 liquidationThreshold = 0.5 ether; // [wad]
-        //     uint256 exchangeRate = 0.95 ether; //
-        //     uint256 collateralValue * liquidationThreshold / WAD * exchangeRate / WAD;
-        //     uint256 debt = 50 ether;
-        //     uint256 healthRatio = collateralValue / debt;
-        // }
+        LiquidationArgs memory args;
+        args.collateral = 100 ether; // [wad]
+        args.liquidationThreshold = 0.5 ether; // [wad]
+        args.exchangeRate = 0.95 ether; // [wad]
+        args.normalizedDebt = 50 ether; // [wad]
+        args.rate = RAY; // [ray]
+        args.targetHealth = 1.25 ether; // [wad]
+        args.reserveFactor = 0.02 ether; // [wad]
+        args.maxDiscount = 0.2 ether; // [wad]
 
-        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([50, 0, 0, 0, 0, 0, 0, 0]);
-        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds);
+        Results memory results = calculateExpectedLiquidationResults(args);
+        console.log("expectedResultingCollateral: ", results.collateral);
+        console.log("expectedResultingDebt: ", results.normalizedDebt);
+        console.log("liquidation threshold: ", args.liquidationThreshold);
+        console.log("liquidation threshold: ", uint64(args.liquidationThreshold));
+        console.log("uint64 max: ", type(uint64).max);
+
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, args.targetHealth, args.reserveFactor, args.maxDiscount);
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
+
         // create position
-        borrow(borrower1, stEthIndex, 100 ether, 50 ether);
-        // exchangeRate drops
-        reserveOracle.setExchangeRate(0.95 ether);
+        borrow(borrower1, ilkIndex, 100 ether, 50 ether);
 
+        // exchangeRate drops
+        reserveOracle1.setExchangeRate(args.exchangeRate);
+
+        // liquidate
+        underlying.mint(keeper1, 100 ether);
         vm.startPrank(keeper1);
-        liquidation.liquidate(stEthIndex, borrower1, keeper1);
+        underlying.approve(address(liquidation), 100 ether);
+        liquidation.liquidate(ilkIndex, borrower1, keeper1);
         vm.stopPrank();
+
+        // results
+        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+        uint256 rate = ionPool.rate(ilkIndex);
+
+        // resulting vault collateral and debt
+        assertEq(actualResultingCollateral, results.collateral, "resulting collateral");
+        assertEq(actualResultingNormalizedDebt, results.normalizedDebt, "resulting normalizedDebt");
+
+        // resulting health ratio is target health ratio
+        uint256 healthRatio =
+            actualResultingCollateral.roundedWadMul(args.exchangeRate).roundedWadMul(args.liquidationThreshold);
+        healthRatio = healthRatio.roundedWadDiv(actualResultingNormalizedDebt).roundedWadDiv(rate.scaleToWad(27));
+        console.log("new healthRatio: ", healthRatio);
+        assertEq(healthRatio, args.targetHealth, "resulting health ratio");
+    }
+
+    // TODO: This test results in number slightly less than 1.25. Test invariants
+    function test_PartialLiquidationSuccessBelowTarget() public {
+        // calculating resulting state after liquidations
+        LiquidationArgs memory args;
+        args.collateral = 4.895700865128650483 ether; // [wad]
+        args.liquidationThreshold = 0.8 ether; // [wad]
+        args.exchangeRate = 0.23867139477572598 ether; // [wad]
+        args.normalizedDebt = 1.000000000000000002 ether; // [wad]
+        args.rate = RAY; // [ray]
+        args.targetHealth = 1.25 ether; // [wad]
+        args.reserveFactor = 0 ether; // [wad]
+        args.maxDiscount = 0.2 ether; // [wad]
+
+        Results memory results = calculateExpectedLiquidationResults(args);
+        console.log("expectedResultingCollateral: ", results.collateral);
+        console.log("expectedResultingDebt: ", results.normalizedDebt);
+        console.log("liquidation threshold: ", args.liquidationThreshold);
+        console.log("liquidation threshold: ", uint64(args.liquidationThreshold));
+        console.log("uint64 max: ", type(uint64).max);
+
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, args.targetHealth, args.reserveFactor, args.maxDiscount);
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
+
+        // create position
+        borrow(borrower1, ilkIndex, args.collateral, args.normalizedDebt);
+
+        // exchangeRate drops
+        reserveOracle1.setExchangeRate(args.exchangeRate);
+
+        // liquidate
+        liquidate(keeper1, ilkIndex, borrower1);
+
+        // results
+        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+        uint256 rate = ionPool.rate(ilkIndex);
+
+        // resulting vault collateral and debt
+        assertEq(actualResultingCollateral, results.collateral, "resulting collateral");
+        assertEq(actualResultingNormalizedDebt, results.normalizedDebt, "resulting normalizedDebt");
+
+        // resulting health ratio is target health ratio
+        uint256 healthRatio =
+            actualResultingCollateral.roundedWadMul(args.exchangeRate).roundedWadMul(args.liquidationThreshold);
+        healthRatio = healthRatio.roundedWadDiv(actualResultingNormalizedDebt).roundedWadDiv(rate.scaleToWad(27));
+        console.log("new healthRatio: ", healthRatio);
+        assertEq(healthRatio, args.targetHealth, "resulting health ratio");
+    }
+
+    function test_PartialLiquidationSuccessWithRate() public {
+        // calculating resulting state after liquidations
+        LiquidationArgs memory args;
+        args.collateral = 100 ether; // [wad]
+        args.liquidationThreshold = 0.5 ether; // [wad]
+        args.exchangeRate = 0.95 ether; // [wad]
+        args.normalizedDebt = 50 ether; // [wad]
+        args.rate = 1.12323423423 ether * RAY / WAD; // [ray]
+        args.targetHealth = 1.25 ether; // [wad]
+        args.reserveFactor = 0.02 ether; // [wad]
+        args.maxDiscount = 0.2 ether; // [wad]
+
+        Results memory results = calculateExpectedLiquidationResults(args);
+
+        console.log("expectedResultingCollateral: ", results.collateral);
+        console.log("expectedResultingDebt: ", results.normalizedDebt);
+        console.log("liquidation threshold: ", args.liquidationThreshold);
+        console.log("liquidation threshold: ", uint64(args.liquidationThreshold));
+        console.log("uint64 max: ", type(uint64).max);
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, args.targetHealth, args.reserveFactor, args.maxDiscount);
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
+
+        // create position
+        borrow(borrower1, ilkIndex, 100 ether, 50 ether);
+
+        // exchangeRate drops
+        reserveOracle1.setExchangeRate(args.exchangeRate);
+
+        // liquidate
+        underlying.mint(keeper1, 100 ether);
+        vm.startPrank(keeper1);
+        underlying.approve(address(liquidation), 100 ether);
+        liquidation.liquidate(ilkIndex, borrower1, keeper1);
+        vm.stopPrank();
+
+        // results
+        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+        uint256 rate = ionPool.rate(ilkIndex);
+
+        // resulting vault collateral and debt
+        // assertEq(actualResultingCollateral, expectedResultingCollateral, "resulting collateral");
+        // assertEq(actualResultingNormalizedDebt, expectedResultingNormalizedDebt, "resulting normalizedDebt");
+
+        // resulting health ratio is target health ratio
+        uint256 healthRatio =
+            actualResultingCollateral.roundedWadMul(args.exchangeRate).roundedWadMul(args.liquidationThreshold);
+        healthRatio = healthRatio.roundedWadDiv(actualResultingNormalizedDebt).roundedWadDiv(rate.scaleToWad(27));
+        console.log("new healthRatio: ", healthRatio);
+        assertEq(healthRatio, args.targetHealth, "resulting health ratio");
     }
 
     /**
@@ -276,7 +298,90 @@ contract LiquidationTest is IonPoolSharedSetup {
      * Partial Liquidation not possible, so move position to the vow
      */
     function test_ProtocolTakesDebt() public {
-        uint64[ILK_COUNT] memory liquidationThresholds = getPercentageInWad([100, 100, 100, 100, 100, 100, 100, 100]);
-        liquidation = new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds);
+        LiquidationArgs memory args;
+        args.collateral = 10 ether; // [wad]
+        args.liquidationThreshold = 1 ether; // [wad]
+        args.exchangeRate = 0.9 ether; // [wad]
+        args.normalizedDebt = 10 ether; // [wad]
+        args.rate = RAY; // [ray]
+        args.targetHealth = 1.25 ether; // [wad]
+        args.reserveFactor = 0.02 ether; // [wad]
+        args.maxDiscount = 0.2 ether; // [wad]
+
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, args.targetHealth, args.reserveFactor, args.maxDiscount);
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
+
+        // create position
+        borrow(borrower1, ilkIndex, args.collateral, args.normalizedDebt);
+
+        // exchangeRate drops
+        reserveOracle1.setExchangeRate(args.exchangeRate);
+
+        // liquidate
+        liquidate(keeper1, ilkIndex, borrower1);
+
+        // results
+        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+
+        assertEq(actualResultingCollateral, 0, "resulting collateral"); 
+        assertEq(actualResultingNormalizedDebt, 0, "resulting normalized debt"); 
+    }
+
+
+    /**
+     * @dev Partial liquidation leaves dust so goes into full liquidations for liquidator
+     * Resulting normalizedDebt should be zero
+     * Resulting collateral should be zero or above zero
+     */
+    function test_LiquidatorPaysForDust() public {
+        // set dust
+        ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleToRad(18)); // [rad]
+
+        // calculating resulting state after liquidations
+        LiquidationArgs memory args;
+        args.collateral = 1.29263225501889978 ether; // [wad]
+        args.liquidationThreshold = 0.8 ether; // [wad]
+        args.exchangeRate = 0.432464060992175961 ether; // [wad]
+        args.normalizedDebt = 0.500000000000000001 ether; // [wad]
+        args.rate = RAY; // [ray]
+        args.targetHealth = 1.25 ether; // [wad]
+        args.reserveFactor = 0 ether; // [wad]
+        args.maxDiscount = 0.2 ether; // [wad]
+
+        Results memory results = calculateExpectedLiquidationResults(args);
+        console.log("expectedResultingCollateral: ", results.collateral);
+        console.log("expectedResultingDebt: ", results.normalizedDebt);
+        console.log("liquidation threshold: ", args.liquidationThreshold);
+        console.log("liquidation threshold: ", uint64(args.liquidationThreshold));
+        console.log("uint64 max: ", type(uint64).max);
+
+        uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
+
+        liquidation =
+        new Liquidation(address(ionPool), revenueRecipient, exchangeRateOracles, liquidationThresholds, args.targetHealth, args.reserveFactor, args.maxDiscount);
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
+
+        // create position
+        borrow(borrower1, ilkIndex, args.collateral, args.normalizedDebt);
+
+        // exchangeRate drops
+        reserveOracle1.setExchangeRate(args.exchangeRate);
+
+        // liquidate
+        liquidate(keeper1, ilkIndex, borrower1);
+
+        // results
+        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+
+        // health ratio is collateral / debt
+        // resulting debt is zero, so health ratio will give divide by zero
+
+        // resulting vault collateral and debt
+        assertEq(actualResultingNormalizedDebt, 0, "resulting normalizedDebt should be zero");
+        assertTrue(actualResultingCollateral >= 0, "resulting collateral can be non-zero");
     }
 }

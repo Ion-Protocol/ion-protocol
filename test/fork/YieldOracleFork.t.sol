@@ -6,11 +6,9 @@ import { console2 } from "forge-std/console2.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { stdJson as StdJson } from "forge-std/stdJson.sol";
-
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "../../src/interfaces/OracleInterfaces.sol";
 import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
-import { YieldOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT, PERIODS } from "src/YieldOracle.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { YieldOracle, ILK_COUNT, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION } from "src/YieldOracle.sol";
 
 contract YieldOracleExposed is YieldOracle {
     constructor(
