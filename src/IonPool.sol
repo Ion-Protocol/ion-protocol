@@ -83,7 +83,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 debt; // Total Dai Issued    [rad]
         uint256 totalUnbackedDebt; // Total Unbacked Dai  [rad]
         InterestRate interestRateModule;
-        bytes32 whitelistMerkleRoot;  
+        bytes32 whitelistMerkleRoot;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~bytes32(uint256(0xff))

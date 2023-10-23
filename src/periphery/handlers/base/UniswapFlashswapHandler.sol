@@ -60,7 +60,8 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
 
     struct FlashSwapData {
         address user;
-        // This value will be used for change in collateral during leveraging and change in (normalized) debt during deleveraging
+        // This value will be used for change in collateral during leveraging and change in (normalized) debt during
+        // deleveraging
         uint256 changeInCollateralOrDebt;
         bool zeroForOne;
     }
@@ -219,7 +220,9 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
             // necessary weth from IonPool position to pay back flashswap
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
-            _depositAndBorrow(data.user, address(this), data.changeInCollateralOrDebt, amountToPay, AmountToBorrow.IS_MIN);
+            _depositAndBorrow(
+                data.user, address(this), data.changeInCollateralOrDebt, amountToPay, AmountToBorrow.IS_MIN
+            );
         } else {
             amountToPay = uint256(amount1Delta);
 

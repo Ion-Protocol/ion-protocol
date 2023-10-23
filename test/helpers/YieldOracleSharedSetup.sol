@@ -38,7 +38,7 @@ contract MockSwell is ISwEth {
     uint256 _exchangeRate = SWELL_ETH_EXCHANGE_RATE;
 
     function getRate() external view returns (uint256) {
-        return _exchangeRate; 
+        return _exchangeRate;
     }
 
     function swETHToETHRate() external view returns (uint256) {

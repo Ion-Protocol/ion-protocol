@@ -25,7 +25,8 @@ contract LiquidationTest is LiquidationSharedSetup {
 
     function test_ExchangeRateCannotBeZero() public {
         // deploy liquidations contract
-        uint64[ILK_COUNT] memory liquidationThresholds = [0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether];
+        uint64[ILK_COUNT] memory liquidationThresholds =
+            [0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether, 0.75 ether];
 
         uint256 _targetHealth = 1.25 ether;
         uint256 _reserveFactor = 0.02 ether;
@@ -326,10 +327,9 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
         uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
 
-        assertEq(actualResultingCollateral, 0, "resulting collateral"); 
-        assertEq(actualResultingNormalizedDebt, 0, "resulting normalized debt"); 
+        assertEq(actualResultingCollateral, 0, "resulting collateral");
+        assertEq(actualResultingNormalizedDebt, 0, "resulting normalized debt");
     }
-
 
     /**
      * @dev Partial liquidation leaves dust so goes into full liquidations for liquidator

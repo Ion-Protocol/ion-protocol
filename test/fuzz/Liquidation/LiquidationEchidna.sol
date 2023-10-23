@@ -46,7 +46,8 @@
 
 //         uint64[ILK_COUNT] memory liquidationThresholds = [uint64(args.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
 //         liquidation =
-//         new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds, args.targetHealth, args.reserveFactor, args.maxDiscount);
+//         new Liquidation(address(ionPool), address(reserveOracle), revenueRecipient, liquidationThresholds,
+// args.targetHealth, args.reserveFactor, args.maxDiscount);
 //         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 //     }
 

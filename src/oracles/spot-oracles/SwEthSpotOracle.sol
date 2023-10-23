@@ -8,7 +8,6 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SpotOracle } from "./SpotOracle.sol";
 import { WAD } from "src/libraries/math/RoundedMath.sol";
 
-
 contract UniswapHelper {
     function _getPriceX96FromSqrtPriceX96(uint256 sqrtPriceX96) public pure returns (uint256 priceX96) {
         return Math.mulDiv(sqrtPriceX96 * sqrtPriceX96, 10 ** 18, 2 ** 192); // [wad]

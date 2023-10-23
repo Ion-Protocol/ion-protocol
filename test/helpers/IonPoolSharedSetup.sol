@@ -97,7 +97,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
     ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
 
-    ERC20PresetMinterPauser[] internal mintableCollaterals = [stEth, swEth, ethX]; 
+    ERC20PresetMinterPauser[] internal mintableCollaterals = [stEth, swEth, ethX];
 
     uint16 internal constant stEthAdjustedReserveFactor = 0.1e4;
     uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
@@ -127,7 +127,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     IlkData[] ilkConfigs;
 
     function setUp() public virtual override {
-
         collaterals = _getCollaterals();
         address[] memory depositContracts = _getDepositContracts();
 

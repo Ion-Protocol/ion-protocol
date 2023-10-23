@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-interface ILido { 
-    function totalSupply() external view returns (uint256); 
-    function getBufferedEther() external view returns (uint256); 
-    function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);    
+interface ILido {
+    function totalSupply() external view returns (uint256);
+    function getBufferedEther() external view returns (uint256);
+    function getBeaconStat()
+        external
+        view
+        returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
 }
 
 interface IWstEth {
@@ -20,5 +23,5 @@ interface IStaderOracle {
 
 interface ISwEth {
     function swETHToETHRate() external view returns (uint256);
-    function getRate() external view returns (uint256); 
+    function getRate() external view returns (uint256);
 }

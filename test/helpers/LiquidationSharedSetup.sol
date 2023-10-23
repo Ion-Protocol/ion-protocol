@@ -32,12 +32,11 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     Liquidation public liquidation;
     GemJoin public gemJoin;
 
-    MockReserveOracle public reserveOracle1; 
-    MockReserveOracle public reserveOracle2; 
-    MockReserveOracle public reserveOracle3; 
+    MockReserveOracle public reserveOracle1;
+    MockReserveOracle public reserveOracle2;
+    MockReserveOracle public reserveOracle3;
 
-    address[] public exchangeRateOracles; 
-
+    address[] public exchangeRateOracles;
 
     uint8 public ilkIndex;
 
@@ -71,17 +70,23 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         reserveOracle2 = new MockReserveOracle();
         reserveOracle3 = new MockReserveOracle();
 
-        exchangeRateOracles = [address(reserveOracle1), address(reserveOracle2), address(reserveOracle3), address(0), address(0), address(0), address(0), address(0)]; 
+        exchangeRateOracles = [
+            address(reserveOracle1),
+            address(reserveOracle2),
+            address(reserveOracle3),
+            address(0),
+            address(0),
+            address(0),
+            address(0),
+            address(0)
+        ];
     }
 
     /**
      * @dev Converts percentage to WAD. Used for instantiating liquidationThreshold arrays
      * @param percentages number out of 100 ex) 75 input will return
      */
-    function getPercentageInWad(uint8[ILK_COUNT] memory percentages)
-        internal
-        returns (uint64[] memory results)
-    {
+    function getPercentageInWad(uint8[ILK_COUNT] memory percentages) internal returns (uint64[] memory results) {
         for (uint8 i = 0; i < ILK_COUNT; i++) {
             results[i] = uint64((uint256(percentages[i]) * WAD) / 100);
         }
