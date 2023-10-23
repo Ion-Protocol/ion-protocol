@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.21;
 
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 

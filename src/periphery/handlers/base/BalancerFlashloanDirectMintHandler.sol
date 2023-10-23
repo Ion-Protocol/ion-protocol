@@ -170,8 +170,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
             if (address(lstToken) != address(token)) revert FlashLoanedInvalidToken();
 
-            console.log(amounts[0]);
-
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingCollateral, resultingDebt, AmountToBorrow.IS_MIN);
 

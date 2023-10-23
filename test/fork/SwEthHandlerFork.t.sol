@@ -66,9 +66,9 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
-        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
-        assertGt(ionPool.normalizedDebt(ilkIndex, address(this)).rayDivDown(ionPool.rate(ilkIndex)), resultingDebt);
+        assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)), resultingDebt);
         assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
     function testFork_swEthFlashLoanWeth() external {
@@ -84,9 +84,9 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        assertApproxEqAbs(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)), resultingDebt, 1e27 / RAY);
+        assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
-        // Should be fine since rate is 1
-        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), resultingDebt);
     }
 
     function testFork_swEthFlashSwapLeverage() external {
@@ -103,8 +103,8 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
-        // Should be fine since rate is 1
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)), maxResultingDebt);
+        assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)) * ionPool.rate(ilkIndex), maxResultingDebt * RAY);
     }
 
     function testFork_swEthFlashSwapDeleverage() external {
@@ -155,7 +155,7 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
 contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
     using RoundedMath for *;
 
-    /// forge-config: default.fuzz.runs = 10000
+    /// forge-config: default.fuzz.runs = 100000
     function testForkFuzz_swEthFlashLoanCollateral(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier
@@ -184,7 +184,7 @@ contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
-    /// forge-config: default.fuzz.runs = 10000
+    /// forge-config: default.fuzz.runs = 100000
     function testForkFuzz_swEthFlashLoanWeth(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         initialDeposit = bound(initialDeposit, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
@@ -212,8 +212,8 @@ contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
-    // TODO: Replace all inlines with a deep fuzz config
-    /// forge-config: default.fuzz.runs = 10000
+    // TODO: Replace all inlines with a deep fuzz config 
+    /// forge-config: default.fuzz.runs = 100000
     function testForkFuzz_swEthFlashSwapLeverage(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier
@@ -293,7 +293,7 @@ contract SwEthHandler_WithRateChange_ForkTest is SwEthHandler_ForkTest {
 }
 
 contract SwEthHandler_WithRateChange_ForkFuzzTest is SwEthHandler_ForkFuzzTest {
-    /// forge-config: default.fuzz.runs = 10000
+    /// forge-config: default.fuzz.runs = 100000
     function testForkFuzz_withRateChange_swEthFlashLoanCollateral(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,
@@ -319,7 +319,7 @@ contract SwEthHandler_WithRateChange_ForkFuzzTest is SwEthHandler_ForkFuzzTest {
         super.testForkFuzz_swEthFlashLoanWeth(initialDeposit, resultingCollateralMultiplier);
     }
 
-    /// forge-config: default.fuzz.runs = 10000
+    /// forge-config: default.fuzz.runs = 100000
     function testForkFuzz_withRateChange_swEthFlashSwapLeverage(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,

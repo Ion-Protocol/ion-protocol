@@ -386,8 +386,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         whenNotPaused(Pauses.UNSAFE)
         onlyWhitelistedBorrowers(proof)
     {
-        console.log("amountOfNormalizedDebt: ", amountOfNormalizedDebt);
-        console2.log("amountOfNormalizedDebt.toInt256(): ", amountOfNormalizedDebt.toInt256());
         _modifyPosition(ilkIndex, user, address(0), w, 0, amountOfNormalizedDebt.toInt256());
 
         emit Borrow(ilkIndex, user, w, amountOfNormalizedDebt);
@@ -465,7 +463,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         ilk.totalNormalizedDebt = _add(uint256(ilk.totalNormalizedDebt), changeInNormalizedDebt).toUint104();
 
         int256 changeInDebt = ilkRate.toInt256() * changeInNormalizedDebt;
-        console2.log("changeInDebt: ", changeInDebt);
         uint256 newTotalDebtInVault = ilkRate * vault.normalizedDebt;
         $.debt = _add($.debt, changeInDebt);
 
