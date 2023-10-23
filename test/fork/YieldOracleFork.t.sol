@@ -1,41 +1,39 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { console2 } from "forge-std/console2.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { stdJson as StdJson } from "forge-std/stdJson.sol";
-
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "../../src/interfaces/ProviderInterfaces.sol";
-import { RoundedMath } from "../../src/math/RoundedMath.sol";
-import { ApyOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT, PERIODS } from "src/ApyOracle.sol";
+import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { YieldOracle, ILK_COUNT, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION } from "src/YieldOracle.sol";
 
-contract ApyOracleExposed is ApyOracle {
+contract YieldOracleExposed is YieldOracle {
     constructor(
-        uint32[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
+        uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
         address _lido,
         address _stader,
         address _swell
     )
-        ApyOracle(_historicalExchangeRates, _lido, _stader, _swell)
+        YieldOracle(_historicalExchangeRates, _lido, _stader, _swell)
     { }
 
     function getFullApysArray() external view returns (uint32[ILK_COUNT] memory) {
         return apys;
     }
 
-    function getFullHistoricalExchangesRatesArray() external view returns (uint32[ILK_COUNT][LOOK_BACK] memory) {
+    function getFullHistoricalExchangesRatesArray() external view returns (uint64[ILK_COUNT][LOOK_BACK] memory) {
         return historicalExchangeRates;
     }
 
-    function historicalExchangeRatesByIndex(uint256 currentIndex) external view returns (uint32[ILK_COUNT] memory) {
+    function historicalExchangeRatesByIndex(uint256 currentIndex) external view returns (uint64[ILK_COUNT] memory) {
         return historicalExchangeRates[currentIndex];
     }
 }
 
-contract ApyOracleForkTest is Test {
+contract YieldOracle_ForkTest is Test {
     using RoundedMath for uint256;
     using SafeCast for uint256;
     using Strings for *;
@@ -43,13 +41,13 @@ contract ApyOracleForkTest is Test {
     uint256 internal constant SCALE = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
     uint256 internal constant DAYS_TO_GO_BACK = 10;
 
-    ApyOracleExposed public apyOracle;
+    YieldOracleExposed public apyOracle;
     // Historical blocks at which oracle would have been updateable, assuming the oracle was launched `DAYS_TO_GO_BACK`
     // days ago
     uint256[] blockNumbersToRollTo;
 
-    uint32[ILK_COUNT][] apysHistory;
-    uint32[ILK_COUNT][LOOK_BACK][] historicalExchangeRatesHistory;
+    uint64[ILK_COUNT][] apysHistory;
+    uint64[ILK_COUNT][LOOK_BACK][] historicalExchangeRatesHistory;
 
     function _computeStaderExchangeRate(
         uint256 totalETHBalance,
@@ -87,14 +85,14 @@ contract ApyOracleForkTest is Test {
         address staderExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.stader.address");
         address swellExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.swell.address");
 
-        uint32[ILK_COUNT][LOOK_BACK] memory historicalExchangeRates;
+        uint64[ILK_COUNT][LOOK_BACK] memory historicalExchangeRates;
 
         for (uint256 i = 0; i < LOOK_BACK; i++) {
-            uint32 lidoExchangeRate = (lidoRates[i] / SCALE).toUint32();
-            uint32 staderExchangeRate = (staderRates[i] / SCALE).toUint32();
-            uint32 swellExchangeRate = (swellRates[i] / SCALE).toUint32();
+            uint64 lidoExchangeRate = (lidoRates[i]).toUint64();
+            uint64 staderExchangeRate = (staderRates[i]).toUint64();
+            uint64 swellExchangeRate = (swellRates[i]).toUint64();
 
-            uint32[ILK_COUNT] memory exchangesRates = [lidoExchangeRate, staderExchangeRate, swellExchangeRate];
+            uint64[ILK_COUNT] memory exchangesRates = [lidoExchangeRate, staderExchangeRate, swellExchangeRate];
 
             historicalExchangeRates[i] = exchangesRates;
         }
@@ -108,7 +106,7 @@ contract ApyOracleForkTest is Test {
         vm.selectFork(mainnetFork);
 
         apyOracle =
-        new ApyOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
+        new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
         vm.makePersistent(address(apyOracle));
 
         apysHistory.push(apyOracle.getFullApysArray());
@@ -118,12 +116,12 @@ contract ApyOracleForkTest is Test {
     function testFork_apyOracleUpdatesWithRealData() public {
         for (uint256 i = 0; i < blockNumbersToRollTo.length; i++) {
             vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), blockNumbersToRollTo[i]);
-            uint32 currentIndex = apyOracle.currentIndex();
-            uint32[ILK_COUNT] memory ratesToUpdate = apyOracle.historicalExchangeRatesByIndex(currentIndex);
+            uint64 currentIndex = apyOracle.currentIndex();
+            uint64[ILK_COUNT] memory ratesToUpdate = apyOracle.historicalExchangeRatesByIndex(currentIndex);
 
             apyOracle.updateAll();
 
-            uint32[ILK_COUNT] memory updatedRate = apyOracle.historicalExchangeRatesByIndex(currentIndex);
+            uint64[ILK_COUNT] memory updatedRate = apyOracle.historicalExchangeRatesByIndex(currentIndex);
 
             // Verify that all new rates are higher than the old rates
             for (uint256 j = 0; j < ILK_COUNT; j++) {

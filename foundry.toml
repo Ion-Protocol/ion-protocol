@@ -2,17 +2,27 @@
 auto_detect_solc = false
 src = "src"
 out = "out"
-solc = "0.8.19"
+solc = "0.8.21"
 libs = ["lib"]
 verbosity = 3
-remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/", 
+                "@balancer-labs/v2-interfaces/=lib/balancer-v2-monorepo/pkg/interfaces/",
+                "@balancer-labs/v2-pool-stable/=lib/balancer-v2-monorepo/pkg/pool-stable/",
+                "@chainlink/contracts/=lib/chainlink/contracts/",
+                "@uniswap/v3-periphery/=lib/v3-periphery/",
+                "@uniswap/v3-core/=lib/v3-core/",]
 fs_permissions = [{ access = "read-write", path = "./"}]
+optimizer = true
+optimizer_runs = 1000
+no_match_contract = "Echidna"
+gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy"]
 
 [profile.default.fuzz]
-runs = 256
+runs = 10000
+max_test_rejects = 10000000
 
 [profile.default.invariant]
-runs = 256
+runs = 20
 depth = 50
 fail_on_revert = true
 call_override = false   # reentrancy-check

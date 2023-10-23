@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { RoundedMath, RAY, WAD } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, RAY, WAD } from "../../src/libraries/math/RoundedMath.sol";
 
-contract RoundedMathTest is Test {
+contract RoundedMath_Test is Test {
     function test_roundedWadMul() public {
         uint256 a = 7 * WAD;
         uint256 b = 8 * WAD;

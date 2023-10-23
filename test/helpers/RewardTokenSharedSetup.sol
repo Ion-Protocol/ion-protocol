@@ -1,29 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
-import { Test } from "forge-std/Test.sol";
 import { RewardToken } from "../../src/token/RewardToken.sol";
-import { RoundedMath } from "../../src/math/RoundedMath.sol";
-import { ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
+import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
+import { BaseTestSetup } from "./BaseTestSetup.sol";
 
-contract RewardTokenExternal is RewardToken {
-    constructor(
+contract RewardTokenExposed is RewardToken {
+    function init(
         address _underlying,
         address _treasury,
         uint8 decimals_,
         string memory name_,
         string memory symbol_
     )
-        RewardToken(_underlying, _treasury, decimals_, name_, symbol_)
-    { }
+        public
+        initializer
+    {
+        initialize(_underlying, _treasury, decimals_, name_, symbol_);
+    }
 
     // --- Cheats ---
     function setSupplyFactor(uint256 factor) external {
-        supplyFactor = factor;
-    }
-
-    function getSupplyFactor() external view returns (uint256) {
-        return supplyFactor;
+        _setSupplyFactor(factor);
     }
 
     // --- Expose Internal ---
@@ -40,7 +38,7 @@ contract RewardTokenExternal is RewardToken {
     }
 }
 
-abstract contract RewardTokenSharedSetup is Test {
+abstract contract RewardTokenSharedSetup is BaseTestSetup {
     using RoundedMath for uint256;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -49,12 +47,7 @@ abstract contract RewardTokenSharedSetup is Test {
     event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    RewardTokenExternal rewardToken;
-    ERC20PresetMinterPauser underlying;
-    address internal TREASURY = vm.addr(2);
-    uint8 internal constant DECIMALS = 18;
-    string internal constant SYMBOL = "iWETH";
-    string internal constant NAME = "Ion Wrapped Ether";
+    RewardTokenExposed rewardToken;
 
     uint256 sendingUserPrivateKey = 16;
     uint256 receivingUserPrivateKey = 17;
@@ -63,9 +56,10 @@ abstract contract RewardTokenSharedSetup is Test {
     address receivingUser = vm.addr(receivingUserPrivateKey); // random address
     address spender = vm.addr(spenderPrivateKey); // random address
 
-    function setUp() public virtual {
-        underlying = new ERC20PresetMinterPauser("WETH", "Wrapped Ether");
-        rewardToken = new RewardTokenExternal(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
+    function setUp() public virtual override {
+        super.setUp();
+        rewardToken = new RewardTokenExposed();
+        rewardToken.init(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
     }
 
     // --- Helpers ---

@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { BaseScript } from "./Base.s.sol";
 import { console2 } from "forge-std/Script.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { ApyOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "src/APYOracle.sol";
+import { YieldOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "src/YieldOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { RoundedMath } from "src/math/RoundedMath.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-contract DeployApyOracleScript is BaseScript {
+contract DeployYieldOracleScript is BaseScript {
     using RoundedMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
 
-    string configPath = "./deployment-config/ApyOracle.json";
+    string configPath = "./deployment-config/YieldOracle.json";
     string config = vm.readFile(configPath);
 
     uint256 internal constant SCALE = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
 
-    function run() public broadcast returns (ApyOracle apyOracle) {
+    function run() public broadcast returns (YieldOracle apyOracle) {
         string[] memory configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
         assert(configKeys.length == ILK_COUNT);
 
@@ -31,20 +31,20 @@ contract DeployApyOracleScript is BaseScript {
         address staderExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.stader.address");
         address swellExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.swell.address");
 
-        uint32[ILK_COUNT][LOOK_BACK] memory historicalExchangeRates;
+        uint64[ILK_COUNT][LOOK_BACK] memory historicalExchangeRates;
 
         for (uint256 i = 0; i < LOOK_BACK; i++) {
-            uint32 lidoEr = (lidoRates[i] / SCALE).toUint32();
-            uint32 staderEr = (staderRates[i] / SCALE).toUint32();
-            uint32 swellEr = (swellRates[i] / SCALE).toUint32();
+            uint64 lidoEr = (lidoRates[i] / SCALE).toUint32();
+            uint64 staderEr = (staderRates[i] / SCALE).toUint32();
+            uint64 swellEr = (swellRates[i] / SCALE).toUint32();
 
-            uint32[ILK_COUNT] memory exchangesRates = [lidoEr, staderEr, swellEr];
+            uint64[ILK_COUNT] memory exchangesRates = [lidoEr, staderEr, swellEr];
 
             historicalExchangeRates[i] = exchangesRates;
         }
 
         apyOracle =
-        new ApyOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
+        new YieldOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
     }
 
     function configureDeployment() external {

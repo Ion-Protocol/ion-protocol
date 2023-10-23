@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
-import { ApyOracle, LOOK_BACK, ILK_COUNT } from "../../src/ApyOracle.sol";
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
+import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
 
 uint256 constant WST_ETH_EXCHANGE_RATE = 1.2e18;
 uint256 constant STADER_ETH_EXCHANGE_RATE = 1.1e18;
 uint256 constant SWELL_ETH_EXCHANGE_RATE = 1.15e18;
 
-contract MockLido is ILidoWstEth {
+contract MockLido is IWstEth {
     uint256 _exchangeRate = WST_ETH_EXCHANGE_RATE;
 
     function stEthPerToken() external view returns (uint256) {
@@ -34,8 +34,12 @@ contract MockStader is IStaderOracle {
     }
 }
 
-contract MockSwell is ISwellEth {
+contract MockSwell is ISwEth {
     uint256 _exchangeRate = SWELL_ETH_EXCHANGE_RATE;
+
+    function getRate() external view returns (uint256) {
+        return _exchangeRate; 
+    }
 
     function swETHToETHRate() external view returns (uint256) {
         return _exchangeRate;
@@ -46,21 +50,18 @@ contract MockSwell is ISwellEth {
     }
 }
 
-contract ApyOracleSharedSetup is Test {
-    ApyOracle public oracle;
+abstract contract YieldOracleSharedSetup is Test {
+    YieldOracle public oracle;
 
-    uint32 internal constant baseRate = 1e6;
-    uint32[ILK_COUNT] internal recentPostUpdateRates = [
-        uint32(WST_ETH_EXCHANGE_RATE / 10 ** 12),
-        uint32(STADER_ETH_EXCHANGE_RATE / 10 ** 12),
-        uint32(SWELL_ETH_EXCHANGE_RATE / 10 ** 12)
-    ];
+    uint64 internal constant baseRate = 1e18;
+    uint64[ILK_COUNT] internal recentPostUpdateRates =
+        [uint64(WST_ETH_EXCHANGE_RATE), uint64(STADER_ETH_EXCHANGE_RATE), uint64(SWELL_ETH_EXCHANGE_RATE)];
 
     MockLido lidoOracle;
     MockStader staderOracle;
     MockSwell swellOracle;
 
-    uint32[ILK_COUNT][LOOK_BACK] historicalExchangeRatesInitial;
+    uint64[ILK_COUNT][LOOK_BACK] historicalExchangeRatesInitial;
 
     function setUp() public {
         // Warp to reasonable timestamp
@@ -70,7 +71,7 @@ contract ApyOracleSharedSetup is Test {
         staderOracle = new MockStader();
         swellOracle = new MockSwell();
 
-        uint32[ILK_COUNT] memory baseRates;
+        uint64[ILK_COUNT] memory baseRates;
 
         for (uint256 i = 0; i < ILK_COUNT; i++) {
             baseRates[i] = baseRate;
@@ -80,7 +81,7 @@ contract ApyOracleSharedSetup is Test {
             historicalExchangeRatesInitial[i] = baseRates;
         }
 
-        oracle = new ApyOracle(
+        oracle = new YieldOracle(
             historicalExchangeRatesInitial, 
             address(lidoOracle),
             address(staderOracle),
@@ -98,5 +99,7 @@ contract ApyOracleSharedSetup is Test {
                 }
             }
         }
+
+        assertEq(oracle.currentIndex(), 1);
     }
 }

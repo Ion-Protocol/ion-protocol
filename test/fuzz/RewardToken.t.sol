@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardToken } from "../../src/token/RewardToken.sol";
 import { RewardTokenSharedSetup } from "../helpers/RewardTokenSharedSetup.sol";
-import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, RAY } from "../../src/libraries/math/RoundedMath.sol";
 import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract RewardTokenFuzzTest is RewardTokenSharedSetup {
+contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
     function testFuzz_mintRewardTokenBasic(uint256 amountOfRewardTokens) external {
@@ -59,24 +60,24 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens != 0);
         // Prevent overflow
         vm.assume(amountOfRewardTokens < 2 ** 128);
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
         // supplyFactor greater than 10,000 is highly unlikely
         supplyFactorNew = bound(supplyFactorNew, supplyFactorOld, 5000e27);
-        vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
+        vm.assume(amountOfRewardTokens.rayDivDown(supplyFactorNew) != 0);
 
         underlying.mint(address(this), amountOfRewardTokens);
 
         underlying.approve(address(rewardToken), type(uint256).max);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint1 = amountOfRewardTokens.roundedRayDiv(supplyFactorOld);
+        uint256 expectedNormalizedMint1 = amountOfRewardTokens.rayDivDown(supplyFactorOld);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.wadMulDown(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -85,10 +86,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         underlying.mint(address(this), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint2 = amountOfRewardTokens.roundedRayDiv(supplyFactorNew);
+        uint256 expectedNormalizedMint2 = amountOfRewardTokens.rayDivDown(supplyFactorNew);
         uint256 totalDeposited = amountOfRewardTokens * 2;
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
-        uint256 totalValue = totalDepositsNormalized.roundedRayMul(supplyFactorNew);
+        uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), totalDepositsNormalized);
         assertEq(rewardToken.balanceOf(address(this)), totalValue);
@@ -105,24 +106,24 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens != 0);
         // Prevent overflow
         vm.assume(amountOfRewardTokens < 2 ** 128);
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
         // supplyFactor greater than 5,000 is highly unlikely
         supplyFactorNew = bound(supplyFactorNew, supplyFactorOld + 1, 5000e27);
-        vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
+        vm.assume(amountOfRewardTokens.rayDivDown(supplyFactorNew) != 0);
 
         underlying.mint(address(this), amountOfRewardTokens);
 
         underlying.approve(address(rewardToken), type(uint256).max);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint1 = amountOfRewardTokens.roundedRayDiv(supplyFactorOld);
+        uint256 expectedNormalizedMint1 = amountOfRewardTokens.rayDivDown(supplyFactorOld);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.wadMulDown(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -131,10 +132,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
         underlying.mint(address(this), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint2 = amountOfRewardTokens.roundedRayDiv(supplyFactorNew);
+        uint256 expectedNormalizedMint2 = amountOfRewardTokens.rayDivDown(supplyFactorNew);
         uint256 totalDeposited = amountOfRewardTokens * 2;
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
-        uint256 totalValue = totalDepositsNormalized.roundedRayMul(supplyFactorNew);
+        uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), totalDepositsNormalized);
         assertEq(rewardToken.balanceOf(address(this)), totalValue);
@@ -248,10 +249,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
 
             bytes32 structHash =
                 keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, amountOfRewardTokens, 0, deadline));
-            ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
+            MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
             (uint8 v, bytes32 r, bytes32 s) =
-                vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+                vm.sign(sendingUserPrivateKey, MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
             rewardToken.permit(sendingUser, spender, amountOfRewardTokens, deadline, v, r, s);
         }
@@ -319,10 +320,10 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
             // Have spender try to sign on behalf of sendingUser (should fail)
             bytes32 structHash =
                 keccak256(abi.encode(PERMIT_TYPEHASH, sendingUser, spender, locals.amountOfRewardTokens, 0, deadline));
-            ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
+            MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
 
             (uint8 v, bytes32 r, bytes32 s) =
-                vm.sign(nonSenderPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+                vm.sign(nonSenderPrivateKey, MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
 
             vm.expectRevert(
                 abi.encodeWithSelector(
@@ -331,12 +332,12 @@ contract RewardTokenFuzzTest is RewardTokenSharedSetup {
             );
             rewardToken.permit(sendingUser, spender, locals.amountOfRewardTokens, deadline, v, r, s);
 
-            (v, r, s) = vm.sign(sendingUserPrivateKey, ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
+            (v, r, s) = vm.sign(sendingUserPrivateKey, MessageHashUtils.toTypedDataHash(DOMAIN_SEPARATOR, structHash));
             (uint8 vMalleable, bytes32 rMalleable, bytes32 sMalleable) = _calculateMalleableSignature(v, r, s);
 
             // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay
             // protection wasn't included
-            vm.expectRevert("ECDSA: invalid signature 's' value");
+            vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureS.selector, sMalleable));
             rewardToken.permit(
                 sendingUser, spender, locals.amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable
             );

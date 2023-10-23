@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
 import { UserHandler, SupplyFactorIncreaseHandler } from "./Handlers.t.sol";
-import { RoundedMath } from "../../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
@@ -130,7 +130,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
  * contract's underlying balance since the last time `supplyFactor` was
  * increased.
  */
-contract RewardTokenInvariantTest is RewardTokenSharedSetup {
+contract RewardToken_InvariantTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
 
     ActorManager public actorManager;
@@ -143,16 +143,13 @@ contract RewardTokenInvariantTest is RewardTokenSharedSetup {
     function setUp() public override {
         super.setUp();
 
-        for (uint256 i = 0; i < AMOUNT_USERS;) {
+        for (uint256 i = 0; i < AMOUNT_USERS; i++) {
             UserHandler user = new UserHandler(rewardToken, underlying);
             userHandlers.push(user);
             underlying.mint(address(user), USER_INITIAL_BALANCE);
 
             vm.prank(address(user));
             underlying.approve(address(rewardToken), type(uint256).max); // max approval
-            unchecked {
-                ++i;
-            }
         }
 
         supplyFactorIncreaseHandler = new SupplyFactorIncreaseHandler(rewardToken, underlying);
@@ -166,17 +163,22 @@ contract RewardTokenInvariantTest is RewardTokenSharedSetup {
     function invariant_userBalancesAlwaysAddToTotalSupply() external {
         // Accounting must be done in normalized fashion
         uint256 totalSupplyByBalances;
-        for (uint256 i = 0; i < userHandlers.length;) {
+        for (uint256 i = 0; i < userHandlers.length; i++) {
             UserHandler user = userHandlers[i];
             totalSupplyByBalances += rewardToken.normalizedBalanceOf(address(user));
-            unchecked {
-                ++i;
-            }
         }
 
         underlying.balanceOf(address(rewardToken)); // update underlying balance
         rewardToken.totalSupply();
 
         assertEq(rewardToken.normalizedTotalSupply(), totalSupplyByBalances);
+    }
+
+    function invariant_totalSupplyAlwaysBacked() external {
+        uint256 totalSupply = rewardToken.totalSupply();
+
+        uint256 underlyingBalance = underlying.balanceOf(address(rewardToken));
+
+        assertGe(underlyingBalance, totalSupply);
     }
 }
