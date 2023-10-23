@@ -6,12 +6,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { RoundedMath, WAD, RAY } from "../src/math/RoundedMath.sol";
 import { IonPool } from "src/IonPool.sol";
+import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
 import "forge-std/console.sol";
-
-// TODO: import instead when ReserveOracle is finished
-interface IReserveOracle {
-    function getExchangeRate(uint256 ilkIndex) external view returns (uint256 exchangeRate);
-}
 
 uint32 constant ILK_COUNT = 8;
 
@@ -29,14 +25,21 @@ contract Liquidation {
     uint256 immutable RESERVE_FACTOR;
     uint256 immutable MAX_DISCOUNT;
 
-    // ilk specific variable
-    // TODO: could this be immutable? 
-    uint64[ILK_COUNT] public liquidationThresholds; // [wad] indexed by ilkIndex
+    // liquidation thresholds 
+    uint64 public immutable liquidationThreshold0; 
+    uint64 public immutable liquidationThreshold1; 
+    uint64 public immutable liquidationThreshold2; 
 
-    address public immutable revenueRecipient;
+    // exchange rates 
+    address public immutable exchangeRateOracle0;
+    address public immutable exchangeRateOracle1;
+    address public immutable exchangeRateOracle2;
+
+    address public immutable revenueRecipient; // receives fees 
+    address public immutable protocol; // receives confiscated vault debt and collateral 
 
     IonPool public immutable ionPool;
-    IReserveOracle public immutable reserveOracle;
+    ReserveOracle public immutable reserveOracle;
     IERC20 public immutable underlying;
 
     struct LiquidateArgs {
@@ -54,15 +57,15 @@ contract Liquidation {
         address _ionPool,
         address _reserveOracle,
         address _revenueRecipient,
-        uint64[ILK_COUNT] memory _liquidationThresholds,
+        uint64[] memory _liquidationThresholds,
+        address[] memory _exchangeRateOracles, 
         uint256 _targetHealth,
         uint256 _reserveFactor,
         uint256 _maxDiscount
     ) {
         ionPool = IonPool(_ionPool);
-        reserveOracle = IReserveOracle(_reserveOracle);
+        reserveOracle = ReserveOracle(_reserveOracle);
         revenueRecipient = _revenueRecipient;
-        liquidationThresholds = _liquidationThresholds;
 
         TARGET_HEALTH = _targetHealth;
         RESERVE_FACTOR = _reserveFactor;
@@ -70,6 +73,30 @@ contract Liquidation {
 
         underlying = ionPool.getUnderlying();
         underlying.approve(address(ionPool), type(uint256).max); // approve ionPool to transfer the underlying asset
+
+        liquidationThreshold0 = _liquidationThresholds[0]; 
+        liquidationThreshold1 = _liquidationThresholds[1]; 
+        liquidationThreshold2 = _liquidationThresholds[2]; 
+
+        exchangeRateOracle0 = _exchangeRateOracles[0]; 
+        exchangeRateOracle1 = _exchangeRateOracles[1]; 
+        exchangeRateOracle2 = _exchangeRateOracles[2]; 
+
+    }
+
+    function _getExchangeRateAndLiquidationThreshold(uint8 ilkIndex) internal view returns (uint256 liquidationThreshold, uint256 exchangeRate) { 
+        address exchangeRateOracle; 
+        if (ilkIndex == 0) {
+            exchangeRateOracle = exchangeRateOracle0; 
+            liquidationThreshold = uint256(liquidationThreshold0);  
+        } else if (ilkIndex == 1) {
+            exchangeRateOracle = exchangeRateOracle1; 
+            liquidationThreshold = uint256(liquidationThreshold1); 
+        } else if (ilkIndex == 2) {
+            exchangeRateOracle = exchangeRateOracle2; 
+            liquidationThreshold = uint256(liquidationThreshold2); 
+        }
+        exchangeRate = uint256(ReserveOracle(exchangeRateOracle).getExchangeRate()); 
     }
 
     /**
@@ -130,11 +157,7 @@ contract Liquidation {
         uint256 rate = ionPool.rate(ilkIndex);
         uint256 dust = ionPool.dust(ilkIndex);
 
-        console.log("liqThres 0: ", liquidationThresholds[0]);
-        console.log("liqThres 1: ", liquidationThresholds[1]);
-        console.log("liqThres 2: ", liquidationThresholds[2]);
-        uint256 liquidationThreshold = liquidationThresholds[ilkIndex]; // []
-        uint256 exchangeRate = reserveOracle.getExchangeRate(ilkIndex); // [ray]
+        (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex); 
 
         if (exchangeRate == 0) {
             revert ExchangeRateCannotBeZero(exchangeRate);

@@ -3,13 +3,13 @@ pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ApyOracle, LOOK_BACK, ILK_COUNT } from "../../src/ApyOracle.sol";
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/IProviders.sol";
 
 uint256 constant WST_ETH_EXCHANGE_RATE = 1.2e18;
 uint256 constant STADER_ETH_EXCHANGE_RATE = 1.1e18;
 uint256 constant SWELL_ETH_EXCHANGE_RATE = 1.15e18;
 
-contract MockLido is ILidoWstEth {
+contract MockLido is IWstEth {
     uint256 _exchangeRate = WST_ETH_EXCHANGE_RATE;
 
     function stEthPerToken() external view returns (uint256) {
@@ -34,8 +34,12 @@ contract MockStader is IStaderOracle {
     }
 }
 
-contract MockSwell is ISwellEth {
+contract MockSwell is ISwEth {
     uint256 _exchangeRate = SWELL_ETH_EXCHANGE_RATE;
+
+    function getRate() external view returns (uint256) {
+        return _exchangeRate; 
+    }
 
     function swETHToETHRate() external view returns (uint256) {
         return _exchangeRate;

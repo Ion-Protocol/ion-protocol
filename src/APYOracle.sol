@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "./interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/IProviders.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RoundedMath } from "./math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -102,14 +102,14 @@ contract ApyOracle is IApyOracle {
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint32 exchangeRate) {
         uint256 scale = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
         if (ilkIndex == 0) {
-            ILidoWstEth lido = ILidoWstEth(address0);
+            IWstEth lido = IWstEth(address0);
             exchangeRate = (lido.stEthPerToken() / scale).toUint32();
         } else if (ilkIndex == 1) {
             IStaderOracle stader = IStaderOracle(address1);
             (, uint256 totalETHBalance, uint256 totalETHXSupply) = stader.exchangeRate();
             exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply) / scale).toUint32();
         } else {
-            ISwellEth swell = ISwellEth(address2);
+            ISwEth swell = ISwEth(address2);
             exchangeRate = (swell.swETHToETHRate() / scale).toUint32();
         }
     }

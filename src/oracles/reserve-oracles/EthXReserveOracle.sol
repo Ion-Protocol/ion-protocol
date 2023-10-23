@@ -1,12 +1,15 @@
 pragma solidity ^0.8.13;
 
-import { ISwEth } from "src/interfaces/IProviders.sol";
+import { IStaderOracle } from "src/interfaces/IProviders.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { RoundedMath } from "src/math/RoundedMath.sol";
+import "forge-std/console.sol"; 
+// https://etherscan.io/address/0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737
 
-
-// https://etherscan.io/token/0xf951E335afb289353dc249e82926178EaC7DEd78#readProxyContract
-contract SwEthReserveOracle is ReserveOracle {
+uint8 constant ethXDecimals = 18;
+contract EthXReserveOracle is ReserveOracle {
+    using RoundedMath for uint256; 
     using SafeCast for *; 
 
     address public protocolFeed;
@@ -17,7 +20,10 @@ contract SwEthReserveOracle is ReserveOracle {
         exchangeRate = _getProtocolExchangeRate();
     }
 
+    // @dev exchange rate is total LST supply divided by total underlying ETH 
+    // NOTE: 
     function _getProtocolExchangeRate() internal view override returns (uint72 protocolExchangeRate) {
-        protocolExchangeRate = ISwEth(protocolFeed).getRate().toUint72(); 
+        (, uint256 totalEthBalance, uint256 totalEthXSupply) = IStaderOracle(protocolFeed).exchangeRate(); 
+        protocolExchangeRate = totalEthBalance.wadDivDown(totalEthXSupply).toUint72();
     }
 }

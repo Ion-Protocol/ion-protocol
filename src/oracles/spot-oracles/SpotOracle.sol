@@ -36,11 +36,4 @@ abstract contract SpotOracle {
         spot = (ltv * price).scaleToRay(36); // [ray]
         require(spot > 0);
     }
-
-    // reserveOracle
-    // getExchangeRate
-    
-    // spotOracle
-    // getPrice
-    // getSpot 
 }

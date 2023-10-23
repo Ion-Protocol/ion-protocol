@@ -7,7 +7,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { stdJson as StdJson } from "forge-std/stdJson.sol";
 
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderOracle, ISwEth } from "../../src/interfaces/IProviders.sol";
 import { RoundedMath } from "../../src/math/RoundedMath.sol";
 import { ApyOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT, PERIODS } from "src/ApyOracle.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";

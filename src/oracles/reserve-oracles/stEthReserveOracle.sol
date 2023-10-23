@@ -1,23 +1,45 @@
-// // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
-// pragma solidity ^0.8.13;
+pragma solidity ^0.8.13;
 
-// import { ReserveOracle } from "./ReserveOracle.sol";
+import { ILido, IWstEth } from "src/interfaces/IProviders.sol"; 
+import { ReserveOracle } from "./ReserveOracle.sol";
+import { RoundedMath } from "src/math/RoundedMath.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { console2 } from "forge-std/console2.sol";
 
-// interface wstEth {
-//     function exchangeRate() external view returns (uint256);
-// }
+contract StEthReserveOracle is ReserveOracle {
+    using SafeCast for uint256; 
+    using RoundedMath for uint256; 
 
-// contract stEthReserveOracle is ReserveOracle {
-//     address public protocolFeed;
+    address public immutable lido; 
+    address public immutable wstEth; 
 
-//     constructor(address _token, address _protocolFeed) ReserveOracle(_token) {
-//         protocolFeed = _protocolFeed;
-//         exchangeRate = _getProtocolExchangeRate();
-//         nextExchangeRate = exchangeRate;
-//     }
+    constructor(address _lido, address _wstEth, uint8 _ilkIndex, address[] memory _feeds, uint8 _quorum) ReserveOracle(_ilkIndex, _feeds, _quorum) {
+        lido = _lido; 
+        wstEth = _wstEth; 
+        exchangeRate = _getProtocolExchangeRate();
+    }
 
-//     function _getProtocolExchangeRate() internal view override returns (uint256) {
-//         return wstEth(protocolFeed).exchangeRate();
-//     }
-// }
+    // @dev converts wstETH to stETH to ETH for ETH per wstETH  
+    // stETH / wstETH = stEth per wstEth 
+    // ETH / stETH = total ether value / total stETH supply
+    // ETH / wstETH = (ETH / stETH) * (stETH / wstETH)
+    // NOTE: stEth might not be deployed until the offchain reserve oracle for stEth is production ready. 
+    function _getProtocolExchangeRate() internal view override returns (uint72) {
+        console2.log("stETH per wstEth: ", IWstEth(wstEth).stEthPerToken());
+        console2.log("supply: ", ILido(lido).totalSupply()); 
+        
+        uint256 bufferedEther = ILido(lido).getBufferedEther(); 
+        ( , , uint256 beaconBalance) = ILido(lido).getBeaconStat(); 
+
+        console2.log("bufferedEther: ", bufferedEther); 
+        console2.log("beaconBalance: ", beaconBalance); 
+        uint256 ethPerStEth = (beaconBalance + bufferedEther).wadDivDown(ILido(lido).totalSupply());
+        uint256 stEthPerWstEth = IWstEth(wstEth).stEthPerToken(); 
+        console2.log("steth per wsteth: ", stEthPerWstEth); 
+        return ethPerStEth.wadMulDown(stEthPerWstEth).toUint72();  
+
+        console2.log("exchangeRate: ", exchangeRate);  
+    }
+}
