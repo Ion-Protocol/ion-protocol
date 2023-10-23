@@ -8,7 +8,7 @@ import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { InterestRate } from "./InterestRate.sol";
-import { RoundedMath, RAY } from "./math/RoundedMath.sol";
+import { RoundedMath, RAY } from "./libraries/math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
@@ -22,7 +22,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     // --- Errors ---
     error CeilingExceeded();
-    error UnsafePositionChange();
+    error UnsafePositionChange(uint256 newTotalDebtInVault, uint256 collateral, uint256 spot);
     error UnsafePositionChangeWithoutConsent();
     error UseOfCollateralWithoutConsent();
     error TakingWethWithoutConsent();
@@ -55,6 +55,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
+    address private immutable addressThis = address(this);
+
     // --- Data ---
     struct Ilk {
         uint104 totalNormalizedDebt; // Total Normalised Debt     [wad]
@@ -86,7 +88,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant IonPoolStorageLocation = 0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e00;
 
-    function _getIonPoolStorage() private pure returns (IonPoolStorage storage $) {
+    function _getIonPoolStorage() internal pure returns (IonPoolStorage storage $) {
         assembly {
             $.slot := IonPoolStorageLocation
         }
@@ -108,16 +110,13 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         external
         initializer
     {
-        console.log("ionPool initialize");
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
-        // console.log("after access control default admin rules");
         RewardToken.initialize(_underlying, _treasury, decimals_, name_, symbol_);
-        console.log("after reward token initialize");
+
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.interestRateModule = _interestRateModule;
         emit InterestRateModuleUpdated(address(0), address(_interestRateModule));
-        console.log("after initialize");
     }
 
     // --- Administration ---
@@ -274,7 +273,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
             unchecked { ++i; }
         }
 
-        _setSupplyFactor(getSupplyFactor() + totalSupplyFactorIncrease);
+        _setSupplyFactor(supplyFactor() + totalSupplyFactorIncrease);
         _mintToTreasury(totalTreasuryMintAmount);
     }
 
@@ -289,19 +288,13 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
             ilk.rate = newRate;
             ilk.lastRateUpdate = newTimestamp;
 
-            _setSupplyFactor(getSupplyFactor() + supplyFactorIncrease);
+            _setSupplyFactor(supplyFactor() + supplyFactorIncrease);
             _mintToTreasury(treasuryMintAmount);
         }
     }
 
-    function calculateRewardAndDebtDistribution(uint8 ilkIndex)
-        external
-        view
-        returns (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRate, uint48 newTimestamp)
-    {
-        return _calculateRewardAndDebtDistribution(ilkIndex, totalSupply());
-    }
-
+    // TODO: Change math to calculate change in rate. This way it will be consistent to how the supplyFactor is being
+    // changed
     function _calculateRewardAndDebtDistribution(
         uint8 ilkIndex,
         uint256 totalEthSupply
@@ -457,7 +450,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
                 either(changeInNormalizedDebt > 0, changeInCollateral < 0),
                 newTotalDebtInVault > vault.collateral * ilk.spot
             )
-        ) revert UnsafePositionChange();
+        ) revert UnsafePositionChange(newTotalDebtInVault, vault.collateral, ilk.spot);
 
         // vault is either more safe, or the owner consents
         if (both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !isAllowed(u, _msgSender()))) {
@@ -522,14 +515,14 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         if (amount == 0) return;
 
         if (amount < 0) {
-            // Round up in protocol's favor
+            // TODO: Round up using mulmod
             uint256 amountWad = uint256(-amount) / RAY;
             amountWad = amountWad * RAY < uint256(-amount) ? amountWad + 1 : amountWad;
-            getUnderlying().safeTransferFrom(user, address(this), amountWad);
+            underlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
             uint256 amountWad = uint256(amount) / RAY;
-            getUnderlying().safeTransfer(user, amountWad);
+            underlying().safeTransfer(user, amountWad);
         }
     }
 
@@ -604,14 +597,12 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     function ilkCount() public view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilks.length;
     }
 
     function getIlkIndex(address ilkAddress) public view returns (uint8) {
-        bytes32 addressInBytes32 = bytes32(uint256(uint160(ilkAddress)));
-
         IonPoolStorage storage $ = _getIonPoolStorage();
+        bytes32 addressInBytes32 = bytes32(uint256(uint160(ilkAddress)));
 
         // Since there should never be more than 256 collaterals, an unsafe cast
         // should be fine
@@ -620,62 +611,93 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     function getIlkAddress(uint256 ilkIndex) public view returns (address) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilkAddresses.at(ilkIndex);
     }
 
     function addressContains(address ilk) public view returns (bool) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilkAddresses.contains(ilk);
     }
 
     function addressesLength() public view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilkAddresses.length();
     }
 
     function totalNormalizedDebt(uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilks[ilkIndex].totalNormalizedDebt;
     }
 
     function rate(uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilks[ilkIndex].rate;
+    }
+
+    function lastRateUpdate(uint8 ilkIndex) external view returns (uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.ilks[ilkIndex].lastRateUpdate;
     }
 
     function spot(uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilks[ilkIndex].spot;
     }
 
     function debtCeiling(uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilks[ilkIndex].debtCeiling;
     }
 
     function dust(uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.ilks[ilkIndex].dust;
     }
 
     function collateral(uint8 ilkIndex, address user) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.vaults[ilkIndex][user].collateral;
     }
 
     function normalizedDebt(uint8 ilkIndex, address user) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-
         return $.vaults[ilkIndex][user].normalizedDebt;
+    }
+
+    function gem(uint8 ilkIndex, address user) external view returns (uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.gem[ilkIndex][user];
+    }
+
+    function unbackedDebt(address user) external view returns (uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.unbackedDebt[user];
+    }
+
+    function isOperator(address user, address operator) external view returns (bool) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.isOperator[user][operator] == 1;
+    }
+
+    function isAllowed(address bit, address usr) public view returns (bool) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+
+        return either(bit == usr, $.isOperator[bit][usr] == 1);
+    }
+
+    function debt() external view returns (uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.debt;
+    }
+
+    function totalUnbackedDebt() external view returns (uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.totalUnbackedDebt;
+    }
+
+    function interestRateModule() external view returns (address) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return address($.interestRateModule);
     }
 
     function getCurrentBorrowRate(uint8 ilkIndex) public view returns (uint256 borrowRate, uint256 reserveFactor) {
@@ -690,24 +712,30 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         (borrowRate, reserveFactor) = $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
     }
 
+    function calculateRewardAndDebtDistribution(uint8 ilkIndex)
+        external
+        view
+        returns (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRate, uint48 newTimestamp)
+    {
+        return _calculateRewardAndDebtDistribution(ilkIndex, totalSupply());
+    }
+
+    function implementation() external view returns (address) {
+        return addressThis;
+    }
+
     // --- Auth ---
 
-    function addOperator(address usr) external {
+    function addOperator(address operator) external {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.isOperator[_msgSender()][usr] = 1;
+        $.isOperator[_msgSender()][operator] = 1;
     }
 
-    function removeOperator(address usr) external {
+    function removeOperator(address operator) external {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.isOperator[_msgSender()][usr] = 0;
-    }
-
-    function isAllowed(address bit, address usr) public view returns (bool) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-
-        return either(bit == usr, $.isOperator[bit][usr] == 1);
+        $.isOperator[_msgSender()][operator] = 0;
     }
 
     // --- Math ---

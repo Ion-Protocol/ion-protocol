@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardTokenExposed } from "../../helpers/RewardTokenSharedSetup.sol";
-import { RoundedMath } from "../../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
@@ -31,17 +31,18 @@ contract UserHandler is Handler {
 
     function mint(address account, uint256 amount) external {
         amount = bound(amount, 0, underlying.balanceOf(address(this)));
-        uint256 currentSupplyFactor = rewardToken.getSupplyFactor();
+        uint256 currentSupplyFactor = rewardToken.supplyFactor();
 
-        if (amount.roundedRayDiv(currentSupplyFactor) == 0) return;
+        if (amount.rayDivDown(currentSupplyFactor) == 0) return;
         rewardToken.mint(account, amount);
     }
 
     function burn(address account, uint256 amount) external {
         amount = bound(amount, 0, rewardToken.balanceOf(account));
-        uint256 currentSupplyFactor = rewardToken.getSupplyFactor();
+        uint256 currentSupplyFactor = rewardToken.supplyFactor();
 
-        if (amount.roundedRayDiv(currentSupplyFactor) == 0) return;
+        uint256 amountNormalized = amount.rayDivUp(currentSupplyFactor);
+        if (amountNormalized == 0 || amountNormalized > rewardToken.normalizedBalanceOf(account)) return;
         rewardToken.burn(account, account, amount);
     }
 
@@ -101,11 +102,11 @@ contract SupplyFactorIncreaseHandler is Handler {
     { }
 
     function increaseSupplyFactor(uint256 amount) external {
-        uint256 oldSupplyFactor = rewardToken.getSupplyFactor();
+        uint256 oldSupplyFactor = rewardToken.supplyFactor();
         amount = bound(amount, 1.1e27, 1.25e27); // between 1E-16 and 15%
 
         uint256 oldTotalSupply = rewardToken.totalSupply();
-        uint256 newSupplyFactor = oldSupplyFactor.roundedRayMul(amount);
+        uint256 newSupplyFactor = oldSupplyFactor.rayMulDown(amount);
         rewardToken.setSupplyFactor(newSupplyFactor);
 
         uint256 interestCreated = rewardToken.totalSupply() - oldTotalSupply;

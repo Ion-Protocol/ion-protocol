@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
 import { UserHandler, SupplyFactorIncreaseHandler } from "./Handlers.t.sol";
-import { RoundedMath } from "../../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
@@ -172,5 +172,13 @@ contract RewardToken_InvariantTest is RewardTokenSharedSetup {
         rewardToken.totalSupply();
 
         assertEq(rewardToken.normalizedTotalSupply(), totalSupplyByBalances);
+    }
+
+    function invariant_totalSupplyAlwaysBacked() external {
+        uint256 totalSupply = rewardToken.totalSupply();
+
+        uint256 underlyingBalance = underlying.balanceOf(address(rewardToken));
+
+        assertGe(underlyingBalance, totalSupply);
     }
 }

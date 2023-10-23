@@ -4,8 +4,8 @@ pragma solidity 0.8.21;
 import { IonPoolExposed } from "../../helpers/IonPoolSharedSetup.sol";
 // import { IonHandler } from "../../../src/periphery/IonHandler.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
-import { IHevm } from "../../echidna/IHevm.sol";
-import { RoundedMath } from "../../../src/math/RoundedMath.sol";
+import { IHevm } from "../../helpers/echidna/IHevm.sol";
+import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
@@ -35,7 +35,7 @@ contract LenderHandler is Handler {
 
     function supply(uint256 amount) public {
         amount = bound(amount, 0, type(uint128).max);
-        uint256 amountNormalized = amount.roundedRayDiv(ionPool.getSupplyFactor());
+        uint256 amountNormalized = amount.roundedRayDiv(ionPool.supplyFactor());
 
         if (amountNormalized == 0) return;
         totalHoldingsNormalized += amountNormalized;
@@ -49,7 +49,7 @@ contract LenderHandler is Handler {
         uint256 balance = Math.min(underlying.balanceOf(address(ionPool)), ionPool.balanceOf(address(this)));
         amount = bound(amount, 0, balance);
 
-        uint256 amountNormalized = amount.roundedRayDiv(ionPool.getSupplyFactor());
+        uint256 amountNormalized = amount.roundedRayDiv(ionPool.supplyFactor());
         if (amountNormalized == 0) return;
 
         totalHoldingsNormalized -= amountNormalized;

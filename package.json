@@ -3,15 +3,18 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
+    "solhint": "solhint 'src/**/*.sol'",
+    "slither": "slither src",
     "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPoolEchidna",
-    "ApyOracle:deployment:configure": "forge script script/DeployApyOracle.s.sol -s 'configureDeployment()' --ffi",
-    "ApyOracle:deployment:deploy:testnet": "forge script script/DeployApyOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify",
-    "ApyOracle:deployment:deploy:mainnet": "forge script script/DeployApyOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify"
+    "YieldOracle:deployment:configure": "forge script script/DeployYieldOracle.s.sol -s 'configureDeployment()' --ffi",
+    "YieldOracle:deployment:deploy:testnet": "forge script script/DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify",
+    "YieldOracle:deployment:deploy:mainnet": "forge script script/DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify"
   },
   "dependencies": {
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.7.1",
+    "solhint": "^3.6.2",
     "viem": "^1.14.0",
     "web3": "^4.1.2"
   },

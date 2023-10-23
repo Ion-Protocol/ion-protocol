@@ -1,46 +1,76 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IInterestRate } from "./interfaces/IInterestRate.sol";
-import { IApyOracle } from "./interfaces/IApyOracle.sol";
-import { RoundedMath, RAY } from "../src/math/RoundedMath.sol";
-import { IonPool } from "../src/IonPool.sol";
+import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
+import { RoundedMath } from "./libraries/math/RoundedMath.sol";
 
 struct IlkData {
-    uint80 minimumProfitMargin; // 18 decimals
-    uint64 reserveFactor; // 18 decimals
-    uint64 optimalUtilizationRate; // 18 decimals
-    uint16 distributionFactor; // 2 decimals
+    //                                                 _
+    uint96 adjustedProfitMargin; // 27 decimals         |
+    uint96 minimumKinkRate; // 27 decimals              |
+    uint24 adjustedAboveKinkSlope; // 4 decimals        |   256 bits
+    uint24 minimumAboveKinkSlope; // 4 decimals         |
+    uint16 adjustedReserveFactor; // 4 decimals        _|
+    //                                                  |
+    uint16 minimumReserveFactor; // 4 decimals          |
+    uint96 adjustedBaseRate; // 27 decimals             |   240 bits
+    uint96 minimumBaseRate; // 27 decimals              |
+    uint16 optimalUtilizationRate; // 4 decimals        |
+    uint16 distributionFactor; // 4 decimals           _|
 }
 
 // forgefmt: disable-start
 
-//                                                              256     224 208              144             80                   0
-//                                                               | empty |   |    opt_util    |  reserve_fac  | min_profit_margin |
-//                                                                         ^
-//                                                                 distribution_factor
-//                                                               |       |   |                |               |                   |
+// Word 1
+//
+//                                                256  240   216   192                     96                      0
+//                                                 |    |     |     |     min_kink_rate     |   adj_profit_margin  |
+//                                                   ^     ^     ^
+//                                   adj_reserve_factor    ^   adj_above_kink_slope
+//                                                       min_above_kink_slope
 
-// 2 ** 80 - 1
-uint256 constant PROFIT_MARGIN_MASK =                           0x00000000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFF; 
-// (2 ** (80 + 64) - 1) - (2 ** 80 - 1)
-uint256 constant RESERVE_FACTOR_MASK =                          0x0000000000000000000000000000FFFFFFFFFFFFFFFF00000000000000000000; 
-// (2 ** (80 + 64 + 64) - 1) - (2 ** (80 + 64) - 1)
-uint256 constant OPTIMAL_UTILIZATION_MASK =                     0x000000000000FFFFFFFFFFFFFFFF000000000000000000000000000000000000;
-// (2 ** (80 + 64 + 64 + 16) - 1) - (2 ** (80 + 64 + 64) - 1)
-uint256 constant DISTRIBUTION_FACTOR_MASK =                     0x00000000FFFF0000000000000000000000000000000000000000000000000000;
+uint256 constant ADJUSTED_PROFIT_MARGIN_MASK =    0x0000000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF; 
+uint256 constant MINIMUM_KINK_RATE_MASK =         0x0000000000000000FFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000;
+uint256 constant ADJUSTED_ABOVE_KINK_SLOPE_MASK = 0x0000000000FFFFFF000000000000000000000000000000000000000000000000;
+uint256 constant MINIMUM_ABOVE_KINK_SLOPE_MASK =  0x0000FFFFFF000000000000000000000000000000000000000000000000000000;
+uint256 constant ADJUSTED_RESERVE_FACTOR_MASK =   0xFFFF000000000000000000000000000000000000000000000000000000000000; 
+
+// Word 2
+//
+//                                                256  240 224 208                     112                     16   0
+//                                                 | __ |   |   |     min_base_rate     |     adj_base_rate     |   |
+//                                                        ^   ^                                                   ^
+//                                                        ^  opt_util                                            min_reserve_factor
+//                                       distribution_factor
+
+uint256 constant MINIMUM_RESERVE_FACTOR_MASK =    0x000000000000000000000000000000000000000000000000000000000000FFFF;
+uint256 constant ADJUSTED_BASE_RATE_MASK =        0x000000000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000;
+uint256 constant MINIMUM_BASE_RATE_MASK =         0x000000000000FFFFFFFFFFFFFFFFFFFFFFFF0000000000000000000000000000;
+uint256 constant OPTIMAL_UTILIZATION_MASK =       0x00000000FFFF0000000000000000000000000000000000000000000000000000;
+uint256 constant DISTRIBUTION_FACTOR_MASK =       0x0000FFFF00000000000000000000000000000000000000000000000000000000;
 
 // forgefmt: disable-end
 
-uint8 constant PROFIT_MARGIN_SHIFT = 0;
-uint8 constant RESERVE_FACTOR_SHIFT = 80;
-uint8 constant OPTIMAL_UTILIZATION_SHIFT = 80 + 64;
-uint8 constant DISTRIBUTION_FACTOR_SHIFT = 80 + 64 + 64;
+// Word 1
+uint8 constant ADJUSTED_PROFIT_MARGIN_SHIFT = 0;
+uint8 constant MINIMUM_KINK_RATE_SHIFT = 96;
+uint8 constant ADJUSTED_ABOVE_KINK_SLOPE_SHIFT = 96 + 96;
+uint8 constant MINIMUM_ABOVE_KINK_SLOPE_SHIFT = 96 + 96 + 24;
+uint8 constant ADJUSTED_RESERVE_FACTOR_SHIFT = 96 + 96 + 24 + 24;
+
+// Word 2
+uint8 constant MINIMUM_RESERVE_FACTOR_SHIFT = 0;
+uint8 constant ADJUSTED_BASE_RATE_SHIFT = 16;
+uint8 constant MINIMUM_BASE_RATE_SHIFT = 16 + 96;
+uint8 constant OPTIMAL_UTILIZATION_SHIFT = 16 + 96 + 96;
+uint8 constant DISTRIBUTION_FACTOR_SHIFT = 16 + 96 + 96 + 16;
+
+uint48 constant SECONDS_IN_A_DAY = 31_536_000;
 
 contract InterestRate {
     error DistributionFactorsDoNotSumToOne(uint256 sum);
 
-    using RoundedMath for uint256;
+    using RoundedMath for *;
 
     error CollateralIndexOutOfBounds();
     error TotalDebtsLength(uint256 collateralCount, uint256 totalDebtsLength);
@@ -48,19 +78,27 @@ contract InterestRate {
     /**
      * @dev Packed collateral configs
      */
-    uint256 internal immutable ilkConfig0;
-    uint256 internal immutable ilkConfig1;
-    uint256 internal immutable ilkConfig2;
-    uint256 internal immutable ilkConfig3;
-    uint256 internal immutable ilkConfig4;
-    uint256 internal immutable ilkConfig5;
-    uint256 internal immutable ilkConfig6;
-    uint256 internal immutable ilkConfig7;
+    uint256 internal immutable ilkConfig0_a;
+    uint256 internal immutable ilkConfig0_b;
+    uint256 internal immutable ilkConfig1_a;
+    uint256 internal immutable ilkConfig1_b;
+    uint256 internal immutable ilkConfig2_a;
+    uint256 internal immutable ilkConfig2_b;
+    uint256 internal immutable ilkConfig3_a;
+    uint256 internal immutable ilkConfig3_b;
+    uint256 internal immutable ilkConfig4_a;
+    uint256 internal immutable ilkConfig4_b;
+    uint256 internal immutable ilkConfig5_a;
+    uint256 internal immutable ilkConfig5_b;
+    uint256 internal immutable ilkConfig6_a;
+    uint256 internal immutable ilkConfig6_b;
+    uint256 internal immutable ilkConfig7_a;
+    uint256 internal immutable ilkConfig7_b;
 
     uint256 public immutable collateralCount;
-    IApyOracle immutable apyOracle;
+    IYieldOracle immutable apyOracle;
 
-    constructor(IlkData[] memory ilkDataList, IApyOracle _apyOracle) {
+    constructor(IlkData[] memory ilkDataList, IYieldOracle _apyOracle) {
         collateralCount = ilkDataList.length;
         apyOracle = _apyOracle;
 
@@ -71,16 +109,16 @@ contract InterestRate {
             // forgefmt: disable-next-line
             unchecked { ++i; }
         }
-        if (distributionFactorSum != 1e2) revert DistributionFactorsDoNotSumToOne(distributionFactorSum);
+        if (distributionFactorSum != 1e4) revert DistributionFactorsDoNotSumToOne(distributionFactorSum);
 
-        ilkConfig0 = _packCollateralConfig(ilkDataList, 0);
-        ilkConfig1 = _packCollateralConfig(ilkDataList, 1);
-        ilkConfig2 = _packCollateralConfig(ilkDataList, 2);
-        ilkConfig3 = _packCollateralConfig(ilkDataList, 3);
-        ilkConfig4 = _packCollateralConfig(ilkDataList, 4);
-        ilkConfig5 = _packCollateralConfig(ilkDataList, 5);
-        ilkConfig6 = _packCollateralConfig(ilkDataList, 6);
-        ilkConfig7 = _packCollateralConfig(ilkDataList, 7);
+        (ilkConfig0_a, ilkConfig0_b) = _packCollateralConfig(ilkDataList, 0);
+        (ilkConfig1_a, ilkConfig1_b) = _packCollateralConfig(ilkDataList, 1);
+        (ilkConfig2_a, ilkConfig2_b) = _packCollateralConfig(ilkDataList, 2);
+        (ilkConfig3_a, ilkConfig3_b) = _packCollateralConfig(ilkDataList, 3);
+        (ilkConfig4_a, ilkConfig4_b) = _packCollateralConfig(ilkDataList, 4);
+        (ilkConfig5_a, ilkConfig5_b) = _packCollateralConfig(ilkDataList, 5);
+        (ilkConfig6_a, ilkConfig6_b) = _packCollateralConfig(ilkDataList, 6);
+        (ilkConfig7_a, ilkConfig7_b) = _packCollateralConfig(ilkDataList, 7);
     }
 
     function _packCollateralConfig(
@@ -89,15 +127,24 @@ contract InterestRate {
     )
         internal
         view
-        returns (uint256 packedConfig)
+        returns (uint256 packedConfig_a, uint256 packedConfig_b)
     {
-        if (index >= collateralCount) return 0;
+        if (index >= collateralCount) return (0, 0);
 
         IlkData memory ilkData = ilkDataList[index];
 
-        packedConfig = (
-            uint256(ilkData.minimumProfitMargin) << PROFIT_MARGIN_SHIFT
-                | uint256(ilkData.reserveFactor) << RESERVE_FACTOR_SHIFT
+        packedConfig_a = (
+            uint256(ilkData.adjustedProfitMargin) << ADJUSTED_PROFIT_MARGIN_SHIFT
+                | uint256(ilkData.minimumKinkRate) << MINIMUM_KINK_RATE_SHIFT
+                | uint256(ilkData.adjustedAboveKinkSlope) << ADJUSTED_ABOVE_KINK_SLOPE_SHIFT
+                | uint256(ilkData.minimumAboveKinkSlope) << MINIMUM_ABOVE_KINK_SLOPE_SHIFT
+                | uint256(ilkData.adjustedReserveFactor) << ADJUSTED_RESERVE_FACTOR_SHIFT
+        );
+
+        packedConfig_b = (
+            uint256(ilkData.minimumReserveFactor) << MINIMUM_RESERVE_FACTOR_SHIFT
+                | uint256(ilkData.adjustedBaseRate) << ADJUSTED_BASE_RATE_SHIFT
+                | uint256(ilkData.minimumBaseRate) << MINIMUM_BASE_RATE_SHIFT
                 | uint256(ilkData.optimalUtilizationRate) << OPTIMAL_UTILIZATION_SHIFT
                 | uint256(ilkData.distributionFactor) << DISTRIBUTION_FACTOR_SHIFT
         );
@@ -106,35 +153,62 @@ contract InterestRate {
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
         if (index > collateralCount - 1) revert CollateralIndexOutOfBounds();
 
-        uint256 packedConfig;
+        uint256 packedConfig_a;
+        uint256 packedConfig_b;
 
         if (index == 0) {
-            packedConfig = ilkConfig0;
+            packedConfig_a = ilkConfig0_a;
+            packedConfig_b = ilkConfig0_b;
         } else if (index == 1) {
-            packedConfig = ilkConfig1;
+            packedConfig_a = ilkConfig1_a;
+            packedConfig_b = ilkConfig1_b;
         } else if (index == 2) {
-            packedConfig = ilkConfig2;
+            packedConfig_a = ilkConfig2_a;
+            packedConfig_b = ilkConfig2_b;
         } else if (index == 3) {
-            packedConfig = ilkConfig3;
+            packedConfig_a = ilkConfig3_a;
+            packedConfig_b = ilkConfig3_b;
         } else if (index == 4) {
-            packedConfig = ilkConfig4;
+            packedConfig_a = ilkConfig4_a;
+            packedConfig_b = ilkConfig4_b;
         } else if (index == 5) {
-            packedConfig = ilkConfig5;
+            packedConfig_a = ilkConfig5_a;
+            packedConfig_b = ilkConfig5_b;
         } else if (index == 6) {
-            packedConfig = ilkConfig6;
+            packedConfig_a = ilkConfig6_a;
+            packedConfig_b = ilkConfig6_b;
         } else if (index == 7) {
-            packedConfig = ilkConfig7;
+            packedConfig_a = ilkConfig7_a;
+            packedConfig_b = ilkConfig7_b;
         }
 
-        uint80 minimumProfitMargin = uint80((packedConfig & PROFIT_MARGIN_MASK) >> PROFIT_MARGIN_SHIFT);
-        uint64 reserveFactor = uint64((packedConfig & RESERVE_FACTOR_MASK) >> RESERVE_FACTOR_SHIFT);
-        uint64 optimalUilization = uint64((packedConfig & OPTIMAL_UTILIZATION_MASK) >> OPTIMAL_UTILIZATION_SHIFT);
-        uint8 distributionFactor = uint8((packedConfig & DISTRIBUTION_FACTOR_MASK) >> DISTRIBUTION_FACTOR_SHIFT);
+        uint72 adjustedProfitMargin =
+            uint72((packedConfig_a & ADJUSTED_PROFIT_MARGIN_MASK) >> ADJUSTED_PROFIT_MARGIN_SHIFT);
+        uint72 minimumKinkRate = uint72((packedConfig_a & MINIMUM_KINK_RATE_MASK) >> MINIMUM_KINK_RATE_SHIFT);
+        uint24 adjustedAboveKinkSlope =
+            uint24((packedConfig_a & ADJUSTED_ABOVE_KINK_SLOPE_MASK) >> ADJUSTED_ABOVE_KINK_SLOPE_SHIFT);
+        uint24 minimumAboveKinkSlope =
+            uint24((packedConfig_a & MINIMUM_ABOVE_KINK_SLOPE_MASK) >> MINIMUM_ABOVE_KINK_SLOPE_SHIFT);
+        uint16 adjustedReserveFactor =
+            uint16((packedConfig_a & ADJUSTED_RESERVE_FACTOR_MASK) >> ADJUSTED_RESERVE_FACTOR_SHIFT);
+
+        uint16 minimumReserveFactor =
+            uint16((packedConfig_b & MINIMUM_RESERVE_FACTOR_MASK) >> MINIMUM_RESERVE_FACTOR_SHIFT);
+        uint72 adjustedBaseRate = uint72((packedConfig_b & ADJUSTED_BASE_RATE_MASK) >> ADJUSTED_BASE_RATE_SHIFT);
+        uint72 minimumBaseRate = uint72((packedConfig_b & MINIMUM_BASE_RATE_MASK) >> MINIMUM_BASE_RATE_SHIFT);
+        uint16 optimalUtilizationRate = uint16((packedConfig_b & OPTIMAL_UTILIZATION_MASK) >> OPTIMAL_UTILIZATION_SHIFT);
+        uint16 distributionFactor = uint16((packedConfig_b & DISTRIBUTION_FACTOR_MASK) >> DISTRIBUTION_FACTOR_SHIFT);
 
         ilkData = IlkData({
-            minimumProfitMargin: minimumProfitMargin,
-            reserveFactor: reserveFactor,
-            optimalUtilizationRate: optimalUilization,
+            adjustedProfitMargin: adjustedProfitMargin,
+            minimumKinkRate: minimumKinkRate,
+            adjustedAboveKinkSlope: adjustedAboveKinkSlope,
+            minimumAboveKinkSlope: minimumAboveKinkSlope,
+            adjustedReserveFactor: adjustedReserveFactor,
+            minimumReserveFactor: minimumReserveFactor,
+            adjustedBaseRate: adjustedBaseRate,
+            minimumBaseRate: minimumBaseRate,
+            optimalUtilizationRate: optimalUtilizationRate,
             distributionFactor: distributionFactor
         });
     }
@@ -151,30 +225,63 @@ contract InterestRate {
     )
         external
         view
-        returns (uint256 borrowRate, uint256 reserveFactor)
+        returns (uint256, uint256)
     {
-        IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
-
         // TODO: Validate input
         uint256 collateralApy = apyOracle.apys(ilkIndex);
 
-        // TODO: Above kink rate borrow rate
-        uint256 distributionFactorRay = _scaleToRay(uint256(ilkData.distributionFactor), 2);
-        uint256 collateralApyRay = _scaleToRay(collateralApy, 6);
-        uint256 minimumProfitMarginRay = _scaleToRay(uint256(ilkData.minimumProfitMargin), 18);
-        uint256 optimalUtilizationRateRay = _scaleToRay(ilkData.optimalUtilizationRate, 18);
+        IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
+
+        uint256 distributionFactorRay = _scaleToRay(ilkData.distributionFactor, 4);
+        uint256 collateralApyRay = _scaleToRay(collateralApy, 8);
+        uint256 optimalUtilizationRateRay = _scaleToRay(ilkData.optimalUtilizationRate, 4);
         totalEthSupply = _scaleToRay(totalEthSupply, 18);
 
-        uint256 slope = (collateralApyRay - minimumProfitMarginRay).roundedRayDiv(optimalUtilizationRateRay);
+        uint256 collateralApyRayInSeconds = collateralApyRay / SECONDS_IN_A_DAY;
 
         uint256 utilizationRate =
-            totalEthSupply == 0 ? 0 : totalDebt.roundedRayDiv(totalEthSupply.roundedRayMul(distributionFactorRay));
+        // Prevent division by 0
+         totalEthSupply == 0 ? 0 : totalDebt.rayDivDown(totalEthSupply.rayMulDown(distributionFactorRay));
 
-        borrowRate = utilizationRate.roundedRayMul(slope) + RAY;
+        uint256 adjustedBelowKinkSlope = (
+            collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate
+        ).rayDivDown(optimalUtilizationRateRay);
 
-        reserveFactor = ilkData.reserveFactor;
+        uint256 minimumBelowKinkSlope =
+            (ilkData.minimumKinkRate - ilkData.minimumBaseRate).rayDivDown(optimalUtilizationRateRay);
+
+        if (utilizationRate < optimalUtilizationRateRay) {
+            uint256 adjustedBorrowRate = adjustedBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.adjustedBaseRate;
+            uint256 minimumBorrowRate = minimumBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.minimumBaseRate;
+
+            if (adjustedBorrowRate < minimumBorrowRate) {
+                return (minimumBorrowRate, ilkData.minimumReserveFactor);
+            } else {
+                return (adjustedBorrowRate, ilkData.adjustedReserveFactor);
+            }
+        } else {
+            uint256 excessUtil = utilizationRate - optimalUtilizationRateRay;
+
+            uint256 adjustedNormalRate =
+                adjustedBelowKinkSlope.rayMulDown(optimalUtilizationRateRay) + ilkData.adjustedBaseRate;
+            uint256 minimumNormalRate =
+                minimumBelowKinkSlope.rayMulDown(optimalUtilizationRateRay) + ilkData.minimumBaseRate;
+
+            // [WAD] * [RAY] / [WAD] = [RAY]
+            uint256 adjustedBorrowRate =
+                uint256(ilkData.adjustedAboveKinkSlope).wadMulDown(excessUtil) + adjustedNormalRate;
+            uint256 minimumBorrowRate =
+                uint256(ilkData.minimumAboveKinkSlope).wadMulDown(excessUtil) + minimumNormalRate;
+
+            if (adjustedBorrowRate < minimumBorrowRate) {
+                return (minimumBorrowRate, ilkData.minimumReserveFactor);
+            } else {
+                return (adjustedBorrowRate, ilkData.adjustedReserveFactor);
+            }
+        }
     }
 
+    // TODO: Use library function
     function _scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
         return value * (10 ** 27) / (10 ** scale);
     }

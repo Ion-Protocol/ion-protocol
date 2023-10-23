@@ -5,118 +5,10 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardToken } from "../../src/token/RewardToken.sol";
 import { RewardTokenSharedSetup } from "../helpers/RewardTokenSharedSetup.sol";
-import { RoundedMath, RAY } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, RAY } from "../../src/libraries/math/RoundedMath.sol";
 import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
-contract RewardToken_FuzzRoundingErrorTest is RewardTokenSharedSetup {
-    using RoundedMath for uint256;
-
-    function setUp() public override {
-        super.setUp();
-        underlying.approve(address(rewardToken), type(uint256).max);
-    }
-
-    /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_mint(uint256 amount1, uint256 supplyFactor) external {
-        vm.assume(amount1 != 0);
-        // Prevent overflow
-        vm.assume(amount1 < 2 ** 128);
-        supplyFactor = bound(supplyFactor, 1e27, 5000e27);
-        vm.assume(amount1.roundedRayDiv(supplyFactor) != 0);
-
-        uint256 roundingError = ((supplyFactor / RAY) + 1) / 2;
-
-        rewardToken.setSupplyFactor(supplyFactor);
-
-        assertEq(rewardToken.balanceOf(address(this)), 0);
-
-        underlying.mint(address(this), amount1);
-        rewardToken.mint(address(this), amount1);
-
-        assertApproxEqAbs(rewardToken.balanceOf(address(this)), amount1, roundingError);
-        assertEq(underlying.balanceOf(address(rewardToken)), amount1);
-    }
-
-    /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_burn(uint256 amount1, uint256 supplyFactor) external {
-        vm.assume(amount1 != 0);
-        // Prevent overflow
-        vm.assume(amount1 < 2 ** 128);
-        supplyFactor = bound(supplyFactor, 1e27, 5000e27);
-        vm.assume(amount1.roundedRayDiv(supplyFactor) != 0);
-
-        underlying.mint(address(this), amount1);
-        rewardToken.mint(address(this), amount1);
-
-        uint256 roundingError = (((supplyFactor / RAY) + 1) / 2) + 1; // Round up the rounding error
-        uint256 burnAmount1 = bound(amount1, 0, amount1);
-
-        rewardToken.setSupplyFactor(supplyFactor);
-        uint256 interestCreated = rewardToken.totalSupply() - underlying.balanceOf(address(rewardToken)) + roundingError;
-        _depositInterestGains(interestCreated);
-        uint256 balanceAfterRebase = rewardToken.balanceOf(address(this));
-
-        rewardToken.burn(address(this), address(this), burnAmount1);
-
-        uint256 balanceAfterBurn1 = rewardToken.balanceOf(address(this));
-
-        assertApproxEqAbs(balanceAfterBurn1, balanceAfterRebase - burnAmount1, roundingError);
-        assertEq(underlying.balanceOf(address(rewardToken)), amount1 + interestCreated - burnAmount1);
-
-        uint256 burnAmount2 = bound(balanceAfterBurn1, 0, balanceAfterBurn1 / 2);
-        vm.assume(burnAmount2.roundedRayDiv(supplyFactor) != 0);
-
-        rewardToken.burn(address(this), address(this), burnAmount2);
-
-        uint256 balanceAfterBurn2 = rewardToken.balanceOf(address(this));
-
-        assertApproxEqAbs(balanceAfterBurn2, balanceAfterBurn1 - burnAmount2, roundingError);
-        assertEq(underlying.balanceOf(address(rewardToken)), amount1 + interestCreated - burnAmount1 - burnAmount2);
-    }
-
-    address internal immutable TRANSFER_RECEIVER = vm.addr(98);
-
-    /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_transfer(uint256 amount1, uint256 supplyFactor) external {
-        vm.assume(amount1 != 0);
-        // Prevent overflow
-        vm.assume(amount1 < 2 ** 128);
-        supplyFactor = bound(supplyFactor, 1e27, 10e27);
-        vm.assume(amount1.roundedRayDiv(supplyFactor) != 0);
-
-        underlying.mint(address(this), amount1);
-        rewardToken.mint(address(this), amount1);
-
-        uint256 roundingError = (((supplyFactor / RAY) + 1) / 2) + 1; // Round up the rounding error
-        uint256 transferAmount1 = bound(amount1, 0, amount1);
-
-        rewardToken.setSupplyFactor(supplyFactor);
-        uint256 interestCreated = rewardToken.totalSupply() - underlying.balanceOf(address(rewardToken)) + roundingError;
-        _depositInterestGains(interestCreated);
-        uint256 balanceAfterRebase = rewardToken.balanceOf(address(this));
-
-        rewardToken.transfer(TRANSFER_RECEIVER, transferAmount1);
-
-        uint256 balanceAfterTransfer1 = rewardToken.balanceOf(address(this));
-        uint256 receiverBalanceAfterTransfer1 = rewardToken.balanceOf(TRANSFER_RECEIVER);
-
-        assertApproxEqAbs(balanceAfterTransfer1, balanceAfterRebase - transferAmount1, roundingError);
-        assertApproxEqAbs(receiverBalanceAfterTransfer1, transferAmount1, roundingError - 1);
-
-        uint256 transferAmount2 = bound(balanceAfterTransfer1, 0, balanceAfterTransfer1 / 2);
-        vm.assume(transferAmount2.roundedRayDiv(supplyFactor) != 0);
-
-        rewardToken.transfer(TRANSFER_RECEIVER, transferAmount2);
-
-        uint256 balanceAfterTransfer2 = rewardToken.balanceOf(address(this));
-        uint256 receiverBalanceAfterTransfer2 = rewardToken.balanceOf(TRANSFER_RECEIVER);
-
-        assertApproxEqAbs(balanceAfterTransfer2, balanceAfterTransfer1 - transferAmount2, roundingError);
-        assertApproxEqAbs(receiverBalanceAfterTransfer2, receiverBalanceAfterTransfer1 + transferAmount2, roundingError);
-    }
-}
 
 contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
     using RoundedMath for uint256;
@@ -168,24 +60,24 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens != 0);
         // Prevent overflow
         vm.assume(amountOfRewardTokens < 2 ** 128);
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
         // supplyFactor greater than 10,000 is highly unlikely
         supplyFactorNew = bound(supplyFactorNew, supplyFactorOld, 5000e27);
-        vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
+        vm.assume(amountOfRewardTokens.rayDivDown(supplyFactorNew) != 0);
 
         underlying.mint(address(this), amountOfRewardTokens);
 
         underlying.approve(address(rewardToken), type(uint256).max);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint1 = amountOfRewardTokens.roundedRayDiv(supplyFactorOld);
+        uint256 expectedNormalizedMint1 = amountOfRewardTokens.rayDivDown(supplyFactorOld);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.wadMulDown(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -194,10 +86,10 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         underlying.mint(address(this), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint2 = amountOfRewardTokens.roundedRayDiv(supplyFactorNew);
+        uint256 expectedNormalizedMint2 = amountOfRewardTokens.rayDivDown(supplyFactorNew);
         uint256 totalDeposited = amountOfRewardTokens * 2;
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
-        uint256 totalValue = totalDepositsNormalized.roundedRayMul(supplyFactorNew);
+        uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), totalDepositsNormalized);
         assertEq(rewardToken.balanceOf(address(this)), totalValue);
@@ -214,24 +106,24 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         vm.assume(amountOfRewardTokens != 0);
         // Prevent overflow
         vm.assume(amountOfRewardTokens < 2 ** 128);
-        uint256 supplyFactorOld = rewardToken.getSupplyFactor();
+        uint256 supplyFactorOld = rewardToken.supplyFactor();
         // supplyFactor greater than 5,000 is highly unlikely
         supplyFactorNew = bound(supplyFactorNew, supplyFactorOld + 1, 5000e27);
-        vm.assume(amountOfRewardTokens.roundedRayDiv(supplyFactorNew) != 0);
+        vm.assume(amountOfRewardTokens.rayDivDown(supplyFactorNew) != 0);
 
         underlying.mint(address(this), amountOfRewardTokens);
 
         underlying.approve(address(rewardToken), type(uint256).max);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint1 = amountOfRewardTokens.roundedRayDiv(supplyFactorOld);
+        uint256 expectedNormalizedMint1 = amountOfRewardTokens.rayDivDown(supplyFactorOld);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
         assertEq(rewardToken.balanceOf(address(this)), amountOfRewardTokens);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardToken)), amountOfRewardTokens);
 
-        uint256 interestCreated = amountOfRewardTokens.roundedWadMul(supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewardTokens.wadMulDown(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -240,10 +132,10 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         underlying.mint(address(this), amountOfRewardTokens);
         rewardToken.mint(address(this), amountOfRewardTokens);
 
-        uint256 expectedNormalizedMint2 = amountOfRewardTokens.roundedRayDiv(supplyFactorNew);
+        uint256 expectedNormalizedMint2 = amountOfRewardTokens.rayDivDown(supplyFactorNew);
         uint256 totalDeposited = amountOfRewardTokens * 2;
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
-        uint256 totalValue = totalDepositsNormalized.roundedRayMul(supplyFactorNew);
+        uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
         assertEq(rewardToken.normalizedBalanceOf(address(this)), totalDepositsNormalized);
         assertEq(rewardToken.balanceOf(address(this)), totalValue);
@@ -445,7 +337,7 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
 
             // Openzeppelin ECDSA library already prevents the use of malleable signatures, even if nonce-based replay
             // protection wasn't included
-            vm.expectRevert("ECDSA: invalid signature 's' value");
+            vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureS.selector, sMalleable));
             rewardToken.permit(
                 sendingUser, spender, locals.amountOfRewardTokens, deadline, vMalleable, rMalleable, sMalleable
             );

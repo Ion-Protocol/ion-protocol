@@ -5,7 +5,7 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IERC20Errors } from "./IERC20Errors.sol";
-import { RoundedMath, RAY } from "../math/RoundedMath.sol";
+import { RoundedMath, RAY } from "../libraries/math/RoundedMath.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -15,7 +15,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
  * @title RewardToken
  * @notice Heavily inspired by Aave's `AToken`
  */
-contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
+abstract contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
     using RoundedMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -124,7 +124,6 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
         );
     }
 
-    // TODO: Do rounding in protocol's favor
     /**
      *
      * @param user to burn tokens from
@@ -215,69 +214,10 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
         // The amount to mint can easily be very small since it is a fraction of the interest accrued.
         // In that case, the treasury will experience a (very small) loss, but it
         // wont cause potentially valid transactions to fail.
-        _mintNormalized(_treasury, amount.roundedRayDiv(_supplyFactor));
+        _mintNormalized(_treasury, amount.rayDivDown(_supplyFactor));
 
         emit Transfer(address(0), _treasury, amount);
         emit Mint(_treasury, amount, _supplyFactor);
-    }
-
-    function name() public view returns (string memory) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        return $.name;
-    }
-
-    function symbol() public view returns (string memory) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        return $.symbol;
-    }
-
-    /**
-     * @dev Current token balance
-     * @param user to get balance of
-     */
-    function balanceOf(address user) public view returns (uint256) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        return $._normalizedBalances[user].roundedRayMul($.supplyFactor);
-    }
-
-    /**
-     * @dev Accounting is done in normalized balances
-     * @param user to get normalized balance of
-     */
-    function normalizedBalanceOf(address user) external view returns (uint256) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        return $._normalizedBalances[user];
-    }
-
-    /**
-     * @dev Current total supply
-     */
-    function totalSupply() public view returns (uint256) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
-
-        if (_normalizedTotalSupply == 0) {
-            return 0;
-        }
-
-        return _normalizedTotalSupply.roundedRayMul($.supplyFactor);
-    }
-
-    function normalizedTotalSupply() public view returns (uint256) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        return $.normalizedTotalSupply;
-    }
-
-    function decimals() public view returns (uint8) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        return $.decimals;
     }
 
     /**
@@ -358,17 +298,6 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
     }
 
     /**
-     * @dev Returns current allowance
-     * @param owner of tokens
-     * @param spender of tokens
-     */
-    function allowance(address owner, address spender) public view returns (uint256) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
-
-        return $._allowances[owner][spender];
-    }
-
-    /**
      * @dev Can only be called by owner of the tokens
      * @param to transfer to
      * @param amount to transfer
@@ -401,7 +330,7 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
-        uint256 amountNormalized = amount.roundedRayDiv(_supplyFactor);
+        uint256 amountNormalized = amount.rayDivDown(_supplyFactor);
 
         uint256 oldSenderBalance = $._normalizedBalances[from];
         if (oldSenderBalance < amountNormalized) {
@@ -473,19 +402,91 @@ contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors
 
     function _setSupplyFactor(uint256 newSupplyFactor) internal {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
-
         $.supplyFactor = newSupplyFactor;
     }
 
-    function getSupplyFactor() public view returns (uint256) {
-        RewardTokenStorage storage $ = _getRewardTokenStorage();
+    // --- Getters ---
 
-        return $.supplyFactor;
+    function underlying() public view returns (IERC20) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.underlying;
     }
 
-    function getUnderlying() public view returns (IERC20) {
+    function decimals() public view returns (uint8) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.decimals;
+    }
+
+    /**
+     * @dev Current token balance
+     * @param user to get balance of
+     */
+    function balanceOf(address user) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._normalizedBalances[user].rayMulDown($.supplyFactor);
+    }
+
+    /**
+     * @dev Accounting is done in normalized balances
+     * @param user to get normalized balance of
+     */
+    function normalizedBalanceOf(address user) external view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._normalizedBalances[user];
+    }
+
+    /**
+     * @dev Returns current allowance
+     * @param owner of tokens
+     * @param spender of tokens
+     */
+    function allowance(address owner, address spender) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._allowances[owner][spender];
+    }
+
+    function nonces(address owner) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.nonces[owner];
+    }
+
+    function name() public view returns (string memory) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.name;
+    }
+
+    function symbol() public view returns (string memory) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.symbol;
+    }
+
+    function treasury() public view returns (address) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.treasury;
+    }
+
+    /**
+     * @dev Current total supply
+     */
+    function totalSupply() public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
-        return $.underlying;
+        uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
+
+        if (_normalizedTotalSupply == 0) {
+            return 0;
+        }
+
+        return _normalizedTotalSupply.rayMulDown($.supplyFactor);
+    }
+
+    function normalizedTotalSupply() public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.normalizedTotalSupply;
+    }
+
+    function supplyFactor() public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.supplyFactor;
     }
 }
