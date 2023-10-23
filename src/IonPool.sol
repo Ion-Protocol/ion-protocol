@@ -87,7 +87,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant IonPoolStorageLocation = 0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e00;
 
-    function _getIonPoolStorage() private pure returns (IonPoolStorage storage $) {
+    function _getIonPoolStorage() internal pure returns (IonPoolStorage storage $) {
         assembly {
             $.slot := IonPoolStorageLocation
         }

@@ -37,6 +37,8 @@ interface IStaderDeposit {
     function deposit(address _receiver) external payable;
 
     function previewDeposit(uint256 _assets) external view returns (uint256);
+
+    function getExchangeRate() external view returns (uint256);
 }
 
 interface ISwellDeposit {

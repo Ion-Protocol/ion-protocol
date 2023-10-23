@@ -3,13 +3,18 @@ pragma solidity 0.8.21;
 
 import { IonPool } from "../../IonPool.sol";
 import { IonRegistry } from "./../IonRegistry.sol";
-import { UniswapHandler } from "./base/UniswapHandler.sol";
+import { IonHandlerBase } from "./base/IonHandlerBase.sol";
+import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
+import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
 import { ILidoWStEthDeposit } from "../../interfaces/DepositInterfaces.sol";
+import { LidoLibrary } from "../../libraries/LidoLibrary.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-contract WstEthHandler is UniswapHandler {
+contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
+    using LidoLibrary for ILidoWStEthDeposit;
+
     error WstEthDepositFailed();
 
     constructor(
@@ -20,13 +25,14 @@ contract WstEthHandler is UniswapHandler {
         IUniswapV3Pool _wstEthUniswapPool,
         uint24 _poolFee
     )
+        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry)
         // token0 is wstEth
-        UniswapHandler(_ilkIndex, _ionPool, _ionRegistry, _factory, _wstEthUniswapPool, _poolFee, false)
+        UniswapFlashswapHandler(_factory, _wstEthUniswapPool, _poolFee, false)
     { }
 
     function _getLstAmountOut(uint256 amountWeth) internal view override returns (uint256) {
         // lstToken and depositContract are same
-        return ILidoWStEthDeposit(address(lstToken)).getWstETHByStETH(amountWeth);
+        return ILidoWStEthDeposit(address(lstToken)).getLstAmountOutForEthAmountIn(amountWeth);
     }
 
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {

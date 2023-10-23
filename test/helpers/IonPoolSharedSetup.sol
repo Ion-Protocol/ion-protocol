@@ -62,6 +62,12 @@ contract IonPoolExposed is IonPool {
     // IonPool(_underlying, _treasury, _decimals, _name, _symbol, _defaultAdmin, _interestRateModule)
     { }
 
+    function setRate(uint8 ilkIndex, uint104 newRate) external {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+
+        $.ilks[ilkIndex].rate = newRate;
+    }
+
     function setSupplyFactor(uint256 factor) external {
         _setSupplyFactor(factor);
     }

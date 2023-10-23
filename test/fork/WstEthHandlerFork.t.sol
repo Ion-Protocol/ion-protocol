@@ -16,6 +16,7 @@ import { Vm } from "forge-std/Vm.sol";
 import { console2 } from "forge-std/console2.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
+// TODO: Test with rate change
 contract WstEthHandler_ForkBase is IonHandler_ForkBase {
     uint8 internal constant ilkIndex = 0;
     IUniswapV3Pool internal constant WSTETH_ETH_UNISWAP_POOL =
@@ -52,7 +53,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     function testFork_wstEthFlashLoanCollateral() external {
         uint256 initialDeposit = 1e18; // in wstEth
         uint256 resultingCollateral = 5e18; // in wstEth
-        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmount(resultingCollateral - initialDeposit);
+        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
@@ -70,7 +71,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     function testFork_wstEthFlashLoanWeth() external {
         uint256 initialDeposit = 1e18; // in wstEth
         uint256 resultingCollateral = 5e18; // in wstEth
-        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmount(resultingCollateral - initialDeposit);
+        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
@@ -94,7 +95,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -112,7 +113,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         vm.recordLogs();
-        wstEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -136,7 +137,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         uint256 debtToRemove = ionPool.normalizedDebt(ilkIndex, address(this)) * ionPool.rate(ilkIndex) / RAY;
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashSwapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -160,7 +161,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
     {
         initialDeposit = bound(initialDeposit, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
-        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmount(resultingCollateral - initialDeposit);
+        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
@@ -179,7 +180,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
     function testForkFuzz_wstEthFlashLoanWeth(uint256 initialDeposit, uint256 resultingCollateralMultiplier) external {
         initialDeposit = bound(initialDeposit, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
-        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmount(resultingCollateral - initialDeposit);
+        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
@@ -210,7 +211,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -228,7 +229,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         vm.recordLogs();
-        wstEthHandler.flashSwapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -252,7 +253,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         uint256 debtToRemove = ionPool.normalizedDebt(ilkIndex, address(this)) * ionPool.rate(ilkIndex) / RAY;
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashSwapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
