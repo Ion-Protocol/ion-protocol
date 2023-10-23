@@ -1,10 +1,10 @@
 pragma solidity ^0.8.13;
 
-import { IStaderOracle } from "src/interfaces/IProviders.sol";
+import { IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { RoundedMath } from "src/math/RoundedMath.sol";
-import "forge-std/console.sol"; 
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+
 // https://etherscan.io/address/0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737
 
 uint8 constant ethXDecimals = 18;

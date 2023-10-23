@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.13;
 
-import { ILido, IWstEth } from "src/interfaces/IProviders.sol"; 
+import { ILido, IWstEth } from "src/interfaces/ProviderInterfaces.sol"; 
 import { ReserveOracle } from "./ReserveOracle.sol";
-import { RoundedMath } from "src/math/RoundedMath.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { console2 } from "forge-std/console2.sol";
 
@@ -27,19 +27,10 @@ contract StEthReserveOracle is ReserveOracle {
     // ETH / wstETH = (ETH / stETH) * (stETH / wstETH)
     // NOTE: stEth might not be deployed until the offchain reserve oracle for stEth is production ready. 
     function _getProtocolExchangeRate() internal view override returns (uint72) {
-        console2.log("stETH per wstEth: ", IWstEth(wstEth).stEthPerToken());
-        console2.log("supply: ", ILido(lido).totalSupply()); 
-        
         uint256 bufferedEther = ILido(lido).getBufferedEther(); 
         ( , , uint256 beaconBalance) = ILido(lido).getBeaconStat(); 
-
-        console2.log("bufferedEther: ", bufferedEther); 
-        console2.log("beaconBalance: ", beaconBalance); 
         uint256 ethPerStEth = (beaconBalance + bufferedEther).wadDivDown(ILido(lido).totalSupply());
         uint256 stEthPerWstEth = IWstEth(wstEth).stEthPerToken(); 
-        console2.log("steth per wsteth: ", stEthPerWstEth); 
         return ethPerStEth.wadMulDown(stEthPerWstEth).toUint72();  
-
-        console2.log("exchangeRate: ", exchangeRate);  
     }
 }

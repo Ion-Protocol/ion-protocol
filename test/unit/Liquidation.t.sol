@@ -4,8 +4,7 @@ pragma solidity ^0.8.21;
 
 import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
-import { RoundedMath } from "src/math/RoundedMath.sol";
-import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import "forge-std/console.sol";
 
 contract MockstEthReserveOracle {

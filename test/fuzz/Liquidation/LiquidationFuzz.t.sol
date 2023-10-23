@@ -2,20 +2,9 @@
 pragma solidity 0.8.21;
 
 import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
-import { RoundedMath, WAD, RAY } from "src/math/RoundedMath.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { Liquidation } from "src/Liquidation.sol";
-import "forge-std/console.sol";
 
-// Traces:
-//  [2261284] LiquidationFuzzTest::testFuzz_AssertCheckFixedConfigsNoRate(6554, 2447769056616533639 [2.447e18], 14066
-// [1.406e4])
-
-// 1377293678788981892 * 1 ether * 0.8 ether / 1 ether =
-//
-
-// depositAmt, borrowAmt, exchangeRate 2, 1, 250000000000000000
-// depositAmt, borrowAmt, exchangeRate
-// depositAmt, borrowAmt, exchangeRate
 contract LiquidationFuzzTest is LiquidationSharedSetup {
     using RoundedMath for uint256;
 
@@ -63,7 +52,6 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
         vm.assume(borrowAmt * WAD / depositAmt < args.liquidationThreshold);
 
         // new exchangeRate needs to result in healthRatio < 1
-        console.log("assume: ", depositAmt * exchangeRate / WAD * args.liquidationThreshold / borrowAmt);
 
         vm.assume(depositAmt * exchangeRate / WAD * args.liquidationThreshold / borrowAmt < 1 ether);
 
@@ -166,8 +154,6 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
 
         // results
         // if bad debt => protocol confiscates, resulting normalized and collateral is both zero
-        console.log("collateral: ", ionPool.collateral(ilkIndex, BORROWER));
-        console.log("debt: ", ionPool.normalizedDebt(ilkIndex, BORROWER));
         assert(ionPool.collateral(ilkIndex, BORROWER) == 0);
         assert(ionPool.normalizedDebt(ilkIndex, BORROWER) == 0);
     }
@@ -216,9 +202,6 @@ contract LiquidationFuzzTest is LiquidationSharedSetup {
         vm.assume(results.gemOut <= depositAmt);
 
         // but should leave dust
-        console.log("borrowAmt * args.rate: ", borrowAmt * args.rate);
-        console.log("results.repay rad: ", results.repay.scaleToRad(18));
-        console.log("dust: ", dust);
         vm.assume(borrowAmt * args.rate - results.repay.scaleToRad(18) < dust);
 
         // actions

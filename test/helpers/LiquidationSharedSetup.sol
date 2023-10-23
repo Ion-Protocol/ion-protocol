@@ -4,9 +4,8 @@ pragma solidity ^0.8.21;
 
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
-import { GemJoin } from "../../src/join/GemJoin.sol";
-import { RoundedMath } from "src/math/RoundedMath.sol";
-import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
+import { GemJoin } from "src/join/GemJoin.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import "forge-std/console.sol";
 
 contract MockReserveOracle {
@@ -67,8 +66,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         // create supply position
         supply(lender1, 100 ether);
 
-    
-
         // TODO: Make ReserveOracleSharedSetUp
         reserveOracle1 = new MockReserveOracle();
         reserveOracle2 = new MockReserveOracle();
@@ -107,11 +104,11 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
      */
     function borrow(address borrower, uint8 ilkIndex, uint256 depositAmt, uint256 borrowAmt) internal {
         // mint
-        collaterals[ilkIndex].mint(borrower, depositAmt);
+        mintableCollaterals[ilkIndex].mint(borrower, depositAmt);
         vm.startPrank(borrower);
         // join
         gemJoin = gemJoins[ilkIndex];
-        collaterals[ilkIndex].approve(address(gemJoin), depositAmt);
+        mintableCollaterals[ilkIndex].approve(address(gemJoin), depositAmt);
         gemJoin.join(borrower, depositAmt);
         // move collateral to vault
         ionPool.moveGemToVault(ilkIndex, borrower, borrower, depositAmt);

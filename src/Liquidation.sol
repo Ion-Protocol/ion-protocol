@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { RoundedMath, WAD, RAY } from "../src/math/RoundedMath.sol";
+import { RoundedMath, WAD, RAY } from "./libraries/math/RoundedMath.sol";
 import { IonPool } from "src/IonPool.sol";
 import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
 import "forge-std/console.sol";
@@ -68,7 +68,7 @@ contract Liquidation {
         RESERVE_FACTOR = _reserveFactor;
         MAX_DISCOUNT = _maxDiscount;
 
-        underlying = ionPool.getUnderlying();
+        underlying = ionPool.underlying();
         underlying.approve(address(ionPool), type(uint256).max); // approve ionPool to transfer the underlying asset
 
         liquidationThreshold0 = _liquidationThresholds[0]; 

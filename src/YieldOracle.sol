@@ -101,7 +101,7 @@ contract YieldOracle is IYieldOracle {
     // TODO: Move to a library
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            IWstEth lido = ILidoWstEth(address0);
+            IWstEth lido = IWstEth(address0);
             exchangeRate = (lido.stEthPerToken()).toUint64();
         } else if (ilkIndex == 1) {
             // TODO: Use stader deposit contract `getExchangeRate()` instead

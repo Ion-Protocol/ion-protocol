@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
 import { Liquidation } from "src/Liquidation.sol";
-import { RoundedMath, WAD, RAY } from "src/math/RoundedMath.sol";
+import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
 
 // pushes spot price from value feeds to the IonPool contract
 abstract contract SpotOracle {

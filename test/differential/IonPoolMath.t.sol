@@ -19,7 +19,7 @@ contract IonPoolExposed is IonPool {
         address initialDefaultAdmin,
         InterestRate _interestRateModule
     ) 
-    IonPool(_underlying, _treasury, decimals_, name_, symbol_, initialDefaultAdmin, _interestRateModule)
+    // IonPool(_underlying, _treasury, decimals_, name_, symbol_, initialDefaultAdmin, _interestRateModule)
     { }
 
     function add(uint256 x, int256 y) external pure returns (uint256 z) {

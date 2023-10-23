@@ -1,9 +1,8 @@
 pragma solidity ^0.8.13;
 
-import { ISwEth } from "src/interfaces/IProviders.sol";
+import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
 
 // https://etherscan.io/token/0xf951E335afb289353dc249e82926178EaC7DEd78#readProxyContract
 contract SwEthReserveOracle is ReserveOracle {
