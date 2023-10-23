@@ -6,8 +6,6 @@ import { IonPool } from "src/IonPool.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { RoundedMath, WAD, RAY } from "src/math/RoundedMath.sol";
 
-import "forge-std/console2.sol";
-
 // pushes spot price from value feeds to the IonPool contract
 abstract contract SpotOracle {
     using RoundedMath for uint256;

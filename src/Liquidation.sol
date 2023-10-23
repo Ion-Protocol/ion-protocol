@@ -9,7 +9,7 @@ import { IonPool } from "src/IonPool.sol";
 import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
 import "forge-std/console.sol";
 
-uint32 constant ILK_COUNT = 8;
+uint8 constant ILK_COUNT = 8; 
 
 contract Liquidation {
     using SafeERC20 for IERC20;
@@ -39,7 +39,6 @@ contract Liquidation {
     address public immutable protocol; // receives confiscated vault debt and collateral 
 
     IonPool public immutable ionPool;
-    ReserveOracle public immutable reserveOracle;
     IERC20 public immutable underlying;
 
     struct LiquidateArgs {
@@ -55,16 +54,14 @@ contract Liquidation {
 
     constructor(
         address _ionPool,
-        address _reserveOracle,
         address _revenueRecipient,
-        uint64[] memory _liquidationThresholds,
         address[] memory _exchangeRateOracles, 
+        uint64[ILK_COUNT] memory _liquidationThresholds,
         uint256 _targetHealth,
         uint256 _reserveFactor,
         uint256 _maxDiscount
     ) {
         ionPool = IonPool(_ionPool);
-        reserveOracle = ReserveOracle(_reserveOracle);
         revenueRecipient = _revenueRecipient;
 
         TARGET_HEALTH = _targetHealth;

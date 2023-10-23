@@ -5,7 +5,6 @@ pragma solidity ^0.8.21;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "forge-std/console.sol"; 
 
 // overridden by a collateral-specific ReserveOracle contract
 uint8 constant FEED_COUNT = 3;  
@@ -85,12 +84,10 @@ abstract contract ReserveOracle is Ownable {
             val = ((feed0ExchangeRate + feed1ExchangeRate) / uint256(quorum)).toUint72(); 
             return val.toUint72(); 
         } else if (quorum == 3) { 
-            console.log("in quorum 3"); 
             uint256 feed0ExchangeRate = IReserveFeed(feed0).getExchangeRate(_ilkIndex); 
             uint256 feed1ExchangeRate = IReserveFeed(feed1).getExchangeRate(_ilkIndex); 
             uint256 feed2ExchangeRate = IReserveFeed(feed2).getExchangeRate(_ilkIndex);
             val = ((feed0ExchangeRate + feed1ExchangeRate + feed2ExchangeRate) / uint256(quorum)).toUint72();
-            console.log("val: ", val); 
             return val.toUint72(); 
         }
     }

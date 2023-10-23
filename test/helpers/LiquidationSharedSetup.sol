@@ -9,7 +9,7 @@ import { RoundedMath } from "src/math/RoundedMath.sol";
 import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
 import "forge-std/console.sol";
 
-contract MockstEthReserveOracle {
+contract MockReserveOracle {
     uint256 public exchangeRate;
 
     function setExchangeRate(uint256 _exchangeRate) public {
@@ -28,11 +28,17 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     uint256 constant WAD = 1e18;
     uint256 constant RAY = 1e27;
 
-    uint32 constant ILK_COUNT = 8; // NOTE: Need to match with the ILK_COUNT in Liquidation.sol
+    uint32 constant ILK_COUNT = 8;
 
     Liquidation public liquidation;
     GemJoin public gemJoin;
-    MockstEthReserveOracle public reserveOracle;
+
+    MockReserveOracle public reserveOracle1; 
+    MockReserveOracle public reserveOracle2; 
+    MockReserveOracle public reserveOracle3; 
+
+    address[] public exchangeRateOracles; 
+
 
     uint8 public ilkIndex;
 
@@ -61,8 +67,14 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         // create supply position
         supply(lender1, 100 ether);
 
+    
+
         // TODO: Make ReserveOracleSharedSetUp
-        reserveOracle = new MockstEthReserveOracle();
+        reserveOracle1 = new MockReserveOracle();
+        reserveOracle2 = new MockReserveOracle();
+        reserveOracle3 = new MockReserveOracle();
+
+        exchangeRateOracles = [address(reserveOracle1), address(reserveOracle2), address(reserveOracle3), address(0), address(0), address(0), address(0), address(0)]; 
     }
 
     /**
@@ -71,7 +83,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
      */
     function getPercentageInWad(uint8[ILK_COUNT] memory percentages)
         internal
-        returns (uint64[ILK_COUNT] memory results)
+        returns (uint64[] memory results)
     {
         for (uint8 i = 0; i < ILK_COUNT; i++) {
             results[i] = uint64((uint256(percentages[i]) * WAD) / 100);
