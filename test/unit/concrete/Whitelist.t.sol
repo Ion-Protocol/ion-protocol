@@ -30,8 +30,12 @@ contract MockModifiers {
         _;
     }
 
-    function onlyBorrowersFunction(bytes32[] memory proof) external onlyWhitelistedBorrowers(proof) { }
-    function onlyLendersFunction(bytes32[] memory proof) external onlyWhitelistedLenders(proof) { }
+    function onlyBorrowersFunction(bytes32[] memory proof) external onlyWhitelistedBorrowers(proof) returns (bool) {
+        return true; 
+     }
+    function onlyLendersFunction(bytes32[] memory proof) external onlyWhitelistedLenders(proof) returns (bool) {
+        return true; 
+     }
 }
 
 // contract MockProxyModifiers() public {
@@ -53,7 +57,7 @@ contract MockModifiers {
 //     }
 // }
 
-contract WhitelistTest is Test {
+contract WhitelistMockTest is Test {
     Whitelist whitelist;
 
     function setUp() public {
@@ -76,7 +80,16 @@ contract WhitelistTest is Test {
 
     // --- Mock Tests ---
 
-    function test_WhitelistMockBorrowerUninitializedMerkleRoot() public { }
+    function test_RevertWhen_MerkleRootUninitialized() public {
+
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist)); 
+        
+        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, address(this)));
+        mockModifiers.onlyBorrowersFunction(new bytes32[](0)); 
+        
+        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedLender.selector, address(this)));
+        mockModifiers.onlyLendersFunction(new bytes32[](0));         
+    }
 
     function test_WhitelistMockBorrowerModifiers() public {
         // generate merkle root
@@ -97,7 +110,7 @@ contract WhitelistTest is Test {
         vm.stopPrank();
     }
 
-    function test_WhitelistMockBorrowerInvalidProof() public {
+    function test_RevertWhen_WhitelistMockBorrowerInvalidProof() public {
         // generate merkle root
         // [["0x1111111111111111111111111111111111111111"],
         // ["0x2222222222222222222222222222222222222222"],
@@ -120,7 +133,7 @@ contract WhitelistTest is Test {
         vm.stopPrank();
     }
 
-    function test_WhitelistMockBorrowerInvalidAddress() public {
+    function test_RevertWhen_WhitelistMockBorrowerInvalidAddress() public {
         // generate merkle root
         // [["0x1111111111111111111111111111111111111111"],
         // ["0x2222222222222222222222222222222222222222"],
@@ -142,6 +155,89 @@ contract WhitelistTest is Test {
         vm.stopPrank();
     }
 
+    function test_ApprovedAddressCanBorrowWithoutProof() public {
+        address protocol = address(1); 
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist));
+
+        whitelist.approveProtocolWhitelist(protocol);
+        
+        vm.startPrank(protocol); 
+        assertTrue(mockModifiers.onlyBorrowersFunction(new bytes32[](0)));  
+        vm.stopPrank(); 
+    }
+
+    function test_ApprovedAddressCanLendWithoutProof() public {
+        address protocol = address(1); 
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist));
+        
+        whitelist.approveProtocolWhitelist(protocol);
+
+        vm.startPrank(protocol); 
+        assertTrue(mockModifiers.onlyLendersFunction(new bytes32[](0)));  
+        vm.stopPrank(); 
+    }
+
+    function test_RevertWhen_RevokedAddressBorrowsWithoutProof() public {
+        address protocol = address(1); 
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist));
+
+        whitelist.approveProtocolWhitelist(protocol);
+        
+        vm.startPrank(protocol); 
+        assertTrue(mockModifiers.onlyBorrowersFunction(new bytes32[](0)));  
+        vm.stopPrank(); 
+
+        whitelist.revokeProtocolWhitelist(protocol); 
+
+        vm.startPrank(protocol);
+        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, protocol));
+        mockModifiers.onlyBorrowersFunction(new bytes32[](0));
+        vm.stopPrank(); 
+    }
+
+    function test_RevertWhen_RevokedAddressLendsWithoutProof() public {
+        address protocol = address(1); 
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist));
+
+        whitelist.approveProtocolWhitelist(protocol);
+        
+        vm.startPrank(protocol); 
+        assertTrue(mockModifiers.onlyLendersFunction(new bytes32[](0)));  
+        vm.stopPrank(); 
+
+        whitelist.revokeProtocolWhitelist(protocol); 
+
+        vm.startPrank(protocol);
+        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedLender.selector, protocol));
+        mockModifiers.onlyLendersFunction(new bytes32[](0));
+        vm.stopPrank(); 
+    }
+
+    function test_Ownable2Step() public {
+
+        address newOwner = address(1); 
+
+        Whitelist whitelist = new Whitelist(0, 0); 
+        assertEq(whitelist.owner(), address(this)); 
+
+        whitelist.transferOwnership(newOwner);
+
+        assertEq(whitelist.owner(), address(this)); 
+        assertEq(whitelist.pendingOwner(), newOwner); 
+
+        vm.startPrank(newOwner); 
+        whitelist.acceptOwnership(); 
+        vm.stopPrank();
+
+        assertEq(whitelist.owner(), newOwner); 
+    }
+
+    function test_RevertWhen_UnauthorizedAddressAcceptsOwnership() public {
+
+    }
+}
+
+contract WhitelistIntegrationTest is Test {
     // --- Ion Pool ---
 
     // function test_IonPoolWhiteListValidProof() public {

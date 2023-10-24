@@ -5,6 +5,8 @@ import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
+import "forge-std/console2.sol"; 
+
 contract Whitelist is Ownable2Step {
     bytes32 public borrowersWhitelistMerkleRoot;
     bytes32 public lendersWhitelistMerkleRoot;
@@ -30,6 +32,9 @@ contract Whitelist is Ownable2Step {
 
     function approveProtocolWhitelist(address _addr) external onlyOwner {
         protocolWhitelist[_addr] = true;
+        console2.log("approve"); 
+        console2.log(_addr); 
+        console2.log(protocolWhitelist[_addr]); 
     }
 
     function revokeProtocolWhitelist(address _addr) external onlyOwner {
@@ -41,8 +46,11 @@ contract Whitelist is Ownable2Step {
      * @return true if the addr is part of the borrower whitelist or the protocol whitelist. False otherwise
      */
     function isWhitelistedBorrower(bytes32[] calldata proof, address addr) external view returns (bool) {
+        console2.log("addr: ", addr);
+        console2.log(protocolWhitelist[addr]); 
         if (protocolWhitelist[addr]) return true;
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));
+        console2.logBytes32(leaf); 
         return MerkleProof.verify(proof, borrowersWhitelistMerkleRoot, leaf);
     }
 
