@@ -17,6 +17,26 @@ interface IUniswapPoolV3 {
     ) external returns (int256, int256);
 }
 
+library StringUtils {
+    function uint256ToString(uint256 _value) internal pure returns (string memory) {
+        if (_value == 0) {
+            return "0";
+        }
+        uint256 temp = _value;
+        uint256 digits;
+        while (temp > 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (_value > 0) {
+            buffer[--digits] = bytes1(uint8(48 + _value % 10));
+            _value /= 10;
+        }
+        return string(buffer);
+    }
+}
+
 contract UniswapSwapTester is Test {
     address constant uniswapStEthAddress = 0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa;
     address constant uniswapSwEthAddress = 0x30eA22C879628514f1494d4BBFEF79D21A6B49A2;
@@ -29,7 +49,7 @@ contract UniswapSwapTester is Test {
     IUniswapPoolV3 uniswapPool;
     // if true, then we care about stETH. if false, then we care about swETH
     bool swETH_stETH_flag = true;
-    bool writeToTerminal = true;
+    bool writeToFile = true;
     
     // UNISWAP CALLBACK/HELPER FUNCTIONS
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata) external {
@@ -59,7 +79,7 @@ contract UniswapSwapTester is Test {
     }
 
     function simForkTest(int256 amountSpecified, uint160 sqrtPriceLimitX96, address poolAddress) 
-        internal {
+        internal returns (uint256, uint256, uint256) {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
         uniswapPool = IUniswapPoolV3(poolAddress);
         bool zeroForOne = swETH_stETH_flag;
@@ -93,9 +113,8 @@ contract UniswapSwapTester is Test {
         } else {
             native = stETH.balanceOf(address(this));
         }
-        if (writeToTerminal) {
-            console2.log(necessaryBalance, oldRawPrice, (percDiff * 100), native);
-        }
+        console2.log(necessaryBalance, oldRawPrice, (percDiff * 100), native);
+        return (oldRawPrice, newRawPrice, native);
     }
 
 
@@ -144,17 +163,27 @@ contract UniswapSwapTester is Test {
         for (uint256 i = 0; i < len; i++) {
             depositAmounts[i] = starting + int256(i) * increment;
         }
-        if (writeToTerminal) {
-            console2.log("amountSpecified oldPrice percentDiff swapReceieved");
+
+        string memory path = "./offchain/files/swETH_output.csv";
+        string memory header = "amountSpecified,oldPrice,newPrice,swapReceived";
+        console2.log(header);
+        if (writeToFile) {
+            vm.writeLine(path, header);
         }
 
         for (uint256 i = 0; i < len; i++) {
             int256 amountSpecified = depositAmounts[i];
-            if (!writeToTerminal) {
-                console2.log("--------------------------------------------------");
-                console2.log("[swETH] AMOUNT SPECIFIED:", amountSpecified);
+            console2.log("--------------------------------------------------");
+            console2.log("[swETH] AMOUNT SPECIFIED:", amountSpecified);
+            (uint256 oldP, uint256 newP, uint256 swapValue) = simForkTest(amountSpecified, sqrtPriceLimitX96, uniswapSwEthAddress);
+            if (writeToFile) {
+                string memory oldPString = StringUtils.uint256ToString(oldP);
+                string memory newPString = StringUtils.uint256ToString(newP);
+                string memory swapValueString = StringUtils.uint256ToString(swapValue);
+                string memory amountSpecifiedString = StringUtils.uint256ToString(uint256(amountSpecified));
+                string memory row = string(abi.encodePacked(amountSpecifiedString, ",", oldPString, ",", newPString, ",", swapValueString));
+                vm.writeLine(path, row);
             }
-            simForkTest(amountSpecified, sqrtPriceLimitX96, uniswapSwEthAddress);
         }
     }
 
