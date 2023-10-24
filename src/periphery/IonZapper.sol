@@ -14,14 +14,12 @@ contract IonZapper {
         _weth.approve(address(ionPool), type(uint256).max);
     }
 
-    function zap() public payable {
+    function zapSupply() external payable {
         uint256 amount = msg.value;
 
         weth.deposit{ value: amount }();
         ionPool.supply(msg.sender, amount);
     }
 
-    receive() external payable {
-        zap();
-    }
+    function zapDepositWstEth() external payable { }
 }

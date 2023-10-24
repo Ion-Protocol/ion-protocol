@@ -2,12 +2,11 @@
 pragma solidity ^0.8.21;
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { TickMath } from "src/oracles/spot-oracles/TickMath.sol";
+import { TickMath } from "src/libraries/TickMath.sol";
 import { UniswapOracleLibrary } from "src/oracles/spot-oracles/UniswapOracleLibrary.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SpotOracle } from "./SpotOracle.sol";
 import { WAD } from "src/libraries/math/RoundedMath.sol";
-
 
 contract UniswapHelper {
     function _getPriceX96FromSqrtPriceX96(uint256 sqrtPriceX96) public pure returns (uint256 priceX96) {

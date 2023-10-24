@@ -5,9 +5,9 @@
 // contract ReserveFeed is ReserveOracle {
 //     address public protocolFeed;
 
-//     address public immutable ilk0; 
-//     address public immutable ilk1; 
-//     address public immutable ilk2; 
+//     address public immutable ilk0;
+//     address public immutable ilk1;
+//     address public immutable ilk2;
 
 //     constructor(address _token, address[] memory _ilks) ReserveOracle(_token) {
 //         protocolFeed = _protocolFeed;
@@ -18,6 +18,5 @@
 //     function _getProtocolExchangeRate() internal view override returns (uint256) {
 //         return wstEth(protocolFeed).exchangeRate();
 //     }
-
 
 // }

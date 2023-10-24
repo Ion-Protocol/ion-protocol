@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { Test } from "forge-std/Test.sol";
-import { LidoLibrary } from "../../src/libraries/LidoLibrary.sol";
-import { ILidoWStEthDeposit } from "../../src/interfaces/DepositInterfaces.sol";
-import { ILidoStEthDeposit } from "../../src/interfaces/DepositInterfaces.sol";
+import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
+import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { ILidoStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract LidoLibrary_FuzzTest is Test {

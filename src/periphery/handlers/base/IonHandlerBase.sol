@@ -104,7 +104,11 @@ abstract contract IonHandlerBase {
         if (amountToBorrow != 0) ionPool.borrow(ilkIndex, vaultHolder, receiver, normalizedAmountToBorrow);
     }
 
-    function repayAndWithdraw(uint256 collateralToWithdraw, uint256 debtToRepay) external {
+    /**
+     * @param debtToRepay in eth terms
+     * @param collateralToWithdraw in collateral terms
+     */
+    function repayAndWithdraw(uint256 debtToRepay, uint256 collateralToWithdraw) external {
         weth.transferFrom(msg.sender, address(this), debtToRepay);
         _repayAndWithdraw(msg.sender, msg.sender, collateralToWithdraw, debtToRepay);
     }

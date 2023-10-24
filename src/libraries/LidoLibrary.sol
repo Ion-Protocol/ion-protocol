@@ -8,6 +8,9 @@ import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
 library LidoLibrary {
     using RoundedMath for uint256;
 
+    error WstEthDepositFailed();
+
+
     function getEthAmountInForLstAmountOut(
         ILidoWStEthDeposit wstEth,
         uint256 lstAmount
@@ -31,4 +34,18 @@ library LidoLibrary {
         // lstToken and depositContract are same
         return ILidoWStEthDeposit(address(wstEth)).getWstETHByStETH(ethAmount);
     }
+
+    function depositForLst(
+        ILidoWStEthDeposit wstEth,
+        uint256 ethAmount
+    )
+        internal
+        returns (uint256)
+    {
+        (bool success, ) = address(wstEth).call{ value: ethAmount }("");
+        if (!success) revert WstEthDepositFailed();
+
+        return getLstAmountOutForEthAmountIn(wstEth, ethAmount);
+    }
+
 }

@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { RewardToken } from "src/token/RewardToken.sol";
+import { IERC20Errors } from "src/token/IERC20Errors.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+
+import { RewardTokenSharedSetup } from "test/helpers/RewardTokenSharedSetup.sol";
+
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { RewardTokenSharedSetup } from "../helpers/RewardTokenSharedSetup.sol";
-import { RewardToken } from "../../src/token/RewardToken.sol";
-import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
-import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
+
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 

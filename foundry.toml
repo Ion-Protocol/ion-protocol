@@ -15,7 +15,7 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
 optimizer_runs = 1000
 no_match_contract = "Echidna"
-gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy"]
+gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool"]
 
 [profile.default.fuzz]
 runs = 10000

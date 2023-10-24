@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+// TODO: Coalesce DepositInterfaces and ProviderInterfaces
 interface ILidoStEthDeposit {
     function submit(address _referral) external payable returns (uint256);
 

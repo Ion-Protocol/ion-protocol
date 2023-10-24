@@ -10,18 +10,16 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
 
 contract MockFeed {
-    
-    mapping(uint8 ilkIndex => uint72 exchangeRate) public exchangeRates; 
+    mapping(uint8 ilkIndex => uint72 exchangeRate) public exchangeRates;
 
-    constructor() {
-    }
+    constructor() { }
 
     function setExchangeRate(uint8 _ilkIndex, uint72 _exchangeRate) public {
-        exchangeRates[_ilkIndex] = _exchangeRate; 
+        exchangeRates[_ilkIndex] = _exchangeRate;
     }
 
     function getExchangeRate(uint8 _ilkIndex) public returns (uint256) {
-        return exchangeRates[_ilkIndex]; 
+        return exchangeRates[_ilkIndex];
     }
 }
 
@@ -38,7 +36,7 @@ contract ReserveOracleTest is IonPoolSharedSetup {
 
     address constant LIDO = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    
+
     // fork configs
 
     uint256 constant BLOCK_NUMBER = 18_372_927;
@@ -46,7 +44,7 @@ contract ReserveOracleTest is IonPoolSharedSetup {
 
     uint256 mainnetFork;
 
-    ERC20PresetMinterPauser mockToken; 
+    ERC20PresetMinterPauser mockToken;
 
     function setUp() public override {
         mainnetFork = vm.createSelectFork(MAINNET_RPC_URL); // specify blockheight?
@@ -55,90 +53,89 @@ contract ReserveOracleTest is IonPoolSharedSetup {
         super.setUp();
 
         ERC20PresetMinterPauser mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");
-    
     }
 
     // --- stETH Reserve Oracle Test ---
 
     function test_StEthReserveOracleGetProtocolExchangeRate() public {
-        uint8 ilkIndex = 0; 
-        address[] memory feeds = new address[](3); 
-        uint8 quorum = 0; 
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum); 
-        
+        uint8 ilkIndex = 0;
+        address[] memory feeds = new address[](3);
+        uint8 quorum = 0;
+        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum);
+
         uint256 protocolExchangeRate = stEthReserveOracle.getProtocolExchangeRate();
-        assertEq(protocolExchangeRate, 1140172374139257947, "protocol exchange rate"); 
+        assertEq(protocolExchangeRate, 1_140_172_374_139_257_947, "protocol exchange rate");
     }
 
     function test_StEthReserveOracleAggregation() public {
-        uint8 ilkIndex = 0; 
+        uint8 ilkIndex = 0;
 
         MockFeed mockFeed1 = new MockFeed();
         MockFeed mockFeed2 = new MockFeed();
         MockFeed mockFeed3 = new MockFeed();
 
-        uint72 mockFeed1ExchangeRate = 1.1 ether; 
-        uint72 mockFeed2ExchangeRate = 1.12 ether; 
+        uint72 mockFeed1ExchangeRate = 1.1 ether;
+        uint72 mockFeed2ExchangeRate = 1.12 ether;
         uint72 mockFeed3ExchangeRate = 1.14 ether;
 
-        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate); 
+        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate);
         mockFeed2.setExchangeRate(ilkIndex, mockFeed2ExchangeRate);
         mockFeed3.setExchangeRate(ilkIndex, mockFeed3ExchangeRate);
 
-        address[] memory feeds = new address[](3); 
-        
-        feeds[0] = address(mockFeed1); 
-        feeds[1] = address(mockFeed2); 
-        feeds[2] = address(mockFeed3); 
-        
-        uint8 quorum = 3; 
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum); 
+        address[] memory feeds = new address[](3);
 
-        uint72 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3; 
+        feeds[0] = address(mockFeed1);
+        feeds[1] = address(mockFeed2);
+        feeds[2] = address(mockFeed3);
 
-        uint256 protocolExchangeRate = stEthReserveOracle.getExchangeRate(); 
+        uint8 quorum = 3;
+        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum);
 
-        // should output the expected as the minimum 
+        uint72 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
+
+        uint256 protocolExchangeRate = stEthReserveOracle.getExchangeRate();
+
+        // should output the expected as the minimum
         assertEq(protocolExchangeRate, expectedMinExchangeRate, "protocol exchange rate");
     }
 
-    // --- ETHx Reserve Oracle Test --- 
+    // --- ETHx Reserve Oracle Test ---
 
     function test_EthXReserveOracleGetProtocolExchangeRate() public {
-        uint8 ilkIndex = 0; 
+        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
-        uint8 quorum = 0; 
+        uint8 quorum = 0;
         EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
             ETHX_PROTOCOL_FEED,
             ilkIndex,
             feeds,
             quorum
-        ); 
+        );
 
         uint256 protocolExchangeRate = ethXReserveOracle.getProtocolExchangeRate();
-        assertEq(protocolExchangeRate, 1010109979339787990, "protocol exchange rate");
+        assertEq(protocolExchangeRate, 1_010_109_979_339_787_990, "protocol exchange rate");
     }
 
     function test_EthXReserveOracleAggregation() public {
-        uint8 ilkIndex = 0; 
-        uint8 quorum = 3; 
+        uint8 ilkIndex = 0;
+        uint8 quorum = 3;
 
         MockFeed mockFeed1 = new MockFeed();
         MockFeed mockFeed2 = new MockFeed();
         MockFeed mockFeed3 = new MockFeed();
 
-        uint72 mockFeed1ExchangeRate = 0.9 ether; 
-        uint72 mockFeed2ExchangeRate = 0.95 ether; 
+        uint72 mockFeed1ExchangeRate = 0.9 ether;
+        uint72 mockFeed2ExchangeRate = 0.95 ether;
         uint72 mockFeed3ExchangeRate = 1 ether;
 
-        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate); 
-        mockFeed2.setExchangeRate(ilkIndex, mockFeed2ExchangeRate); 
-        mockFeed3.setExchangeRate(ilkIndex, mockFeed3ExchangeRate); 
+        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate);
+        mockFeed2.setExchangeRate(ilkIndex, mockFeed2ExchangeRate);
+        mockFeed3.setExchangeRate(ilkIndex, mockFeed3ExchangeRate);
 
-        address[] memory feeds = new address[](3); 
-        feeds[0] = address(mockFeed1); 
+        address[] memory feeds = new address[](3);
+        feeds[0] = address(mockFeed1);
         feeds[1] = address(mockFeed2);
-        feeds[2] = address(mockFeed3); 
+        feeds[2] = address(mockFeed3);
         EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
             ETHX_PROTOCOL_FEED,
             ilkIndex,
@@ -147,39 +144,39 @@ contract ReserveOracleTest is IonPoolSharedSetup {
         );
 
         uint256 expectedExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
-        uint256 protocolExchangeRate = ethXReserveOracle.getExchangeRate(); 
-        
-        assertEq(protocolExchangeRate, expectedExchangeRate, "min exchange rate"); 
+        uint256 protocolExchangeRate = ethXReserveOracle.getExchangeRate();
+
+        assertEq(protocolExchangeRate, expectedExchangeRate, "min exchange rate");
     }
 
-    // --- swETH Reserve Oracle Test --- 
+    // --- swETH Reserve Oracle Test ---
 
     function test_SwEthReserveOracleGetProtocolExchangeRate() public {
-        uint8 ilkIndex = 0; 
-        uint8 quorum = 0; 
-        
-        address[] memory feeds = new address[](3); 
+        uint8 ilkIndex = 0;
+        uint8 quorum = 0;
+
+        address[] memory feeds = new address[](3);
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
             SWETH_PROTOCOL_FEED,
             ilkIndex, 
             feeds, 
             quorum
-        ); 
+        );
 
-        uint256 protocolExchangeRate = swEthReserveOracle.getProtocolExchangeRate(); 
-        assertEq(protocolExchangeRate, 1039088295006509594, "protocol exchange rate"); 
+        uint256 protocolExchangeRate = swEthReserveOracle.getProtocolExchangeRate();
+        assertEq(protocolExchangeRate, 1_039_088_295_006_509_594, "protocol exchange rate");
     }
 
-    // --- Reserve Oracle Aggregation Test --- 
+    // --- Reserve Oracle Aggregation Test ---
 
     function test_SwEthReserveOracleGetAggregateExchangeRateMin() public {
         MockFeed mockFeed = new MockFeed();
-        
-        // reserve oracle 
-        uint8 ilkIndex = 0;        
-        address[] memory feeds = new address[](3); 
-        feeds[0] = address(mockFeed); 
-        uint8 quorum = 1; 
+
+        // reserve oracle
+        uint8 ilkIndex = 0;
+        address[] memory feeds = new address[](3);
+        feeds[0] = address(mockFeed);
+        uint8 quorum = 1;
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
             SWETH_PROTOCOL_FEED, 
             ilkIndex, 
@@ -187,68 +184,66 @@ contract ReserveOracleTest is IonPoolSharedSetup {
             quorum 
         );
 
-        // mock reserve feed 
+        // mock reserve feed
         mockFeed.setExchangeRate(ilkIndex, 1.01 ether);
-       
-        // should be a min of 
-        // protocol exchange rate = 1.03 
-        // mock exchange rate = 1.01 
+
+        // should be a min of
+        // protocol exchange rate = 1.03
+        // mock exchange rate = 1.01
         uint72 exchangeRate = swEthReserveOracle.getExchangeRate();
-        assertEq(exchangeRate, 1.01 ether, "min exchange rate");  
+        assertEq(exchangeRate, 1.01 ether, "min exchange rate");
     }
 
     function test_SwEthReserveOracleTwoFeeds() public {
-        MockFeed mockFeed1 = new MockFeed(); 
-        MockFeed mockFeed2 = new MockFeed(); 
+        MockFeed mockFeed1 = new MockFeed();
+        MockFeed mockFeed2 = new MockFeed();
 
-        uint8 ilkIndex = 0; 
-        address[] memory feeds = new address[](3); 
+        uint8 ilkIndex = 0;
+        address[] memory feeds = new address[](3);
         feeds[0] = address(mockFeed1);
-        feeds[1] = address(mockFeed2);  
-        uint8 quorum = 2; 
+        feeds[1] = address(mockFeed2);
+        uint8 quorum = 2;
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
             SWETH_PROTOCOL_FEED,
             ilkIndex, 
             feeds, 
             quorum 
-        ); 
-        mockFeed1.setExchangeRate(ilkIndex, 0.9 ether); 
-        mockFeed2.setExchangeRate(ilkIndex, 0.8 ether); 
-    
-        uint72 expectedMinExchangeRate = (0.9 ether + 0.8 ether) / 2; 
+        );
+        mockFeed1.setExchangeRate(ilkIndex, 0.9 ether);
+        mockFeed2.setExchangeRate(ilkIndex, 0.8 ether);
 
-        assertEq(swEthReserveOracle.getExchangeRate(), expectedMinExchangeRate, "min exchange rate"); 
+        uint72 expectedMinExchangeRate = (0.9 ether + 0.8 ether) / 2;
+
+        assertEq(swEthReserveOracle.getExchangeRate(), expectedMinExchangeRate, "min exchange rate");
     }
 
     function test_SwEthReserveOracleThreeFeeds() public {
-        MockFeed mockFeed1 = new MockFeed(); 
-        MockFeed mockFeed2 = new MockFeed(); 
-        MockFeed mockFeed3 = new MockFeed(); 
+        MockFeed mockFeed1 = new MockFeed();
+        MockFeed mockFeed2 = new MockFeed();
+        MockFeed mockFeed3 = new MockFeed();
 
-        uint72 mockFeed1ExchangeRate = 1 ether; 
-        uint72 mockFeed2ExchangeRate = 1.4 ether; 
+        uint72 mockFeed1ExchangeRate = 1 ether;
+        uint72 mockFeed2ExchangeRate = 1.4 ether;
         uint72 mockFeed3ExchangeRate = 1.8 ether;
 
-        uint8 ilkIndex = 1; 
-        address[] memory feeds = new address[](3); 
-        feeds[0] = address(mockFeed1); 
-        feeds[1] = address(mockFeed2); 
-        uint8 quorum = 2; 
+        uint8 ilkIndex = 1;
+        address[] memory feeds = new address[](3);
+        feeds[0] = address(mockFeed1);
+        feeds[1] = address(mockFeed2);
+        uint8 quorum = 2;
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
             SWETH_PROTOCOL_FEED,
             ilkIndex,
             feeds,
             quorum 
-        ); 
-        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate); 
-        mockFeed2.setExchangeRate(ilkIndex, mockFeed2ExchangeRate); 
-        mockFeed3.setExchangeRate(ilkIndex, mockFeed3ExchangeRate); 
+        );
+        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate);
+        mockFeed2.setExchangeRate(ilkIndex, mockFeed2ExchangeRate);
+        mockFeed3.setExchangeRate(ilkIndex, mockFeed3ExchangeRate);
 
-        uint72 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3; 
-        assertEq(swEthReserveOracle.getExchangeRate(), swEthReserveOracle.getExchangeRate(), "min exchange rate"); 
+        uint72 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
+        assertEq(swEthReserveOracle.getExchangeRate(), swEthReserveOracle.getExchangeRate(), "min exchange rate");
     }
 
-    // --- Combined Tests --- 
-
-
+    // --- Combined Tests ---
 }
