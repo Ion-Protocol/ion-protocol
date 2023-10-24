@@ -6,7 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { RoundedMath, WAD, RAY } from "./libraries/math/RoundedMath.sol";
 import { IonPool } from "src/IonPool.sol";
-import { ReserveOracle } from "src/oracles/reserve-oracles/ReserveOracle.sol";
+import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import "forge-std/console.sol";
 
 uint8 constant ILK_COUNT = 8;

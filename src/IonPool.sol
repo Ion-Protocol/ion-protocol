@@ -11,6 +11,7 @@ import { InterestRate } from "./InterestRate.sol";
 import { RoundedMath, RAY } from "./libraries/math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
+import { Whitelist } from "src/Whitelist.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
 
@@ -57,6 +58,19 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     address private immutable addressThis = address(this);
 
+    // --- Modifiers ---
+    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        $.whitelist.isWhitelistedBorrower(proof, _msgSender());
+        _;
+    }
+
+    modifier onlyWhitelistedLenders(bytes32[] memory proof) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        $.whitelist.isWhitelistedLender(proof, _msgSender());
+        _;
+    }
+
     // --- Data ---
     struct Ilk {
         uint104 totalNormalizedDebt; // Total Normalised Debt     [wad]
@@ -83,7 +97,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 debt; // Total Dai Issued    [rad]
         uint256 totalUnbackedDebt; // Total Unbacked Dai  [rad]
         InterestRate interestRateModule;
-        bytes32 whitelistMerkleRoot;
+        Whitelist whitelist;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~bytes32(uint256(0xff))
@@ -106,7 +120,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         string memory name_,
         string memory symbol_,
         address initialDefaultAdmin,
-        InterestRate _interestRateModule
+        InterestRate _interestRateModule,
+        Whitelist _whitelist
     )
         external
         initializer
@@ -117,6 +132,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.interestRateModule = _interestRateModule;
+        $.whitelist = _whitelist;
         emit InterestRateModuleUpdated(address(0), address(_interestRateModule));
     }
 
@@ -340,7 +356,15 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     }
 
     // TODO: Supply caps
-    function supply(address user, uint256 amt) external whenNotPaused(Pauses.SAFE) {
+    function supply(
+        address user,
+        uint256 amt,
+        bytes32[] calldata proof
+    )
+        external
+        whenNotPaused(Pauses.SAFE)
+        onlyWhitelistedLenders(proof)
+    {
         _accrueInterest();
         _mint(user, amt);
     }
@@ -351,10 +375,12 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint8 ilkIndex,
         address user,
         address w,
-        uint256 amountOfNormalizedDebt
+        uint256 amountOfNormalizedDebt,
+        bytes32[] calldata proof
     )
         external
         whenNotPaused(Pauses.UNSAFE)
+        onlyWhitelistedBorrowers(proof)
     {
         console.log("amountOfNormalizedDebt: ", amountOfNormalizedDebt);
         console2.log("amountOfNormalizedDebt.toInt256(): ", amountOfNormalizedDebt.toInt256());
@@ -384,10 +410,12 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint8 ilkIndex,
         address user,
         address v,
-        uint256 amount
+        uint256 amount,
+        bytes32[] calldata proof
     )
         external
         whenNotPaused(Pauses.SAFE)
+        onlyWhitelistedBorrowers(proof)
     {
         _modifyPosition(ilkIndex, user, v, address(0), amount.toInt256(), 0);
     }

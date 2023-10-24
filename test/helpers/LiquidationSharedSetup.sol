@@ -99,7 +99,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         underlying.mint(lender, supplyAmt);
         vm.startPrank(lender);
         underlying.approve(address(ionPool), supplyAmt);
-        ionPool.supply(lender, supplyAmt);
+        ionPool.supply(lender, supplyAmt, emptyProof);
         vm.stopPrank();
     }
 
@@ -116,8 +116,8 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         mintableCollaterals[ilkIndex].approve(address(gemJoin), depositAmt);
         gemJoin.join(borrower, depositAmt);
         // move collateral to vault
-        ionPool.moveGemToVault(ilkIndex, borrower, borrower, depositAmt);
-        ionPool.borrow(ilkIndex, borrower, borrower, borrowAmt);
+        ionPool.moveGemToVault(ilkIndex, borrower, borrower, depositAmt, emptyProof);
+        ionPool.borrow(ilkIndex, borrower, borrower, borrowAmt, emptyProof);
         vm.stopPrank();
     }
 

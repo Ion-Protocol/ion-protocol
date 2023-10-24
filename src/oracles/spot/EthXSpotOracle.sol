@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.21;
 
-import { SpotOracle } from "src/oracles/spot-oracles/SpotOracle.sol";
+import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { IChainlink } from "src/interfaces/IChainlink.sol";
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 

@@ -78,13 +78,13 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
         vm.startPrank(lender1);
         weth.deposit{ value: INITIAL_LENDER_UNDERLYING_BALANCE }();
         weth.approve(address(ionPool), type(uint256).max);
-        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE, emptyProof);
         vm.stopPrank();
 
         vm.startPrank(lender2);
         weth.deposit{ value: INITIAL_LENDER_UNDERLYING_BALANCE }();
         weth.approve(address(ionPool), type(uint256).max);
-        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE, emptyProof);
         vm.stopPrank();
 
         vm.deal(address(this), INITIAL_THIS_UNDERLYING_BALANCE);

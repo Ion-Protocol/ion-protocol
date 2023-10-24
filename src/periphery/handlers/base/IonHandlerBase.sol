@@ -6,7 +6,7 @@ import { IonRegistry } from "./../../IonRegistry.sol";
 import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 import { GemJoin } from "../../../join/GemJoin.sol";
 import { RoundedMath } from "../../../libraries/math/RoundedMath.sol";
-
+import { Whitelist } from "src/Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -45,8 +45,14 @@ abstract contract IonHandlerBase {
     // TODO: Instead of passing registry, just pass GemJoin directly
     GemJoin immutable gemJoin;
     IERC20 immutable lstToken;
+    Whitelist immutable whitelist;
 
-    constructor(uint8 _ilkIndex, IonPool _ionPool, IonRegistry _ionRegistry) {
+    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
+        whitelist.isWhitelistedBorrower(proof, msg.sender);
+        _;
+    }
+
+    constructor(uint8 _ilkIndex, IonPool _ionPool, IonRegistry _ionRegistry, Whitelist _whitelist) {
         ionPool = _ionPool;
         ilkIndex = _ilkIndex;
 
@@ -59,11 +65,20 @@ abstract contract IonHandlerBase {
         GemJoin _gemJoin = _ionRegistry.gemJoins(_ilkIndex);
         gemJoin = _gemJoin;
 
+        whitelist = _whitelist;
+
         _weth.approve(address(ionPool), type(uint256).max);
         IERC20(ilkAddress).approve(address(_gemJoin), type(uint256).max);
     }
 
-    function depositAndBorrow(uint256 amountCollateral, uint256 amountToBorrow) external {
+    function depositAndBorrow(
+        uint256 amountCollateral,
+        uint256 amountToBorrow,
+        bytes32[] calldata proof
+    )
+        external
+        onlyWhitelistedBorrowers(proof)
+    {
         lstToken.safeTransferFrom(msg.sender, address(this), amountCollateral);
         _depositAndBorrow(msg.sender, msg.sender, amountCollateral, amountToBorrow, AmountToBorrow.IS_MAX);
     }
@@ -90,7 +105,7 @@ abstract contract IonHandlerBase {
     {
         gemJoin.join(address(this), amountCollateral);
 
-        ionPool.moveGemToVault(ilkIndex, vaultHolder, address(this), amountCollateral);
+        ionPool.moveGemToVault(ilkIndex, vaultHolder, address(this), amountCollateral, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
 
@@ -101,7 +116,9 @@ abstract contract IonHandlerBase {
             normalizedAmountToBorrow = amountToBorrow.rayDivDown(currentRate);
         }
 
-        if (amountToBorrow != 0) ionPool.borrow(ilkIndex, vaultHolder, receiver, normalizedAmountToBorrow);
+        if (amountToBorrow != 0) {
+            ionPool.borrow(ilkIndex, vaultHolder, receiver, normalizedAmountToBorrow, new bytes32[](0));
+        }
     }
 
     function repayAndWithdraw(uint256 collateralToWithdraw, uint256 debtToRepay) external {

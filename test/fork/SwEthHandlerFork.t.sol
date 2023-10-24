@@ -9,6 +9,7 @@ import { IonPool } from "../../src/IonPool.sol";
 import { IonHandler_ForkBase } from "../helpers/IonHandlerForkBase.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { ISwellDeposit } from "../../src/interfaces/DepositInterfaces.sol";
+import { Whitelist } from "src/Whitelist.sol";
 
 import { Vm } from "forge-std/Vm.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
@@ -24,7 +25,8 @@ contract SwEthHandler_ForkBase is IonHandler_ForkBase {
     // TODO: Write test for increased `rate` value. Not much value to just check if `rate` is 1e27
     function setUp() public virtual override {
         super.setUp();
-        swEthHandler = new SwEthHandler(ilkIndex, ionPool, ionRegistry, FACTORY, SWETH_ETH_POOL, 500);
+        swEthHandler =
+            new SwEthHandler(ilkIndex, ionPool, ionRegistry, Whitelist(whitelist), FACTORY, SWETH_ETH_POOL, 500);
 
         IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
 

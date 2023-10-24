@@ -14,6 +14,7 @@ import { RAY } from "../../src/libraries/math/RoundedMath.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { Whitelist } from "src/Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 // struct IlkData {
@@ -71,6 +72,17 @@ contract IonPoolExposed is IonPool {
     }
 }
 
+// for bypassing whitelist checks during tests
+contract MockWhitelist {
+    function isWhitelistedBorrower(bytes32[] calldata proof, address addr) external view returns (bool) {
+        return true;
+    }
+
+    function isWhitelistedLender(bytes32[] calldata proof, address addr) external view returns (bool) {
+        return true;
+    }
+}
+
 abstract contract IonPoolSharedSetup is BaseTestSetup {
     IonPoolExposed ionPool;
     // IonHandler ionHandler;
@@ -85,6 +97,10 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     address immutable lender2 = vm.addr(2);
     address immutable borrower1 = vm.addr(3);
     address immutable borrower2 = vm.addr(4);
+
+    // --- Whitelist ---
+    address internal whitelist;
+    bytes32[] internal emptyProof;
 
     // --- Configs ---
     uint256 internal constant SPOT = 1e27; // [ray]
@@ -211,7 +227,9 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
         // attempt to initialize again
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPool.initialize(
+            _getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule, Whitelist(whitelist)
+        );
 
         // assertEq(ionPool.treasury(), TREASURY);
         // assertEq(ionPool.decimals(), DECIMALS);

@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.21;
 
-import "src/oracles/spot-oracles/SpotOracle.sol";
-import "src/oracles/spot-oracles/SwEthSpotOracle.sol";
-import "src/oracles/spot-oracles/StEthSpotOracle.sol";
-import "src/oracles/spot-oracles/EthXSpotOracle.sol";
+import "src/oracles/spot/SpotOracle.sol";
+import "src/oracles/spot/SwEthSpotOracle.sol";
+import "src/oracles/spot/StEthSpotOracle.sol";
+import "src/oracles/spot/EthXSpotOracle.sol";
 import "test/helpers/IonPoolSharedSetup.sol";
 
 // fork tests for integrating with external contracts

@@ -8,9 +8,10 @@ import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
 import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
 import { ISwellDeposit } from "../../interfaces/DepositInterfaces.sol";
 import { RoundedMath } from "../../libraries/math/RoundedMath.sol";
-
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+
+import { Whitelist } from "src/Whitelist.sol";
 
 contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using RoundedMath for uint256;
@@ -19,11 +20,12 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
         uint8 _ilkIndex,
         IonPool _ionPool,
         IonRegistry _ionRegistry,
+        Whitelist _whitelist,
         IUniswapV3Factory _factory,
         IUniswapV3Pool _swEthPool,
         uint24 _poolFee
     )
-        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry)
+        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry, _whitelist)
         UniswapFlashswapHandler(_factory, _swEthPool, _poolFee, true)
     { }
 

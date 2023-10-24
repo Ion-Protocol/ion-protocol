@@ -12,6 +12,8 @@ import { LidoLibrary } from "../../libraries/LidoLibrary.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
+import { Whitelist } from "src/Whitelist.sol";
+
 contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using LidoLibrary for ILidoWStEthDeposit;
 
@@ -21,11 +23,12 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         uint8 _ilkIndex,
         IonPool _ionPool,
         IonRegistry _ionRegistry,
+        Whitelist _whitelist,
         IUniswapV3Factory _factory,
         IUniswapV3Pool _wstEthUniswapPool,
         uint24 _poolFee
     )
-        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry)
+        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry, _whitelist)
         // token0 is wstEth
         UniswapFlashswapHandler(_factory, _wstEthUniswapPool, _poolFee, false)
     { }

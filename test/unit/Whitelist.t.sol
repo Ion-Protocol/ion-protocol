@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 import { Whitelist } from "src/Whitelist.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
 import "forge-std/console.sol";
+import "forge-std/Test.sol";
 
 contract MockModifiers {
     Whitelist whitelist;
@@ -52,14 +53,13 @@ contract MockModifiers {
 //     }
 // }
 
-contract WhitelistTest is IonPoolSharedSetup {
-    Whitelist public whitelist;
+contract WhitelistTest is Test {
+    Whitelist whitelist;
 
-    function setUp() public override {
-        super.setUp();
-
+    function setUp() public {
         bytes32 borrowersWhitelistMerkleRoot = 0;
         bytes32 lendersWhitelistMerkleRoot = 0;
+
         whitelist = new Whitelist(borrowersWhitelistMerkleRoot, lendersWhitelistMerkleRoot);
     }
 
@@ -109,15 +109,15 @@ contract WhitelistTest is IonPoolSharedSetup {
         MockModifiers mockModifiers = new MockModifiers(address(whitelist));
 
         // correct address
-        address addr = 0x1111111111111111111111111111111111111111; 
-        vm.startPrank(addr); 
-        bytes32[] memory proof = new bytes32[](2);  
-        // but wrong proof 
-        proof[0] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192); 
-        proof[1] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192); 
-        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, addr)); 
-        mockModifiers.onlyBorrowersFunction(proof); 
-        vm.stopPrank(); 
+        address addr = 0x1111111111111111111111111111111111111111;
+        vm.startPrank(addr);
+        bytes32[] memory proof = new bytes32[](2);
+        // but wrong proof
+        proof[0] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192);
+        proof[1] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192);
+        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, addr));
+        mockModifiers.onlyBorrowersFunction(proof);
+        vm.stopPrank();
     }
 
     function test_WhitelistMockBorrowerInvalidAddress() public {
@@ -143,6 +143,10 @@ contract WhitelistTest is IonPoolSharedSetup {
     }
 
     // --- Ion Pool ---
+
+    // function test_IonPoolWhiteListValidProof() public {
+    //     ionPool.borrow()
+    // }
 
     // --- Flash Leverage ---
     // flash leverage should forward the msg.sender to the merkle tree as sender

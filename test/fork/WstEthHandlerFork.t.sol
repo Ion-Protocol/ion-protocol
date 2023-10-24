@@ -6,6 +6,7 @@ import { RoundedMath, WAD, RAY } from "../../src/libraries/math/RoundedMath.sol"
 import { WstEthHandler } from "../../src/periphery/handlers/WstEthHandler.sol";
 import { ILidoWStEthDeposit } from "../../src/interfaces/DepositInterfaces.sol";
 import { LidoLibrary } from "../../src/libraries/LidoLibrary.sol";
+import { Whitelist } from "src/Whitelist.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
@@ -27,7 +28,9 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
 
     function setUp() public override {
         super.setUp();
-        wstEthHandler = new WstEthHandler(ilkIndex, ionPool, ionRegistry, FACTORY, WSTETH_ETH_UNISWAP_POOL, 100);
+
+        wstEthHandler =
+        new WstEthHandler(ilkIndex, ionPool, ionRegistry, Whitelist(whitelist), FACTORY, WSTETH_ETH_UNISWAP_POOL, 100);
 
         IERC20(address(MAINNET_WSTETH)).approve(address(wstEthHandler), type(uint256).max);
 

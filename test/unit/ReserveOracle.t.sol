@@ -2,9 +2,9 @@
 pragma solidity ^0.8.21;
 
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
-import { SwEthReserveOracle } from "src/oracles/reserve-oracles/SwEthReserveOracle.sol";
-import { StEthReserveOracle } from "src/oracles/reserve-oracles/StEthReserveOracle.sol";
-import { EthXReserveOracle } from "src/oracles/reserve-oracles/EthXReserveOracle.sol";
+import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
+import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
+import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
 
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
