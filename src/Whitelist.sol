@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol"; 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { console2 } from "forge-std/console2.sol";
 
-contract Whitelist {
+
+contract Whitelist is Ownable2Step {
     bytes32 public borrowersWhitelistMerkleRoot;
     bytes32 public lendersWhitelistMerkleRoot;
 
@@ -16,24 +19,24 @@ contract Whitelist {
 
     error InvalidWhitelistMerkleProof();
 
-    constructor(bytes32 _borrowersWhitelistMerkleRoot, bytes32 _lendersWhitelistMerkleRoot) {
+    constructor(bytes32 _borrowersWhitelistMerkleRoot, bytes32 _lendersWhitelistMerkleRoot) Ownable(msg.sender) {
         borrowersWhitelistMerkleRoot = _borrowersWhitelistMerkleRoot;
         lendersWhitelistMerkleRoot = _lendersWhitelistMerkleRoot;
     }
 
-    function updateBorrowersWhitelistMerkleRoot(bytes32 _borrowersWhitelistMerkleRoot) external returns (bytes32) {
+    function updateBorrowersWhitelistMerkleRoot(bytes32 _borrowersWhitelistMerkleRoot) external onlyOwner returns (bytes32) {
         borrowersWhitelistMerkleRoot = _borrowersWhitelistMerkleRoot;
     }
 
-    function updateLendersWhitelistMerkleRoot(bytes32 _lendersWhitelistMerkleRoot) external returns (bytes32) {
+    function updateLendersWhitelistMerkleRoot(bytes32 _lendersWhitelistMerkleRoot) external onlyOwner returns (bytes32) {
         lendersWhitelistMerkleRoot = _lendersWhitelistMerkleRoot;
     }
 
-    function approveProtocolWhitelist(address _addr) external {
+    function approveProtocolWhitelist(address _addr) onlyOwner external {
         protocolWhitelist[_addr] = TRUE;
     }
 
-    function revokeProtocolWhitelist(address _addr) external {
+    function revokeProtocolWhitelist(address _addr) onlyOwner external {
         protocolWhitelist[_addr] = FALSE;
     }
 
@@ -51,6 +54,6 @@ contract Whitelist {
         console2.log("is whitelisted lender"); 
         if (protocolWhitelist[addr] == TRUE) return true;
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));
-        MerkleProof.verify(proof, lendersWhitelistMerkleRoot, leaf);
+        return MerkleProof.verify(proof, lendersWhitelistMerkleRoot, leaf);
     }
 }
