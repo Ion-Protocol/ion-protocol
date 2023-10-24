@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract Whitelist {
     bytes32 public borrowersWhitelistMerkleRoot;
@@ -47,6 +48,7 @@ contract Whitelist {
     // @dev called by external modifiers to prove inclusion as a lender
     // @returns true if the addr is part of the whitelist, false otherwise
     function isWhitelistedLender(bytes32[] calldata proof, address addr) external view returns (bool) {
+        console2.log("is whitelisted lender"); 
         if (protocolWhitelist[addr] == TRUE) return true;
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));
         MerkleProof.verify(proof, lendersWhitelistMerkleRoot, leaf);

@@ -61,13 +61,17 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     // --- Modifiers ---
     modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedBorrower(proof, _msgSender());
+        Whitelist($.whitelist).isWhitelistedBorrower(proof, _msgSender());
         _;
     }
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
+        console2.log("ion pool only whitelisted lenders"); 
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedLender(proof, _msgSender());
+        console2.log("hi"); 
+        // console2.log($);
+        console2.log(address($.whitelist));
+        Whitelist($.whitelist).isWhitelistedLender(proof, _msgSender());
         _;
     }
 

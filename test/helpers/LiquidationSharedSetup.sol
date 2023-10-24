@@ -99,7 +99,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         underlying.mint(lender, supplyAmt);
         vm.startPrank(lender);
         underlying.approve(address(ionPool), supplyAmt);
-        ionPool.supply(lender, supplyAmt, emptyProof);
+        ionPool.supply(lender, supplyAmt, new bytes32[](0));
         vm.stopPrank();
     }
 

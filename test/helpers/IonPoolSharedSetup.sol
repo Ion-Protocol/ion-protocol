@@ -17,6 +17,9 @@ import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable
 import { Whitelist } from "src/Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
+import { console2 } from "forge-std/console2.sol";
+
+
 // struct IlkData {
 //                                                        _
 //     uint96 adjustedProfitMargin; // 27 decimals         |
@@ -75,10 +78,12 @@ contract IonPoolExposed is IonPool {
 // for bypassing whitelist checks during tests
 contract MockWhitelist {
     function isWhitelistedBorrower(bytes32[] calldata proof, address addr) external view returns (bool) {
+        console2.log("mock whitelist borrower");
         return true;
     }
 
     function isWhitelistedLender(bytes32[] calldata proof, address addr) external view returns (bool) {
+        console2.log("mock whitelist lender"); 
         return true;
     }
 }
@@ -183,6 +188,9 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
+        // whitelist 
+        whitelist = address(new MockWhitelist());
+
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
         // Instantiate upgradeable IonPool
@@ -197,7 +205,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
             NAME,
             SYMBOL,
             address(this),
-            interestRateModule
+            interestRateModule,
+            whitelist
         );
         ionPool = IonPoolExposed(
             address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), initializeBytes))
