@@ -19,7 +19,6 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
-
 // struct IlkData {
 //                                                        _
 //     uint96 adjustedProfitMargin; // 27 decimals         |
@@ -83,7 +82,7 @@ contract MockWhitelist {
     }
 
     function isWhitelistedLender(bytes32[] calldata proof, address addr) external view returns (bool) {
-        console2.log("mock whitelist lender"); 
+        console2.log("mock whitelist lender");
         return true;
     }
 }
@@ -188,7 +187,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
-        // whitelist 
+        // whitelist
         whitelist = address(new MockWhitelist());
 
         // Instantiate upgradeable IonPool

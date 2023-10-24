@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { RewardToken } from "./token/RewardToken.sol";
+import { RewardModule } from "./token/RewardModule.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -15,7 +15,7 @@ import { Whitelist } from "src/Whitelist.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
 
-contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardToken {
+contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
     using RoundedMath for uint256;
@@ -66,9 +66,9 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     }
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
-        console2.log("ion pool only whitelisted lenders"); 
+        console2.log("ion pool only whitelisted lenders");
         IonPoolStorage storage $ = _getIonPoolStorage();
-        console2.log("hi"); 
+        console2.log("hi");
         // console2.log($);
         console2.log(address($.whitelist));
         Whitelist($.whitelist).isWhitelistedLender(proof, _msgSender());
@@ -131,7 +131,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         initializer
     {
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
-        RewardToken.initialize(_underlying, _treasury, decimals_, name_, symbol_);
+        RewardModule.initialize(_underlying, _treasury, decimals_, name_, symbol_);
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
