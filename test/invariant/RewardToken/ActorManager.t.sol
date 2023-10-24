@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
+import { RewardModuleSharedSetup } from "../../helpers/RewardModuleSharedSetup.sol";
 import { UserHandler, SupplyFactorIncreaseHandler } from "./Handlers.t.sol";
 import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
 
@@ -33,67 +33,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         UserHandler user = userHandlers[handlerIndex];
 
         user.burn(address(user), amount);
-    }
-
-    function transfer(uint256 handlerIndex, uint256 transferToIndex, uint256 amount) external {
-        handlerIndex = bound(handlerIndex, 0, userHandlers.length - 1);
-        transferToIndex = bound(transferToIndex, 0, userHandlers.length - 1);
-
-        UserHandler user = userHandlers[handlerIndex];
-        address transferToUser = address(_pickOther(userHandlers, handlerIndex, transferToIndex));
-
-        user.transfer(address(user), transferToUser, amount);
-    }
-
-    function approve(uint256 handlerIndex, uint256 spenderIndex, uint256 amount) external {
-        handlerIndex = bound(handlerIndex, 0, userHandlers.length - 1);
-        spenderIndex = bound(spenderIndex, 0, userHandlers.length - 1);
-
-        UserHandler user = userHandlers[handlerIndex];
-        address spender = address(_pickOther(userHandlers, handlerIndex, spenderIndex));
-
-        user.approve(address(user), spender, amount);
-    }
-
-    function increaseAllowance(uint256 handlerIndex, uint256 spenderIndex, uint256 amount) external {
-        handlerIndex = bound(handlerIndex, 0, userHandlers.length - 1);
-        spenderIndex = bound(spenderIndex, 0, userHandlers.length - 1);
-
-        UserHandler user = userHandlers[handlerIndex];
-        address spender = address(_pickOther(userHandlers, handlerIndex, spenderIndex));
-
-        user.increaseAllowance(address(user), spender, amount);
-    }
-
-    function decreaseAllowance(uint256 handlerIndex, uint256 spenderIndex, uint256 amount) external {
-        handlerIndex = bound(handlerIndex, 0, userHandlers.length - 1);
-        spenderIndex = bound(spenderIndex, 0, userHandlers.length - 1);
-
-        UserHandler user = userHandlers[handlerIndex];
-        address spender = address(_pickOther(userHandlers, handlerIndex, spenderIndex));
-
-        user.decreaseAllowance(address(user), spender, amount);
-    }
-
-    function transferFrom(
-        uint256 handlerIndex,
-        uint256 spenderIndex,
-        uint256 transferToIndex,
-        uint256 amount
-    )
-        external
-    {
-        handlerIndex = bound(handlerIndex, 0, userHandlers.length - 1);
-        spenderIndex = bound(spenderIndex, 0, userHandlers.length - 1);
-        transferToIndex = bound(transferToIndex, 0, userHandlers.length - 1);
-
-        UserHandler user = userHandlers[handlerIndex];
-        // spender and transferTo can be same
-        address spender = address(_pickOther(userHandlers, handlerIndex, spenderIndex));
-        address transferToUser = address(_pickOther(userHandlers, handlerIndex, transferToIndex));
-
-        user.transferFrom(address(user), spender, transferToUser, amount);
-    }
+    }    
 
     // --- SupplyFactorIncreaser Functions ---
 
@@ -126,11 +66,11 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
 
 /**
  * @dev One big assumption of this invariant test is that `supplyFactor` is
- * always increased in proportion to the increase in the `RewardToken`
+ * always increased in proportion to the increase in the `RewardModule`
  * contract's underlying balance since the last time `supplyFactor` was
  * increased.
  */
-contract RewardToken_InvariantTest is RewardTokenSharedSetup {
+contract RewardModule_InvariantTest is RewardModuleSharedSetup {
     using RoundedMath for uint256;
 
     ActorManager public actorManager;
@@ -144,15 +84,15 @@ contract RewardToken_InvariantTest is RewardTokenSharedSetup {
         super.setUp();
 
         for (uint256 i = 0; i < AMOUNT_USERS; i++) {
-            UserHandler user = new UserHandler(rewardToken, underlying);
+            UserHandler user = new UserHandler(rewardModule, underlying);
             userHandlers.push(user);
             underlying.mint(address(user), USER_INITIAL_BALANCE);
 
             vm.prank(address(user));
-            underlying.approve(address(rewardToken), type(uint256).max); // max approval
+            underlying.approve(address(rewardModule), type(uint256).max); // max approval
         }
 
-        supplyFactorIncreaseHandler = new SupplyFactorIncreaseHandler(rewardToken, underlying);
+        supplyFactorIncreaseHandler = new SupplyFactorIncreaseHandler(rewardModule, underlying);
         underlying.grantRole(underlying.MINTER_ROLE(), address(supplyFactorIncreaseHandler));
 
         actorManager = new ActorManager(userHandlers, supplyFactorIncreaseHandler);
@@ -165,19 +105,19 @@ contract RewardToken_InvariantTest is RewardTokenSharedSetup {
         uint256 totalSupplyByBalances;
         for (uint256 i = 0; i < userHandlers.length; i++) {
             UserHandler user = userHandlers[i];
-            totalSupplyByBalances += rewardToken.normalizedBalanceOf(address(user));
+            totalSupplyByBalances += rewardModule.normalizedBalanceOf(address(user));
         }
 
-        underlying.balanceOf(address(rewardToken)); // update underlying balance
-        rewardToken.totalSupply();
+        underlying.balanceOf(address(rewardModule)); // update underlying balance
+        rewardModule.totalSupply();
 
-        assertEq(rewardToken.normalizedTotalSupply(), totalSupplyByBalances);
+        assertEq(rewardModule.normalizedTotalSupply(), totalSupplyByBalances);
     }
 
     function invariant_totalSupplyAlwaysBacked() external {
-        uint256 totalSupply = rewardToken.totalSupply();
+        uint256 totalSupply = rewardModule.totalSupply();
 
-        uint256 underlyingBalance = underlying.balanceOf(address(rewardToken));
+        uint256 underlyingBalance = underlying.balanceOf(address(rewardModule));
 
         assertGe(underlyingBalance, totalSupply);
     }

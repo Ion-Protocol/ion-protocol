@@ -41,7 +41,7 @@ contract LenderHandler is Handler {
         totalHoldingsNormalized += amountNormalized;
 
         underlying.mint(address(this), amount);
-        ionPool.supply(address(this), amount);
+        ionPool.supply(address(this), amount, new bytes32[](0));
     }
 
     function withdraw(uint256 amount) public {
