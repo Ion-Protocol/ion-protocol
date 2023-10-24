@@ -33,7 +33,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         UserHandler user = userHandlers[handlerIndex];
 
         user.burn(address(user), amount);
-    }    
+    }
 
     // --- SupplyFactorIncreaser Functions ---
 

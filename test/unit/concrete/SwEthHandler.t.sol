@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { SwEthHandler } from "src/periphery/handlers/SwEthHandler.sol";
+import { SwEthHandler } from "src/flash/handlers/SwEthHandler.sol";
 import { Whitelist } from "src/Whitelist.sol";
 
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";

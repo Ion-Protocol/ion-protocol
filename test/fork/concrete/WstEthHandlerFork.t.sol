@@ -2,14 +2,13 @@
 pragma solidity 0.8.21;
 
 import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
-import { WstEthHandler } from "src/periphery/handlers/WstEthHandler.sol";
+import { WstEthHandler } from "src/flash/handlers/WstEthHandler.sol";
 import { IonPool } from "src/IonPool.sol";
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
 import {
-    BalancerFlashloanDirectMintHandler,
-    VAULT
-} from "src/periphery/handlers/base/BalancerFlashloanDirectMintHandler.sol";
-import { UniswapFlashswapHandler } from "src/periphery/handlers/base/UniswapFlashswapHandler.sol";
+    BalancerFlashloanDirectMintHandler, VAULT
+} from "src/flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
+import { UniswapFlashswapHandler } from "src/flash/handlers/base/UniswapFlashswapHandler.sol";
 import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
 import { Whitelist } from "src/Whitelist.sol";
 

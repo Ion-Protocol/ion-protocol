@@ -4,8 +4,8 @@ pragma solidity 0.8.21;
 // import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
-// import { IonHandler } from "../../src/periphery/IonHandler.sol";
-import { IonRegistry } from "../../src/periphery/IonRegistry.sol";
+// import { IonHandler } from "../../src/flash/IonHandler.sol";
+import { IonRegistry } from "../../src/flash/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_DAY } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
@@ -76,13 +76,11 @@ contract IonPoolExposed is IonPool {
 
 // for bypassing whitelist checks during tests
 contract MockWhitelist {
-    function isWhitelistedBorrower(bytes32[] calldata proof, address addr) external view returns (bool) {
-        console2.log("mock whitelist borrower");
+    function isWhitelistedBorrower(bytes32[] calldata, address) external pure returns (bool) {
         return true;
     }
 
-    function isWhitelistedLender(bytes32[] calldata proof, address addr) external view returns (bool) {
-        console2.log("mock whitelist lender");
+    function isWhitelistedLender(bytes32[] calldata, address) external pure returns (bool) {
         return true;
     }
 }

@@ -40,7 +40,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     // --- Events ---
     event IlkInitialized(uint8 indexed ilkIndex, address indexed ilkAddress);
     event GlobalDebtCeilingUpdated(uint256 oldCeiling, uint256 newCeiling);
-    event InterestRateModuleUpdated(address oldModule, address newModule);
+    event InterestRateModuleUpdated(address newModule);
     event Hope(address indexed from, address indexed to);
     event Nope(address indexed from, address indexed to);
     event MintAndBurnGem(uint8 indexed ilkIndex, address indexed usr, int256 wad);
@@ -133,7 +133,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         $.interestRateModule = _interestRateModule;
         $.whitelist = _whitelist;
-        emit InterestRateModuleUpdated(address(0), address(_interestRateModule));
+        emit InterestRateModuleUpdated(address(_interestRateModule));
     }
 
     // --- Administration ---
@@ -202,6 +202,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         // Sanity check
         if (_interestRateModule.collateralCount() != $.ilks.length) revert InvalidInterestRateModule();
         $.interestRateModule = _interestRateModule;
+
+        emit InterestRateModuleUpdated(address(_interestRateModule));
     }
 
     /**
