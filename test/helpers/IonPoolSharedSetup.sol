@@ -113,38 +113,40 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
 
-    ERC20PresetMinterPauser immutable stEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
+    ERC20PresetMinterPauser immutable wstEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
     ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
 
-    ERC20PresetMinterPauser[] internal mintableCollaterals = [stEth, swEth, ethX];
+    ERC20PresetMinterPauser[] internal mintableCollaterals = [wstEth, swEth, ethX];
 
-    uint16 internal constant stEthAdjustedReserveFactor = 0.1e4;
+    uint16 internal constant wstEthAdjustedReserveFactor = 0.1e4;
     uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
     uint16 internal constant swEthAdjustedReserveFactor = 0.08e4;
 
-    uint16 internal constant stEthOptimalUtilizationRate = 0.9e4;
+    uint16 internal constant wstEthOptimalUtilizationRate = 0.9e4;
     uint16 internal constant ethXOptimalUtilizationRate = 0.95e4;
     uint16 internal constant swEthOptimalUtilizationRate = 0.92e4;
 
-    uint16 internal stEthDistributionFactor = 0.2e4;
+    uint16 internal wstEthDistributionFactor = 0.2e4;
     uint16 internal ethXDistributionFactor = 0.4e4;
     uint16 internal swEthDistributionFactor = 0.4e4;
 
-    uint256 internal stEthDebtCeiling = 20e45;
+    uint256 internal wstEthDebtCeiling = 20e45;
     uint256 internal ethXDebtCeiling = 40e45;
     uint256 internal swEthDebtCeiling = 40e45;
 
     IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
     uint16[] internal adjustedReserveFactors =
-        [stEthAdjustedReserveFactor, ethXAdjustedReserveFactor, swEthAdjustedReserveFactor];
+        [wstEthAdjustedReserveFactor, ethXAdjustedReserveFactor, swEthAdjustedReserveFactor];
     uint16[] internal optimalUtilizationRates =
-        [stEthOptimalUtilizationRate, ethXOptimalUtilizationRate, swEthOptimalUtilizationRate];
-    uint16[] internal distributionFactors = [stEthDistributionFactor, ethXDistributionFactor, swEthDistributionFactor];
-    uint256[] internal debtCeilings = [stEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
+        [wstEthOptimalUtilizationRate, ethXOptimalUtilizationRate, swEthOptimalUtilizationRate];
+    uint16[] internal distributionFactors = [wstEthDistributionFactor, ethXDistributionFactor, swEthDistributionFactor];
+    uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
 
     IlkData[] ilkConfigs;
+
+    IonPool implementation;
 
     function setUp() public virtual override {
         collaterals = _getCollaterals();
@@ -211,6 +213,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
             address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), initializeBytes))
         );
 
+        implementation = new IonPool();
+
         ionPool.grantRole(ionPool.ION(), address(this));
 
         for (uint8 i = 0; i < collaterals.length; i++) {
@@ -224,10 +228,9 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         }
 
         ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
-        // ionHandler = new IonHandler(ionPool, ionRegistry);
 
-        // ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        // ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
     }
 
     function test_setUp() public virtual {
@@ -302,7 +305,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     function _getCollaterals() internal view virtual returns (IERC20[] memory _collaterals) {
         _collaterals = new IERC20[](3);
 
-        _collaterals[0] = IERC20(address(stEth));
+        _collaterals[0] = IERC20(address(wstEth));
         _collaterals[1] = IERC20(address(ethX));
         _collaterals[2] = IERC20(address(swEth));
     }

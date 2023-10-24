@@ -508,7 +508,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
         // If changeInDebt < 0, it is a repayment and WETH is being transferred
         // into the protocol
-        // console.log("changeInDebt: ", changeInDebt);
         _borrowWeth(w, changeInDebt);
     }
 

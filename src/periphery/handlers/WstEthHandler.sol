@@ -17,8 +17,6 @@ import { Whitelist } from "src/Whitelist.sol";
 contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using LidoLibrary for ILidoWStEthDeposit;
 
-    error WstEthDepositFailed();
-
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
@@ -40,10 +38,6 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
 
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
         weth.withdraw(amountWeth);
-
-        (bool success,) = address(lstToken).call{ value: amountWeth }("");
-        if (!success) revert WstEthDepositFailed();
-
-        return _getLstAmountOut(amountWeth);
+        return ILidoWStEthDeposit(address(lstToken)).depositForLst(amountWeth);
     }
 }

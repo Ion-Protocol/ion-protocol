@@ -41,7 +41,7 @@ contract GemJoin is Ownable2Step, Pausable {
     function exit(address user, uint256 amount) external whenNotPaused {
         if (int256(amount) < 0) revert Int256Overflow();
 
-        pool.mintAndBurnGem(ilkIndex, user, -int256(amount));
-        gem.safeTransfer(msg.sender, amount);
+        pool.mintAndBurnGem(ilkIndex, msg.sender, -int256(amount));
+        gem.safeTransfer(user, amount);
     }
 }

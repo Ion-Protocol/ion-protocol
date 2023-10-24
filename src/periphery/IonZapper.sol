@@ -22,11 +22,12 @@ contract IonZapper {
         _weth.approve(address(ionPool), type(uint256).max);
     }
 
-    function zap(bytes32[] calldata proof) public payable onlyWhitelistedLenders(proof) {
+    function zapSupply(bytes32[] calldata proof) external payable onlyWhitelistedLenders(proof) {
         uint256 amount = msg.value;
 
         weth.deposit{ value: amount }();
-        bytes32[] memory empty;
-        ionPool.supply(msg.sender, amount, empty); // passes in empty proof since whitelist is checked in the modifier
+        ionPool.supply(msg.sender, amount, new bytes32[](0));
     }
+
+    function zapDepositWstEth() external payable { }
 }

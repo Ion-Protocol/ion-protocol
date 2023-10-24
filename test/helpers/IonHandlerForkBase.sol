@@ -50,6 +50,8 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     IUniswapV3Factory internal constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
+    IUniswapV3Pool constant WSTETH_WETH_POOL = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
+
     function setUp() public virtual override {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
         super.setUp();

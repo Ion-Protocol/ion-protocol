@@ -15,6 +15,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
+IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+
 /**
  * @dev There a couple things to consider here from a security perspective. The
  * first one is that the flashloan callback must only be callable from the
@@ -36,10 +38,8 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
     error ReceiveCallerNotVault(address unauthorizedCaller);
     error FlashLoanedTooManyTokens(uint256 amountTokens);
-    error FlashLoanedInvalidToken();
+    error FlashloanedInvalidToken(address tokenAddress);
     error ExternalFlashloanNotAllowed();
-
-    IVault internal constant vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     uint256 private flashloanInitiated = 1;
 
@@ -70,7 +70,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         // Prevents attacked from initiating flashloan and passing malicious data through callback
         flashloanInitiated = 2;
 
-        vault.flashLoan(
+        VAULT.flashLoan(
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
@@ -107,7 +107,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
         flashloanInitiated = 2;
 
-        vault.flashLoan(
+        VAULT.flashLoan(
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
@@ -120,7 +120,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @notice Code assumes Balancer flashloans remain free.
      * @dev This function is intended to never be called directly. It should
-     * only be called by the Balancer vault during a flashloan initiated by this
+     * only be called by the Balancer VAULT during a flashloan initiated by this
      * contract. This callback logic only handles the creation of leverage
      * positions by minting. Since not all tokens have withdrawable liquidity
      * via the LST protocol directly, deleverage through the protocol will need
@@ -139,9 +139,9 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         external
         override
     {
-        if (flashloanInitiated != 2) revert ExternalFlashloanNotAllowed();
-        if (msg.sender != address(vault)) revert ReceiveCallerNotVault(msg.sender);
         if (tokens.length > 1) revert FlashLoanedTooManyTokens(tokens.length);
+        if (msg.sender != address(VAULT)) revert ReceiveCallerNotVault(msg.sender);
+        if (flashloanInitiated != 2) revert ExternalFlashloanNotAllowed();
 
         IERC20Balancer token = tokens[0];
         (address user, uint256 initialDeposit, uint256 resultingCollateral, uint256 resultingDebt) =
@@ -163,12 +163,12 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingCollateral, resultingDebt, AmountToBorrow.IS_MIN);
 
-            weth.transfer(address(vault), amounts[0]);
+            weth.transfer(address(VAULT), amounts[0]);
         } else {
+            if (address(lstToken) != address(token)) revert FlashloanedInvalidToken(address(token));
+
             // Sanity check
             assert(amounts[0] + initialDeposit == resultingCollateral);
-
-            if (address(lstToken) != address(token)) revert FlashLoanedInvalidToken();
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingCollateral, resultingDebt, AmountToBorrow.IS_MIN);
@@ -176,7 +176,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             // Convert borrowed WETH back to collateral token
             uint256 tokenAmountReceived = _depositWethForLst(resultingDebt);
 
-            lstToken.safeTransfer(address(vault), tokenAmountReceived);
+            lstToken.safeTransfer(address(VAULT), tokenAmountReceived);
         }
     }
 }
