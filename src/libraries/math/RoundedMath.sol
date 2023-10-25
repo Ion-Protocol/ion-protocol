@@ -121,6 +121,7 @@ library RoundedMath {
 
     // --- Scalers ---
 
+    // TODO: use muldiv instead 
     function scaleToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
         return value * (10 ** 18) / (10 ** scale);
     }

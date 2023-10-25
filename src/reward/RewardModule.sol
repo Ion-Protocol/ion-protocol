@@ -8,7 +8,6 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 /**
  * @title RewardModule
- * @notice Heavily inspired by Aave's `AToken` but without tokenization.
  */
 abstract contract RewardModule is ContextUpgradeable {
     using RoundedMath for uint256;

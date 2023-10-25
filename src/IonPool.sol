@@ -605,7 +605,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
      * @dev Helper function to deal with borrowing and repaying debt. A positive
      * amount is a borrow while negative amount is a repayment
      * @param user receiver if transfer to, or sender if transfer from
-     * @param amount amount to transfer
+     * @param amount amount to transfer [rad]
      */
     function _transferWeth(address user, int256 amount) internal {
         if (amount == 0) return;
