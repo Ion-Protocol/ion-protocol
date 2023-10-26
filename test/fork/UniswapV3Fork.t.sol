@@ -65,7 +65,6 @@ contract UniswapSwapTester is Test {
 
     function getPrice() internal returns (uint256){
         (uint160 sqrtPriceX96O,,,,,,) = uniswapPool.slot0();
-        // console2.log("SQRT PRICE", sqrtPriceX96O);
         uint256 num;
         uint256 div;
         if (swETH_stETH_flag) {
@@ -113,7 +112,8 @@ contract UniswapSwapTester is Test {
         } else {
             native = stETH.balanceOf(address(this));
         }
-        console2.log(necessaryBalance, oldRawPrice, (percDiff * 100), native);
+        // perc diff is in 2 decimal places now 
+        console2.log(necessaryBalance, newRawPrice, (percDiff / 1e14), native);
         return (oldRawPrice, newRawPrice, native);
     }
 
@@ -150,11 +150,19 @@ contract UniswapSwapTester is Test {
         simForkTest(amountSpecified, sqrtPriceLimitX96, uniswapStEthAddress);
     }
     
-    function testSwETHSwapRange() external {    
+    function testSwETHSwapRange() external { 
+        uniswapPool = IUniswapPoolV3(uniswapSwEthAddress);
+        swETH.approve(address(uniswapPool), type(uint256).max);
+        uint256 totalSwETHinPool = swETH.balanceOf(address(uniswapPool));
+        uint256 currentPrice = getPrice();
+
         // configure range here
         int256 increment = 5e18;
-        int256 starting = 1900e18; // inclusive
-        int256 ending = 2101e18; // exclusive
+        int256 starting = int256(totalSwETHinPool * currentPrice / 1e18);
+        int256 ending = starting + (increment * 20);
+        if (starting < 0) {
+            starting = 0;
+        }
 
         swETH_stETH_flag = true; 
         uint160 sqrtPriceLimitX96 = 0.9999e18; 
@@ -164,9 +172,8 @@ contract UniswapSwapTester is Test {
             depositAmounts[i] = starting + int256(i) * increment;
         }
 
-        string memory path = "./offchain/files/swETH_output.csv";
+        string memory path = vm.envString("UNISWAP_SWETH_FILE_PATH");
         string memory header = "amountSpecified,oldPrice,newPrice,swapReceived";
-        console2.log(header);
         if (writeToFile) {
             vm.writeLine(path, header);
         }

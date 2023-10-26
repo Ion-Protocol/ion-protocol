@@ -10,9 +10,13 @@
     "YieldOracle:deployment:deploy:mainnet": "forge script script/DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify"
   },
   "dependencies": {
+    "bignumber.js": "^9.1.2",
+    "csv-parser": "^3.0.0",
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.7.1",
+    "pg": "^8.11.3",
+    "pg-promise": "^11.5.4",
     "viem": "^1.14.0",
     "web3": "^4.1.2"
   },

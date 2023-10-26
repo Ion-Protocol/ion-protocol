@@ -14,7 +14,7 @@ const client = new pg.Client({
     ssl: true,
 });
 
-const csvFilePath = './offchain/files/swETH_output.csv';
+const csvFilePath = process.env.FILE_PATH;
 
 async function processData() {
     console.log('Connecting to database...')
@@ -58,7 +58,8 @@ async function writeDb() {
         .on('end', async () => {
             try {
                 await Promise.all(rows); // Wait for all insert queries to complete
-                console.log('All rows inserted successfully.');
+                console.log(`All ${rows.length} rows inserted successfully.`);
+                clearFileContents(csvFilePath);
             } catch (error) {
                 console.error('Error inserting rows:', error);
             } finally {
@@ -66,6 +67,12 @@ async function writeDb() {
             }
         });
     
+}
+
+function clearFileContents(filePath) {
+    // Open the file in write mode and truncate its contents
+    fs.writeFileSync(filePath, '', 'utf8');
+    console.log(`Contents of file at ${filePath} cleared successfully.`);
 }
 
 processData();
