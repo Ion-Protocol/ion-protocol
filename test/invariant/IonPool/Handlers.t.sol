@@ -5,7 +5,7 @@ import { IonPoolExposed } from "../../helpers/IonPoolSharedSetup.sol";
 // import { IonHandler } from "../../../src/periphery/IonHandler.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 import { IHevm } from "../../helpers/echidna/IHevm.sol";
-import { RoundedMath } from "../../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { CommonBase } from "forge-std/Base.sol";

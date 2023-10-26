@@ -3,14 +3,16 @@ pragma solidity 0.8.21;
 
 import { IonPool } from "../../IonPool.sol";
 import { IonRegistry } from "./../IonRegistry.sol";
-import { UniswapHandler } from "./base/UniswapHandler.sol";
+import { IonHandlerBase } from "./base/IonHandlerBase.sol";
+import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
+import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
 import { ISwellDeposit } from "../../interfaces/DepositInterfaces.sol";
-import { RoundedMath } from "../../math/RoundedMath.sol";
+import { RoundedMath } from "../../libraries/math/RoundedMath.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-contract SwEthHandler is UniswapHandler {
+contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using RoundedMath for uint256;
 
     constructor(
@@ -18,9 +20,11 @@ contract SwEthHandler is UniswapHandler {
         IonPool _ionPool,
         IonRegistry _ionRegistry,
         IUniswapV3Factory _factory,
-        IUniswapV3Pool _swEthPool
+        IUniswapV3Pool _swEthPool,
+        uint24 _poolFee
     )
-        UniswapHandler(_ilkIndex, _ionPool, _ionRegistry, _factory, _swEthPool, true)
+        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry)
+        UniswapFlashswapHandler(_factory, _swEthPool, _poolFee, true)
     { }
 
     function _getLstAmountOut(uint256 amountWeth) internal view override returns (uint256) {

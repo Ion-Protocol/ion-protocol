@@ -5,7 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardToken } from "../../src/token/RewardToken.sol";
 import { RewardTokenSharedSetup } from "../helpers/RewardTokenSharedSetup.sol";
-import { RoundedMath, RAY } from "../../src/math/RoundedMath.sol";
+import { RoundedMath, RAY } from "../../src/libraries/math/RoundedMath.sol";
 import { IERC20Errors } from "../../src/token/IERC20Errors.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";

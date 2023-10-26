@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { Test } from "forge-std/Test.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
+// import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { IonPool } from "../../src/IonPool.sol";
 // import { IonHandler } from "../../src/periphery/IonHandler.sol";
 import { IonRegistry } from "../../src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_DAY } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
-import { RAY } from "../../src/math/RoundedMath.sol";
+import { RAY } from "../../src/libraries/math/RoundedMath.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
@@ -62,14 +60,14 @@ contract IonPoolExposed is IonPool {
     // IonPool(_underlying, _treasury, _decimals, _name, _symbol, _defaultAdmin, _interestRateModule)
     { }
 
+    function setRate(uint8 ilkIndex, uint104 newRate) external {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+
+        $.ilks[ilkIndex].rate = newRate;
+    }
+
     function setSupplyFactor(uint256 factor) external {
         _setSupplyFactor(factor);
-    }
-}
-
-contract EmptyContract {
-    function foo() public pure returns (uint256) {
-        return 0;
     }
 }
 
@@ -99,6 +97,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
     ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
 
+    ERC20PresetMinterPauser[] internal mintableCollaterals = [stEth, swEth, ethX]; 
+
     uint16 internal constant stEthAdjustedReserveFactor = 0.1e4;
     uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
     uint16 internal constant swEthAdjustedReserveFactor = 0.08e4;
@@ -127,6 +127,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     IlkData[] ilkConfigs;
 
     function setUp() public virtual override {
+
         collaterals = _getCollaterals();
         address[] memory depositContracts = _getDepositContracts();
 
@@ -155,6 +156,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
                 optimalUtilizationRate: optimalUtilizationRates[i],
                 distributionFactor: distributionFactors[i]
             });
+
             ilkConfigs.push(ilkConfig);
 
             distributionFactorSum += distributionFactors[i];
@@ -187,11 +189,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         );
 
         ionPool.grantRole(ionPool.ION(), address(this));
-
-        // vm.prank(borrower1);
-        // ionPool.hope(address(ionHandler));
-        // vm.prank(borrower2);
-        // ionPool.hope(address(ionHandler));
 
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));

@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardToken } from "../../src/token/RewardToken.sol";
-import { RoundedMath } from "../../src/math/RoundedMath.sol";
+import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 
 contract RewardTokenExposed is RewardToken {

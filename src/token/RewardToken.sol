@@ -5,7 +5,7 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { IERC20Errors } from "./IERC20Errors.sol";
-import { RoundedMath, RAY } from "../math/RoundedMath.sol";
+import { RoundedMath, RAY } from "../libraries/math/RoundedMath.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -124,7 +124,6 @@ abstract contract RewardToken is ContextUpgradeable, IERC20, IERC20Metadata, IER
         );
     }
 
-    // TODO: Do rounding in protocol's favor
     /**
      *
      * @param user to burn tokens from

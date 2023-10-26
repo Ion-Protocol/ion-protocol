@@ -8,10 +8,11 @@ import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { InterestRate } from "./InterestRate.sol";
-import { RoundedMath, RAY } from "./math/RoundedMath.sol";
+import { RoundedMath, RAY } from "./libraries/math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardToken {
     using SafeERC20 for IERC20;
@@ -87,7 +88,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant IonPoolStorageLocation = 0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e00;
 
-    function _getIonPoolStorage() private pure returns (IonPoolStorage storage $) {
+    function _getIonPoolStorage() internal pure returns (IonPoolStorage storage $) {
         assembly {
             $.slot := IonPoolStorageLocation
         }
@@ -474,6 +475,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
         // If changeInDebt < 0, it is a repayment and WETH is being transferred
         // into the protocol
+        // console.log("changeInDebt: ", changeInDebt);
         _borrowWeth(w, changeInDebt);
     }
 
@@ -481,20 +483,21 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
     /**
      * @dev To be used by protocol to settle bad debt using reserves
+     * NOTE: Can pay another user's bad debt with the sender's asset
+     * @param user the address that owns the bad debt being paid off
      * @param rad amount of debt to be repaid (45 decimals)
      */
-    function repayBadDebt(uint256 rad) external {
+    function repayBadDebt(address user, uint256 rad) external {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        address u = _msgSender();
-        $.unbackedDebt[u] -= rad;
+        $.unbackedDebt[user] -= rad;
         $.totalUnbackedDebt -= rad;
         $.debt -= rad;
 
         // Must be negative since it is a repayment
-        _borrowWeth(u, -(rad.toInt256()));
+        _borrowWeth(_msgSender(), -(rad.toInt256()));
 
-        emit RepayBadDebt(u, rad);
+        emit RepayBadDebt(user, rad);
     }
 
     // --- Helpers ---
@@ -509,7 +512,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         if (amount == 0) return;
 
         if (amount < 0) {
-            // Round up in protocol's favor
             // TODO: Round up using mulmod
             uint256 amountWad = uint256(-amount) / RAY;
             amountWad = amountWad * RAY < uint256(-amount) ? amountWad + 1 : amountWad;

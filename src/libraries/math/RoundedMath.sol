@@ -7,6 +7,7 @@ uint256 constant WAD = 1e18;
 uint256 constant RAY = 1e27;
 uint256 constant RAD = 1e45;
 
+// TODO: Rename to WadRayMath and get rid of all `rounded...` functions
 library RoundedMath {
     using Math for uint256;
 

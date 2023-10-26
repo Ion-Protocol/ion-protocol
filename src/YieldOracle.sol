@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { ILidoWstEth, IStaderOracle, ISwellEth } from "./interfaces/OracleInterfaces.sol";
+import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { WAD } from "./math/RoundedMath.sol";
 
 // historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
 // storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
@@ -102,14 +101,15 @@ contract YieldOracle is IYieldOracle {
     // TODO: Move to a library
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            ILidoWstEth lido = ILidoWstEth(address0);
+            IWstEth lido = IWstEth(address0);
             exchangeRate = (lido.stEthPerToken()).toUint64();
         } else if (ilkIndex == 1) {
+            // TODO: Use stader deposit contract `getExchangeRate()` instead
             IStaderOracle stader = IStaderOracle(address1);
             (, uint256 totalETHBalance, uint256 totalETHXSupply) = stader.exchangeRate();
             exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply)).toUint64();
         } else {
-            ISwellEth swell = ISwellEth(address2);
+            ISwEth swell = ISwEth(address2);
             exchangeRate = (swell.swETHToETHRate()).toUint64();
         }
     }
