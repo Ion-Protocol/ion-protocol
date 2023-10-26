@@ -20,4 +20,3 @@ node_modules/
 .env.production.local
 .env.local
 
-offchain/files/*
