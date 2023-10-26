@@ -36,7 +36,6 @@ fig.update_layout(title_text='Data Analysis', showlegend=False)
 
 # Save the combined plot as an HTML file
 fig.write_html('./offchain/files/output.html')
-
 print("Combined HTML file generated successfully: ./offchain/files/output.html")
 
 # clear the output csv file
