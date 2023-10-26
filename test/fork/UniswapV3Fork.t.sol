@@ -154,11 +154,13 @@ contract UniswapSwapTester is Test {
         uniswapPool = IUniswapPoolV3(uniswapSwEthAddress);
         swETH.approve(address(uniswapPool), type(uint256).max);
         uint256 totalSwETHinPool = swETH.balanceOf(address(uniswapPool));
+        uint256 totalEthinPool = weth.balanceOf(address(uniswapPool));
         uint256 currentPrice = getPrice();
+        uint256 ethDenomSwEthValue = totalSwETHinPool * currentPrice / 1e18;
 
         // configure range here
         int256 increment = 5e18;
-        int256 starting = int256(totalSwETHinPool * currentPrice / 1e18);
+        int256 starting = int256(ethDenomSwEthValue);
         int256 ending = starting + (increment * 20);
         if (starting < 0) {
             starting = 0;
@@ -173,6 +175,14 @@ contract UniswapSwapTester is Test {
         }
 
         string memory path = vm.envString("UNISWAP_SWETH_FILE_PATH");
+        // write the swETH and ETH balances to our output file
+        if (writeToFile) {
+            string memory swEthString = StringUtils.uint256ToString(totalSwETHinPool);
+            string memory ethString = StringUtils.uint256ToString(totalEthinPool);
+            string memory balanceRow = string(abi.encodePacked(swEthString, ",", ethString));
+            vm.writeLine(path, balanceRow);
+        }
+
         string memory header = "amountSpecified,oldPrice,newPrice,swapReceived";
         if (writeToFile) {
             vm.writeLine(path, header);
