@@ -40,10 +40,17 @@ scatter_fig3 = go.Scatter(x=df['amountSpecified'], y=df['swapReceived'], mode='l
 fig.add_trace(scatter_fig1, row=1, col=1)
 fig.add_trace(scatter_fig2, row=1, col=2)
 fig.add_trace(scatter_fig3, row=2, col=1)
+fig.update_xaxes(title_text='ETH', row=1, col=1)
+fig.update_xaxes(title_text='ETH', row=1, col=2)
+fig.update_xaxes(title_text='ETH', row=2, col=1)
+fig.update_yaxes(title_text='Percent Difference (%)', row=1, col=1)
+fig.update_yaxes(title_text='Effective Swap Rate (swETH/ETH)', row=1, col=2)
+fig.update_yaxes(title_text='swETH (EAT)', row=2, col=1)
 
 # Add bar charts to the subplots
 bar_fig1 = go.Bar(x=['swETH Balance', 'ETH Balance'], y=[swEth_balance, eth_balance])
 fig.add_trace(bar_fig1, row=2, col=2)
+fig.update_yaxes(title_text='# of Tokens', row=2, col=2)
 
 # Update layout for the combined dashboard
 fig.update_layout(title_text='Data Analysis Dashboard', showlegend=False)
