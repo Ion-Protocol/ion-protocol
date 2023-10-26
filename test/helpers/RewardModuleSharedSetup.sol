@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModule } from "../../src/token/RewardModule.sol";
-import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
+import { RewardModule } from "src/reward/RewardModule.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { TransparentUpgradeableProxy } from "src/admin/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "src/admin/ProxyAdmin.sol";
+
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 
 contract RewardModuleExposed is RewardModule {
+
     function init(
         address _underlying,
         address _treasury,
         uint8 decimals_,
         string memory name_,
         string memory symbol_
-    )
-        public
-        initializer
-    {
-        initialize(_underlying, _treasury, decimals_, name_, symbol_);
+    ) external initializer {
+        RewardModule.initialize(_underlying, _treasury, decimals_, name_, symbol_);
     }
 
     // --- Cheats ---
@@ -48,6 +49,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     RewardModuleExposed rewardModule;
+    ProxyAdmin ionProxyAdmin;
 
     uint256 sendingUserPrivateKey = 16;
     uint256 receivingUserPrivateKey = 17;
@@ -58,8 +60,90 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
 
     function setUp() public virtual override {
         super.setUp();
-        rewardModule = new RewardModuleExposed();
-        rewardModule.init(address(underlying), TREASURY, DECIMALS, NAME, SYMBOL);
+        ionProxyAdmin = new ProxyAdmin(address(this));
+        RewardModuleExposed rewardModuleImpl = new RewardModuleExposed();
+
+        bytes memory initializeBytes = abi.encodeWithSelector(
+            RewardModuleExposed.init.selector,
+            address(underlying),
+            address(TREASURY),
+            DECIMALS,
+            NAME,
+            SYMBOL
+        );
+
+        rewardModule = RewardModuleExposed(
+            address(
+                new TransparentUpgradeableProxy(
+                    address(rewardModuleImpl),
+                    address(ionProxyAdmin),
+                    initializeBytes
+                )
+            )
+        );
+    }
+
+    function test_Initialize() external {
+        ProxyAdmin _admin = new ProxyAdmin(address(this));
+        RewardModuleExposed _rewardModuleImpl = new RewardModuleExposed();
+
+        bytes memory initializeBytes = abi.encodeWithSelector(
+            RewardModuleExposed.init.selector,
+            address(0),
+            address(TREASURY),
+            DECIMALS,
+            NAME,
+            SYMBOL
+        );
+
+        vm.expectRevert(RewardModule.InvalidUnderlyingAddress.selector);
+        rewardModule = RewardModuleExposed(
+            address(
+                new TransparentUpgradeableProxy(
+                    address(_rewardModuleImpl),
+                    address(_admin),
+                    initializeBytes
+                )
+            )
+        );
+
+        initializeBytes = abi.encodeWithSelector(
+            RewardModuleExposed.init.selector,
+            address(underlying),
+            address(0),
+            DECIMALS,
+            NAME,
+            SYMBOL
+        );
+
+        vm.expectRevert(RewardModule.InvalidTreasuryAddress.selector);
+        rewardModule = RewardModuleExposed(
+            address(
+                new TransparentUpgradeableProxy(
+                    address(_rewardModuleImpl),
+                    address(_admin),
+                    initializeBytes
+                )
+            )
+        );
+
+        initializeBytes = abi.encodeWithSelector(
+            RewardModuleExposed.init.selector,
+            address(underlying),
+            address(TREASURY),
+            DECIMALS,
+            NAME,
+            SYMBOL
+        );
+        rewardModule = RewardModuleExposed(
+            address(
+                new TransparentUpgradeableProxy(
+                    address(_rewardModuleImpl),
+                    address(_admin),
+                    initializeBytes
+                )
+            )
+        );
     }
 
     // --- Helpers ---

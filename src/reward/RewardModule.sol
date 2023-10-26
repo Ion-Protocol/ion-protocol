@@ -62,7 +62,7 @@ abstract contract RewardModule is ContextUpgradeable {
     event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
 
     /**
-     * @dev Emitted when `RewardToken`s are minted by `user` in exchange for `amount` underlying tokens. `supplyFactor`
+     * @dev Emitted when minting by `user` in exchange for `amount` underlying tokens. `supplyFactor`
      * is the  supply factor at the time.
      */
     event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
@@ -123,6 +123,9 @@ abstract contract RewardModule is ContextUpgradeable {
 
         uint256 _supplyFactor = $.supplyFactor;
         uint256 amountScaled = amount.rayDivUp(_supplyFactor);
+
+        // This conditional should be impossible with rounding up, but will keep
+        // it as a sanity check
         if (amountScaled == 0) revert InvalidBurnAmount();
         _burnNormalized(user, amountScaled);
 

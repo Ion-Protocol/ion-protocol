@@ -112,10 +112,10 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
 
     ERC20PresetMinterPauser immutable wstEth = new ERC20PresetMinterPauser("Staked Ether", "stETH");
-    ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
     ERC20PresetMinterPauser immutable ethX = new ERC20PresetMinterPauser("Ether X", "ETHX");
+    ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
 
-    ERC20PresetMinterPauser[] internal mintableCollaterals = [wstEth, swEth, ethX];
+    ERC20PresetMinterPauser[] internal mintableCollaterals = [wstEth, ethX, swEth];
 
     uint16 internal constant wstEthAdjustedReserveFactor = 0.1e4;
     uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
@@ -143,8 +143,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
 
     IlkData[] ilkConfigs;
-
-    IonPool implementation;
 
     function setUp() public virtual override {
         collaterals = _getCollaterals();
@@ -193,7 +191,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
         // Instantiate upgradeable IonPool
-        IonPoolExposed logicIonPool =
+        IonPoolExposed ionPoolImpl =
             new IonPoolExposed(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
 
         bytes memory initializeBytes = abi.encodeWithSelector(
@@ -208,10 +206,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
             whitelist
         );
         ionPool = IonPoolExposed(
-            address(new TransparentUpgradeableProxy(address(logicIonPool), address(ionProxyAdmin), initializeBytes))
+            address(new TransparentUpgradeableProxy(address(ionPoolImpl), address(ionProxyAdmin), initializeBytes))
         );
-
-        implementation = new IonPool();
 
         ionPool.grantRole(ionPool.ION(), address(this));
 
