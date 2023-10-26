@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "../../../IonPool.sol";
-import { IonRegistry } from "./../../IonRegistry.sol";
-import { IWETH9 } from "../../../interfaces/IWETH9.sol";
-import { GemJoin } from "../../../join/GemJoin.sol";
-import { RoundedMath } from "../../../libraries/math/RoundedMath.sol";
+import { IonPool } from "src/IonPool.sol";
+import { IonRegistry } from "src/IonRegistry.sol";
+import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { GemJoin } from "src/join/GemJoin.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 /**
  * @dev There a couple things to consider here from a security perspective. The
@@ -147,19 +145,6 @@ abstract contract IonHandlerBase {
 
         gemJoin.exit(receiver, collateralToWithdraw);
     }
-
-    /**
-     * @dev Returns how much lst one would get out of a deposit size of
-     * `amountWeth`
-     */
-    function _getLstAmountOut(uint256 amountWeth) internal view virtual returns (uint256);
-
-    /**
-     * @dev Unwraps weth into eth and deposits into lst contract
-     * @param amountWeth to deposit
-     * @return amountLst received
-     */
-    function _depositWethForLst(uint256 amountWeth) internal virtual returns (uint256);
 
     receive() external payable {
         if (msg.sender != address(weth)) revert CannotSendEthToContract();

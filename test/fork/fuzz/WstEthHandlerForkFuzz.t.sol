@@ -13,7 +13,7 @@ import { Vm } from "forge-std/Vm.sol";
 
 using LidoLibrary for ILidoWStEthDeposit;
 
-contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
+abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
     using RoundedMath for *;
 
     function testForkFuzz_FlashLoanCollateral(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
@@ -35,7 +35,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         wstEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
 
-        assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)), resultingDebt);
+        assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
@@ -81,7 +81,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)) * ionPool.rate(ilkIndex), maxResultingDebt * RAY);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
     function testForkFuzz_FlashSwapDeleverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
@@ -106,8 +106,7 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         }
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
-        // Should be fine since rate is 1
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)), maxResultingDebt);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
 
         uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
@@ -123,12 +122,12 @@ contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
 
         assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
-        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated - normalizedDebtToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
     }
 }
 
 contract WstEthHandler_WithRateChange_ForkFuzzTest is WstEthHandler_ForkFuzzTest {
-    function testForkFuzz_withRateChange_FlashLoanCollateral(
+    function testForkFuzz_WithRateChange_FlashLoanCollateral(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,
         uint104 rate
@@ -140,7 +139,7 @@ contract WstEthHandler_WithRateChange_ForkFuzzTest is WstEthHandler_ForkFuzzTest
         super.testForkFuzz_FlashLoanCollateral(initialDeposit, resultingCollateralMultiplier);
     }
 
-    function testForkFuzz_withRateChange_FlashLoanWeth(
+    function testForkFuzz_WithRateChange_FlashLoanWeth(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,
         uint104 rate
@@ -152,7 +151,7 @@ contract WstEthHandler_WithRateChange_ForkFuzzTest is WstEthHandler_ForkFuzzTest
         super.testForkFuzz_FlashLoanWeth(initialDeposit, resultingCollateralMultiplier);
     }
 
-    function testForkFuzz_withRateChange_FlashSwapLeverage(
+    function testForkFuzz_WithRateChange_FlashSwapLeverage(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,
         uint104 rate
@@ -164,7 +163,7 @@ contract WstEthHandler_WithRateChange_ForkFuzzTest is WstEthHandler_ForkFuzzTest
         super.testForkFuzz_FlashSwapLeverage(initialDeposit, resultingCollateralMultiplier);
     }
 
-    function testForkFuzz_withRateChange_FlashSwapDeleverage(
+    function testForkFuzz_WithRateChange_FlashSwapDeleverage(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,
         uint104 rate

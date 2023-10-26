@@ -11,6 +11,8 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract LidoLibrary_FuzzTest is Test {
+    using LidoLibrary for ILidoWStEthDeposit;
+
     ILidoWStEthDeposit private constant MAINNET_WSTETH = ILidoWStEthDeposit(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
 
     function setUp() external {
@@ -27,8 +29,8 @@ contract LidoLibrary_FuzzTest is Test {
         ILidoStEthDeposit stEth = ILidoStEthDeposit(MAINNET_WSTETH.stETH());
         vm.assume(ethAmountIn < stEth.getCurrentStakeLimit());
 
-        (bool success,) = address(MAINNET_WSTETH).call{ value: ethAmountIn }("");
-        require(success, "Failed transfer");
+        vm.deal(address(this), ethAmountIn);
+        MAINNET_WSTETH.depositForLst(ethAmountIn);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(this)), lstAmount);
     }
 
@@ -40,8 +42,8 @@ contract LidoLibrary_FuzzTest is Test {
         vm.assume(ethAmount < stEth.getCurrentStakeLimit());
         uint256 lstAmountOut = LidoLibrary.getLstAmountOutForEthAmountIn(MAINNET_WSTETH, ethAmount);
 
-        (bool success,) = address(MAINNET_WSTETH).call{ value: ethAmount }("");
-        require(success, "Failed transfer");
+        vm.deal(address(this), ethAmount);
+        MAINNET_WSTETH.depositForLst(ethAmount);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(this)), lstAmountOut);
     }
 }

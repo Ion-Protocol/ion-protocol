@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
 
+// Mocks
 uint256 constant WST_ETH_EXCHANGE_RATE = 1.2e18;
 uint256 constant STADER_ETH_EXCHANGE_RATE = 1.1e18;
 uint256 constant SWELL_ETH_EXCHANGE_RATE = 1.15e18;

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "../../../IonPool.sol";
-import { IonRegistry } from "./../../IonRegistry.sol";
 import { IonHandlerBase } from "./IonHandlerBase.sol";
 import { RoundedMath } from "../../../libraries/math/RoundedMath.sol";
 
@@ -50,6 +48,8 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     constructor(IUniswapV3Factory _factory, IUniswapV3Pool _pool, uint24 _poolFee, bool _wethIsToken0) {
         if (address(_factory) == address(0)) revert InvalidFactoryAddress();
         if (address(_pool) == address(0)) revert InvalidUniswapPool();
+
+        // TODO: check that pool has weth as pair
 
         factory = _factory;
         pool = _pool;
@@ -137,6 +137,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         FlashSwapData memory flashswapData =
             FlashSwapData({ user: msg.sender, changeInCollateralOrDebt: debtToRemove, zeroForOne: zeroForOne });
 
+        // TODO: Cheaper with mulMod?
         // This recalculation is necessary because IonPool rounds up repayment
         // calculations... so the amount of weth required to pay off the debt
         // may be slightly higher

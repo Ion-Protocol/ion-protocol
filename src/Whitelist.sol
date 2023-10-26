@@ -20,17 +20,11 @@ contract Whitelist is Ownable2Step {
         lendersWhitelistMerkleRoot = _lendersWhitelistMerkleRoot;
     }
 
-    function updateBorrowersWhitelistMerkleRoot(bytes32 _borrowersWhitelistMerkleRoot)
-        external
-        onlyOwner
-    {
+    function updateBorrowersWhitelistMerkleRoot(bytes32 _borrowersWhitelistMerkleRoot) external onlyOwner {
         borrowersWhitelistMerkleRoot = _borrowersWhitelistMerkleRoot;
     }
 
-    function updateLendersWhitelistMerkleRoot(bytes32 _lendersWhitelistMerkleRoot)
-        external
-        onlyOwner
-    {
+    function updateLendersWhitelistMerkleRoot(bytes32 _lendersWhitelistMerkleRoot) external onlyOwner {
         lendersWhitelistMerkleRoot = _lendersWhitelistMerkleRoot;
     }
 
@@ -45,7 +39,7 @@ contract Whitelist is Ownable2Step {
     /**
      * @dev called by external modifiers to prove inclusion as a borrower
      * @return true if the addr is part of the borrower whitelist or the protocol whitelist. False otherwise
-     */ 
+     */
     function isWhitelistedBorrower(bytes32[] calldata proof, address addr) external view returns (bool) {
         if (protocolWhitelist[addr]) return true;
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));
@@ -55,7 +49,7 @@ contract Whitelist is Ownable2Step {
     /**
      * @dev called by external modifiers to prove inclusion as a lender
      * @return true if the addr is part of the lender whitelist or the protocol whitelist. False otherwise
-     */ 
+     */
     function isWhitelistedLender(bytes32[] calldata proof, address addr) external view returns (bool) {
         if (protocolWhitelist[addr]) return true;
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));

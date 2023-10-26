@@ -72,7 +72,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
-        assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)), resultingDebt);
+        assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
@@ -91,9 +91,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
         assertApproxEqAbs(
-            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
-            resultingDebt,
-            1e27 / RAY
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt, 1e27 / RAY
         );
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
@@ -114,7 +112,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)) * ionPool.rate(ilkIndex), maxResultingDebt * RAY);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
     function testFork_FlashswapDeleverage() external {
@@ -138,8 +136,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         }
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
-        // Should be fine since rate is 1
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)), maxResultingDebt);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
 
         uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
@@ -155,7 +152,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
 
         assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
-        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated - normalizedDebtToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
     }
 
     function testFork_RevertWhen_FlashloanNotInitiatedByHandler() external {
@@ -165,7 +162,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 8e18;
 
-        vm.expectRevert(BalancerFlashloanDirectMintHandler.ExternalFlashloanNotAllowed.selector);
+        vm.expectRevert(BalancerFlashloanDirectMintHandler.ExternalBalancerFlashloanNotAllowed.selector);
         VAULT.flashLoan(
             IFlashLoanRecipient(address(wstEthHandler)), addresses, amounts, abi.encode(msg.sender, 0, 0, 0)
         );
@@ -207,7 +204,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         amounts[0] = 8e18;
 
         // Should actually be impossible
-        vm.expectRevert(BalancerFlashloanDirectMintHandler.ExternalFlashloanNotAllowed.selector);
+        vm.expectRevert(BalancerFlashloanDirectMintHandler.ExternalBalancerFlashloanNotAllowed.selector);
         vm.prank(address(VAULT));
         wstEthHandler.receiveFlashLoan(addresses, amounts, amounts, abi.encode(address(this), 100e18, 100e18, 100e18));
     }

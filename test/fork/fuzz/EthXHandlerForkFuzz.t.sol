@@ -1,25 +1,35 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { SwEthHandler_ForkBase } from "test/fork/concrete/SwEthHandlerFork.t.sol";
+import { EthXHandler_ForkBase } from "test/fork/concrete/EthXHandlerFork.t.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
-import { ISwellDeposit } from "src/interfaces/DepositInterfaces.sol";
-import { SwellLibrary } from "src/libraries/SwellLibrary.sol";
+import { IStaderDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
 
 import { Vm } from "forge-std/Vm.sol";
 
-using SwellLibrary for ISwellDeposit;
+using StaderLibrary for IStaderDeposit;
 
-abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
+abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
     using RoundedMath for *;
 
+    uint256 minDeposit;
+    uint256 maxDeposit;
+
+    function setUp() public override {
+        super.setUp();
+
+        minDeposit = MAINNET_STADER.staderConfig().getMinDepositAmount();
+        maxDeposit = MAINNET_STADER.staderConfig().getMaxDepositAmount();
+    }
+
     function testForkFuzz_FlashLoanCollateral(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
-        initialDeposit = bound(initialDeposit, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);
+        initialDeposit = bound(initialDeposit, minDeposit, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
-        uint256 resultingDebt = MAINNET_SWELL.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
+        uint256 resultingDebt = MAINNET_STADER.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
         uint256 ilkSpot = ionPool.spot(ilkIndex);
@@ -30,20 +40,20 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
 
         vm.assume(!unsafePositionChange);
 
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
+        weth.approve(address(ethXHandler), type(uint256).max);
+        ionPool.addOperator(address(ethXHandler));
 
-        swEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
+        ethXHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
 
         assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt);
-        assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
     function testForkFuzz_FlashLoanWeth(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
-        initialDeposit = bound(initialDeposit, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);
+        initialDeposit = bound(initialDeposit, minDeposit, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
-        uint256 resultingDebt = MAINNET_SWELL.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
+        uint256 resultingDebt = MAINNET_STADER.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
         uint256 ilkSpot = ionPool.spot(ilkIndex);
@@ -51,50 +61,50 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
 
         bool unsafePositionChange = newTotalDebt > resultingCollateral * ilkSpot;
 
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
+        weth.approve(address(ethXHandler), type(uint256).max);
+        ionPool.addOperator(address(ethXHandler));
 
         vm.assume(!unsafePositionChange);
 
-        swEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
+        ethXHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
 
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
             ilkRate / RAY
         );
-        assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
     // TODO: Replace all inlines with a deep fuzz config
     function testForkFuzz_FlashSwapLeverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
-        initialDeposit = bound(initialDeposit, 1e13, INITIAL_THIS_UNDERLYING_BALANCE);
+        initialDeposit = bound(initialDeposit, minDeposit, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
         uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
             // skip protecting for this in the test
 
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
+        weth.approve(address(ethXHandler), type(uint256).max);
+        ionPool.addOperator(address(ethXHandler));
 
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
-        assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
         assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
     function testForkFuzz_FlashSwapDeleverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
-        initialDeposit = bound(initialDeposit, 1e13, INITIAL_THIS_UNDERLYING_BALANCE);
+        initialDeposit = bound(initialDeposit, minDeposit, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
         uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
             // skip protecting for this in the test
 
-        weth.approve(address(swEthHandler), type(uint256).max);
-        ionPool.addOperator(address(swEthHandler));
+        weth.approve(address(ethXHandler), type(uint256).max);
+        ionPool.addOperator(address(ethXHandler));
 
         vm.recordLogs();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -119,14 +129,14 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
-        swEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove);
 
         assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
     }
 }
 
-contract SwEthHandler_WithRateChange_ForkFuzzTest is SwEthHandler_ForkFuzzTest {
+contract EthXHandler_WithRateChange_ForkFuzzTest is EthXHandler_ForkFuzzTest {
     function testForkFuzz_WithRateChange_FlashLoanCollateral(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,

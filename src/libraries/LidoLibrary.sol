@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { ILidoStEthDeposit } from "../../src/interfaces/DepositInterfaces.sol";
-import { ILidoWStEthDeposit } from "../../src/interfaces/DepositInterfaces.sol";
-import { RoundedMath } from "../../src/libraries/math/RoundedMath.sol";
+import { ILidoStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 
 library LidoLibrary {
     using RoundedMath for uint256;

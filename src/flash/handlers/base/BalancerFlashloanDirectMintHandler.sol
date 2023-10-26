@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "../../../IonPool.sol";
-import { IonRegistry } from "./../../IonRegistry.sol";
-import { IWETH9 } from "../../../interfaces/IWETH9.sol";
-import { GemJoin } from "../../../join/GemJoin.sol";
 import { IonHandlerBase } from "./IonHandlerBase.sol";
 
 import { IVault, IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
@@ -12,8 +8,6 @@ import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vaul
 
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -39,7 +33,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     error ReceiveCallerNotVault(address unauthorizedCaller);
     error FlashLoanedTooManyTokens(uint256 amountTokens);
     error FlashloanedInvalidToken(address tokenAddress);
-    error ExternalFlashloanNotAllowed();
+    error ExternalBalancerFlashloanNotAllowed();
 
     uint256 private flashloanInitiated = 1;
 
@@ -141,7 +135,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     {
         if (tokens.length > 1) revert FlashLoanedTooManyTokens(tokens.length);
         if (msg.sender != address(VAULT)) revert ReceiveCallerNotVault(msg.sender);
-        if (flashloanInitiated != 2) revert ExternalFlashloanNotAllowed();
+        if (flashloanInitiated != 2) revert ExternalBalancerFlashloanNotAllowed();
 
         IERC20Balancer token = tokens[0];
         (address user, uint256 initialDeposit, uint256 resultingCollateral, uint256 resultingDebt) =
@@ -179,4 +173,11 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             lstToken.safeTransfer(address(VAULT), tokenAmountReceived);
         }
     }
+
+    /**
+     * @dev Unwraps weth into eth and deposits into lst contract
+     * @param amountWeth to deposit
+     * @return amountLst received
+     */
+    function _depositWethForLst(uint256 amountWeth) internal virtual returns (uint256);
 }

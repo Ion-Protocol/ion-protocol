@@ -24,7 +24,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     // --- Errors ---
     error CeilingExceeded();
     error UnsafePositionChange(uint256 newTotalDebtInVault, uint256 collateral, uint256 spot);
-    error UnsafePositionChangeWithoutConsent();
+    error UnsafePositionChangeWithoutConsent(address user, address unconsentedOperator);
+    error GemTransferWithoutConsent(address user, address unconsentedOperator);
     error UseOfCollateralWithoutConsent();
     error TakingWethWithoutConsent();
     error VaultCannotBeDusty();
@@ -453,6 +454,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         _accrueInterestForIlk(ilkIndex);
 
+        // TODO: Follow xdomain-dss impl
         Vault memory vault = $.vaults[ilkIndex][u];
         Ilk memory ilk = $.ilks[ilkIndex];
 
@@ -482,7 +484,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         // vault is either more safe, or the owner consents
         if (both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !isAllowed(u, _msgSender()))) {
-            revert UnsafePositionChangeWithoutConsent();
+            revert UnsafePositionChangeWithoutConsent(u, _msgSender());
         }
 
         // collateral src consents
@@ -611,7 +613,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     }
 
     function transferGem(uint8 ilkIndex, address src, address dst, uint256 wad) external whenNotPaused(Pauses.UNSAFE) {
-        require(isAllowed(src, _msgSender()), "Vat/not-allowed");
+        if (!isAllowed(src, _msgSender())) revert GemTransferWithoutConsent(src, _msgSender());
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
