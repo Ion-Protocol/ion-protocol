@@ -16,21 +16,17 @@ contract MockModifiers {
         whitelist = Whitelist(_whitelist);
     }
 
-    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
-        if (!whitelist.isWhitelistedBorrower(proof, msg.sender)) {
-            revert NotWhitelistedBorrower(msg.sender);
-        }
+    modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
+        whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, proof); // error from whitelist
         _;
     }
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
-        if (!whitelist.isWhitelistedLender(proof, msg.sender)) {
-            revert NotWhitelistedLender(msg.sender);
-        }
+        whitelist.isWhitelistedLender(msg.sender, proof); // error from whitelist
         _;
     }
 
-    function onlyBorrowersFunction(bytes32[] memory proof) external onlyWhitelistedBorrowers(proof) returns (bool) {
+    function onlyBorrowersFunction(uint8 ilkIndex, bytes32[] memory proof) external onlyWhitelistedBorrowers(ilkIndex, proof) returns (bool) {
         return true; 
      }
     function onlyLendersFunction(bytes32[] memory proof) external onlyWhitelistedLenders(proof) returns (bool) {
@@ -61,44 +57,60 @@ contract WhitelistMockTest is Test {
     Whitelist whitelist;
 
     function setUp() public {
-        bytes32 borrowersWhitelistMerkleRoot = 0;
-        bytes32 lendersWhitelistMerkleRoot = 0;
+        bytes32 lendersRoot = 0;
 
-        whitelist = new Whitelist(borrowersWhitelistMerkleRoot, lendersWhitelistMerkleRoot);
+        bytes32[] memory borrowersRoots = new bytes32[](3); 
+        borrowersRoots[0] = 0; 
+        borrowersRoots[1] = 0; 
+        borrowersRoots[2] = 0; 
+
+        whitelist = new Whitelist(borrowersRoots, lendersRoot);
     }
 
-    function test_UpdateWhitelistMerkleRoots() public {
-        bytes32 borrowersRoot = 0xa83c6a6e585f4631021a5b1197e6bb8e82861564dfa44a97c69df6975bd4ba02;
+    function test_UpdateRoots() public {
+        bytes32 borrowersRoot0 = bytes32(uint256(1));
+        bytes32 borrowersRoot1 = bytes32(uint256(2)); 
+        bytes32 borrowersRoot2 = bytes32(uint256(3)); 
+
         bytes32 lendersRoot = 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11;
 
-        whitelist.updateBorrowersWhitelistMerkleRoot(borrowersRoot);
-        whitelist.updateLendersWhitelistMerkleRoot(lendersRoot);
+        whitelist.updateBorrowersRoot(0, borrowersRoot0);
+        whitelist.updateBorrowersRoot(1, borrowersRoot1);
+        whitelist.updateBorrowersRoot(2, borrowersRoot2);
 
-        assertEq(whitelist.borrowersWhitelistMerkleRoot(), borrowersRoot, "update borrowers root");
-        assertEq(whitelist.lendersWhitelistMerkleRoot(), lendersRoot, "update lenders root");
+        whitelist.updateLendersRoot(lendersRoot);
+
+        assertEq(whitelist.lendersRoot(), lendersRoot, "update lenders root");
+        assertEq(whitelist.borrowersRoot(0), borrowersRoot0, "update borrowers root 0");
+        assertEq(whitelist.borrowersRoot(1), borrowersRoot1, "update borrowers root 1"); 
+        assertEq(whitelist.borrowersRoot(2), borrowersRoot2, "update borrowers root 2"); 
     }
 
     // --- Mock Tests ---
 
-    function test_RevertWhen_MerkleRootUninitialized() public {
+    /**
+     * @dev Uninitialized or zero merkle roots should always return true
+     */
+    function test_MerkleRootUninitializedReturnsTrue() public {
 
         MockModifiers mockModifiers = new MockModifiers(address(whitelist)); 
         
-        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, address(this)));
-        mockModifiers.onlyBorrowersFunction(new bytes32[](0)); 
-        
-        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedLender.selector, address(this)));
-        mockModifiers.onlyLendersFunction(new bytes32[](0));         
+        assertTrue(mockModifiers.onlyBorrowersFunction(0, new bytes32[](0))); 
+        assertTrue(mockModifiers.onlyBorrowersFunction(1, new bytes32[](0))); 
+        assertTrue(mockModifiers.onlyBorrowersFunction(2, new bytes32[](0))); 
+        assertTrue(mockModifiers.onlyBorrowersFunction(3, new bytes32[](0))); 
+
+        assertTrue(mockModifiers.onlyLendersFunction(new bytes32[](0)));         
     }
 
-    function test_WhitelistMockBorrowerModifiers() public {
+    function test_WhitelisBorrowerValidProof() public {
         // generate merkle root
         // [["0x1111111111111111111111111111111111111111"],
         // ["0x2222222222222222222222222222222222222222"],
         // ["0x3333333333333333333333333333333333333333"]];
         // => 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11
-
-        whitelist.updateBorrowersWhitelistMerkleRoot(0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11);
+        uint8 ilkIndex = 0; 
+        whitelist.updateBorrowersRoot(ilkIndex, 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11);
 
         MockModifiers mockModifiers = new MockModifiers(address(whitelist));
 
@@ -106,7 +118,7 @@ contract WhitelistMockTest is Test {
         bytes32[] memory proof = new bytes32[](2);
         proof[0] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192);
         proof[1] = bytes32(0xcef861ae49469220eac9703d1077fa45b0a3ae990e4a8a7d325472f93cbca30e);
-        mockModifiers.onlyBorrowersFunction(proof);
+        mockModifiers.onlyBorrowersFunction(ilkIndex, proof);
         vm.stopPrank();
     }
 
@@ -116,8 +128,8 @@ contract WhitelistMockTest is Test {
         // ["0x2222222222222222222222222222222222222222"],
         // ["0x3333333333333333333333333333333333333333"]];
         // => 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11
-
-        whitelist.updateBorrowersWhitelistMerkleRoot(0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11);
+        uint8 ilkIndex = 0; 
+        whitelist.updateBorrowersRoot(ilkIndex, 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11);
 
         MockModifiers mockModifiers = new MockModifiers(address(whitelist));
 
@@ -128,19 +140,20 @@ contract WhitelistMockTest is Test {
         // but wrong proof
         proof[0] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192);
         proof[1] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192);
-        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, addr));
-        mockModifiers.onlyBorrowersFunction(proof);
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, ilkIndex, addr));
+        mockModifiers.onlyBorrowersFunction(ilkIndex, proof);
         vm.stopPrank();
     }
 
     function test_RevertWhen_WhitelistMockBorrowerInvalidAddress() public {
+        uint8 ilkIndex = 0; 
         // generate merkle root
         // [["0x1111111111111111111111111111111111111111"],
         // ["0x2222222222222222222222222222222222222222"],
         // ["0x3333333333333333333333333333333333333333"]];
         // => 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11
 
-        whitelist.updateBorrowersWhitelistMerkleRoot(0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11);
+        whitelist.updateBorrowersRoot(ilkIndex, 0xcbbe6d63f5be7e5334d28b46ad9cbf99a89625899443061c6fd58fcae90b2d11);
         MockModifiers mockModifiers = new MockModifiers(address(whitelist));
 
         // wrong address
@@ -150,19 +163,103 @@ contract WhitelistMockTest is Test {
         // valid proof for 0x111...
         proof[0] = bytes32(0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192);
         proof[1] = bytes32(0xcef861ae49469220eac9703d1077fa45b0a3ae990e4a8a7d325472f93cbca30e);
-        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, addr));
-        mockModifiers.onlyBorrowersFunction(proof);
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, ilkIndex, addr));
+        mockModifiers.onlyBorrowersFunction(ilkIndex, proof);
+        vm.stopPrank();
+    }
+
+    function test_WhitelistLenderValidProof() public {
+        // generate merkle root 
+        // ["0x0000000000000000000000000000000000000001"],
+        // ["0x0000000000000000000000000000000000000002"],
+        // ["0x0000000000000000000000000000000000000003"],
+        // ["0x0000000000000000000000000000000000000004"],
+        // ["0x0000000000000000000000000000000000000005"],
+        // => 0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094
+
+        whitelist.updateLendersRoot(0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094); 
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist)); 
+
+        // correct address 
+        address addr1 = address(1); 
+        bytes32[] memory proof1 = new bytes32[](2); 
+        proof1[0] = bytes32(0x2584db4a68aa8b172f70bc04e2e74541617c003374de6eb4b295e823e5beab01);
+        proof1[1] = bytes32(0xc949c2dc5da2bd9a4f5ae27532dfbb3551487bed50825cd099ff5d0a8d613ab5);
+        vm.startPrank(addr1); 
+        assertTrue(mockModifiers.onlyLendersFunction(proof1)); 
+        vm.stopPrank();
+
+        // correct address 
+        address addr3 = address(3); 
+        bytes32[] memory proof3 = new bytes32[](2); 
+        proof3[0] = bytes32(0xb5d9d894133a730aa651ef62d26b0ffa846233c74177a591a4a896adfda97d22);
+        proof3[1] = bytes32(0xc949c2dc5da2bd9a4f5ae27532dfbb3551487bed50825cd099ff5d0a8d613ab5);
+        vm.startPrank(addr3); 
+        assertTrue(mockModifiers.onlyLendersFunction(proof3)); 
+        vm.stopPrank();
+
+        address addr5 = address(5); 
+        bytes32[] memory proof5 = new bytes32[](3); 
+        proof5[0] = bytes32(0x1ab0c6948a275349ae45a06aad66a8bd65ac18074615d53676c09b67809099e0);
+        proof5[1] = bytes32(0xc167b0e3c82238f4f2d1a50a8b3a44f96311d77b148c30dc0ef863e1a060dcb6);
+        proof5[2] = bytes32(0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7);
+        vm.startPrank(addr5); 
+        assertTrue(mockModifiers.onlyLendersFunction(proof5)); 
+        vm.stopPrank();
+    }
+
+    function test_WhitelistLenderInvalidProof() public {
+        // generate merkle root 
+        // ["0x0000000000000000000000000000000000000001"],
+        // ["0x0000000000000000000000000000000000000002"],
+        // ["0x0000000000000000000000000000000000000003"],
+        // ["0x0000000000000000000000000000000000000004"],
+        // ["0x0000000000000000000000000000000000000005"],
+        // => 0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094
+
+        whitelist.updateLendersRoot(0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094); 
+        MockModifiers mockModifiers = new MockModifiers(address(whitelist)); 
+
+        // correct address 
+        address addr1 = address(1); 
+        bytes32[] memory proof1 = new bytes32[](2); 
+        proof1[0] = bytes32(0x2584db4a68aa8b172f70bc04e2e74541617c003374de6eb4b295e823e5beab01);
+        proof1[1] = bytes32(uint256(1)); // invalid proof
+        vm.startPrank(addr1); 
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedLender.selector, addr1));        
+        mockModifiers.onlyLendersFunction(proof1); 
+        vm.stopPrank();
+
+        // correct address 
+        address addr3 = address(3); 
+        bytes32[] memory proof3 = new bytes32[](2); 
+        proof3[0] = bytes32(uint256(0));
+        proof3[1] = bytes32(0xc949c2dc5da2bd9a4f5ae27532dfbb3551487bed50825cd099ff5d0a8d613ab5);
+        vm.startPrank(addr3); 
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedLender.selector, addr3));        
+        mockModifiers.onlyLendersFunction(proof3); 
+        vm.stopPrank();
+
+        address addr5 = address(5); 
+        bytes32[] memory proof5 = new bytes32[](3); 
+        proof5[0] = bytes32(0x1ab0c6948a275349ae45a06aad66a8bd65ac18074615d53676c09b67809099e0);
+        proof5[1] = bytes32(uint256(4));
+        proof5[2] = bytes32(0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7);
+        vm.startPrank(addr5); 
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedLender.selector, addr5));        
+        mockModifiers.onlyLendersFunction(proof5); 
         vm.stopPrank();
     }
 
     function test_ApprovedAddressCanBorrowWithoutProof() public {
+        uint8 ilkIndex = 0;
         address protocol = address(1); 
         MockModifiers mockModifiers = new MockModifiers(address(whitelist));
 
         whitelist.approveProtocolWhitelist(protocol);
         
         vm.startPrank(protocol); 
-        assertTrue(mockModifiers.onlyBorrowersFunction(new bytes32[](0)));  
+        assertTrue(mockModifiers.onlyBorrowersFunction(ilkIndex, new bytes32[](0)));  
         vm.stopPrank(); 
     }
 
@@ -178,24 +275,32 @@ contract WhitelistMockTest is Test {
     }
 
     function test_RevertWhen_RevokedAddressBorrowsWithoutProof() public {
+        uint8 ilkIndex = 0; 
+
+        // borrow whitelist is not empty
+        whitelist.updateBorrowersRoot(ilkIndex, bytes32(uint256(1))); 
+
         address protocol = address(1); 
         MockModifiers mockModifiers = new MockModifiers(address(whitelist));
 
         whitelist.approveProtocolWhitelist(protocol);
         
         vm.startPrank(protocol); 
-        assertTrue(mockModifiers.onlyBorrowersFunction(new bytes32[](0)));  
+        assertTrue(mockModifiers.onlyBorrowersFunction(ilkIndex, new bytes32[](0)));  
         vm.stopPrank(); 
 
         whitelist.revokeProtocolWhitelist(protocol); 
 
         vm.startPrank(protocol);
-        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedBorrower.selector, protocol));
-        mockModifiers.onlyBorrowersFunction(new bytes32[](0));
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, ilkIndex, protocol));
+        mockModifiers.onlyBorrowersFunction(ilkIndex, new bytes32[](0));
         vm.stopPrank(); 
     }
 
     function test_RevertWhen_RevokedAddressLendsWithoutProof() public {
+        // lender whitelist is not empty
+        whitelist.updateLendersRoot(bytes32(uint256(1)));
+
         address protocol = address(1); 
         MockModifiers mockModifiers = new MockModifiers(address(whitelist));
 
@@ -208,7 +313,7 @@ contract WhitelistMockTest is Test {
         whitelist.revokeProtocolWhitelist(protocol); 
 
         vm.startPrank(protocol);
-        vm.expectRevert(abi.encodeWithSelector(MockModifiers.NotWhitelistedLender.selector, protocol));
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedLender.selector, protocol));
         mockModifiers.onlyLendersFunction(new bytes32[](0));
         vm.stopPrank(); 
     }
@@ -217,7 +322,13 @@ contract WhitelistMockTest is Test {
 
         address newOwner = address(1); 
 
-        Whitelist whitelist = new Whitelist(0, 0); 
+        bytes32[] memory borrowersRoots = new bytes32[](3); 
+        borrowersRoots[0] = 0; 
+        borrowersRoots[1] = 0; 
+        borrowersRoots[2] = 0; 
+
+        Whitelist whitelist = new Whitelist(borrowersRoots, 0); 
+
         assertEq(whitelist.owner(), address(this)); 
 
         whitelist.transferOwnership(newOwner);

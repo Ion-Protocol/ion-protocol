@@ -45,8 +45,8 @@ abstract contract IonHandlerBase {
     IERC20 immutable lstToken;
     Whitelist immutable whitelist;
 
-    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
-        whitelist.isWhitelistedBorrower(proof, msg.sender);
+    modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
+        whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, proof);
         _;
     }
 
@@ -74,7 +74,7 @@ abstract contract IonHandlerBase {
         bytes32[] calldata proof
     )
         external
-        onlyWhitelistedBorrowers(proof)
+        onlyWhitelistedBorrowers(ilkIndex, proof)
     {
         lstToken.safeTransferFrom(msg.sender, address(this), amountCollateral);
         _depositAndBorrow(msg.sender, msg.sender, amountCollateral, amountToBorrow, AmountToBorrow.IS_MAX);

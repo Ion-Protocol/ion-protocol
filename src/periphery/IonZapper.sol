@@ -11,7 +11,7 @@ contract IonZapper {
     Whitelist immutable whitelist;
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
-        whitelist.isWhitelistedLender(proof, msg.sender);
+        whitelist.isWhitelistedLender(msg.sender, proof);
         _;
     }
 

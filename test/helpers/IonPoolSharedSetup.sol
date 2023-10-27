@@ -79,11 +79,11 @@ contract IonPoolExposed is IonPool {
 
 // for bypassing whitelist checks during tests
 contract MockWhitelist {
-    function isWhitelistedBorrower(bytes32[] calldata, address) external pure returns (bool) {
+    function isWhitelistedBorrower(uint8, address, bytes32[] calldata) external pure returns (bool) {
         return true;
     }
 
-    function isWhitelistedLender(bytes32[] calldata, address) external pure returns (bool) {
+    function isWhitelistedLender(address, bytes32[] calldata) external pure returns (bool) {
         return true;
     }
 }

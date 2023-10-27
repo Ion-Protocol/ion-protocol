@@ -90,15 +90,15 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     address private immutable addressThis = address(this);
 
     // --- Modifiers ---
-    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
+    modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedBorrower(proof, _msgSender());
+        $.whitelist.isWhitelistedBorrower(ilkIndex, _msgSender(), proof);
         _;
     }
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedLender(proof, _msgSender());
+        $.whitelist.isWhitelistedLender(_msgSender(), proof);
         _;
     }
 
@@ -439,7 +439,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     )
         external
         whenNotPaused(Pauses.UNSAFE)
-        onlyWhitelistedBorrowers(proof)
+        onlyWhitelistedBorrowers(ilkIndex, proof)
     {
         _accrueInterestForIlk(ilkIndex);
         uint104 ilkRate = _modifyPosition(ilkIndex, user, address(0), recipient, 0, amountOfNormalizedDebt.toInt256());
@@ -491,7 +491,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     )
         external
         whenNotPaused(Pauses.SAFE)
-        onlyWhitelistedBorrowers(proof)
+        onlyWhitelistedBorrowers(ilkIndex, proof)
     {
         _modifyPosition(ilkIndex, user, depositor, address(0), amount.toInt256(), 0);
 
