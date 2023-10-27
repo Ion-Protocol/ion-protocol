@@ -26,3 +26,4 @@ crytic-export/
 
 # logs
 /.txt
+offchain/.DS_Store
