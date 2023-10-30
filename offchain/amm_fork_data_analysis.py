@@ -10,6 +10,7 @@ load_dotenv()
 
 # Read data from csv file from env
 filepath = os.environ['UNISWAP_SWETH_FILE_PATH']
+print("\n\n\nBeginning analysis of swETH/ETH Uniswap pool...")
 print("Reading data from file: " + filepath)
 # Read the first line of the CSV file to get balances
 with open(filepath, 'r') as file:
@@ -55,8 +56,8 @@ fig.update_xaxes(title_text='ETH', row=2, col=2)
 fig.update_xaxes(title_text='ETH', row=3, col=1)
 fig.update_yaxes(title_text='Percent Difference (%)', row=1, col=1)
 fig.update_yaxes(title_text='Effective Swap Rate (swETH/ETH)', row=1, col=2)
-fig.update_yaxes(title_text='# of Tokens', row=2, col=1)
-fig.update_yaxes(title_text='# of Tokens', row=2, col=2)
+fig.update_yaxes(title_text='ETH (EAT)', row=2, col=1)
+fig.update_yaxes(title_text='swETH (EAT)', row=2, col=2)
 fig.update_yaxes(title_text='swETH (EAT)', row=3, col=1)
 
 
@@ -66,10 +67,10 @@ fig.add_trace(bar_fig1, row=3, col=2)
 fig.update_yaxes(title_text='# of Tokens', row=3, col=2)
 
 # Update layout for the combined dashboard
-fig.update_layout(title_text='Data Analysis Dashboard', showlegend=False)
+fig.update_layout(title_text='Cost of Attack swETH/ETH Uniswap Pool', showlegend=False)
 # Save the dashboard as an HTML file
 fig.write_html('./offchain/files/output.html')
-print("Combined HTML file generated successfully: ./offchain/files/output.html")
+print("Dashboard HTML file generated successfully: ./offchain/files/output.html")
 
 # clear the output csv file
 # open(filepath, 'w').close()
