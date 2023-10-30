@@ -147,8 +147,8 @@ contract UniswapSwapTester is Test {
             string memory newPString = StringUtils.uint256ToString(newRawPrice);
             string memory swapValueString = StringUtils.uint256ToString(native);
             string memory amountSpecifiedString = StringUtils.uint256ToString(necessaryBalance);
-            string memory ethInPoolString = StringUtils.uint256ToString(totalSwETHinPool);
-            string memory swETHInPoolString = StringUtils.uint256ToString(totalEthinPool);
+            string memory ethInPoolString = StringUtils.uint256ToString(totalEthinPool);
+            string memory swETHInPoolString = StringUtils.uint256ToString(totalSwETHinPool);
             string memory row = string(abi.encodePacked(
                 amountSpecifiedString, ",", 
                 oldPString, ",", 

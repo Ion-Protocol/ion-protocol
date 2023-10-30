@@ -73,4 +73,4 @@ fig.write_html('./offchain/files/output.html')
 print("Dashboard HTML file generated successfully: ./offchain/files/output.html")
 
 # clear the output csv file
-# open(filepath, 'w').close()
+open(filepath, 'w').close()
