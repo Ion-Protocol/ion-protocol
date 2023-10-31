@@ -39,7 +39,7 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
     function setUp() public virtual override {
         super.setUp();
         wstEthHandler =
-            new WstEthHandler(ilkIndex, ionPool, ionRegistry, Whitelist(whitelist), FACTORY, WSTETH_WETH_POOL, 100);
+            new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), FACTORY, WSTETH_WETH_POOL, 100);
 
         IERC20(address(MAINNET_WSTETH)).approve(address(wstEthHandler), type(uint256).max);
 
@@ -91,7 +91,9 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
         assertApproxEqAbs(
-            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt, 1e27 / RAY
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
+            resultingDebt,
+            1e27 / RAY
         );
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
@@ -130,8 +132,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         uint256 normalizedDebtCreated;
         for (uint256 i = 0; i < entries.length; i++) {
-            // keccak256("Borrow(uint8,address,address,uint256)")
-            if (entries[i].topics[0] != 0x2849ef38636c2977383bd33bdb624c62112b78ba6e24b056290f50c02e029d8a) continue;
+            // keccak256("Borrow(uint8,address,address,uint256,uint256)")
+            if (entries[i].topics[0] != 0xc1bf80a66a0c1db72f87da77c6a183c34835b2dc06f7c0d713ea4bcb6bd8afa6) continue;
             normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
         }
 

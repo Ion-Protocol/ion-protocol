@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { IonRegistry } from "src/IonRegistry.sol";
+import { GemJoin } from "src/join/GemJoin.sol";
 import { IonHandlerBase } from "src/flash/handlers/base/IonHandlerBase.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
@@ -26,13 +26,13 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
-        IonRegistry _ionRegistry,
+        GemJoin _gemJoin,
         IStaderDeposit _staderDeposit,
         Whitelist _whitelist,
         IUniswapV3Pool _wstEthUniswapPool
     )
         UniswapFlashloanBalancerSwapHandler(_wstEthUniswapPool)
-        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry, _whitelist)
+        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
     {
         staderDeposit = _staderDeposit;
     }

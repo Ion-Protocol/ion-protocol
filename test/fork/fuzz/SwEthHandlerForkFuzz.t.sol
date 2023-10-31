@@ -22,7 +22,7 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         uint256 resultingDebt = MAINNET_SWELL.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
-        uint256 ilkSpot = ionPool.spot(ilkIndex);
+        uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
         // Calculating this way emulates the newTotalDebt value in IonPool
         uint256 newTotalDebt = resultingDebt.rayDivUp(ilkRate) * ilkRate;
 
@@ -46,7 +46,7 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         uint256 resultingDebt = MAINNET_SWELL.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
-        uint256 ilkSpot = ionPool.spot(ilkIndex);
+        uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
         uint256 newTotalDebt = resultingDebt.rayDivUp(ilkRate) * ilkRate;
 
         bool unsafePositionChange = newTotalDebt > resultingCollateral * ilkSpot;
@@ -100,8 +100,8 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
 
         uint256 normalizedDebtCreated;
         for (uint256 i = 0; i < entries.length; i++) {
-            // keccak256("Borrow(uint8,address,address,uint256)")
-            if (entries[i].topics[0] != 0x2849ef38636c2977383bd33bdb624c62112b78ba6e24b056290f50c02e029d8a) continue;
+            // keccak256("Borrow(uint8,address,address,uint256,uint256)")
+            if (entries[i].topics[0] != 0xc1bf80a66a0c1db72f87da77c6a183c34835b2dc06f7c0d713ea4bcb6bd8afa6) continue;
             normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
         }
 

@@ -116,7 +116,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         mintableCollaterals[ilkIndex].approve(address(gemJoin), depositAmt);
         gemJoin.join(borrower, depositAmt);
         // move collateral to vault
-        ionPool.moveGemToVault(ilkIndex, borrower, borrower, depositAmt, emptyProof);
+        ionPool.depositCollateral(ilkIndex, borrower, borrower, depositAmt, emptyProof);
         ionPool.borrow(ilkIndex, borrower, borrower, borrowAmt, emptyProof);
         vm.stopPrank();
     }

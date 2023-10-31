@@ -9,14 +9,16 @@ import { ProxyAdmin } from "src/admin/ProxyAdmin.sol";
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 
 contract RewardModuleExposed is RewardModule {
-
     function init(
         address _underlying,
         address _treasury,
         uint8 decimals_,
         string memory name_,
         string memory symbol_
-    ) external initializer {
+    )
+        external
+        initializer
+    {
         RewardModule.initialize(_underlying, _treasury, decimals_, name_, symbol_);
     }
 
@@ -64,12 +66,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
         RewardModuleExposed rewardModuleImpl = new RewardModuleExposed();
 
         bytes memory initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector,
-            address(underlying),
-            address(TREASURY),
-            DECIMALS,
-            NAME,
-            SYMBOL
+            RewardModuleExposed.init.selector, address(underlying), address(TREASURY), DECIMALS, NAME, SYMBOL
         );
 
         rewardModule = RewardModuleExposed(
@@ -88,12 +85,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
         RewardModuleExposed _rewardModuleImpl = new RewardModuleExposed();
 
         bytes memory initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector,
-            address(0),
-            address(TREASURY),
-            DECIMALS,
-            NAME,
-            SYMBOL
+            RewardModuleExposed.init.selector, address(0), address(TREASURY), DECIMALS, NAME, SYMBOL
         );
 
         vm.expectRevert(RewardModule.InvalidUnderlyingAddress.selector);
@@ -108,12 +100,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
         );
 
         initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector,
-            address(underlying),
-            address(0),
-            DECIMALS,
-            NAME,
-            SYMBOL
+            RewardModuleExposed.init.selector, address(underlying), address(0), DECIMALS, NAME, SYMBOL
         );
 
         vm.expectRevert(RewardModule.InvalidTreasuryAddress.selector);
@@ -128,12 +115,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
         );
 
         initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector,
-            address(underlying),
-            address(TREASURY),
-            DECIMALS,
-            NAME,
-            SYMBOL
+            RewardModuleExposed.init.selector, address(underlying), address(TREASURY), DECIMALS, NAME, SYMBOL
         );
         rewardModule = RewardModuleExposed(
             address(

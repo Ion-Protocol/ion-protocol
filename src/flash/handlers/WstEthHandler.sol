@@ -2,8 +2,8 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { IonRegistry } from "src/IonRegistry.sol";
 import { IonHandlerBase } from "./base/IonHandlerBase.sol";
+import { GemJoin } from "src/join/GemJoin.sol";
 import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
 import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
 import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
@@ -20,13 +20,13 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
-        IonRegistry _ionRegistry,
+        GemJoin _gemJoin,
         Whitelist _whitelist,
         IUniswapV3Factory _factory,
         IUniswapV3Pool _wstEthUniswapPool,
         uint24 _poolFee
     )
-        IonHandlerBase(_ilkIndex, _ionPool, _ionRegistry, _whitelist)
+        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
         // token0 is wstEth
         UniswapFlashswapHandler(_factory, _wstEthUniswapPool, _poolFee, false)
     { }

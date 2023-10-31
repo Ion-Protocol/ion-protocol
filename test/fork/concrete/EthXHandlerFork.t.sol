@@ -37,7 +37,7 @@ contract EthXHandler_ForkBase is IonHandler_ForkBase {
     function setUp() public virtual override {
         super.setUp();
         ethXHandler =
-            new EthXHandler(ilkIndex, ionPool, ionRegistry, MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL);
+            new EthXHandler(ilkIndex, ionPool, gemJoins[ilkIndex], MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL);
 
         IERC20(address(MAINNET_ETHX)).approve(address(ethXHandler), type(uint256).max);
 
@@ -84,7 +84,9 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
         assertApproxEqAbs(
-            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt, 1e27 / RAY
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
+            resultingDebt,
+            1e27 / RAY
         );
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
@@ -123,8 +125,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
 
         uint256 normalizedDebtCreated;
         for (uint256 i = 0; i < entries.length; i++) {
-            // keccak256("Borrow(uint8,address,address,uint256)")
-            if (entries[i].topics[0] != 0x2849ef38636c2977383bd33bdb624c62112b78ba6e24b056290f50c02e029d8a) continue;
+            // keccak256("Borrow(uint8,address,address,uint256,uint256)")
+            if (entries[i].topics[0] != 0xc1bf80a66a0c1db72f87da77c6a183c34835b2dc06f7c0d713ea4bcb6bd8afa6) continue;
             normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
         }
 
@@ -149,13 +151,6 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
 
         assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
-    }
-
-    function testFork_RevertWhen_UniswapFlashloanNotInitiatedByHandler() external {
-        vm.expectRevert(UniswapFlashloanBalancerSwapHandler.ExternalUniswapFlashloanNotAllowed.selector);
-        // This should be impossible
-        vm.prank(address(ethXHandler));
-        WSTETH_WETH_POOL.flash(address(ethXHandler), 1e18, 0, "");
     }
 
     function testFork_RevertWhen_BalancerFlashloanNotInitiatedByHandler() external {

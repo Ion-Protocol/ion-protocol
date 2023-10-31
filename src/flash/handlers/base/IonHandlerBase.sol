@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { IonRegistry } from "src/IonRegistry.sol";
+import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
@@ -50,7 +50,7 @@ abstract contract IonHandlerBase {
         _;
     }
 
-    constructor(uint8 _ilkIndex, IonPool _ionPool, IonRegistry _ionRegistry, Whitelist _whitelist) {
+    constructor(uint8 _ilkIndex, IonPool _ionPool, GemJoin _gemJoin, Whitelist _whitelist) {
         ionPool = _ionPool;
         ilkIndex = _ilkIndex;
 
@@ -60,7 +60,6 @@ abstract contract IonHandlerBase {
         address ilkAddress = ionPool.getIlkAddress(_ilkIndex);
         lstToken = IERC20(ilkAddress);
 
-        GemJoin _gemJoin = _ionRegistry.gemJoins(_ilkIndex);
         gemJoin = _gemJoin;
 
         whitelist = _whitelist;
@@ -103,7 +102,7 @@ abstract contract IonHandlerBase {
     {
         gemJoin.join(address(this), amountCollateral);
 
-        ionPool.moveGemToVault(ilkIndex, vaultHolder, address(this), amountCollateral, new bytes32[](0));
+        ionPool.depositCollateral(ilkIndex, vaultHolder, address(this), amountCollateral, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
 
@@ -141,7 +140,7 @@ abstract contract IonHandlerBase {
 
         ionPool.repay(ilkIndex, vaultHolder, address(this), normalizedDebtToRepay);
 
-        ionPool.moveGemFromVault(ilkIndex, vaultHolder, address(this), collateralToWithdraw);
+        ionPool.withdrawCollateral(ilkIndex, vaultHolder, address(this), collateralToWithdraw);
 
         gemJoin.exit(receiver, collateralToWithdraw);
     }
