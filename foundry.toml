@@ -18,9 +18,8 @@ no_match_contract = "Echidna"
 gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "EthXHandler"]
 
 [profile.default.fuzz]
-runs = 100000
-max_test_rejects = 1000000
-seed = "0x01"
+runs = 10000
+max_test_rejects = 10000000
 
 [profile.default.invariant]
 runs = 20

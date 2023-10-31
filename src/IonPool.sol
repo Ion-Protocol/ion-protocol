@@ -443,7 +443,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     {
         _accrueInterestForIlk(ilkIndex);
         uint104 ilkRate = _modifyPosition(ilkIndex, user, address(0), recipient, 0, amountOfNormalizedDebt.toInt256());
-
         emit Borrow(ilkIndex, user, recipient, amountOfNormalizedDebt, ilkRate);
     }
 
@@ -521,7 +520,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         uint104 _totalNormalizedDebt = _add($.ilks[ilkIndex].totalNormalizedDebt, changeInNormalizedDebt).toUint104();
         int256 changeInDebt = ilkRate.toInt256() * changeInNormalizedDebt;
-
+        
         uint256 newTotalDebtInVault = ilkRate * vault.normalizedDebt;
 
         // Prevent stack too deep

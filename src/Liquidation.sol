@@ -93,7 +93,6 @@ contract Liquidation {
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         exchangeRate = ReserveOracle(exchangeRateOracle).getExchangeRate();
         exchangeRate = uint256(exchangeRate).scaleToRay(18);
-        // console.log("exchangeRate: ", exchangeRate);
     }
 
     /**
@@ -126,9 +125,6 @@ contract Liquidation {
         uint256 repayNum = debtValue.rayMulUp(TARGET_HEALTH) - collateralValue; // [rad] - [rad] = [rad]
         uint256 repayDen = TARGET_HEALTH - liquidationThreshold.rayDivUp(RAY - discount); // round up in protocol favor
         repay = repayNum.rayDivUp(repayDen);
-        console.log("repayNum: ", repayNum);
-        console.log("repayDen: ", repayDen);
-        console.log("repay: ", repay);
     }
 
     struct LiquidateArgs {
@@ -151,7 +147,6 @@ contract Liquidation {
     )
         external
     {
-        console.log("--- in liquidations --- ");
         // --- Calculations ---
 
         LiquidateArgs memory liquidateArgs;
@@ -164,8 +159,6 @@ contract Liquidation {
         uint256 dust = ionPool.dust(ilkIndex);
 
         (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex);
-        console.log("lt: ", liquidationThreshold);
-        console.log("er: ", exchangeRate);
 
         if (exchangeRate == 0) {
             revert ExchangeRateCannotBeZero(exchangeRate);
@@ -181,19 +174,13 @@ contract Liquidation {
         // debtValue = [wad] * [ray] = [rad]
         // healthRatio = [rad] * RAY / [rad] = [ray]
 
-        console.log("collateral: ", collateral);
-        console.log("exchangeRate: ", exchangeRate);
-        console.log("collateral * exchangeRate: ", collateral * exchangeRate);
         uint256 collateralValue = (collateral * exchangeRate).rayMulUp(liquidationThreshold); // round down in protocol
             // favor
         // uint256 debtValue = normalizedDebt * rate; stack overflow without
 
         {
             // [rad] * RAY / [rad] = [ray]
-            console.log("collateralValue: ", collateralValue);
-            console.log("debtValue: ", normalizedDebt * rate);
             uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
-            console.log("healthRatio check: ", healthRatio);
             if (healthRatio >= RAY) {
                 revert VaultIsNotUnsafe(healthRatio);
             }
@@ -228,7 +215,6 @@ contract Liquidation {
         // NOTE: could also add gemOut > collateral check
         if (liquidateArgs.repay > normalizedDebt * rate) {
             // [rad] > [rad]
-            console.log("PROTOCOL LIQUIDATION");
             liquidateArgs.dart = normalizedDebt; // [wad]
             liquidateArgs.gemOut = collateral; // [wad]
             ionPool.confiscateVault(
@@ -243,12 +229,10 @@ contract Liquidation {
             return;
         } else if (normalizedDebt * rate - liquidateArgs.repay < dust) {
             // [rad] - [rad] < [rad]
-            console.log("DUST LIQUIDATION");
             liquidateArgs.repay = normalizedDebt * rate; // bound repay to total debt
             liquidateArgs.dart = normalizedDebt; // pay off all debt including dust
             liquidateArgs.gemOut = normalizedDebt * rate / liquidateArgs.price; // round down in protocol favor
         } else if (normalizedDebt * rate - liquidateArgs.repay >= dust) {
-            console.log("PARTIAL LIQUIDATION");
             // repay stays unchanged
             liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad]
             liquidateArgs.dart =
@@ -256,9 +240,6 @@ contract Liquidation {
                 // in protocol favor
             liquidateArgs.gemOut = liquidateArgs.repay / liquidateArgs.price; // readjust amount of collateral, round
                 // down in protocol favor
-
-            console.log("liquidateArgs.dart: ", liquidateArgs.dart);
-            console.log("liquidateArgs.gemOut: ", liquidateArgs.gemOut);
         }
 
         // --- For Second and Third Branch ---

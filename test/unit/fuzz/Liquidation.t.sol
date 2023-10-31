@@ -136,14 +136,10 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
             // dust
             // assert(false); // to see if it's ever reaching this branch
             // ffi to see when this branch gets hit
-            vm.writeLine("fuzz_out.txt", "DUST");
             assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
         } else if (results.category == 2) {
-            vm.writeLine("fuzz_out.txt", "PARTIAL");
             uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
-            console.log("actualCollateral: ", actualCollateral);
             uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
-            console.log("actualNormalizedDebt: ", actualNormalizedDebt);
             if (actualNormalizedDebt != 0) {
                 // Could be full liquidation if there was only 1 normalizedDebt in the beginning
                 uint256 healthRatio = getHealthRatio(
@@ -153,7 +149,6 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                     stateArgs.exchangeRate,
                     deploymentArgs.liquidationThreshold
                 );
-                console.log("health ratio: ", healthRatio);
                 assert(healthRatio >= deploymentArgs.targetHealth);
             }
         }
