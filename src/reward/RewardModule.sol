@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { RoundedMath, RAY } from "../libraries/math/RoundedMath.sol";
+import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
