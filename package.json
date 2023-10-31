@@ -6,7 +6,7 @@
     "coverage": "./coverage.sh",
     "solhint": "solhint 'src/**/*.sol'",
     "slither": "slither src",
-    "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPoolEchidna",
+    "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPool_Echidna",
     "YieldOracle:deployment:configure": "forge script script/DeployYieldOracle.s.sol -s 'configureDeployment()' --ffi",
     "YieldOracle:deployment:deploy:testnet": "forge script script/DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify",
     "YieldOracle:deployment:deploy:mainnet": "forge script script/DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify"

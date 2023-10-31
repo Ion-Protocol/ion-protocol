@@ -23,7 +23,7 @@ max_test_rejects = 10000000
 
 [profile.default.invariant]
 runs = 20
-depth = 50
+depth = 512
 fail_on_revert = true
 call_override = false   # reentrancy-check
 
