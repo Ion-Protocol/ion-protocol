@@ -58,7 +58,6 @@ contract SpotOracleTest is IonPoolSharedSetup {
 
         stEthSpotOracle = new StEthSpotOracle(
             STETH_ILK_INDEX, 
-            address(ionPool), 
             ltv, 
             MAINNET_ETH_PER_STETH_CHAINLINK, 
             MAINNET_WSTETH
@@ -73,7 +72,6 @@ contract SpotOracleTest is IonPoolSharedSetup {
 
         stEthSpotOracle = new StEthSpotOracle(
             STETH_ILK_INDEX, 
-            address(ionPool),
             ltv, 
             MAINNET_ETH_PER_STETH_CHAINLINK, 
             MAINNET_WSTETH
@@ -97,7 +95,6 @@ contract SpotOracleTest is IonPoolSharedSetup {
 
         swEthSpotOracle = new SwEthSpotOracle(
             SWETH_ILK_INDEX, 
-            address(ionPool), 
             ltv, 
             MAINNET_SWETH_ETH_UNISWAP_01,
             100
@@ -112,7 +109,7 @@ contract SpotOracleTest is IonPoolSharedSetup {
         uint32 secondsAgo = 100;
 
         SwEthSpotOracle swEthSpotOracle =
-            new SwEthSpotOracle(SWETH_ILK_INDEX, address(ionPool), ltv, MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
+            new SwEthSpotOracle(SWETH_ILK_INDEX, ltv, MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
 
         uint256 expectedPrice = swEthSpotOracle.getPrice();
         uint256 expectedSpot = (ltv * expectedPrice).scaleToRay(36);
@@ -127,7 +124,6 @@ contract SpotOracleTest is IonPoolSharedSetup {
         uint64 ltv = 0.7 ether;
         ethXSpotOracle = new EthXSpotOracle(
             ETHX_ILK_INDEX,
-            address(ionPool),
             ltv, 
             MAINNET_USD_PER_ETHX_REDSTONE,
             MAINNET_USD_PER_ETH_CHAINLINK
@@ -148,7 +144,6 @@ contract SpotOracleTest is IonPoolSharedSetup {
 
         EthXSpotOracle ethXSpotOracle = new EthXSpotOracle(
             ETHX_ILK_INDEX,
-            address(ionPool), 
             ltv, 
             MAINNET_USD_PER_ETHX_REDSTONE, 
             MAINNET_USD_PER_ETH_CHAINLINK

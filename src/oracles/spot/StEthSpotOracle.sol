@@ -15,12 +15,11 @@ contract StEthSpotOracle is SpotOracle {
 
     constructor(
         uint8 _ilkIndex,
-        address _ionPool,
-        uint64 _ltv,
+        uint256 _ltv,
         address _stEthToEthChainlink,
         address _wstETH
     )
-        SpotOracle(_ilkIndex, _ionPool, _ltv)
+        SpotOracle(_ilkIndex, _ltv)
     {
         stEthToEthChainlink = IChainlink(_stEthToEthChainlink);
         wstEth = IWstEth(_wstETH);
