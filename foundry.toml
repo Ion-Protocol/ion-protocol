@@ -15,7 +15,7 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
 optimizer_runs = 1000
 no_match_contract = "Echidna"
-gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy"]
+gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "EthXHandler"]
 
 [profile.default.fuzz]
 runs = 10000
@@ -23,7 +23,7 @@ max_test_rejects = 10000000
 
 [profile.default.invariant]
 runs = 20
-depth = 50
+depth = 512
 fail_on_revert = true
 call_override = false   # reentrancy-check
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+// TODO: Coalesce DepositInterfaces and ProviderInterfaces
 interface ILidoStEthDeposit {
     function submit(address _referral) external payable returns (uint256);
 
@@ -34,11 +35,40 @@ interface ILidoWStEthDeposit {
 }
 
 interface IStaderDeposit {
-    function deposit(address _receiver) external payable;
+    function deposit(address _receiver) external payable returns (uint256);
 
     function previewDeposit(uint256 _assets) external view returns (uint256);
 
+    function previewWithdraw(uint256 _shares) external view returns (uint256);
+
     function getExchangeRate() external view returns (uint256);
+
+    function staderConfig() external view returns (IStaderConfig);
+
+    function totalAssets() external view returns (uint256);
+}
+
+interface IStaderConfig {
+    function getMinDepositAmount() external view returns (uint256);
+
+    function getMaxDepositAmount() external view returns (uint256);
+
+    function getStaderOracle() external view returns (address);
+}
+
+/// @title ExchangeRate
+/// @notice This struct holds data related to the exchange rate between ETH and ETHX.
+struct ExchangeRate {
+    /// @notice The block number when the exchange rate was last updated.
+    uint256 reportingBlockNumber;
+    /// @notice The total balance of Ether (ETH) in the system.
+    uint256 totalETHBalance;
+    /// @notice The total supply of the liquid staking token (ETHX) in the system.
+    uint256 totalETHXSupply;
+}
+
+interface IStaderOracle {
+    function getExchangeRate() external view returns (ExchangeRate memory);
 }
 
 interface ISwellDeposit {

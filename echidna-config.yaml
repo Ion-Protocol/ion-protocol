@@ -1,28 +1,27 @@
 workers: 5
 
-testLimit: 5000
+testLimit: 50000
+seqLen: 1024
 
 solcArgs: "--optimize --optimize-runs 1000"
-
-# cryticArgs: [
-#     "--solc-remaps",
-#     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
-#     @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
-#     ds-test/=lib/forge-std/lib/ds-test/src/
-#     forge-std/=lib/forge-std/src/
-#     openzeppelin-contracts/=lib/openzeppelin-contracts/
-#     openzeppelin/=lib/openzeppelin-contracts/contracts/"
-#   ]
 
 cryticArgs: [
     "--solc-remaps",
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+    @balancer-labs/v2-interfaces/=lib/balancer-v2-monorepo/pkg/interfaces/
+    @balancer-labs/v2-pool-stable/=lib/balancer-v2-monorepo/pkg/pool-stable/
+    @chainlink/contracts/=lib/chainlink/contracts/
+    @uniswap/v3-periphery/=lib/v3-periphery/
+    @uniswap/v3-core/=lib/v3-core/
+    @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+    balancer-v2-monorepo/=lib/balancer-v2-monorepo/
+    chainlink/=lib/chainlink/
     ds-test/=lib/forge-std/lib/ds-test/src/
+    erc4626-tests/=lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/
     forge-std/=lib/forge-std/src/
-    openzeppelin-contracts/=lib/openzeppelin-contracts/
-    openzeppelin/=lib/openzeppelin-contracts/contracts/",
-]
-
+    openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
+    openzeppelin-contracts/=lib/openzeppelin-contracts/",
+  ]
 
 prefix: "invariant_"
 
@@ -31,8 +30,15 @@ corpusDir: echidna-corpus
 # testMode: assertion # turn off for properties
 
 allContracts: false
-filterBlacklist: false # if false, allows filterFunctions 
-filterFunctions: [
-  "IonPoolEchidna.supply(uint256,uint256)",
-  ""
+filterBlacklist: false # if false, allows filterFunctions
+filterFunctions:
+  [
+    "IonPool_Echidna.supply(uint8,uint88)",
+    "IonPool_Echidna.withdraw(uint8,uint88)",
+    "IonPool_Echidna.borrow(uint8,uint8,uint128)",
+    "IonPool_Echidna.repay(uint8,uint8,uint128)",
+    "IonPool_Echidna.depositCollateral(uint8,uint8,uint128)",
+    "IonPool_Echidna.withdrawCollateral(uint8,uint8,uint128)",
+    "IonPool_Echidna.gemJoin(uint8,uint8,uint128)",
+    "IonPool_Echidna.gemExit(uint8,uint8,uint128)",
   ]

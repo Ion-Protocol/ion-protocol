@@ -18,13 +18,12 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 abstract contract IonPausableUpgradeable is ContextUpgradeable {
     enum Pauses {
         UNSAFE,
-        SAFE,
-        ACCRUAL
+        SAFE
     }
 
     struct IonPausableStorage {
         // Initialized to unpaused implicitly
-        bool[3] _pausedStates;
+        bool[2] _pausedStates;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPausable")) - 1)) & ~bytes32(uint256(0xff))
@@ -37,18 +36,18 @@ abstract contract IonPausableUpgradeable is ContextUpgradeable {
         }
     }
 
-    error AlreadyPaused(Pauses pauseIndex);
-    error AlreadyUnpaused(Pauses pauseIndex);
+    error EnforcedPause(Pauses pauseIndex);
+    error ExpectedPause(Pauses pauseIndex);
 
     /**
      * @dev Emitted when the pause is triggered by `account`.
      */
-    event Paused(Pauses pauseIndex, address account);
+    event Paused(Pauses indexed pauseIndex, address account);
 
     /**
      * @dev Emitted when the pause is lifted by `account`.
      */
-    event Unpaused(Pauses pauseIndex, address account);
+    event Unpaused(Pauses indexed pauseIndex, address account);
 
     /**
      * @dev Modifier to make a function callable only when the contract is not paused.
@@ -86,14 +85,14 @@ abstract contract IonPausableUpgradeable is ContextUpgradeable {
      * @dev Throws if the contract is paused.
      */
     function _requireNotPaused(Pauses pauseIndex) internal view virtual {
-        if (paused(pauseIndex)) revert AlreadyPaused(pauseIndex);
+        if (paused(pauseIndex)) revert EnforcedPause(pauseIndex);
     }
 
     /**
      * @dev Throws if the contract is not paused.
      */
     function _requirePaused(Pauses pauseIndex) internal view virtual {
-        if (!paused(pauseIndex)) revert AlreadyUnpaused(pauseIndex);
+        if (!paused(pauseIndex)) revert ExpectedPause(pauseIndex);
     }
 
     /**

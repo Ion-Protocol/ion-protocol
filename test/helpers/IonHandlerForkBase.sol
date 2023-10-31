@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { ILidoWStEthDeposit, IStaderDeposit, ISwellDeposit } from "../../src/interfaces/DepositInterfaces.sol";
+import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { ILidoWStEthDeposit, IStaderDeposit, ISwellDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
+
 import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
+
 import { IonPoolSharedSetup } from "./IonPoolSharedSetup.sol";
+
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import { RoundedMath, WAD, RAY } from "../../src/libraries/math/RoundedMath.sol";
 
 struct Slot0 {
     // the current price
@@ -50,27 +54,24 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     IUniswapV3Factory internal constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
+    IUniswapV3Pool constant WSTETH_WETH_POOL = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
+
     function setUp() public virtual override {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
         super.setUp();
 
-        // TODO: Replace with real spotter
-        // Simulate spotter
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();
         uint256 wstEthInEthSpot = MAINNET_WSTETH.getStETHByWstETH(uint256(stEthSpot));
-        uint256 riskAdjustedWstEthSpot = wstEthInEthSpot * STETH_LTV / 1e9; // [WAD] * [WAD] / [1e9] = [RAY]
-        ionPool.updateIlkSpot(0, riskAdjustedWstEthSpot);
+        spotOracles[0].setPrice(wstEthInEthSpot);
 
         uint256 rate = STADER_POOL.getRate();
-        uint256 riskAdjustedStaderSpot = rate * STADER_LTV / 1e9;
-        ionPool.updateIlkSpot(1, riskAdjustedStaderSpot);
+        spotOracles[1].setPrice(rate);
 
         (uint160 sqrtPriceX96,,,,,,) = SWETH_ETH_POOL.slot0();
         uint256 oneEthToSwethSpotPrice = uint256(sqrtPriceX96) * sqrtPriceX96 * WAD / (1 << 192); // Spot price OK for
             // testing
         uint256 oneSwethToEthSpotPrice = WAD * WAD / oneEthToSwethSpotPrice;
-        uint256 riskAdjustedSwethSpot = oneSwethToEthSpotPrice * SWELL_LTV / 1e9;
-        ionPool.updateIlkSpot(2, riskAdjustedSwethSpot);
+        spotOracles[2].setPrice(oneSwethToEthSpotPrice);
 
         vm.deal(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
         vm.deal(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
@@ -78,13 +79,13 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
         vm.startPrank(lender1);
         weth.deposit{ value: INITIAL_LENDER_UNDERLYING_BALANCE }();
         weth.approve(address(ionPool), type(uint256).max);
-        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE, emptyProof);
         vm.stopPrank();
 
         vm.startPrank(lender2);
         weth.deposit{ value: INITIAL_LENDER_UNDERLYING_BALANCE }();
         weth.approve(address(ionPool), type(uint256).max);
-        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE, emptyProof);
         vm.stopPrank();
 
         vm.deal(address(this), INITIAL_THIS_UNDERLYING_BALANCE);
@@ -119,11 +120,8 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
         depositContracts[2] = address(MAINNET_SWELL);
     }
 
-    function _getPools() internal pure override returns (address[] memory pools) {
-        pools = new address[](3);
-        pools[0] = address(0);
-        pools[1] = address(0);
-        pools[2] = address(SWETH_ETH_POOL);
+    function _getDebtCeiling(uint8) internal pure override returns (uint256) {
+        return type(uint256).max;
     }
 
     receive() external payable { }
