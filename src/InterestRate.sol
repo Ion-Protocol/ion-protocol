@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
-import { RoundedMath } from "./libraries/math/RoundedMath.sol";
+import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
+import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+
+import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 struct IlkData {
     //                                                 _
@@ -68,11 +70,10 @@ uint8 constant DISTRIBUTION_FACTOR_SHIFT = 16 + 96 + 96 + 16;
 uint48 constant SECONDS_IN_A_DAY = 31_536_000;
 
 contract InterestRate {
-    error DistributionFactorsDoNotSumToOne(uint256 sum);
-
     using RoundedMath for *;
 
     error CollateralIndexOutOfBounds();
+    error DistributionFactorsDoNotSumToOne(uint256 sum);
     error TotalDebtsLength(uint256 collateralCount, uint256 totalDebtsLength);
 
     /**
@@ -103,12 +104,13 @@ contract InterestRate {
         apyOracle = _apyOracle;
 
         uint256 distributionFactorSum = 0;
-        for (uint256 i = 0; i < ilkDataList.length;) {
+        for (uint256 i = 0; i < collateralCount;) {
             distributionFactorSum += ilkDataList[i].distributionFactor;
 
             // forgefmt: disable-next-line
             unchecked { ++i; }
         }
+
         if (distributionFactorSum != 1e4) revert DistributionFactorsDoNotSumToOne(distributionFactorSum);
 
         (ilkConfig0_a, ilkConfig0_b) = _packCollateralConfig(ilkDataList, 0);
