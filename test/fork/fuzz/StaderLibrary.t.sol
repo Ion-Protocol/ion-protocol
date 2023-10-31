@@ -27,10 +27,10 @@ contract StaderLibrary_FuzzTest is Test {
         uint256 minDepositAmount = config.getMinDepositAmount();
         uint256 maxDepositAmount = config.getMaxDepositAmount();
 
-        vm.assume(lstAmount >= minDepositAmount);
-        vm.assume(lstAmount <= maxDepositAmount);
-
         uint256 ethAmountIn = MAINNET_STADER_DEPOSIT.getEthAmountInForLstAmountOut(lstAmount);
+
+        vm.assume(ethAmountIn >= minDepositAmount);
+        vm.assume(ethAmountIn <= maxDepositAmount);
 
         MAINNET_STADER_DEPOSIT.deposit{ value: ethAmountIn }(address(this));
 
