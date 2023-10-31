@@ -53,12 +53,7 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         assertEq(rewardModule.balanceOf(address(this)), 0);
     }
 
-    function testFuzz_mintRewardWithSupplyFactorChange(
-        uint256 amountOfRewards,
-        uint256 supplyFactorNew
-    )
-        external
-    {
+    function testFuzz_mintRewardWithSupplyFactorChange(uint256 amountOfRewards, uint256 supplyFactorNew) external {
         vm.assume(amountOfRewards != 0);
         // Prevent overflow
         vm.assume(amountOfRewards < 2 ** 128);
@@ -99,12 +94,7 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
     }
 
-    function testFuzz_burnRewardWithSupplyFactorChange(
-        uint256 amountOfRewards,
-        uint256 supplyFactorNew
-    )
-        external
-    {
+    function testFuzz_burnRewardWithSupplyFactorChange(uint256 amountOfRewards, uint256 supplyFactorNew) external {
         vm.assume(amountOfRewards != 0);
         // Prevent overflow
         vm.assume(amountOfRewards < 2 ** 128);
@@ -151,5 +141,4 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(this)), burnAmount);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated - burnAmount);
     }
-
 }

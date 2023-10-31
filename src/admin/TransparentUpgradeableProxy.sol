@@ -10,8 +10,7 @@ import { ProxyAdmin } from "./ProxyAdmin.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 /**
- * @notice Copy of OpenZeppelin's `TransparentUpgradeableProxy` that exposes `implementation()` and uses alternative
- * `ProxyAdmin`
+ * @notice Copy of OpenZeppelin's `TransparentUpgradeableProxy` that uses alternative `ProxyAdmin`
  *
  * @dev Interface for {TransparentUpgradeableProxy}. In order to implement transparency, {TransparentUpgradeableProxy}
  * does not implement this interface directly, and its upgradeability mechanism is implemented by an internal dispatch
@@ -116,9 +115,5 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
     function _dispatchUpgradeToAndCall() private {
         (address newImplementation, bytes memory data) = abi.decode(msg.data[4:], (address, bytes));
         ERC1967Utils.upgradeToAndCall(newImplementation, data);
-    }
-
-    function implementation() public view returns (address) {
-        return _implementation();
     }
 }

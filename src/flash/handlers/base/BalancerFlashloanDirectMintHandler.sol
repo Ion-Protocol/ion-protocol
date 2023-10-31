@@ -15,14 +15,14 @@ IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
  * @dev There a couple things to consider here from a security perspective. The
  * first one is that the flashloan callback must only be callable from the
  * Balancer vault. This ensures that nobody can pass arbitrary data to the
- * callback from initiating a separate flashloan. The second one is that the
- * flashloan must only be initialized from this contract. This is a trickier one
- * to enforce since Balancer flashloans are not EIP-3156 compliant and do not
- * pass on the initiator through the callback. To get around this, an inverse
- * reentrancy lock of sorts is used. The lock is set to 2 when a flashloan is initiated
- * and set to 1 once the callback execution terminates. If the lock is not 2
- * when the callback is called, then the flashloan was not initiated by this
- * contract and the tx is reverted.
+ * callback. The second one is that the flashloan must only be initialized from
+ * this contract. This is a trickier one to enforce since Balancer flashloans
+ * are not EIP-3156 compliant and do not pass on the initiator through the
+ * callback. To get around this, an inverse reentrancy lock of sorts is used.
+ * The lock is set to 2 when a flashloan is initiated and set to 1 once the
+ * callback execution terminates. If the lock is not 2 when the callback is
+ * called, then the flashloan was not initiated by this contract and the tx is
+ * reverted.
  *
  * This contract currently deposits directly into LST contract 1:1. It should be
  * noted that a more favorable trade could be possible via DEXs.

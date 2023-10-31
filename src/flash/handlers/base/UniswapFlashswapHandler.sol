@@ -19,6 +19,10 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 /**
  * @dev When using the `UniswapFlashSwapHandler`, the `IUniswapV3Pool pool` fed to the
  * constructor should be the WETH/[LST] pool.
+ *
+ * Unlike Balancer flashloans, there is no concern here that somebody else could
+ * initiate a flashswap, then direct the callback to be called on this contract.
+ * Uniswap enforces that callback is only called on `msg.sender`.
  */
 abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
     using RoundedMath for *;
@@ -172,7 +176,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         (amountIn, amountOutReceived) = zeroForOne
             ? (uint256(amount0Delta), uint256(-amount1Delta))
             : (uint256(amount1Delta), uint256(-amount0Delta));
-        // TODO: Change require to revert
+
         // it's technically possible to not receive the full output amount,
         // so if no price limit has been specified, require this possibility away
         if (sqrtPriceLimitX96 == 0 && amountOutReceived != amountOut) {

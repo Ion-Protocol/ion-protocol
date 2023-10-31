@@ -10,8 +10,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GemJoin_Test is IonPoolSharedSetup {
-
-    address immutable NON_OWNER = vm.addr(12409204);
+    address immutable NON_OWNER = vm.addr(12_409_204);
 
     function test_Pause() external {
         for (uint256 i = 0; i < gemJoins.length; i++) {
@@ -26,9 +25,9 @@ contract GemJoin_Test is IonPoolSharedSetup {
             assertEq(gemJoins[i].paused(), false);
             gemJoins[i].pause();
             assertEq(gemJoins[i].paused(), true);
-        } 
+        }
 
-        for (uint256 i = 0; i <gemJoins.length; i++) {
+        for (uint256 i = 0; i < gemJoins.length; i++) {
             assertEq(gemJoins[i].paused(), true);
             gemJoins[i].unpause();
             assertEq(gemJoins[i].paused(), false);
@@ -62,7 +61,7 @@ contract GemJoin_Test is IonPoolSharedSetup {
 
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
-            
+
             assertEq(ionPool.gem(i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].gem();
@@ -78,7 +77,7 @@ contract GemJoin_Test is IonPoolSharedSetup {
         uint256 amountToJoin = type(uint256).max;
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
-            
+
             assertEq(ionPool.gem(i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].gem();
@@ -88,7 +87,7 @@ contract GemJoin_Test is IonPoolSharedSetup {
             gemJoins[i].join(address(this), amountToJoin);
 
             assertEq(ionPool.gem(i, address(this)), 0);
-        } 
+        }
     }
 
     function test_Exit() public {
@@ -97,7 +96,7 @@ contract GemJoin_Test is IonPoolSharedSetup {
 
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
-            
+
             assertEq(ionPool.gem(i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].gem();
@@ -119,7 +118,7 @@ contract GemJoin_Test is IonPoolSharedSetup {
 
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
-            
+
             assertEq(ionPool.gem(i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].gem();

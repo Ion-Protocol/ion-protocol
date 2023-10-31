@@ -5,6 +5,7 @@ import { WstEthHandler } from "src/flash/handlers/WstEthHandler.sol";
 import { Whitelist } from "src/Whitelist.sol";
 
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
+import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -19,15 +20,14 @@ contract WstEthHandler_Test is IonPoolSharedSetup {
 
         // Ignore Uniswap args since they will be tested through forks
         wstEthHandler =
-        new WstEthHandler(ilkIndex, ionPool, ionRegistry, Whitelist(whitelist), IUniswapV3Factory(address(1)), IUniswapV3Pool(address(1)), 500);
+        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Factory(address(1)), IUniswapV3Pool(address(1)), 500);
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 
-        uint256 riskAdjustedSpot = 0.9e18;
-        ionPool.updateIlkSpot(1, riskAdjustedSpot);
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
 
         vm.startPrank(lender1);
         underlying.approve(address(ionPool), type(uint256).max);
@@ -71,5 +71,9 @@ contract WstEthHandler_Test is IonPoolSharedSetup {
 
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(wstEth.balanceOf(address(this)), depositAmount);
+    }
+
+    function _getDebtCeiling(uint8) internal pure override returns (uint256) {
+        return type(uint256).max;
     }
 }
