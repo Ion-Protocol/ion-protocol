@@ -34,7 +34,7 @@ contract StEthReserveOracle is ReserveOracle {
     // ETH / stETH = total ether value / total stETH supply
     // ETH / wstETH = (ETH / stETH) * (stETH / wstETH)
     // NOTE: stEth might not be deployed until the offchain reserve oracle for stEth is production ready.
-    // TODO: Add Lido's transient balance on top. 
+    // TODO: Add Lido's transient balance on top.
     function _getProtocolExchangeRate() internal view override returns (uint72) {
         uint256 bufferedEther = ILido(lido).getBufferedEther();
         (,, uint256 beaconBalance) = ILido(lido).getBeaconStat();
