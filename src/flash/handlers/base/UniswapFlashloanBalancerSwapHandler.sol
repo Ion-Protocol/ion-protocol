@@ -36,7 +36,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     IVault internal constant vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     bool wethIsToken0OnUniswap;
-    uint256 private flashloanInitiated = 1;
 
     constructor(IUniswapV3Pool _flashloanPool) {
         IERC20(address(weth)).approve(address(vault), type(uint256).max);
@@ -126,11 +125,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         if (wethIsToken0OnUniswap) amount0ToFlash = wethIn;
         else amount1ToFlash = wethIn;
 
-        flashloanInitiated = 2;
-
         flashloanPool.flash(address(this), amount0ToFlash, amount1ToFlash, abi.encode(flashCallbackData));
-
-        flashloanInitiated = 1;
     }
 
     function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove) external {
@@ -140,8 +135,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         uint256 amount1ToFlash;
         if (wethIsToken0OnUniswap) amount0ToFlash = debtToRemove;
         else amount1ToFlash = debtToRemove;
-
-        flashloanInitiated = 2;
 
         flashloanPool.flash(
             address(this),
@@ -164,8 +157,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
                 })
             )
         );
-
-        flashloanInitiated = 1;
     }
 
     struct FlashCallbackData {
@@ -188,9 +179,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
      */
     function uniswapV3FlashCallback(uint256 fee0, uint256 fee1, bytes calldata data) external override {
         if (msg.sender != address(flashloanPool)) revert ReceiveCallerNotPool(msg.sender);
-        // Someone externally initiating the flashloan should be impossible,
-        // given that the pool calls back on msg.sender
-        if (flashloanInitiated != 2) revert ExternalUniswapFlashloanNotAllowed();
 
         FlashCallbackData memory flashCallbackData = abi.decode(data, (FlashCallbackData));
 
