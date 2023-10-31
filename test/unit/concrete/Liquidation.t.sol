@@ -25,9 +25,17 @@ contract LiquidationTest is LiquidationSharedSetup {
 
     function test_ExchangeRateCannotBeZero() public {
         // deploy liquidations contract
-        uint256 liquidationThreshold = 0.75e27; 
-        uint256[ILK_COUNT] memory liquidationThresholds =
-            [liquidationThreshold, liquidationThreshold, liquidationThreshold, liquidationThreshold, liquidationThreshold, liquidationThreshold, liquidationThreshold, liquidationThreshold];
+        uint256 liquidationThreshold = 0.75e27;
+        uint256[ILK_COUNT] memory liquidationThresholds = [
+            liquidationThreshold,
+            liquidationThreshold,
+            liquidationThreshold,
+            liquidationThreshold,
+            liquidationThreshold,
+            liquidationThreshold,
+            liquidationThreshold,
+            liquidationThreshold
+        ];
 
         uint256 _targetHealth = 1.25 ether;
         uint256 _reserveFactor = 0.02 ether;
@@ -56,7 +64,7 @@ contract LiquidationTest is LiquidationSharedSetup {
      */
     function test_RevertWhen_VaultIsNotUnsafe() public {
         // deploy liquidations contract
-        uint256 liquidationThreshold = 0.75e27; 
+        uint256 liquidationThreshold = 0.75e27;
         uint256[ILK_COUNT] memory liquidationThresholds = [liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         uint256 _targetHealth = 1.25e27;
         uint256 _reserveFactor = 0.02e27;
@@ -84,7 +92,7 @@ contract LiquidationTest is LiquidationSharedSetup {
      */
     function test_RevertWhen_HealthRatioIsExactlyOne() public {
         // deploy liquidations contract
-        uint256 liquidationThreshold = 1e27; 
+        uint256 liquidationThreshold = 1e27;
         uint256 _targetHealth = 1.25e27;
         uint256 _reserveFactor = 0.02e27;
         uint256 _maxDiscount = 0.2e27;
@@ -94,7 +102,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
         // set exchange rate
-        uint72 exchangeRate = 0.5e18; 
+        uint72 exchangeRate = 0.5e18;
         reserveOracle1.setExchangeRate(exchangeRate);
 
         // create borrow position
@@ -128,14 +136,14 @@ contract LiquidationTest is LiquidationSharedSetup {
      */
     function test_PartialLiquidationSuccessBasic() public {
         // calculating resulting state after liquidations
-        DeploymentArgs memory dArgs; 
-        StateArgs memory sArgs; 
-        
+        DeploymentArgs memory dArgs;
+        StateArgs memory sArgs;
+
         sArgs.collateral = 100e18; // [wad]
         sArgs.exchangeRate = 0.95e18; // [wad]
         sArgs.normalizedDebt = 50e18; // [wad]
         sArgs.rate = 1e27; // [ray]
-        
+
         dArgs.liquidationThreshold = 0.5e27; // [ray]
         dArgs.targetHealth = 1.25e27; // [ray]
         dArgs.reserveFactor = 0.02e27; // [ray]
@@ -183,14 +191,14 @@ contract LiquidationTest is LiquidationSharedSetup {
     // TODO: This test results in number slightly less than 1.25. Test invariants
     function test_PartialLiquidationSuccessWithDecimals() public {
         // calculating resulting state after liquidations
-        DeploymentArgs memory dArgs; 
-        StateArgs memory sArgs; 
+        DeploymentArgs memory dArgs;
+        StateArgs memory sArgs;
 
         sArgs.collateral = 4.895700865128650483e18; // [wad]
         sArgs.exchangeRate = 0.23867139477572598e18; // [wad]
         sArgs.normalizedDebt = 1.000000000000000002e18; // [wad]
         sArgs.rate = 1e27; // [ray]
-        
+
         dArgs.liquidationThreshold = 0.8e27; // [wad]
         dArgs.targetHealth = 1.25e27; // [wad]
         dArgs.reserveFactor = 0; // [wad]
@@ -224,10 +232,10 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         // resulting health ratio is target health ratio
         uint256 healthRatio = getHealthRatio(
-            actualResultingCollateral, 
+            actualResultingCollateral,
             actualResultingNormalizedDebt,
             sArgs.rate,
-            sArgs.exchangeRate, 
+            sArgs.exchangeRate,
             dArgs.liquidationThreshold
         );
 
@@ -237,14 +245,14 @@ contract LiquidationTest is LiquidationSharedSetup {
 
     function test_PartialLiquidationSuccessWithRate() public {
         // calculating resulting state after liquidations
-        DeploymentArgs memory dArgs; 
-        StateArgs memory sArgs;         
-        
+        DeploymentArgs memory dArgs;
+        StateArgs memory sArgs;
+
         sArgs.collateral = 100e18; // [wad]
         sArgs.exchangeRate = 0.95e18; // [wad]
         sArgs.normalizedDebt = 50e18; // [wad]
         sArgs.rate = 1.12323423423e27; // [ray]
-        
+
         dArgs.liquidationThreshold = 0.5e27; // [wad]
         dArgs.targetHealth = 1.25e27; // [wad]
         dArgs.reserveFactor = 0.02e27; // [wad]
@@ -309,13 +317,13 @@ contract LiquidationTest is LiquidationSharedSetup {
      * Partial Liquidation not possible, so move position to the vow
      */
     function test_ProtocolTakesDebt() public {
-        DeploymentArgs memory dArgs; 
-        StateArgs memory sArgs; 
+        DeploymentArgs memory dArgs;
+        StateArgs memory sArgs;
         sArgs.collateral = 10e18; // [wad]
         sArgs.exchangeRate = 0.9e18; // [wad]
         sArgs.normalizedDebt = 10e18; // [wad]
         sArgs.rate = 1e27; // [ray]
-        
+
         dArgs.liquidationThreshold = 1e27; // [wad]
         dArgs.targetHealth = 1.25e27; // [wad]
         dArgs.reserveFactor = 0.02e27; // [wad]
@@ -353,13 +361,13 @@ contract LiquidationTest is LiquidationSharedSetup {
         ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleToRad(18)); // [rad]
 
         // calculating resulting state after liquidations
-        DeploymentArgs memory dArgs; 
-        StateArgs memory sArgs;         
+        DeploymentArgs memory dArgs;
+        StateArgs memory sArgs;
         sArgs.collateral = 1.29263225501889978e18; // [wad]
         sArgs.exchangeRate = 0.432464060992175961e18; // [wad]
         sArgs.normalizedDebt = 0.500000000000000001e18; // [wad]
         sArgs.rate = 1e27; // [ray]
-        
+
         dArgs.liquidationThreshold = 0.8e27; // [wad]
         dArgs.targetHealth = 1.25e27; // [wad]
         dArgs.reserveFactor = 0e27; // [wad]

@@ -2,7 +2,7 @@
 
 // pragma solidity ^0.8.13;
 
-// TODO: uncomment and write basic tests 
+// TODO: uncomment and write basic tests
 // contract ReserveFeed is ReserveOracle {
 //     address public protocolFeed;
 

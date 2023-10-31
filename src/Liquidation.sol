@@ -21,24 +21,24 @@ contract Liquidation {
 
     // --- parameters ---
 
-    uint256 immutable TARGET_HEALTH; // [ray] 
-    uint256 immutable RESERVE_FACTOR; // [ray] 
-    uint256 immutable MAX_DISCOUNT; // [ray] 
+    uint256 immutable TARGET_HEALTH; // [ray]
+    uint256 immutable RESERVE_FACTOR; // [ray]
+    uint256 immutable MAX_DISCOUNT; // [ray]
 
     // liquidation thresholds
-    uint256 public immutable LIQUIDATION_THRESHOLD_0; 
-    uint256 public immutable LIQUIDATION_THRESHOLD_1; 
-    uint256 public immutable LIQUIDATION_THRESHOLD_2; 
+    uint256 public immutable LIQUIDATION_THRESHOLD_0;
+    uint256 public immutable LIQUIDATION_THRESHOLD_1;
+    uint256 public immutable LIQUIDATION_THRESHOLD_2;
 
     // exchange rates
-    address public immutable EXCHANGE_RATE_ORACLE_0; 
-    address public immutable EXCHANGE_RATE_ORACLE_1; 
-    address public immutable EXCHANGE_RATE_ORACLE_2; 
+    address public immutable EXCHANGE_RATE_ORACLE_0;
+    address public immutable EXCHANGE_RATE_ORACLE_1;
+    address public immutable EXCHANGE_RATE_ORACLE_2;
 
     address public immutable REVENUE_RECIPIENT; // receives fees
     address public immutable PROTOCOL; // receives confiscated vault debt and collateral
 
-    IonPool public immutable ionPool; 
+    IonPool public immutable ionPool;
     IERC20 public immutable underlying;
 
     // --- Events ---
@@ -47,7 +47,7 @@ contract Liquidation {
     constructor(
         address _ionPool,
         address _revenueRecipient,
-        address _protocol, 
+        address _protocol,
         address[] memory _exchangeRateOracles,
         uint256[ILK_COUNT] memory _liquidationThresholds,
         uint256 _targetHealth,
@@ -56,7 +56,7 @@ contract Liquidation {
     ) {
         ionPool = IonPool(_ionPool);
         REVENUE_RECIPIENT = _revenueRecipient;
-        PROTOCOL = _protocol; 
+        PROTOCOL = _protocol;
 
         TARGET_HEALTH = _targetHealth;
         RESERVE_FACTOR = _reserveFactor;
@@ -90,10 +90,10 @@ contract Liquidation {
             exchangeRateOracle = EXCHANGE_RATE_ORACLE_2;
             liquidationThreshold = LIQUIDATION_THRESHOLD_2;
         }
-        // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray] 
+        // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         exchangeRate = ReserveOracle(exchangeRateOracle).getExchangeRate();
-        exchangeRate = uint256(exchangeRate).scaleToRay(18); 
-        // console.log("exchangeRate: ", exchangeRate); 
+        exchangeRate = uint256(exchangeRate).scaleToRay(18);
+        // console.log("exchangeRate: ", exchangeRate);
     }
 
     /**
@@ -120,17 +120,17 @@ contract Liquidation {
         // repayDen = (targetHealth - (liquidationThreshold / (1 - discount)))
         // repay = repayNum / repayDen
         // repayNum = [rad].mulDiv([ray], [ray]) - ([wad] * [ray]).mulDiv([ray], [ray]) = [rad] - [rad] = [rad]
-        // repayDen = [ray] - [ray].mulDiv(RAY, [ray]) = [ray] - [ray] = [ray] 
-        // repay = [rad].mulDiv(RAY, [ray]) = [rad] 
+        // repayDen = [ray] - [ray].mulDiv(RAY, [ray]) = [ray] - [ray] = [ray]
+        // repay = [rad].mulDiv(RAY, [ray]) = [rad]
 
-        uint256 repayNum = debtValue.rayMulUp(TARGET_HEALTH) - collateralValue; // [rad] - [rad] = [rad] 
+        uint256 repayNum = debtValue.rayMulUp(TARGET_HEALTH) - collateralValue; // [rad] - [rad] = [rad]
         uint256 repayDen = TARGET_HEALTH - liquidationThreshold.rayDivUp(RAY - discount); // round up in protocol favor
         repay = repayNum.rayDivUp(repayDen);
-        console.log("repayNum: ", repayNum); 
-        console.log("repayDen: ", repayDen); 
-        console.log("repay: ", repay); 
+        console.log("repayNum: ", repayNum);
+        console.log("repayDen: ", repayDen);
+        console.log("repay: ", repay);
     }
- 
+
     struct LiquidateArgs {
         uint256 repay;
         uint256 gemOut;
@@ -164,8 +164,8 @@ contract Liquidation {
         uint256 dust = ionPool.dust(ilkIndex);
 
         (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex);
-        console.log("lt: ", liquidationThreshold); 
-        console.log("er: ", exchangeRate); 
+        console.log("lt: ", liquidationThreshold);
+        console.log("er: ", exchangeRate);
 
         if (exchangeRate == 0) {
             revert ExchangeRateCannotBeZero(exchangeRate);
@@ -176,37 +176,39 @@ contract Liquidation {
 
         // collateralValue = collateral * exchangeRate * liquidationThreshold
         // debtValue = normalizedDebt * rate
-        // healthRatio = collateralValue / debtValue 
-        // collateralValue = [wad] * [ray] * [ray] / RAY = [rad] 
-        // debtValue = [wad] * [ray] = [rad] 
-        // healthRatio = [rad] * RAY / [rad] = [ray] 
+        // healthRatio = collateralValue / debtValue
+        // collateralValue = [wad] * [ray] * [ray] / RAY = [rad]
+        // debtValue = [wad] * [ray] = [rad]
+        // healthRatio = [rad] * RAY / [rad] = [ray]
 
-        console.log("collateral: ", collateral); 
-        console.log("exchangeRate: ", exchangeRate); 
-        console.log('collateral * exchangeRate: ', collateral * exchangeRate); 
-        uint256 collateralValue = (collateral * exchangeRate).rayMulUp(liquidationThreshold); // round down in protocol favor 
-        // uint256 debtValue = normalizedDebt * rate; stack overflow without 
-       
+        console.log("collateral: ", collateral);
+        console.log("exchangeRate: ", exchangeRate);
+        console.log("collateral * exchangeRate: ", collateral * exchangeRate);
+        uint256 collateralValue = (collateral * exchangeRate).rayMulUp(liquidationThreshold); // round down in protocol
+            // favor
+        // uint256 debtValue = normalizedDebt * rate; stack overflow without
+
         {
-            // [rad] * RAY / [rad] = [ray] 
-            console.log("collateralValue: ", collateralValue); 
-            console.log("debtValue: ", normalizedDebt * rate); 
-            uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor  
-            console.log("healthRatio check: ", healthRatio); 
+            // [rad] * RAY / [rad] = [ray]
+            console.log("collateralValue: ", collateralValue);
+            console.log("debtValue: ", normalizedDebt * rate);
+            uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
+            console.log("healthRatio check: ", healthRatio);
             if (healthRatio >= RAY) {
                 revert VaultIsNotUnsafe(healthRatio);
             }
 
             uint256 discount = RESERVE_FACTOR + (RAY - healthRatio); // [ray] + ([ray] - [ray])
             discount = discount <= MAX_DISCOUNT ? discount : MAX_DISCOUNT; // cap discount to maxDiscount
-        
-            liquidateArgs.price = exchangeRate.rayMulUp(RAY - discount); // [ray] * (RAY - [ray]) / [ray] = [ray], ETH price per LST, round up in protocol favor
+
+            liquidateArgs.price = exchangeRate.rayMulUp(RAY - discount); // [ray] * (RAY - [ray]) / [ray] = [ray], ETH
+                // price per LST, round up in protocol favor
             liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, collateralValue, liquidationThreshold, discount);
         }
 
-        // --- Calculating Repay --- 
+        // --- Calculating Repay ---
 
-        // in protocol favor to round up repayNum, round down repayDen 
+        // in protocol favor to round up repayNum, round down repayDen
 
         // --- Conditionals ---
 
@@ -224,10 +226,11 @@ contract Liquidation {
         //    The resulting health ratio equals targetHealthRatio.
 
         // NOTE: could also add gemOut > collateral check
-        if (liquidateArgs.repay > normalizedDebt * rate) { // [rad] > [rad] 
+        if (liquidateArgs.repay > normalizedDebt * rate) {
+            // [rad] > [rad]
             console.log("PROTOCOL LIQUIDATION");
-            liquidateArgs.dart = normalizedDebt; // [wad] 
-            liquidateArgs.gemOut = collateral; // [wad] 
+            liquidateArgs.dart = normalizedDebt; // [wad]
+            liquidateArgs.gemOut = collateral; // [wad]
             ionPool.confiscateVault(
                 ilkIndex,
                 vault,
@@ -238,29 +241,33 @@ contract Liquidation {
             );
             // TODO: emit protocol liquidation event
             return;
-        } else if (normalizedDebt * rate - liquidateArgs.repay < dust) { // [rad] - [rad] < [rad] 
+        } else if (normalizedDebt * rate - liquidateArgs.repay < dust) {
+            // [rad] - [rad] < [rad]
             console.log("DUST LIQUIDATION");
-            liquidateArgs.repay = normalizedDebt * rate; // bound repay to total debt 
-            liquidateArgs.dart = normalizedDebt; // pay off all debt including dust 
+            liquidateArgs.repay = normalizedDebt * rate; // bound repay to total debt
+            liquidateArgs.dart = normalizedDebt; // pay off all debt including dust
             liquidateArgs.gemOut = normalizedDebt * rate / liquidateArgs.price; // round down in protocol favor
         } else if (normalizedDebt * rate - liquidateArgs.repay >= dust) {
             console.log("PARTIAL LIQUIDATION");
             // repay stays unchanged
-            liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad] 
-            liquidateArgs.dart = liquidateArgs.dart * rate < liquidateArgs.repay ? liquidateArgs.dart + 1 : liquidateArgs.dart; // round up in protocol favor 
-            liquidateArgs.gemOut = liquidateArgs.repay / liquidateArgs.price; // readjust amount of collateral, round down in protocol favor
+            liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad]
+            liquidateArgs.dart =
+                liquidateArgs.dart * rate < liquidateArgs.repay ? liquidateArgs.dart + 1 : liquidateArgs.dart; // round up
+                // in protocol favor
+            liquidateArgs.gemOut = liquidateArgs.repay / liquidateArgs.price; // readjust amount of collateral, round
+                // down in protocol favor
 
-            console.log("liquidateArgs.dart: ", liquidateArgs.dart); 
-            console.log("liquidateArgs.gemOut: ", liquidateArgs.gemOut); 
+            console.log("liquidateArgs.dart: ", liquidateArgs.dart);
+            console.log("liquidateArgs.gemOut: ", liquidateArgs.gemOut);
         }
 
-        // --- For Second and Third Branch --- 
+        // --- For Second and Third Branch ---
 
-        // if dust, repay = normalizedDebt * rate 
+        // if dust, repay = normalizedDebt * rate
         // if partial, repay is unadjusted
         // TODO: simplify with mulmod
         uint256 transferAmt = (liquidateArgs.repay / RAY);
-        transferAmt = transferAmt * RAY < liquidateArgs.repay ? transferAmt + 1: transferAmt; 
+        transferAmt = transferAmt * RAY < liquidateArgs.repay ? transferAmt + 1 : transferAmt;
 
         // calculate fee
         liquidateArgs.fee = liquidateArgs.gemOut.rayMulUp(RESERVE_FACTOR); // [wad] * [ray] / [ray] = [wad]
