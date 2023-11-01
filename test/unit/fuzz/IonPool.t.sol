@@ -7,21 +7,178 @@ import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 uint256 constant COLLATERAL_COUNT = 3;
 
-// TODO: Test lender actions with changing supplyFactor
-// TODO: Test borrow actions with changing rate
-// TODO: Test borrow actions with changing rate and changing time
-contract IonPool_FuzzTest is IonPoolSharedSetup {
-    using RoundedMath for *;
+using RoundedMath for uint256;
 
+abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
     event Mint(address indexed user, address indexed underlyingFrom, uint256 amount, uint256 supplyFactor);
 
-    event MintAndBurnGem(uint8 indexed ilkIndex, address indexed usr, int256 wad);
-    event TransferGem(uint8 indexed ilkIndex, address indexed src, address indexed dst, uint256 wad);
+    bool changeSupplyFactor;
+    uint256 newSupplyFactor;
 
+    function _changeSupplyFactorIfNeeded() internal prankAgnostic returns (uint256 interestCreated) {
+        if (changeSupplyFactor) {
+            uint256 totalSupply = ionPool.totalSupply();
+            uint256 oldSupplyFactor = ionPool.supplyFactor();
+            ionPool.setSupplyFactor(newSupplyFactor);
+            interestCreated = totalSupply.rayMulDown(newSupplyFactor - oldSupplyFactor);
+            console.log("interestCreated", interestCreated);
+
+            _depositInterestGains(interestCreated);
+        }
+    }
+
+    function testFuzz_RevertWhen_SupplyingAboveSupplyCap(uint256 supplyAmount) public {
+        _changeSupplyFactorIfNeeded();
+        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
+
+        uint256 supplyCap = 0;
+        ionPool.updateSupplyCap(supplyCap);
+        vm.expectRevert(abi.encodeWithSelector(IonPool.DepositSurpassesSupplyCap.selector, supplyAmount, supplyCap));
+        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
+    }
+
+    function testFuzz_SupplyBase(uint256 supplyAmount) public {
+        _changeSupplyFactorIfNeeded();
+        uint256 currentSupplyFactor = ionPool.supplyFactor();
+        uint256 normalizedAmount = supplyAmount.rayDivDown(currentSupplyFactor);
+        vm.assume(supplyAmount < type(uint128).max && normalizedAmount > 0);
+
+        uint256 supplyAmountBeforeSupply = ionPool.weth();
+
+        underlying.mint(lender1, supplyAmount);
+
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0), lender1, supplyAmount);
+        vm.expectEmit(true, true, true, true);
+        emit Mint(lender1, lender1, supplyAmount, currentSupplyFactor);
+        vm.prank(lender1);
+        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
+
+        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount);
+        assertEq(ionPool.balanceOf(lender1), normalizedAmount.rayMulDown(currentSupplyFactor));
+
+        uint256 roundingError = currentSupplyFactor / RAY;
+        assertLe(ionPool.balanceOf(lender1) - roundingError, supplyAmount);
+    }
+
+    function testFuzz_SupplyBaseToDifferentAddress(uint256 supplyAmount) public {
+        _changeSupplyFactorIfNeeded();
+        uint256 currentSupplyFactor = ionPool.supplyFactor();
+        uint256 normalizedAmount = supplyAmount.rayDivDown(currentSupplyFactor);
+        vm.assume(supplyAmount < type(uint128).max && normalizedAmount > 0);
+
+        underlying.mint(lender1, supplyAmount);
+
+        uint256 supplyAmountBeforeSupply = ionPool.weth();
+
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0), address(this), supplyAmount);
+        vm.expectEmit(true, true, true, true);
+        emit Mint(address(this), lender1, supplyAmount, currentSupplyFactor);
+        vm.prank(lender1);
+        ionPool.supply(address(this), supplyAmount, new bytes32[](0));
+
+        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount);
+        assertEq(ionPool.balanceOf(address(this)), normalizedAmount.rayMulDown(currentSupplyFactor));
+
+        uint256 roundingError = currentSupplyFactor / RAY;
+        assertLe(ionPool.balanceOf(address(this)) - roundingError, supplyAmount);
+    }
+
+    function testFuzz_WithdrawBase(uint256 supplyAmount, uint256 withdrawAmount) public {
+        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
+        underlying.mint(lender1, supplyAmount);
+
+        vm.startPrank(lender1);
+
+        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
+
+        // Changing supply factor, means that the interest will be deposited
+        _changeSupplyFactorIfNeeded();
+        uint256 supplyAmountAfterRebase = ionPool.weth();
+        uint256 lender1BalanceAfterRebase = ionPool.balanceOf(lender1);
+
+        assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase);
+
+        uint256 currentSupplyFactor = ionPool.supplyFactor();
+        withdrawAmount = bound(withdrawAmount, 0, supplyAmountAfterRebase);
+        vm.assume(withdrawAmount > 0);
+
+        uint256 underlyingBeforeWithdraw = underlying.balanceOf(lender1);
+        uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
+
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(lender1, address(0), withdrawAmount);
+        vm.expectEmit(true, true, true, true);
+        emit Burn(lender1, lender1, withdrawAmount, currentSupplyFactor);
+        ionPool.withdraw(lender1, withdrawAmount);
+
+        uint256 underlyingAfterWithdraw = underlying.balanceOf(lender1);
+        uint256 rewardAssetBalanceAfterWithdraw = ionPool.balanceOf(lender1);
+
+        uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
+        uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
+
+        assertEq(ionPool.weth(), supplyAmountAfterRebase - withdrawAmount);
+        assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + withdrawAmount);
+        // Most important invariant
+        assertGe(rewardAssetBurned, underlyingWithdrawn);
+
+        uint256 roundingError = currentSupplyFactor / RAY;
+        assertLt(ionPool.balanceOf(lender1), lender1BalanceAfterRebase - withdrawAmount + roundingError);
+    }
+
+    function testFuzz_WithdrawBaseToDifferentAddress(uint256 supplyAmount, uint256 withdrawAmount) public {
+        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
+        underlying.mint(lender1, supplyAmount);
+
+        vm.startPrank(lender1);
+
+        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
+
+        // Changing supply factor, means that the interest will be deposited
+        _changeSupplyFactorIfNeeded();
+        uint256 supplyAmountAfterRebase = ionPool.weth();
+        uint256 lender1BalanceAfterRebase = ionPool.balanceOf(lender1);
+
+        assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase);
+
+        uint256 currentSupplyFactor = ionPool.supplyFactor();
+        withdrawAmount = bound(withdrawAmount, 0, supplyAmountAfterRebase);
+        vm.assume(withdrawAmount > 0);
+
+        uint256 underlyingBeforeWithdraw = underlying.balanceOf(lender2);
+        uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
+
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(lender1, address(0), withdrawAmount);
+        vm.expectEmit(true, true, true, true);
+        emit Burn(lender1, lender2, withdrawAmount, currentSupplyFactor);
+        ionPool.withdraw(lender2, withdrawAmount);
+
+        uint256 underlyingAfterWithdraw = underlying.balanceOf(lender2);
+        uint256 rewardAssetBalanceAfterWithdraw = ionPool.balanceOf(lender1);
+
+        uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
+        uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
+
+        assertEq(ionPool.weth(), supplyAmountAfterRebase - withdrawAmount);
+        assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + withdrawAmount);
+        // Most important invariant
+        assertGe(rewardAssetBurned, underlyingWithdrawn);
+
+        uint256 roundingError = currentSupplyFactor / RAY;
+        assertLt(ionPool.balanceOf(lender1), lender1BalanceAfterRebase - withdrawAmount + roundingError);
+    }
+}
+
+abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
     event WithdrawCollateral(uint8 indexed ilkIndex, address indexed user, address indexed recipient, uint256 amount);
     event DepositCollateral(uint8 indexed ilkIndex, address indexed user, address indexed depositor, uint256 amount);
     event Borrow(
@@ -38,129 +195,6 @@ contract IonPool_FuzzTest is IonPoolSharedSetup {
         uint256 amountOfNormalizedDebt,
         uint256 ilkRate
     );
-
-    function setUp() public override {
-        super.setUp();
-
-        ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
-
-        vm.startPrank(lender2);
-        underlying.approve(address(ionPool), type(uint256).max);
-        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE, new bytes32[](0));
-        vm.stopPrank();
-
-        vm.prank(lender1);
-        underlying.approve(address(ionPool), type(uint256).max);
-
-        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            vm.prank(borrower1);
-            collaterals[i].approve(address(gemJoins[i]), type(uint256).max);
-        }
-    }
-
-    function test_setUp() public override {
-        super.test_setUp();
-
-        assertEq(ionPool.weth(), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
-    }
-
-    function testFuzz_RevertWhen_SupplyingAboveSupplyCap(uint256 supplyAmount) public {
-        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
-
-        uint256 supplyCap = 0;
-        ionPool.updateSupplyCap(supplyCap);
-        vm.expectRevert(abi.encodeWithSelector(IonPool.DepositSurpassesSupplyCap.selector, supplyAmount, supplyCap));
-        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
-    }
-
-    function testFuzz_SupplyBase(uint256 supplyAmount) public {
-        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
-
-        uint256 supplyAmountBeforeSupply = ionPool.weth();
-
-        underlying.mint(lender1, supplyAmount);
-
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), lender1, supplyAmount);
-        vm.expectEmit(true, true, true, true);
-        emit Mint(lender1, lender1, supplyAmount, RAY);
-        vm.prank(lender1);
-        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
-
-        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount);
-        assertEq(ionPool.balanceOf(lender1), supplyAmount);
-    }
-
-    function testFuzz_SupplyBaseToDifferentAddress(uint256 supplyAmount) public {
-        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
-
-        underlying.mint(lender1, supplyAmount);
-
-        uint256 supplyAmountBeforeSupply = ionPool.weth();
-
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), address(this), supplyAmount);
-        vm.expectEmit(true, true, true, true);
-        emit Mint(address(this), lender1, supplyAmount, RAY);
-        vm.prank(lender1);
-        ionPool.supply(address(this), supplyAmount, new bytes32[](0));
-
-        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount);
-        assertEq(ionPool.balanceOf(address(this)), supplyAmount);
-    }
-
-    function testFuzz_WithdrawBase(uint256 supplyAmount, uint256 withdrawAmount) public {
-        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
-        underlying.mint(lender1, supplyAmount);
-
-        vm.startPrank(lender1);
-
-        uint256 supplyAmountBeforeSupply = ionPool.weth();
-
-        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
-
-        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount);
-        assertEq(ionPool.balanceOf(lender1), supplyAmount);
-
-        withdrawAmount = bound(withdrawAmount, 1, supplyAmount);
-
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(lender1, address(0), withdrawAmount);
-        vm.expectEmit(true, true, true, true);
-        emit Burn(lender1, lender1, withdrawAmount, RAY);
-        ionPool.withdraw(lender1, withdrawAmount);
-
-        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount - withdrawAmount);
-        assertEq(ionPool.balanceOf(lender1), supplyAmount - withdrawAmount);
-    }
-
-    function testFuzz_WithdrawBaseToDifferentAddress(uint256 supplyAmount, uint256 withdrawAmount) public {
-        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
-        underlying.mint(lender1, supplyAmount);
-
-        vm.startPrank(lender1);
-
-        uint256 supplyAmountBeforeSupply = ionPool.weth();
-
-        ionPool.supply(lender1, supplyAmount, new bytes32[](0));
-
-        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount);
-        assertEq(ionPool.balanceOf(lender1), supplyAmount);
-
-        withdrawAmount = bound(withdrawAmount, 1, supplyAmount);
-
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(lender1, address(0), withdrawAmount);
-        vm.expectEmit(true, true, true, true);
-        emit Burn(lender1, address(this), withdrawAmount, RAY);
-        ionPool.withdraw(address(this), withdrawAmount);
-
-        assertEq(ionPool.weth(), supplyAmountBeforeSupply + supplyAmount - withdrawAmount);
-        assertEq(ionPool.balanceOf(lender1), supplyAmount - withdrawAmount);
-    }
 
     function testFuzz_DepositCollateral(uint256 depositAmount) public {
         vm.assume(depositAmount < type(uint128).max);
@@ -911,6 +945,44 @@ contract IonPool_FuzzTest is IonPoolSharedSetup {
             assertEq(underlying.balanceOf(borrower2), 0);
         }
     }
+}
+
+// TODO: Test borrow actions with changing rate and changing time
+contract IonPool_FuzzTest is IonPoolSharedSetup {
+    event MintAndBurnGem(uint8 indexed ilkIndex, address indexed usr, int256 wad);
+    event TransferGem(uint8 indexed ilkIndex, address indexed src, address indexed dst, uint256 wad);
+
+    function setUp() public override {
+        super.setUp();
+
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        vm.startPrank(lender2);
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE, new bytes32[](0));
+        vm.stopPrank();
+
+        vm.prank(lender1);
+        underlying.approve(address(ionPool), type(uint256).max);
+
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            collaterals[i].approve(address(gemJoins[i]), type(uint256).max);
+        }
+    }
+
+    function test_setUp() public override {
+        super.test_setUp();
+
+        assertEq(ionPool.weth(), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            assertEq(collaterals[i].allowance(borrower1, address(gemJoins[i])), type(uint256).max);
+        }
+    }
 
     function testFuzz_TransferGem(uint256 collateralDepositAmount, uint256 transferAmount) external {
         vm.assume(collateralDepositAmount < type(uint128).max);
@@ -935,7 +1007,12 @@ contract IonPool_FuzzTest is IonPoolSharedSetup {
         }
     }
 
-    function testFuzz_RevertWhen_TransferGemOnBehalfWithoutConsent(uint256 collateralDepositAmount, uint256 transferAmount) external {
+    function testFuzz_RevertWhen_TransferGemOnBehalfWithoutConsent(
+        uint256 collateralDepositAmount,
+        uint256 transferAmount
+    )
+        external
+    {
         vm.assume(collateralDepositAmount < type(uint128).max);
         transferAmount = bound(transferAmount, 0, collateralDepositAmount);
 
@@ -946,15 +1023,18 @@ contract IonPool_FuzzTest is IonPoolSharedSetup {
             vm.prank(borrower1);
             gemJoins[i].join(borrower1, collateralDepositAmount);
 
-            vm.expectRevert(
-                abi.encodeWithSelector(IonPool.GemTransferWithoutConsent.selector, i, borrower1, borrower2)
-            );
+            vm.expectRevert(abi.encodeWithSelector(IonPool.GemTransferWithoutConsent.selector, i, borrower1, borrower2));
             vm.prank(borrower2);
             ionPool.transferGem(i, borrower1, borrower2, transferAmount);
         }
     }
 
-    function testFuzz_TransferGemOnBehalfWithConsent(uint256 collateralDepositAmount, uint256 transferAmount) external {
+    function testFuzz_TransferGemOnBehalfWithConsent(
+        uint256 collateralDepositAmount,
+        uint256 transferAmount
+    )
+        external
+    {
         vm.assume(collateralDepositAmount < type(uint128).max);
         transferAmount = bound(transferAmount, 0, collateralDepositAmount);
 
@@ -977,5 +1057,69 @@ contract IonPool_FuzzTest is IonPoolSharedSetup {
             assertEq(ionPool.gem(i, borrower1), initialGemBalance - transferAmount);
             assertEq(ionPool.gem(i, borrower2), transferAmount);
         }
+    }
+}
+
+contract IonPool_LenderFuzzTest is IonPool_LenderFuzzTestBase {
+    function setUp() public override {
+        super.setUp();
+
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        vm.prank(lender1);
+        underlying.approve(address(ionPool), type(uint256).max);
+    }
+
+    function testFuzz_RevertWhen_SupplyingAboveSupplyCap_WithSupplyFactorChange(
+        uint256 supplyAmount,
+        uint256 _newSupplyFactor
+    )
+        public
+    {
+        changeSupplyFactor = true;
+        newSupplyFactor = bound(_newSupplyFactor, 1e27, 10e27);
+        testFuzz_RevertWhen_SupplyingAboveSupplyCap(supplyAmount);
+    }
+
+    function testFuzz_SupplyBase_WithSupplyFactorChange(uint256 supplyAmount, uint256 _newSupplyFactor) public {
+        changeSupplyFactor = true;
+        newSupplyFactor = bound(_newSupplyFactor, 1e27, 10e27);
+        testFuzz_SupplyBase(supplyAmount);
+    }
+
+    function testFuzz_SupplyBaseToDifferentAddress_WithSupplyFactorChange(
+        uint256 supplyAmount,
+        uint256 _newSupplyFactor
+    )
+        public
+    {
+        changeSupplyFactor = true;
+        newSupplyFactor = bound(_newSupplyFactor, 1e27, 10e27);
+        testFuzz_SupplyBaseToDifferentAddress(supplyAmount);
+    }
+
+    function testFuzz_WithdrawBase_WithSupplyFactorChange(
+        uint256 supplyAmount,
+        uint256 withdrawAmount,
+        uint256 _newSupplyFactor
+    )
+        public
+    {
+        changeSupplyFactor = true;
+        newSupplyFactor = bound(_newSupplyFactor, 1e27, 10e27);
+        testFuzz_WithdrawBase(supplyAmount, withdrawAmount);
+    }
+
+    function testFuzz_WithdrawBaseToDifferentAddress_WithSupplyFactorChange(
+        uint256 supplyAmount,
+        uint256 withdrawAmount,
+        uint256 _newSupplyFactor
+    )
+        public
+    {
+        changeSupplyFactor = true;
+        newSupplyFactor = bound(_newSupplyFactor, 1e27, 10e27);
+        testFuzz_WithdrawBaseToDifferentAddress(supplyAmount, withdrawAmount);
     }
 }

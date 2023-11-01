@@ -88,7 +88,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
         uint256 supplyFactorNew = 1.5e27;
-        uint256 interestCreated = amountOfRewards.wadMulDown(supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewards.rayMulDown(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -107,7 +107,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
 
         uint256 supplyFactorSecondNew = 2.5e27; // 2.5
-        interestCreated = amountOfRewards.wadMulDown(supplyFactorSecondNew - supplyFactorNew);
+        interestCreated = amountOfRewards.rayMulDown(supplyFactorSecondNew - supplyFactorNew);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
@@ -132,7 +132,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
         uint256 supplyFactorNew = 2.5e27; // 2.5
-        uint256 interestCreated = amountOfRewards.wadMulDown(supplyFactorNew - supplyFactorOld);
+        uint256 interestCreated = amountOfRewards.rayMulDown(supplyFactorNew - supplyFactorOld);
         // Adds amount of underlying to the reward token contract based on how
         // much the supply factor was changed
         _depositInterestGains(interestCreated);
