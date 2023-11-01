@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
-import { TickMath } from "src/libraries/TickMath.sol";
+import { TickMath } from "src/libraries/uniswap/TickMath.sol";
 
 contract TickMathExposed {
     function getSqrtRatioAtTick(int24 tick) external pure returns (uint160 sqrtPriceX96) {
@@ -22,18 +22,16 @@ bytes constant tickMathExposedBytecode =
  * @dev Diff test TickMath compiled with 0.7.6 vs compiled with 0.8.21
  */
 contract UniswapTickMath_DifferentialTest is Test {
-
     TickMathExposed ionTickMath;
-    TickMathExposed originalTickMath; 
+    TickMathExposed originalTickMath;
 
     function setUp() external {
-
         // Compiled with 0.8.21
         ionTickMath = new TickMathExposed();
 
         bytes memory originalTickMathBytecode = tickMathExposedBytecode;
         assembly {
-            let deployedAddr := create(0, add(originalTickMathBytecode, 0x20), mload(originalTickMathBytecode)) 
+            let deployedAddr := create(0, add(originalTickMathBytecode, 0x20), mload(originalTickMathBytecode))
             sstore(originalTickMath.slot, deployedAddr)
         }
     }
