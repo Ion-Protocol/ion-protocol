@@ -240,7 +240,8 @@ contract InterestRate {
 
         uint256 utilizationRate =
         // Prevent division by 0
-         totalEthSupply == 0 ? 0 : totalDebt / (totalEthSupply.wadMulDown(distributionFactorWad));  // [RAD] / [WAD] = [RAY]
+         totalEthSupply == 0 ? 0 : totalDebt / (totalEthSupply.wadMulDown(distributionFactorWad)); // [RAD] / [WAD] =
+            // [RAY]
 
         uint256 adjustedBelowKinkSlope = (
             collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate
@@ -279,5 +280,4 @@ contract InterestRate {
             }
         }
     }
-
 }

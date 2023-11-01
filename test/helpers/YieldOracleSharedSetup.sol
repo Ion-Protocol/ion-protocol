@@ -64,7 +64,7 @@ abstract contract YieldOracleSharedSetup is Test {
 
     uint64[ILK_COUNT][LOOK_BACK] historicalExchangeRatesInitial;
 
-    function setUp() public {
+    function setUp() public virtual {
         // Warp to reasonable timestamp
         vm.warp(1_696_181_435);
 
@@ -90,7 +90,7 @@ abstract contract YieldOracleSharedSetup is Test {
         );
     }
 
-    function test_setUp() external {
+    function test_setUp() public virtual {
         for (uint256 i = 0; i < historicalExchangeRatesInitial.length; i++) {
             for (uint256 j = 0; j < historicalExchangeRatesInitial[i].length; j++) {
                 if (i == 0) {

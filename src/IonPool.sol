@@ -1,34 +1,38 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { Whitelist } from "src/Whitelist.sol";
+import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
+import { RewardModule } from "src/reward/RewardModule.sol";
+import { InterestRate } from "src/InterestRate.sol";
+import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
+
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { RewardModule } from "./reward/RewardModule.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { InterestRate } from "./InterestRate.sol";
-import { RoundedMath, RAY } from "./libraries/math/RoundedMath.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { IonPausableUpgradeable } from "./admin/IonPausableUpgradeable.sol";
-import { Whitelist } from "src/Whitelist.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
-import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 
 contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
     using RoundedMath for uint256;
+    using Math for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // --- Errors ---
     error CeilingExceeded(uint256 newDebt, uint256 debtCeiling);
     error UnsafePositionChange(uint256 newTotalDebtInVault, uint256 collateral, uint256 spot);
-    error UnsafePositionChangeWithoutConsent(address user, address unconsentedOperator);
-    error GemTransferWithoutConsent(address user, address unconsentedOperator);
-    error UseOfCollateralWithoutConsent(address user, address unconsentedOperator);
-    error TakingWethWithoutConsent(address user, address unconsentedOperator);
+    error UnsafePositionChangeWithoutConsent(uint8 ilkIndex, address user, address unconsentedOperator);
+    error GemTransferWithoutConsent(uint8 ilkIndex, address user, address unconsentedOperator);
+    error UseOfCollateralWithoutConsent(uint8 ilkIndex, address depositor, address unconsentedOperator);
+    error TakingWethWithoutConsent(address payer, address unconsentedOperator);
     error VaultCannotBeDusty(uint256 amountLeft, uint256 dust);
     error ArithmeticError();
     error SpotUpdaterNotAuthorized();
@@ -37,8 +41,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     error DepositSurpassesSupplyCap(uint256 depositAmount, uint256 supplyCap);
 
     error InvalidIlkAddress();
-    error InvalidAccountingModule();
-    error InvalidInterestRateModule();
+    error InvalidInterestRateModule(InterestRate invalidInterestRateModule);
+    error InvalidWhitelist(Whitelist invalidWhitelist);
 
     // --- Events ---
     event IlkInitialized(uint8 indexed ilkIndex, address indexed ilkAddress);
@@ -54,6 +58,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     event MintAndBurnGem(uint8 indexed ilkIndex, address indexed usr, int256 wad);
     event TransferGem(uint8 indexed ilkIndex, address indexed src, address indexed dst, uint256 wad);
 
+    event WithdrawCollateral(uint8 indexed ilkIndex, address indexed user, address indexed recipient, uint256 amount);
+    event DepositCollateral(uint8 indexed ilkIndex, address indexed user, address indexed depositor, uint256 amount);
     event Borrow(
         uint8 indexed ilkIndex,
         address indexed user,
@@ -68,9 +74,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 amountOfNormalizedDebt,
         uint256 ilkRate
     );
-
-    event DepositCollateral(uint8 indexed ilkIndex, address indexed user, address indexed depositor, uint256 amount);
-    event WithdrawCollateral(uint8 indexed ilkIndex, address indexed user, address indexed recipient, uint256 amount);
 
     event RepayBadDebt(address indexed user, address indexed payer, uint256 rad);
     event ConfiscateVault(
@@ -127,7 +130,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         mapping(address => mapping(address => uint256)) isOperator;
         uint256 weth; // liquidity in pool [wad]
         uint256 wethSupplyCap; // [wad]
-        uint256 debt; // Total Dai Issued    [rad]
         uint256 totalUnbackedDebt; // Total Unbacked Dai  [rad]
         InterestRate interestRateModule;
         Whitelist whitelist;
@@ -186,7 +188,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         Ilk storage ilk = $.ilks[ilkIndex];
 
         ilk.rate = 10 ** 27;
-        ilk.lastRateUpdate = block.timestamp.toUint48();
+        // Unsafe cast OK
+        ilk.lastRateUpdate = uint48(block.timestamp);
 
         emit IlkInitialized(ilkIndex, ilkAddress);
     }
@@ -224,15 +227,27 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     }
 
     function updateInterestRateModule(InterestRate _interestRateModule) external onlyRole(ION) {
-        if (address(_interestRateModule) == address(0)) revert InvalidInterestRateModule();
+        if (address(_interestRateModule) == address(0)) revert InvalidInterestRateModule(_interestRateModule);
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         // Sanity check
-        if (_interestRateModule.collateralCount() != $.ilks.length) revert InvalidInterestRateModule();
+        if (_interestRateModule.collateralCount() != $.ilks.length) {
+            revert InvalidInterestRateModule(_interestRateModule);
+        }
         $.interestRateModule = _interestRateModule;
 
         emit InterestRateModuleUpdated(address(_interestRateModule));
+    }
+
+    function updateWhitelist(Whitelist _whitelist) external onlyRole(ION) {
+        if (address(_whitelist) == address(0)) revert InvalidWhitelist(_whitelist);
+
+        IonPoolStorage storage $ = _getIonPoolStorage();
+
+        $.whitelist = _whitelist;
+
+        emit WhitelistUpdated(address(_whitelist));
     }
 
     /**
@@ -280,7 +295,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         uint256 ilksLength = $.ilks.length;
         for (uint256 i = 0; i < ilksLength;) {
-            $.ilks[i].lastRateUpdate = block.timestamp.toUint48();
+            // Unsafe cast OK
+            $.ilks[i].lastRateUpdate = uint48(block.timestamp);
 
             // forgefmt: disable-next-line
             unchecked { ++i; }
@@ -335,7 +351,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        if (newTimestamp > 0) {
+        if (newTimestamp > block.timestamp) {
             Ilk storage ilk = $.ilks[ilkIndex];
             ilk.rate += newRateIncrease;
             ilk.lastRateUpdate = newTimestamp;
@@ -343,17 +359,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
             _setSupplyFactor(supplyFactor() + supplyFactorIncrease);
             _mintToTreasury(treasuryMintAmount);
         }
-    }
-
-    function calculateRewardAndDebtDistribution(
-        uint8 ilkIndex,
-        uint256 totalEthSupply
-    )
-        external
-        view
-        returns (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRateIncrease, uint48 newTimestamp)
-    {
-        return _calculateRewardAndDebtDistribution(ilkIndex, totalEthSupply);
     }
 
     function _calculateRewardAndDebtDistribution(
@@ -368,48 +373,49 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         Ilk storage ilk = $.ilks[ilkIndex];
 
         uint256 _totalNormalizedDebt = ilk.totalNormalizedDebt;
-        if (_totalNormalizedDebt == 0) return (0, 0, 0, 0);
+        // Unsafe cast OK
+        if (_totalNormalizedDebt == 0 || block.timestamp == ilk.lastRateUpdate) {
+            return (0, 0, 0, uint48(block.timestamp));
+        }
         uint256 _rate = ilk.rate;
 
         uint256 totalDebt = _totalNormalizedDebt.wadMulDown(_rate); // [WAD] * [RAY] / [WAD] = [RAY]
 
-        // TODO: Make this borrow rate less than one, and then add one in this contract. This way, the core guarantees
-        // that borrow rate > 1
         (uint256 borrowRate, uint256 reserveFactor) =
             $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
 
         uint256 borrowRateExpT = _rpow(borrowRate, block.timestamp - ilk.lastRateUpdate, RAY);
 
-        newTimestamp = block.timestamp.toUint48();
-
-        uint256 newDebtCreated = totalDebt.rayMulDown(borrowRateExpT - RAY); // Round down in protocol's favor.
-        uint256 newDebtCreatedUp = totalDebt.rayMulUp(borrowRateExpT - RAY); // Round down in protocol's favor.
+        // Unsafe cast OK
+        newTimestamp = uint48(block.timestamp);
 
         // Debt distribution
-        newRateIncrease = newDebtCreatedUp.rayDivUp(_totalNormalizedDebt).toUint104();
+        newRateIncrease = _rate.rayMulUp(borrowRateExpT).toUint104(); // [RAY]
+
+        uint256 newDebtCreated = _totalNormalizedDebt * newRateIncrease; // [RAD]
 
         // Income distribution
-        uint256 _normalizedTotalSupply = normalizedTotalSupply();
+        uint256 _normalizedTotalSupply = normalizedTotalSupply(); // [WAD]
 
         // If there is no supply, then nothing is being lent out.
         supplyFactorIncrease = _normalizedTotalSupply == 0
             ? 0
-            : newDebtCreated.rayMulDown(RAY - reserveFactor).rayDivDown(_normalizedTotalSupply);
+            : newDebtCreated.mulDiv(RAY - reserveFactor, _normalizedTotalSupply.scaleUpToRad(18)); // [RAD] * [RAY] / [RAD]
+            // = [RAY]
 
-        treasuryMintAmount = newDebtCreated.rayMulDown(reserveFactor);
+        treasuryMintAmount = newDebtCreated.mulDiv(reserveFactor, 1e54); // [RAD] * [RAY] / 1e54 = [WAD]
     }
 
     // --- Lender Operations ---
-    function withdraw(address user, uint256 amount) external whenNotPaused(Pauses.UNSAFE) {
+    function withdraw(address receiverOfUnderlying, uint256 amount) external whenNotPaused(Pauses.UNSAFE) {
         _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.weth -= amount;
 
-        _burn(_msgSender(), user, amount);
+        _burn({ user: _msgSender(), receiverOfUnderlying: receiverOfUnderlying, amount: amount });
     }
 
-    // TODO: Supply caps
     function supply(
         address user,
         uint256 amount,
@@ -425,10 +431,10 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 _supplyCap = $.wethSupplyCap;
         if (($.weth += amount) > _supplyCap) revert DepositSurpassesSupplyCap(amount, _supplyCap);
 
-        _mint(user, amount);
+        _mint({ user: user, senderOfUnderlying: _msgSender(), amount: amount });
     }
 
-    // --- CDP Manipulation ---
+    // --- Borrower Operations ---
 
     function borrow(
         uint8 ilkIndex,
@@ -443,6 +449,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     {
         _accrueInterestForIlk(ilkIndex);
         uint104 ilkRate = _modifyPosition(ilkIndex, user, address(0), recipient, 0, amountOfNormalizedDebt.toInt256());
+
         emit Borrow(ilkIndex, user, recipient, amountOfNormalizedDebt, ilkRate);
     }
 
@@ -497,6 +504,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         emit DepositCollateral(ilkIndex, user, depositor, amount);
     }
 
+    // --- CDP Manipulation ---
+
     function _modifyPosition(
         uint8 ilkIndex,
         address u,
@@ -545,12 +554,12 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
             // vault is either more safe, or the owner consents
             if (both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !isAllowed(u, _msgSender()))) {
-                revert UnsafePositionChangeWithoutConsent(u, _msgSender());
+                revert UnsafePositionChangeWithoutConsent(ilkIndex, u, _msgSender());
             }
 
             // collateral src consents
             if (both(changeInCollateral > 0, !isAllowed(v, _msgSender()))) {
-                revert UseOfCollateralWithoutConsent(v, _msgSender());
+                revert UseOfCollateralWithoutConsent(ilkIndex, v, _msgSender());
             }
         }
         // debt dst consents
@@ -570,7 +579,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
         $.vaults[ilkIndex][u] = vault;
         $.ilks[ilkIndex].totalNormalizedDebt = _totalNormalizedDebt;
-        $.debt = _add($.debt, changeInDebt);
 
         // If changeInDebt < 0, it is a repayment and WETH is being transferred
         // into the protocol
@@ -590,7 +598,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         $.unbackedDebt[user] -= rad;
         $.totalUnbackedDebt -= rad;
-        $.debt -= rad;
 
         // Must be negative since it is a repayment
         _transferWeth(_msgSender(), -(rad.toInt256()));
@@ -687,7 +694,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     }
 
     function transferGem(uint8 ilkIndex, address src, address dst, uint256 wad) external whenNotPaused(Pauses.UNSAFE) {
-        if (!isAllowed(src, _msgSender())) revert GemTransferWithoutConsent(src, _msgSender());
+        if (!isAllowed(src, _msgSender())) revert GemTransferWithoutConsent(ilkIndex, src, _msgSender());
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
@@ -788,11 +795,6 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         return either(bit == usr, $.isOperator[bit][usr] == 1);
     }
 
-    function debt() external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.debt;
-    }
-
     function totalUnbackedDebt() external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
         return $.totalUnbackedDebt;
@@ -801,6 +803,11 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     function interestRateModule() external view returns (address) {
         IonPoolStorage storage $ = _getIonPoolStorage();
         return address($.interestRateModule);
+    }
+
+    function whitelist() external view returns (address) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return address($.whitelist);
     }
 
     function weth() external view returns (uint256) {
@@ -818,6 +825,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 totalDebt = _totalNormalizedDebt.wadMulDown(_rate); // [WAD] * [RAY] / [WAD] = [RAY]
 
         (borrowRate, reserveFactor) = $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
+        borrowRate += RAY;
     }
 
     function calculateRewardAndDebtDistribution(uint8 ilkIndex)
