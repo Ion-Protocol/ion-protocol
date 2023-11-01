@@ -182,8 +182,8 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         // resulting health ratio is target health ratio
         uint256 healthRatio =
-            actualResultingCollateral.roundedWadMul(sArgs.exchangeRate).roundedWadMul(dArgs.liquidationThreshold);
-        healthRatio = healthRatio.roundedWadDiv(actualResultingNormalizedDebt).roundedWadDiv(rate.scaleToWad(27));
+            actualResultingCollateral.wadMulDown(sArgs.exchangeRate).wadMulDown(dArgs.liquidationThreshold);
+        healthRatio = healthRatio.wadDivDown(actualResultingNormalizedDebt).wadDivDown(rate.scaleDownToWad(27));
         console.log("new healthRatio: ", healthRatio);
         assertEq(healthRatio / 1e9, dArgs.targetHealth / 1e9, "resulting health ratio");
     }
@@ -294,8 +294,8 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         // resulting health ratio is target health ratio
         uint256 healthRatio =
-            actualResultingCollateral.roundedWadMul(sArgs.exchangeRate).roundedWadMul(dArgs.liquidationThreshold);
-        healthRatio = healthRatio.roundedWadDiv(actualResultingNormalizedDebt).roundedWadDiv(rate.scaleToWad(27));
+            actualResultingCollateral.wadMulDown(sArgs.exchangeRate).wadMulDown(dArgs.liquidationThreshold);
+        healthRatio = healthRatio.wadDivDown(actualResultingNormalizedDebt).wadDivDown(rate.scaleDownToWad(27));
         console.log("new healthRatio: ", healthRatio);
         assertEq(healthRatio / 1e9, dArgs.targetHealth / 1e9, "resulting health ratio");
     }
@@ -358,7 +358,7 @@ contract LiquidationTest is LiquidationSharedSetup {
      */
     function test_LiquidatorPaysForDust() public {
         // set dust
-        ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleToRad(18)); // [rad]
+        ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleUpToRad(18)); // [rad]
 
         // calculating resulting state after liquidations
         DeploymentArgs memory dArgs;

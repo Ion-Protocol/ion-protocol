@@ -169,7 +169,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         pure
         returns (uint256 resultingHealthRatio)
     {
-        exchangeRate = exchangeRate.scaleToRay(18);
+        exchangeRate = exchangeRate.scaleUpToRay(18);
         resultingHealthRatio = (collateral * exchangeRate).rayMulDown(liquidationThreshold);
         resultingHealthRatio = resultingHealthRatio.rayDivDown(normalizedDebt).rayDivDown(rate);
     }
@@ -193,7 +193,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         StateArgs memory sArgs;
         // copy to new memory
         // scale exchangeRate to ray
-        sArgs.exchangeRate = _sArgs.exchangeRate.scaleToRay(18);
+        sArgs.exchangeRate = _sArgs.exchangeRate.scaleUpToRay(18);
         sArgs.collateral = _sArgs.collateral;
         sArgs.normalizedDebt = _sArgs.normalizedDebt;
         sArgs.rate = _sArgs.rate;

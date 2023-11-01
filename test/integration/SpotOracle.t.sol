@@ -78,7 +78,7 @@ contract SpotOracleTest is IonPoolSharedSetup {
         );
 
         uint256 expectedPrice = stEthSpotOracle.getPrice();
-        uint256 expectedSpot = (ltv * expectedPrice).scaleToRay(36);
+        uint256 expectedSpot = (ltv * expectedPrice).scaleDownToRay(36);
 
         assertEq(stEthSpotOracle.getSpot(), expectedSpot, "spot");
     }
@@ -112,7 +112,7 @@ contract SpotOracleTest is IonPoolSharedSetup {
             new SwEthSpotOracle(SWETH_ILK_INDEX, ltv, MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
 
         uint256 expectedPrice = swEthSpotOracle.getPrice();
-        uint256 expectedSpot = (ltv * expectedPrice).scaleToRay(36);
+        uint256 expectedSpot = (ltv * expectedPrice).scaleDownToRay(36);
 
         assertEq(swEthSpotOracle.getSpot(), expectedSpot, "spot");
     }
@@ -150,7 +150,7 @@ contract SpotOracleTest is IonPoolSharedSetup {
         );
 
         uint256 expectedPrice = ethXSpotOracle.getPrice();
-        uint256 expectedSpot = (ltv * expectedPrice).scaleToRay(36);
+        uint256 expectedSpot = (ltv * expectedPrice).scaleDownToRay(36);
 
         assertEq(ethXSpotOracle.getSpot(), expectedSpot, "spot");
     }

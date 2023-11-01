@@ -89,7 +89,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // [wad] * [ray] <= [wad] * [ray]
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                <= (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(
+                <= (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -97,7 +97,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // position needs to be unsafe after exchange rate change
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                > (stateArgs.collateral * stateArgs.exchangeRate.scaleToRay(18)).rayMulDown(
+                > (stateArgs.collateral * stateArgs.exchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -166,7 +166,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // [wad] * [ray] <= [wad] * [ray]
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                <= (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(
+                <= (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -174,7 +174,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // position needs to be unsafe after exchange rate change
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                > (stateArgs.collateral * stateArgs.exchangeRate.scaleToRay(18)).rayMulDown(
+                > (stateArgs.collateral * stateArgs.exchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -241,7 +241,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         stateArgs.normalizedDebt = bound(
             borrowAmt,
             1,
-            (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
+            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
                 / stateArgs.rate
         ); // [wad]
         // position must be unsafe after exchange rate change
@@ -252,7 +252,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                 / stateArgs.collateral - 1
         ); // [ray]
         // cast exchangeRate back to [wad]
-        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleToWad(27);
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
 
         vm.assume(stateArgs.exchangeRate > 0); // throw away output if exchangeRate is zero
 
@@ -308,7 +308,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         stateArgs.normalizedDebt = bound(
             borrowAmt,
             1,
-            (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
+            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
                 / stateArgs.rate
         ); // [wad]
         // position must be unsafe after exchange rate change
@@ -319,7 +319,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                 / stateArgs.collateral - 1
         ); // [ray]
         // cast exchangeRate back to [wad]
-        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleToWad(27);
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
 
         vm.assume(stateArgs.exchangeRate > 0); // throw away output if exchangeRate is zero
 

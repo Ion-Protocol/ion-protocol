@@ -10,8 +10,8 @@ interface IRedstonePriceFeed {
     function latestAnswer() external view returns (int256 answer);
 }
 
-uint8 constant redstoneDecimals = 8;
-uint8 constant chainlinkDecimals = 8;
+uint8 constant REDSTONE_DECIMALS = 8;
+uint8 constant CHAINLINK_DECIMALS = 8;
 
 contract EthXSpotOracle is SpotOracle {
     using RoundedMath for uint256;
@@ -36,10 +36,10 @@ contract EthXSpotOracle is SpotOracle {
     function getPrice() public view override returns (uint256 ethPerEthX) {
         // get price from the protocol feed
         // usd per ETHx
-        uint256 usdPerEthX = uint256(redstoneEthXPriceFeed.latestAnswer()).scaleToWad(redstoneDecimals); //
+        uint256 usdPerEthX = uint256(redstoneEthXPriceFeed.latestAnswer()).scaleUpToWad(REDSTONE_DECIMALS); //
         // usd per ETH
-        uint256 usdPerEth = uint256(usdPerEthChainlink.latestAnswer()).scaleToWad(chainlinkDecimals);
+        uint256 usdPerEth = usdPerEthChainlink.latestAnswer().scaleUpToWad(CHAINLINK_DECIMALS);
         // (USD per ETHx) / (USD per ETH) = (USD per ETHx) * (ETH per USD) = ETH per ETHx
-        ethPerEthX = usdPerEthX.roundedWadDiv(usdPerEth);
+        ethPerEthX = usdPerEthX.wadDivDown(usdPerEth);
     }
 }
