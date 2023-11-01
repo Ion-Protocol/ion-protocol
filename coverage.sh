@@ -6,7 +6,7 @@ delete=false
 while read -r line; do
     if [[ $line == SF* ]]; then
         path=$(echo "$line" | cut -d':' -f2)
-        if [[ $path == test* || $path == script* ]]; then
+        if [[ $path == test* || $path == script* || $path == src/libraries/uniswap* ]]; then
             delete=true
             continue
         fi
