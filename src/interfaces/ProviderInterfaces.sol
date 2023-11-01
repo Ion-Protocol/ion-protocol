@@ -8,6 +8,7 @@ interface ILido {
         external
         view
         returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
+    function getTotalPooledEther() external view returns (uint256);
 }
 
 interface IWstEth {

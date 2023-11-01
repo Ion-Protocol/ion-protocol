@@ -37,7 +37,7 @@ contract EthXHandler_ForkBase is IonHandler_ForkBase {
     function setUp() public virtual override {
         super.setUp();
         ethXHandler =
-            new EthXHandler(ilkIndex, ionPool, gemJoins[ilkIndex], MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL);
+        new EthXHandler(ilkIndex, ionPool, gemJoins[ilkIndex], MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL);
 
         IERC20(address(MAINNET_ETHX)).approve(address(ethXHandler), type(uint256).max);
 

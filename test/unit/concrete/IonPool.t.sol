@@ -38,7 +38,6 @@ contract IonPool_Test is IonPoolSharedSetup {
         assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
     }
 
-
     function test_BasicLendAndWithdraw() external {
         vm.startPrank(lender1);
         underlying.approve(address(ionPool), type(uint256).max);
@@ -350,38 +349,58 @@ contract IonPool_PausedTest is IonPoolSharedSetup {
     function test_RevertWhen_CallingUnsafeFunctionsWhenPausedUnsafe() external {
         ionPool.pauseUnsafeActions();
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
         ionPool.withdraw(address(0), 0);
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
         ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
         ionPool.withdrawCollateral(0, address(0), address(0), 0);
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
         ionPool.mintAndBurnGem(0, address(0), 0);
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
         ionPool.transferGem(0, address(0), address(0), 0);
     }
 
     function test_RevertWhen_CallingSafeFunctionsWhenPausedSafe() external {
         ionPool.pauseSafeActions();
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+        );
         ionPool.accrueInterest();
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+        );
         ionPool.supply(address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+        );
         ionPool.repay(0, address(0), address(0), 0);
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+        );
         ionPool.depositCollateral(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+        );
         ionPool.repayBadDebt(address(0), 0);
     }
 }

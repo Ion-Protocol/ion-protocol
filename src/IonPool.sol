@@ -405,7 +405,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.weth -= amount;
-        
+
         _burn(_msgSender(), user, amount);
     }
 
@@ -520,7 +520,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         uint104 _totalNormalizedDebt = _add($.ilks[ilkIndex].totalNormalizedDebt, changeInNormalizedDebt).toUint104();
         int256 changeInDebt = ilkRate.toInt256() * changeInNormalizedDebt;
-        
+
         uint256 newTotalDebtInVault = ilkRate * vault.normalizedDebt;
 
         // Prevent stack too deep
