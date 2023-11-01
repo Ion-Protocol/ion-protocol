@@ -78,6 +78,12 @@ contract IonPoolExposed is IonPool {
     function setSupplyFactor(uint256 factor) external {
         _setSupplyFactor(factor);
     }
+
+    function addLiquidity(uint256 amount) external {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+
+        $.weth += amount;
+    }
 }
 
 // for bypassing whitelist checks during tests
@@ -326,5 +332,10 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     function _getDepositContracts() internal view virtual returns (address[] memory) {
         return new address[](3);
+    }
+
+    function _depositInterestGains(uint256 amount) public {
+        ionPool.addLiquidity(amount);
+        underlying.mint(address(ionPool), amount);
     }
 }

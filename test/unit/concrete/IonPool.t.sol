@@ -850,9 +850,7 @@ contract IonPool_Test is IonPoolSharedSetup {
         uint256 collateralDepositAmount = 1e18;
 
         for (uint8 i = 0; i < collaterals.length; i++) {
-            vm.expectRevert(
-                abi.encodeWithSelector(IonPool.GemTransferWithoutConsent.selector, i, borrower1, borrower2)
-            );
+            vm.expectRevert(abi.encodeWithSelector(IonPool.GemTransferWithoutConsent.selector, i, borrower1, borrower2));
             vm.prank(borrower2);
             ionPool.transferGem(i, borrower1, borrower2, collateralDepositAmount);
         }
@@ -874,7 +872,7 @@ contract IonPool_Test is IonPoolSharedSetup {
 
             assertEq(ionPool.gem(i, borrower1), initialGemBalance - collateralDepositAmount);
             assertEq(ionPool.gem(i, borrower2), collateralDepositAmount);
-        } 
+        }
     }
 
     function test_AddOperator() external {
