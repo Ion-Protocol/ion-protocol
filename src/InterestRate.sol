@@ -217,12 +217,12 @@ contract InterestRate {
 
     /**
      * @param ilkIndex index of the collateral
-     * @param totalDebt total debt of the system (27 decimals)
+     * @param totalDebt total debt of the system (45 decimals)
      * @param totalEthSupply total eth supply of the system (18 decimals)
      */
     function calculateInterestRate(
         uint256 ilkIndex,
-        uint256 totalDebt, // [RAY]
+        uint256 totalDebt, // [RAD]
         uint256 totalEthSupply
     )
         external
@@ -230,20 +230,17 @@ contract InterestRate {
         returns (uint256, uint256)
     {
         // TODO: Validate input
-        uint256 collateralApy = apyOracle.apys(ilkIndex);
-
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
 
-        uint256 distributionFactorRay = _scaleToRay(ilkData.distributionFactor, 4);
-        uint256 collateralApyRay = _scaleToRay(collateralApy, 8);
-        uint256 optimalUtilizationRateRay = _scaleToRay(ilkData.optimalUtilizationRate, 4);
-        totalEthSupply = _scaleToRay(totalEthSupply, 18);
+        uint256 distributionFactorWad = ilkData.distributionFactor.scaleUpToWad(4);
+        uint256 collateralApyRay = apyOracle.apys(ilkIndex).scaleUpToRay(8);
+        uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
 
         uint256 collateralApyRayInSeconds = collateralApyRay / SECONDS_IN_A_DAY;
 
         uint256 utilizationRate =
         // Prevent division by 0
-         totalEthSupply == 0 ? 0 : totalDebt.rayDivDown(totalEthSupply.rayMulDown(distributionFactorRay));
+         totalEthSupply == 0 ? 0 : totalDebt / (totalEthSupply.wadMulDown(distributionFactorWad));  // [RAD] / [WAD] = [RAY]
 
         uint256 adjustedBelowKinkSlope = (
             collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate
@@ -257,9 +254,9 @@ contract InterestRate {
             uint256 minimumBorrowRate = minimumBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.minimumBaseRate;
 
             if (adjustedBorrowRate < minimumBorrowRate) {
-                return (minimumBorrowRate, ilkData.minimumReserveFactor);
+                return (minimumBorrowRate, ilkData.minimumReserveFactor.scaleUpToRay(4));
             } else {
-                return (adjustedBorrowRate, ilkData.adjustedReserveFactor);
+                return (adjustedBorrowRate, ilkData.adjustedReserveFactor.scaleUpToRay(4));
             }
         } else {
             uint256 excessUtil = utilizationRate - optimalUtilizationRateRay;
@@ -276,15 +273,11 @@ contract InterestRate {
                 uint256(ilkData.minimumAboveKinkSlope).wadMulDown(excessUtil) + minimumNormalRate;
 
             if (adjustedBorrowRate < minimumBorrowRate) {
-                return (minimumBorrowRate, ilkData.minimumReserveFactor);
+                return (minimumBorrowRate, ilkData.minimumReserveFactor.scaleUpToRay(4));
             } else {
-                return (adjustedBorrowRate, ilkData.adjustedReserveFactor);
+                return (adjustedBorrowRate, ilkData.adjustedReserveFactor.scaleUpToRay(4));
             }
         }
     }
 
-    // TODO: Use library function
-    function _scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
-        return value * (10 ** 27) / (10 ** scale);
-    }
 }

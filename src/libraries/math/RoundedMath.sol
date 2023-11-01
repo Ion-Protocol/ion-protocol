@@ -13,79 +13,8 @@ library RoundedMath {
 
     error MultiplicationOverflow(uint256 a, uint256 b);
     error DivisionByZero();
-
-    /**
-     * @dev Multiplication with proper rounding as opposed to truncation.
-     * @param a multiplier
-     * @param b multiplicand
-     * @return product in `WAD`
-     */
-    function roundedWadMul(uint256 a, uint256 b) internal pure returns (uint256) {
-        return roundedMul(a, b, WAD);
-    }
-
-    /**
-     * @dev Division with proper rounding as opposed to truncation.
-     * @param a dividend
-     * @param b divisor
-     * @return quotient in `WAD`
-     */
-    function roundedWadDiv(uint256 a, uint256 b) internal pure returns (uint256) {
-        return roundedDiv(a, b, WAD);
-    }
-
-    /**
-     * @dev Multiplication with proper rounding as opposed to truncation.
-     * @param a multiplier
-     * @param b multiplicand
-     * @return product in `RAY`
-     */
-    function roundedRayMul(uint256 a, uint256 b) internal pure returns (uint256) {
-        return roundedMul(a, b, RAY);
-    }
-
-    /**
-     * @dev Division with proper rounding as opposed to truncation.
-     * @param a dividend
-     * @param b divisor
-     * @return quotient in `RAY`
-     */
-    function roundedRayDiv(uint256 a, uint256 b) internal pure returns (uint256) {
-        return roundedDiv(a, b, RAY);
-    }
-
-    /**
-     * @dev Multiplication with proper rounding as opposed to truncation.
-     * @param a multiplier
-     * @param b multiplicand
-     * @param scale of multiplicand
-     * @return product (in scale of multiplier)
-     */
-    function roundedMul(uint256 a, uint256 b, uint256 scale) internal pure returns (uint256) {
-        if (a == 0 || b == 0) return 0;
-
-        if (a > (type(uint256).max / b)) revert MultiplicationOverflow(a, b);
-
-        uint256 halfScale = scale / 2;
-
-        return (a * b + halfScale) / scale;
-    }
-
-    /**
-     * @dev Division with proper rounding as opposed to truncation.
-     * @param a dividend
-     * @param b divisor
-     * @param scale of divisor
-     * @return quotient (in scale of dividend)
-     */
-    function roundedDiv(uint256 a, uint256 b, uint256 scale) internal pure returns (uint256) {
-        if (b == 0) revert DivisionByZero();
-        uint256 halfB = b / 2;
-
-        if (a > (type(uint256).max - halfB) / scale) revert MultiplicationOverflow(a, b);
-
-        return (a * scale + halfB) / b;
-    }
+    error NotScalingUp(uint256 from, uint256 to);
+    error NotScalingDown(uint256 from, uint256 to);
 
     function wadMulDown(uint256 a, uint256 b) internal pure returns (uint256) {
         return a.mulDiv(b, WAD);
@@ -119,18 +48,55 @@ library RoundedMath {
         return a.mulDiv(RAY, b, Math.Rounding.Ceil);
     }
 
+    function radMulDown(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(b, RAD);
+    }
+
+    function radMulUp(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(b, RAD, Math.Rounding.Ceil);
+    }
+
+    function radDivDown(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(RAD, b);
+    }
+
+    function radDivUp(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a.mulDiv(RAD, b, Math.Rounding.Ceil);
+    }
+
     // --- Scalers ---
 
-    // TODO: use muldiv instead
-    function scaleToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
-        return value * (10 ** 18) / (10 ** scale);
+    function scaleUpToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return scaleUp(value, scale, 18);
     }
 
-    function scaleToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
-        return value * (10 ** 27) / (10 ** scale);
+    function scaleUpToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return scaleUp(value, scale, 27);
     }
 
-    function scaleToRad(uint256 value, uint256 scale) internal pure returns (uint256) {
-        return value * (10 ** 45) / (10 ** scale);
+    function scaleUpToRad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return scaleUp(value, scale, 45);
+    }
+
+    function scaleDownToWad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return scaleDown(value, scale, 18);
+    }
+
+    function scaleDownToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return scaleDown(value, scale, 27);
+    }
+
+    function scaleDownToRad(uint256 value, uint256 scale) internal pure returns (uint256) {
+        return scaleDown(value, scale, 45);
+    }
+
+    function scaleUp(uint256 value, uint256 from, uint256 to) internal pure returns (uint256) {
+        if (from >= to) revert NotScalingUp(from, to);
+        return value * (10 ** (to - from));
+    }
+
+    function scaleDown(uint256 value, uint256 from, uint256 to) internal pure returns (uint256) {
+        if (from <= to) revert NotScalingDown(from, to);
+        return value / (10 ** (from - to));
     }
 }

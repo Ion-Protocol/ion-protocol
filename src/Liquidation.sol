@@ -92,7 +92,7 @@ contract Liquidation {
         }
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         exchangeRate = ReserveOracle(exchangeRateOracle).getExchangeRate();
-        exchangeRate = uint256(exchangeRate).scaleToRay(18);
+        exchangeRate = uint256(exchangeRate).scaleUpToRay(18);
     }
 
     /**

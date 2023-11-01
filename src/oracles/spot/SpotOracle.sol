@@ -27,6 +27,6 @@ abstract contract SpotOracle {
     // @dev pushes market price multiplied by the LTV
     function getSpot() external view returns (uint256 spot) {
         uint256 price = getPrice(); // must be [wad]
-        spot = (ltv * price).scaleToRay(36); // [ray]
+        spot = (ltv * price).scaleDownToRay(36); // [ray]
     }
 }
