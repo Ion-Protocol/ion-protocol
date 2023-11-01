@@ -61,10 +61,11 @@ abstract contract RewardModule is ContextUpgradeable {
     event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
 
     /**
-     * @dev Emitted when minting by `user` in exchange for `amount` underlying tokens. `supplyFactor`
+     * @dev Emitted when minting for `user` in exchange for `amount` underlying tokens from `underlyingFrom`.
+     * `supplyFactor`
      * is the  supply factor at the time.
      */
-    event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
+    event Mint(address indexed user, address indexed underlyingFrom, uint256 amount, uint256 supplyFactor);
 
     struct RewardModuleStorage {
         IERC20 underlying;
@@ -123,8 +124,6 @@ abstract contract RewardModule is ContextUpgradeable {
         uint256 _supplyFactor = $.supplyFactor;
         uint256 amountScaled = amount.rayDivUp(_supplyFactor);
 
-        // This conditional should be impossible with rounding up, but will keep
-        // it as a sanity check
         if (amountScaled == 0) revert InvalidBurnAmount();
         _burnNormalized(user, amountScaled);
 
@@ -156,10 +155,11 @@ abstract contract RewardModule is ContextUpgradeable {
 
     /**
      *
-     * @param user to mint tokens to and transfer underlying tokens from
+     * @param user to mint tokens to
+     * @param senderOfUnderlying address to transfer underlying tokens from
      * @param amount of reward tokens to mint
      */
-    function _mint(address user, uint256 amount) internal {
+    function _mint(address user, address senderOfUnderlying, uint256 amount) internal {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
@@ -167,10 +167,10 @@ abstract contract RewardModule is ContextUpgradeable {
         if (amountScaled == 0) revert InvalidMintAmount();
         _mintNormalized(user, amountScaled);
 
-        $.underlying.safeTransferFrom(_msgSender(), address(this), amount);
+        $.underlying.safeTransferFrom(senderOfUnderlying, address(this), amount);
 
         emit Transfer(address(0), user, amount);
-        emit Mint(user, amount, _supplyFactor);
+        emit Mint(user, senderOfUnderlying, amount, _supplyFactor);
     }
 
     /**
@@ -207,7 +207,7 @@ abstract contract RewardModule is ContextUpgradeable {
         _mintNormalized(_treasury, amount.rayDivDown(_supplyFactor));
 
         emit Transfer(address(0), _treasury, amount);
-        emit Mint(_treasury, amount, _supplyFactor);
+        emit Mint(_treasury, address(0), amount, _supplyFactor);
     }
 
     function _setSupplyFactor(uint256 newSupplyFactor) internal {
