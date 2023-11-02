@@ -16,9 +16,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
-
 contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
@@ -120,6 +117,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 normalizedDebt; // Normalised Debt    [wad]
     }
 
+    // TODO: Add back global debt variable
     struct IonPoolStorage {
         Ilk[] ilks;
         // remove() should never be called, it will mess up the ordering
@@ -325,13 +323,17 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         uint256 ilksLength = $.ilks.length;
         for (uint8 i = 0; i < ilksLength;) {
-            (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRateIncrease, uint48 newTimestamp) =
-                _calculateRewardAndDebtDistribution(i, totalEthSupply);
+            (
+                uint256 supplyFactorIncrease,
+                uint256 treasuryMintAmount,
+                uint104 newRateIncrease,
+                uint48 timestampIncrease
+            ) = _calculateRewardAndDebtDistribution(i, totalEthSupply);
 
-            if (newTimestamp > 0) {
+            if (timestampIncrease > 0) {
                 Ilk storage ilk = $.ilks[i];
                 ilk.rate += newRateIncrease;
-                ilk.lastRateUpdate = newTimestamp;
+                ilk.lastRateUpdate += timestampIncrease;
 
                 totalSupplyFactorIncrease += supplyFactorIncrease;
                 totalTreasuryMintAmount += treasuryMintAmount;
@@ -346,15 +348,15 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     }
 
     function _accrueInterestForIlk(uint8 ilkIndex) internal {
-        (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRateIncrease, uint48 newTimestamp) =
+        (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRateIncrease, uint48 timestampIncrease) =
             _calculateRewardAndDebtDistribution(ilkIndex, totalSupply());
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        if (newTimestamp > block.timestamp) {
+        if (timestampIncrease > 0) {
             Ilk storage ilk = $.ilks[ilkIndex];
             ilk.rate += newRateIncrease;
-            ilk.lastRateUpdate = newTimestamp;
+            ilk.lastRateUpdate += timestampIncrease;
 
             _setSupplyFactor(supplyFactor() + supplyFactorIncrease);
             _mintToTreasury(treasuryMintAmount);
@@ -367,7 +369,12 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
     )
         internal
         view
-        returns (uint256 supplyFactorIncrease, uint256 treasuryMintAmount, uint104 newRateIncrease, uint48 newTimestamp)
+        returns (
+            uint256 supplyFactorIncrease,
+            uint256 treasuryMintAmount,
+            uint104 newRateIncrease,
+            uint48 timestampIncrease
+        )
     {
         IonPoolStorage storage $ = _getIonPoolStorage();
         Ilk storage ilk = $.ilks[ilkIndex];
@@ -375,22 +382,24 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 _totalNormalizedDebt = ilk.totalNormalizedDebt;
         // Unsafe cast OK
         if (_totalNormalizedDebt == 0 || block.timestamp == ilk.lastRateUpdate) {
-            return (0, 0, 0, uint48(block.timestamp));
+            return (0, 0, 0, 0);
         }
         uint256 _rate = ilk.rate;
 
-        uint256 totalDebt = _totalNormalizedDebt.wadMulDown(_rate); // [WAD] * [RAY] / [WAD] = [RAY]
+        uint256 totalDebt = _totalNormalizedDebt * _rate; // [WAD] * [RAY] = [RAD]
 
         (uint256 borrowRate, uint256 reserveFactor) =
             $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
 
-        uint256 borrowRateExpT = _rpow(borrowRate, block.timestamp - ilk.lastRateUpdate, RAY);
+        if (borrowRate == 0) return (0, 0, 0, 0);
+
+        uint256 borrowRateExpT = _rpow(borrowRate + RAY, block.timestamp - ilk.lastRateUpdate, RAY);
 
         // Unsafe cast OK
-        newTimestamp = uint48(block.timestamp);
+        timestampIncrease = uint48(block.timestamp) - ilk.lastRateUpdate;
 
         // Debt distribution
-        newRateIncrease = _rate.rayMulUp(borrowRateExpT).toUint104(); // [RAY]
+        newRateIncrease = _rate.rayMulUp(borrowRateExpT - RAY).toUint104(); // [RAY]
 
         uint256 newDebtCreated = _totalNormalizedDebt * newRateIncrease; // [RAD]
 
@@ -619,13 +628,16 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
 
         if (amount < 0) {
             // TODO: Round up using mulmod
-            uint256 amountWad = uint256(-amount) / RAY;
-            amountWad = amountWad * RAY < uint256(-amount) ? amountWad + 1 : amountWad;
+            uint256 amountUint = uint256(-amount);
+            uint256 amountWad = amountUint / RAY;
+            if (amountUint % RAY > 0) ++amountWad;
+
             $.weth += amountWad;
             underlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
             uint256 amountWad = uint256(amount) / RAY;
+
             $.weth -= amountWad;
             underlying().safeTransfer(user, amountWad);
         }
@@ -822,7 +834,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint256 _totalNormalizedDebt = $.ilks[ilkIndex].totalNormalizedDebt;
         uint256 _rate = $.ilks[ilkIndex].rate;
 
-        uint256 totalDebt = _totalNormalizedDebt.wadMulDown(_rate); // [WAD] * [RAY] / [WAD] = [RAY]
+        uint256 totalDebt = _totalNormalizedDebt * _rate; // [WAD] * [RAY] / [WAD] = [RAY]
 
         (borrowRate, reserveFactor) = $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
         borrowRate += RAY;

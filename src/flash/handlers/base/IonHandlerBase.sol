@@ -40,12 +40,11 @@ abstract contract IonHandlerBase {
     IWETH9 immutable weth;
     uint8 immutable ilkIndex;
     IonPool immutable ionPool;
-    // TODO: Instead of passing registry, just pass GemJoin directly
     GemJoin immutable gemJoin;
     IERC20 immutable lstToken;
     Whitelist immutable whitelist;
 
-    modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
+    modifier onlyWhitelistedBorrowers(uint8, bytes32[] memory proof) {
         whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, proof);
         _;
     }

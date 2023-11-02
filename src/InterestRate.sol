@@ -243,6 +243,7 @@ contract InterestRate {
          totalEthSupply == 0 ? 0 : totalDebt / (totalEthSupply.wadMulDown(distributionFactorWad)); // [RAD] / [WAD] =
             // [RAY]
 
+        // TODO: Handle case where collateralApyRayInSeconds < adjustedProfitMargin
         uint256 adjustedBelowKinkSlope = (
             collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate
         ).rayDivDown(optimalUtilizationRateRay);

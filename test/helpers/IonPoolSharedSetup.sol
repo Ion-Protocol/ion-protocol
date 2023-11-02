@@ -134,7 +134,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     // --- Configs ---
     uint256 internal constant SPOT = 1e27; // [ray]
-    uint80 internal constant minimumProfitMargin = 0.85e18 / SECONDS_IN_A_DAY;
+    uint96 internal constant minimumProfitMargin = 0.0085e27 / SECONDS_IN_A_DAY; // 0.85%
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
