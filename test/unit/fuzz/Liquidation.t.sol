@@ -245,8 +245,9 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         stateArgs.normalizedDebt = bound(
             borrowAmt,
             1,
-            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
-                / stateArgs.rate
+            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+                deploymentArgs.liquidationThreshold
+            ) / stateArgs.rate
         ); // [wad]
         // position must be unsafe after exchange rate change
         stateArgs.exchangeRate = bound(
@@ -312,8 +313,9 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         stateArgs.normalizedDebt = bound(
             borrowAmt,
             1,
-            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
-                / stateArgs.rate
+            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+                deploymentArgs.liquidationThreshold
+            ) / stateArgs.rate
         ); // [wad]
         // position must be unsafe after exchange rate change
         stateArgs.exchangeRate = bound(

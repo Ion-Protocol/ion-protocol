@@ -86,12 +86,7 @@ abstract contract ReserveOracle is Ownable {
     // @dev Mnimizes the difference
     function getExchangeRate() external view returns (uint256) {
         uint256 exchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
-        console2.log("reserve oracle exchangeRate: ", exchangeRate);
         uint256 diff = prevExchangeRate.rayMulDown(maxChange);
-        console2.log("diff: ", diff);
-        console2.log("upper bound: ", prevExchangeRate + diff);
-        console2.log("lower bound: ", prevExchangeRate - diff);
-        console2.log("bound: ", _bound(exchangeRate, prevExchangeRate - diff, prevExchangeRate + diff));
         return _bound(exchangeRate, prevExchangeRate - diff, prevExchangeRate + diff);
     }
 }
