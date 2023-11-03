@@ -10,7 +10,6 @@ import { GemJoin } from "src/join/GemJoin.sol";
 import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
-
 import { BaseTestSetup } from "test/helpers/BaseTestSetup.sol";
 import { YieldOracleSharedSetup } from "test/helpers/YieldOracleSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
@@ -100,7 +99,7 @@ contract MockWhitelist {
 contract MockSpotOracle is SpotOracle {
     uint256 price;
 
-    constructor(uint8 ilkIndex, uint256 ltv, uint256 _price) SpotOracle(ilkIndex, ltv) {
+    constructor(uint8 ilkIndex, uint256 ltv, address reserveOracle, uint256 _price) SpotOracle(ilkIndex, ltv, reserveOracle) {
         price = _price;
     }
 
@@ -110,6 +109,15 @@ contract MockSpotOracle is SpotOracle {
 
     function setPrice(uint256 _price) public {
         price = _price;
+    }
+}
+
+// TODO: created just to build the contract, delete if unnecessary later
+contract MockReserveOracle {
+    uint256 currentExchangeRate; 
+
+    constructor(uint256 _currentExchangeRate) {
+        currentExchangeRate = _currentExchangeRate;
     }
 }
 
@@ -134,6 +142,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     // --- Configs ---
     uint256 internal constant SPOT = 1e27; // [ray]
+    uint256 internal constant EXCHANGE_RATE = 1e18; // [wad] 
     uint80 internal constant minimumProfitMargin = 0.85e18 / SECONDS_IN_A_DAY;
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
@@ -243,7 +252,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
-            MockSpotOracle spotOracle = new MockSpotOracle(i, 1e18, SPOT / 1e9);
+            MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE); 
+            MockSpotOracle spotOracle = new MockSpotOracle(i, 1e18, address(reserveOracle), SPOT / 1e9); 
             spotOracles.push(spotOracle);
             ionPool.updateIlkSpot(i, spotOracle);
             ionPool.updateIlkDebtCeiling(i, debtCeilings[i]);

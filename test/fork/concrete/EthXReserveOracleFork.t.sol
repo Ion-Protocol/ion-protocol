@@ -13,12 +13,11 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
 
     function test_EthXReserveOracleGetProtocolExchangeRate() public {
         uint256 maxChange = 3e25; // 0.03 3%
-        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
         EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
-            ETHX,
-            ilkIndex,
+            STADER_ORACLE,
+            ETHX_ILK_INDEX,
             feeds,
             quorum,
             maxChange
@@ -30,7 +29,6 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
 
     function test_EthXReserveOracleAggregation() public {
         uint256 maxChange = 1e27; // 1 100%
-        uint8 ilkIndex = 0;
         uint8 quorum = 3;
 
         MockFeed mockFeed1 = new MockFeed();
@@ -41,24 +39,24 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 mockFeed2ExchangeRate = 0.95 ether;
         uint256 mockFeed3ExchangeRate = 1 ether;
 
-        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate);
-        mockFeed2.setExchangeRate(ilkIndex, mockFeed2ExchangeRate);
-        mockFeed3.setExchangeRate(ilkIndex, mockFeed3ExchangeRate);
+        mockFeed1.setExchangeRate(ETHX_ILK_INDEX, mockFeed1ExchangeRate);
+        mockFeed2.setExchangeRate(ETHX_ILK_INDEX, mockFeed2ExchangeRate);
+        mockFeed3.setExchangeRate(ETHX_ILK_INDEX, mockFeed3ExchangeRate);
 
         address[] memory feeds = new address[](3);
         feeds[0] = address(mockFeed1);
         feeds[1] = address(mockFeed2);
         feeds[2] = address(mockFeed3);
         EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
-            ETHX,
-            ilkIndex,
+            STADER_ORACLE,
+            ETHX_ILK_INDEX,
             feeds,
             quorum,
             maxChange
         );
 
         uint256 expectedExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
-        uint256 protocolExchangeRate = ethXReserveOracle.getExchangeRate();
+        uint256 protocolExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         assertEq(protocolExchangeRate, expectedExchangeRate, "min exchange rate");
     }
@@ -87,20 +85,19 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 newTotalSupplyToStore = 1 ether;
         uint256 newTotalEthBalanceToStore = 0.5 ether;
 
-        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
 
-        // sets prevExchangeRate to be the current exchangeRate in constructor
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ilkIndex, feeds, quorum, maxChange);
+        // sets currentExchangeRate to be the current exchangeRate in constructor
+        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ETHX_ILK_INDEX, feeds, quorum, maxChange);
 
-        uint256 exchangeRate = ethXReserveOracle.prevExchangeRate();
+        uint256 exchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // set EthX exchange rate to be lower
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
 
-        uint256 newExchangeRate = ethXReserveOracle.getExchangeRate();
+        uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // should output the min
         uint256 minExchangeRate = exchangeRate - ((exchangeRate * maxChange) / RAY);
@@ -113,21 +110,20 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 newTotalSupplyToStore = 1 ether;
         uint256 newTotalEthBalanceToStore = 3 ether;
 
-        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
 
-        // sets prevExchangeRate to be the current exchangeRate in constructor
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ilkIndex, feeds, quorum,
+        // sets currentExchangeRate to be the current exchangeRate in constructor
+        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ETHX_ILK_INDEX, feeds, quorum,
     maxChange);
 
-        uint256 exchangeRate = ethXReserveOracle.prevExchangeRate();
+        uint256 exchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // set Swell exchange rate to be lower
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
 
-        uint256 newExchangeRate = ethXReserveOracle.getExchangeRate();
+        uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // should output the max
         uint256 maxExchangeRate = exchangeRate + ((exchangeRate * maxChange) / RAY);
@@ -141,21 +137,21 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 newTotalEthBalanceToStore = 1 ether;
         uint256 expectedExchangeRate = newTotalEthBalanceToStore.wadDivDown(newTotalSupplyToStore);
 
-        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
 
-        // sets prevExchangeRate to be the current exchangeRate in constructor
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ilkIndex, feeds, quorum,
+        // sets currentExchangeRate to be the current exchangeRate in constructor
+        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ETHX_ILK_INDEX, feeds, quorum,
     maxChange);
 
-        uint256 currentExchangeRate = ethXReserveOracle.prevExchangeRate();
+        uint256 currentExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // set Swell exchange rate to new but within bounds
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
+        ethXReserveOracle.updateExchangeRate(); 
 
-        uint256 newExchangeRate = ethXReserveOracle.getExchangeRate();
+        uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // should output the newly calculated exchange rate
         assertEq(newExchangeRate, expectedExchangeRate, "exchange rate is unbounded");

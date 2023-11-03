@@ -18,7 +18,7 @@ contract SwEthReserveOracle is ReserveOracle {
         ReserveOracle(_ilkIndex, _feeds, _quorum, _maxChange)
     {
         protocolFeed = _protocolFeed;
-        prevExchangeRate = _getProtocolExchangeRate();
+        updateExchangeRate();
     }
 
     function _getProtocolExchangeRate() internal view override returns (uint256 protocolExchangeRate) {

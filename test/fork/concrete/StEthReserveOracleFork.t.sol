@@ -14,17 +14,15 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
     function test_StEthReserveOracleGetProtocolExchangeRate() public {
         uint256 maxChange = 3e25; // 0.03 3%
-        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, maxChange);
+        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 protocolExchangeRate = stEthReserveOracle.getProtocolExchangeRate();
         assertEq(protocolExchangeRate, 1_143_213_397_000_524_230, "protocol exchange rate");
     }
 
     function test_StEthReserveOracleAggregation() public {
-        uint8 ilkIndex = 0;
         uint256 maxChange = 3e25; // 0.03 3%
 
         MockFeed mockFeed1 = new MockFeed();
@@ -35,9 +33,9 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint72 mockFeed2ExchangeRate = 1.12 ether;
         uint72 mockFeed3ExchangeRate = 1.14 ether;
 
-        mockFeed1.setExchangeRate(ilkIndex, mockFeed1ExchangeRate);
-        mockFeed2.setExchangeRate(ilkIndex, mockFeed2ExchangeRate);
-        mockFeed3.setExchangeRate(ilkIndex, mockFeed3ExchangeRate);
+        mockFeed1.setExchangeRate(STETH_ILK_INDEX, mockFeed1ExchangeRate);
+        mockFeed2.setExchangeRate(STETH_ILK_INDEX, mockFeed2ExchangeRate);
+        mockFeed3.setExchangeRate(STETH_ILK_INDEX, mockFeed3ExchangeRate);
 
         address[] memory feeds = new address[](3);
 
@@ -46,11 +44,12 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[2] = address(mockFeed3);
 
         uint8 quorum = 3;
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, maxChange);
+        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint72 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
 
-        uint256 protocolExchangeRate = stEthReserveOracle.getExchangeRate();
+        stEthReserveOracle.updateExchangeRate(); 
+        uint256 protocolExchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // should output the expected as the minimum
         assertEq(protocolExchangeRate, expectedMinExchangeRate, "protocol exchange rate");
@@ -86,7 +85,6 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
     function test_WstEthExchangeRatePostSlashing() public {
         uint256 clBalanceDiff = 1000 ether;
 
-        uint256 exchangeRate = IWstEth(WSTETH).stEthPerToken();
         uint256 clBalance = uint256(vm.load(LIDO, LIDO_CL_BALANCE_SLOT));
         uint256 totalShares = uint256(vm.load(LIDO, LIDO_TOTAL_SHARES_SLOT));
 
@@ -110,20 +108,18 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 3e25; // 0.03 3%
         uint256 newClBalance = 0.5 ether;
 
-        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
 
         // sets prevExchangeRate to be the current exchangeRate in constructor
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, maxChange);
+        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
-        uint256 exchangeRate = stEthReserveOracle.prevExchangeRate();
+        uint256 exchangeRate = stEthReserveOracle.currentExchangeRate();
         // set Lido exchange rate to be lower
         vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(newClBalance));
 
-        uint256 wstEthExchangeRate = IWstEth(WSTETH).stEthPerToken();
-
-        uint256 newExchangeRate = stEthReserveOracle.getExchangeRate();
+        stEthReserveOracle.updateExchangeRate(); 
+        uint256 newExchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // should output the min
         uint256 minExchangeRate = exchangeRate - ((exchangeRate * maxChange) / RAY);
@@ -134,23 +130,19 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 25e25; // 0.25 25%
         uint256 newClBalance = 100 * WAD * RAY;
 
-        uint256 clBalance = uint256(vm.load(LIDO, LIDO_CL_BALANCE_SLOT));
-
-        uint8 ilkIndex = 0;
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
 
-        // sets prevExchangeRate to be the current exchangeRate in constructor
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, maxChange);
+        // sets currentExchange rate to be the current exchangeRate in constructor
+        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
-        uint256 exchangeRate = stEthReserveOracle.prevExchangeRate();
+        uint256 exchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // set Lido exchange rate to be lower
         vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(newClBalance));
-
-        uint256 wstEthExchangeRate = IWstEth(WSTETH).stEthPerToken();
-
-        uint256 newExchangeRate = stEthReserveOracle.getExchangeRate();
+        stEthReserveOracle.updateExchangeRate(); 
+        
+        uint256 newExchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // should output the min
         uint256 maxExchangeRate = exchangeRate + ((exchangeRate * maxChange) / RAY);

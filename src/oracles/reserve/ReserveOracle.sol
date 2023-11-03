@@ -26,11 +26,14 @@ abstract contract ReserveOracle is Ownable {
 
     uint256 public immutable maxChange; // maximum change allowed in percentage [ray] i.e. 3e25 [ray] would be 3%
 
-    uint256 public prevExchangeRate; // the exchangeRate queried last time
+    uint256 public currentExchangeRate; // the bounded queried last time
 
     IReserveFeed public immutable feed0; // different reserve oracle feeds excluding the protocol exchange rate
     IReserveFeed public immutable feed1;
     IReserveFeed public immutable feed2;
+
+    // --- Events --- 
+    event UpdateExchangeRate(uint256 exchangeRate);
 
     // --- Override ---
     function _getProtocolExchangeRate() internal view virtual returns (uint256);
@@ -71,6 +74,9 @@ abstract contract ReserveOracle is Ownable {
             uint256 feed1ExchangeRate = IReserveFeed(feed1).getExchangeRate(_ilkIndex);
             val = ((feed0ExchangeRate + feed1ExchangeRate) / uint256(quorum));
         } else if (quorum == 3) {
+            console2.log("feed0: ", address(feed0));
+            console2.log("feed1: ", address(feed1));
+            console2.log("feed2: ", address(feed2));
             uint256 feed0ExchangeRate = IReserveFeed(feed0).getExchangeRate(_ilkIndex);
             uint256 feed1ExchangeRate = IReserveFeed(feed1).getExchangeRate(_ilkIndex);
             uint256 feed2ExchangeRate = IReserveFeed(feed2).getExchangeRate(_ilkIndex);
@@ -83,10 +89,18 @@ abstract contract ReserveOracle is Ownable {
         return Math.max(min, Math.min(max, value));
     }
 
-    // @dev Mnimizes the difference
-    function getExchangeRate() external view returns (uint256) {
-        uint256 exchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
-        uint256 diff = prevExchangeRate.rayMulDown(maxChange);
-        return _bound(exchangeRate, prevExchangeRate - diff, prevExchangeRate + diff);
+    // @dev Takes the minimum between the aggregated values and the protocol exchange rate, 
+    //      then bounds it up to the maximum change and writes the bounded value to the state.  
+    // NOTE: keepers should call this update to reflect recent values 
+    function updateExchangeRate() public {
+        uint256 _currentExchangeRate = currentExchangeRate; 
+        uint256 minimum = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
+        console2.log("minimum: ", minimum);
+        uint256 diff = _currentExchangeRate.rayMulDown(maxChange);
+        uint256 bounded = _bound(minimum, _currentExchangeRate - diff, _currentExchangeRate + diff); 
+        console2.log("bounded: ", bounded);
+        currentExchangeRate = bounded; 
+        console2.log("currentExchangeRate: ", currentExchangeRate);
+        emit UpdateExchangeRate(bounded);
     }
 }

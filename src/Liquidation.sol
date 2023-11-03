@@ -91,7 +91,7 @@ contract Liquidation {
             liquidationThreshold = LIQUIDATION_THRESHOLD_2;
         }
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
-        exchangeRate = ReserveOracle(exchangeRateOracle).getExchangeRate();
+        exchangeRate = ReserveOracle(exchangeRateOracle).currentExchangeRate();
         exchangeRate = uint256(exchangeRate).scaleUpToRay(18);
     }
 

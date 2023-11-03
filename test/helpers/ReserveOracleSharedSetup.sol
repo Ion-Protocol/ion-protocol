@@ -3,11 +3,13 @@ pragma solidity ^0.8.21;
 
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
-import { ILido, IWstEth } from "src/interfaces/ProviderInterfaces.sol";
+import { ILido, IWstEth, IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+
+import { console2 } from "forge-std/console2.sol";
 
 contract MockFeed {
     mapping(uint8 ilkIndex => uint256 exchangeRate) public exchangeRates;
@@ -31,6 +33,11 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     uint8 constant SWETH_ILK_INDEX = 1;
     uint8 constant ETHX_ILK_INDEX = 2;
 
+    // default reserve oracle configs
+    uint256 constant MAX_CHANGE = 1e27; // 100%
+    uint8 constant ILK_INDEX = 0; 
+    uint8 constant QUORUM = 0;
+
     address constant LIDO = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
 
@@ -40,7 +47,6 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     address constant SWETH = 0xf951E335afb289353dc249e82926178EaC7DEd78;
     bytes32 constant SWETH_TO_ETH_RATE_SLOT = 0x0000000000000000000000000000000000000000000000000000000000000095;
 
-    address constant ETHX = 0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737;
     address constant STADER_ORACLE = 0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737;
     bytes32 constant STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT =
         0x0000000000000000000000000000000000000000000000000000000000000103;
@@ -57,12 +63,20 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
 
     ERC20PresetMinterPauser mockToken;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         mainnetFork = vm.createSelectFork(MAINNET_RPC_URL); // specify blockheight?
         vm.rollFork(BLOCK_NUMBER);
 
         super.setUp();
 
-        ERC20PresetMinterPauser mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");
+        mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");
+    }
+
+    function changeStaderOracleExchangeRate(uint256 totalEthBalance, uint256 totalSupply) public returns (uint256 newExchangeRate) {
+        vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(totalEthBalance));
+        vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(totalSupply));
+        (, uint256 newTotalEthBalance, uint256 newTotalEthSupply) = IStaderOracle(STADER_ORACLE).exchangeRate();
+        newExchangeRate = newTotalEthBalance.wadDivDown(newTotalEthSupply);
+        console2.log("newExchangeRate: ", newExchangeRate);
     }
 }

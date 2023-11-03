@@ -22,10 +22,11 @@ contract EthXSpotOracle is SpotOracle {
     constructor(
         uint8 _ilkIndex,
         uint256 _ltv,
+        address _reserveOracle,
         address _redstoneEthXPriceFeed,
         address _usdPerEthChainlink
     )
-        SpotOracle(_ilkIndex, _ltv)
+        SpotOracle(_ilkIndex, _ltv, _reserveOracle)
     {
         redstoneEthXPriceFeed = IRedstonePriceFeed(_redstoneEthXPriceFeed);
         usdPerEthChainlink = IChainlink(_usdPerEthChainlink);
