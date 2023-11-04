@@ -4,6 +4,7 @@ pragma solidity ^0.8.21;
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
 import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
+import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { ILido, IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
@@ -54,7 +55,24 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         // should output the expected as the minimum
         assertEq(protocolExchangeRate, expectedMinExchangeRate, "protocol exchange rate");
     }
+    
+    // --- Errors --- 
+    function test_RevertWhen_StEthInvalidInitialization() public {
+        MockFeed mockFeed1 = new MockFeed();
+        MockFeed mockFeed2 = new MockFeed();
+        MockFeed mockFeed3 = new MockFeed();
 
+        uint256 maxChange = 3e25; // 0.03 3%
+        address[] memory feeds = new address[](3);
+        feeds[0] = address(mockFeed1); 
+        feeds[1] = address(mockFeed2); 
+        feeds[2] = address(mockFeed3); 
+        uint8 quorum = 3;
+
+        vm.expectRevert(abi.encodeWithSelector(ReserveOracle.InvalidInitialization.selector, 0));
+        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+    }
+    
     // --- Slashing Scenario ---
 
     /**

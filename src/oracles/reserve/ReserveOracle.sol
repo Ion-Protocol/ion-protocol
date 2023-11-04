@@ -16,10 +16,6 @@ abstract contract ReserveOracle is Ownable {
     using SafeCast for *;
     using RoundedMath for uint256;
 
-    // --- Errors ---
-    error InvalidQuorum(uint8 quorum);
-    error InvalidFeedLength(uint256 length);
-
     uint8 public immutable ilkIndex;
 
     uint8 public immutable quorum; // the number of feeds to aggregate
@@ -34,6 +30,11 @@ abstract contract ReserveOracle is Ownable {
 
     // --- Events --- 
     event UpdateExchangeRate(uint256 exchangeRate);
+
+    // --- Errors ---
+    error InvalidQuorum(uint8 quorum);
+    error InvalidFeedLength(uint256 length);
+    error InvalidInitialization(uint256 exchangeRate); 
 
     // --- Override ---
     function _getProtocolExchangeRate() internal view virtual returns (uint256);
@@ -80,6 +81,9 @@ abstract contract ReserveOracle is Ownable {
             uint256 feed0ExchangeRate = IReserveFeed(feed0).getExchangeRate(_ilkIndex);
             uint256 feed1ExchangeRate = IReserveFeed(feed1).getExchangeRate(_ilkIndex);
             uint256 feed2ExchangeRate = IReserveFeed(feed2).getExchangeRate(_ilkIndex);
+            console2.log("feed0ExchangeRate: ", feed0ExchangeRate);
+            console2.log("feed1ExchangeRate: ", feed1ExchangeRate);
+            console2.log("feed2ExchangeRate: ", feed2ExchangeRate);
             val = ((feed0ExchangeRate + feed1ExchangeRate + feed2ExchangeRate) / uint256(quorum));
         }
     }
@@ -89,16 +93,27 @@ abstract contract ReserveOracle is Ownable {
         return Math.max(min, Math.min(max, value));
     }
 
+    function initializeExchangeRate() public {
+        currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
+        if (currentExchangeRate == 0) {
+            revert InvalidInitialization(currentExchangeRate); 
+        }
+    }
+
     // @dev Takes the minimum between the aggregated values and the protocol exchange rate, 
     //      then bounds it up to the maximum change and writes the bounded value to the state.  
     // NOTE: keepers should call this update to reflect recent values 
     function updateExchangeRate() public {
+        console2.log("updateExchangeRate: ");
         uint256 _currentExchangeRate = currentExchangeRate; 
+        console2.log("_currentExchangeRate: ", _currentExchangeRate);
         uint256 minimum = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
+        console2.log("_aggregate(ilkIndex): ", _aggregate(ilkIndex));
         console2.log("minimum: ", minimum);
         uint256 diff = _currentExchangeRate.rayMulDown(maxChange);
+        console2.log("diff: ", diff);
         uint256 bounded = _bound(minimum, _currentExchangeRate - diff, _currentExchangeRate + diff); 
-        console2.log("bounded: ", bounded);
+        console2.log("bounded exchangeRate: ", bounded);
         currentExchangeRate = bounded; 
         console2.log("currentExchangeRate: ", currentExchangeRate);
         emit UpdateExchangeRate(bounded);

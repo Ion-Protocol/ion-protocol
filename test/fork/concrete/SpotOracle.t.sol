@@ -115,8 +115,31 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         assertEq(stEthSpotOracle.getSpot(), expectedSpot, "spot");
     }
 
-    function test_StEthSpotOracleUsesExchangeRateAsMin() public {
+    function test_StEthSpotOracleUsesPriceAsMin() public {
+        uint256 ltv = 1e27; // 1 100% 
 
+        stEthSpotOracle = new StEthSpotOracle(
+            STETH_ILK_INDEX, 
+            ltv, 
+            address(stEthReserveOracle),
+            MAINNET_ETH_PER_STETH_CHAINLINK, 
+            MAINNET_WSTETH
+        );
+
+        uint256 price = stEthSpotOracle.getPrice(); 
+        console2.log("price in test", price); 
+
+        // update reserve oracle price 
+        // uint256 clBalance = uint256(vm.load(LIDO, LIDO_CL_BALANCE_SLOT));
+        // uint256 newClBalance = clBalance + 5000000 ether; 
+        // uint256 newExchangeRate = changeStEthClBalance(newClBalance);
+        // stEthReserveOracle.updateExchangeRate(); 
+
+        // assertTrue(newExchangeRate > price); 
+
+        uint256 expectedSpot = ltv.wadMulDown(price); 
+
+        assertEq(stEthSpotOracle.getSpot(), expectedSpot, "spot uses the exchangeRate as the minimum"); 
     }
 
     // --- swETH Spot Oracle Test ---
@@ -150,6 +173,25 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 expectedPrice = swEthSpotOracle.getPrice();
         uint256 expectedSpot = ltv.wadMulDown(expectedPrice); 
+
+        assertEq(swEthSpotOracle.getSpot(), expectedSpot, "spot");
+    }
+
+    function test_SwEthSpotOracleUsesExchangeRateAsMin() public {            
+        uint256 ltv = 1e27;
+        uint32 secondsAgo = 100;
+
+        SwEthSpotOracle swEthSpotOracle =
+            new SwEthSpotOracle(SWETH_ILK_INDEX, ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
+
+
+        // update exchange rate 
+        uint256 newExchangeRate = 0.9e18; 
+        changeSwEthExchangeRate(newExchangeRate); 
+        swEthReserveOracle.updateExchangeRate(); 
+        
+        uint256 expectedPrice = swEthSpotOracle.getPrice();
+        uint256 expectedSpot = ltv.wadMulDown(newExchangeRate); 
 
         assertEq(swEthSpotOracle.getSpot(), expectedSpot, "spot");
     }
@@ -192,12 +234,32 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         
         ethXReserveOracle.updateExchangeRate();
 
-        uint256 expectedPrice = ethXSpotOracle.getPrice();
+        uint256 expectedPrice = ethXSpotOracle.getPrice(); 
         uint256 expectedSpot = ltv.wadMulDown(expectedPrice); 
 
         assertEq(ethXSpotOracle.getSpot(), expectedSpot, "spot");
     }
 
     // --- Minimum between reserve oracle and spot price --- 
+    function test_EthXSpotOracleUsesExchangeRateAsMin() public {
+        uint256 ltv = 1e27;
 
+        EthXSpotOracle ethXSpotOracle = new EthXSpotOracle(
+            ETHX_ILK_INDEX,
+            ltv, 
+            address(ethXReserveOracle), 
+            MAINNET_USD_PER_ETHX_REDSTONE, 
+            MAINNET_USD_PER_ETH_CHAINLINK
+        );
+
+        uint256 newExchangeRate = 0.5e18; 
+        changeStaderOracleExchangeRate(newExchangeRate, 1e18); // 0.5 ETH per ETHx 
+        
+        ethXReserveOracle.updateExchangeRate();
+
+        uint256 expectedPrice = ethXSpotOracle.getPrice(); 
+        uint256 expectedSpot = ltv.wadMulDown(newExchangeRate); 
+
+        assertEq(ethXSpotOracle.getSpot(), expectedSpot, "spot");
+    }
 }

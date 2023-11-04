@@ -147,6 +147,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
     function test_SwEthReserveOracleGetAggregateExchangeRateMin() public {
         MockFeed mockFeed = new MockFeed();
+        mockFeed.setExchangeRate(SWETH_ILK_INDEX, 1.01 ether);
 
         // reserve oracle
         address[] memory feeds = new address[](3);
@@ -160,8 +161,6 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
             MAX_CHANGE
         );
 
-        // mock reserve feed
-        mockFeed.setExchangeRate(SWETH_ILK_INDEX, 1.01 ether);
         swEthReserveOracle.updateExchangeRate(); 
 
         // should be a min of
@@ -174,6 +173,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     function test_SwEthReserveOracleTwoFeeds() public {
         MockFeed mockFeed1 = new MockFeed();
         MockFeed mockFeed2 = new MockFeed();
+        mockFeed1.setExchangeRate(SWETH_ILK_INDEX, 0.9 ether);
+        mockFeed2.setExchangeRate(SWETH_ILK_INDEX, 0.8 ether);
 
         address[] memory feeds = new address[](3);
         feeds[0] = address(mockFeed1);
@@ -186,8 +187,6 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
             quorum,
             MAX_CHANGE
         );
-        mockFeed1.setExchangeRate(SWETH_ILK_INDEX, 0.9 ether);
-        mockFeed2.setExchangeRate(SWETH_ILK_INDEX, 0.8 ether);
 
         swEthReserveOracle.updateExchangeRate(); 
 
@@ -205,6 +204,10 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 mockFeed2ExchangeRate = 1.4 ether;
         uint256 mockFeed3ExchangeRate = 1.8 ether;
 
+        mockFeed1.setExchangeRate(SWETH_ILK_INDEX, mockFeed1ExchangeRate);
+        mockFeed2.setExchangeRate(SWETH_ILK_INDEX, mockFeed2ExchangeRate);
+        mockFeed3.setExchangeRate(SWETH_ILK_INDEX, mockFeed3ExchangeRate);
+        
         address[] memory feeds = new address[](3);
         feeds[0] = address(mockFeed1);
         feeds[1] = address(mockFeed2);
@@ -216,9 +219,6 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
             quorum,
             MAX_CHANGE
         );
-        mockFeed1.setExchangeRate(SWETH_ILK_INDEX, mockFeed1ExchangeRate);
-        mockFeed2.setExchangeRate(SWETH_ILK_INDEX, mockFeed2ExchangeRate);
-        mockFeed3.setExchangeRate(SWETH_ILK_INDEX, mockFeed3ExchangeRate);
 
         swEthReserveOracle.updateExchangeRate();
 

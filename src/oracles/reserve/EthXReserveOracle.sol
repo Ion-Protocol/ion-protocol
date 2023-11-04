@@ -25,7 +25,7 @@ contract EthXReserveOracle is ReserveOracle {
         ReserveOracle(_ilkIndex, _feeds, _quorum, _maxChange)
     {
         protocolFeed = _protocolFeed;
-        updateExchangeRate();
+        initializeExchangeRate();
     }
 
     // @dev exchange rate is total LST supply divided by total underlying ETH

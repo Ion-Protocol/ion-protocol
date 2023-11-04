@@ -72,11 +72,23 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
         mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");
     }
 
-    function changeStaderOracleExchangeRate(uint256 totalEthBalance, uint256 totalSupply) public returns (uint256 newExchangeRate) {
+    function changeStaderOracleExchangeRate(uint256 totalEthBalance, uint256 totalSupply) internal returns (uint256 newExchangeRate) {
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(totalEthBalance));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(totalSupply));
         (, uint256 newTotalEthBalance, uint256 newTotalEthSupply) = IStaderOracle(STADER_ORACLE).exchangeRate();
-        newExchangeRate = newTotalEthBalance.wadDivDown(newTotalEthSupply);
+        newExchangeRate = newTotalEthBalance.wadDivDown(newTotalEthSupply); 
         console2.log("newExchangeRate: ", newExchangeRate);
     }
+
+    function changeStEthClBalance(uint256 clBalance) internal returns (uint256 newExchangeRate) {
+        vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(clBalance));
+        assertEq(uint256(vm.load(LIDO, LIDO_CL_BALANCE_SLOT)), clBalance);
+        newExchangeRate = IWstEth(WSTETH).stEthPerToken();
+    }
+
+    function changeSwEthExchangeRate(uint256 exchangeRate) internal returns (uint256 newExchangeRate) { 
+        // set swETH exchange rate to be lower
+        vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(exchangeRate));
+    }
+    
 }

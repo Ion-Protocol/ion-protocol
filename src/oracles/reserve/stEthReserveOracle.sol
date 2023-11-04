@@ -26,7 +26,7 @@ contract StEthReserveOracle is ReserveOracle {
     {
         lido = _lido;
         wstEth = _wstEth;
-        updateExchangeRate();
+        initializeExchangeRate();
     }
 
     // @dev Returns the exchange rate for wstETH to stETH. This function only needs to return the

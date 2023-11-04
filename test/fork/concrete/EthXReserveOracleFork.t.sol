@@ -96,6 +96,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         // set EthX exchange rate to be lower
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
+        ethXReserveOracle.updateExchangeRate(); 
 
         uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 
@@ -122,6 +123,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         // set Swell exchange rate to be lower
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
+        ethXReserveOracle.updateExchangeRate(); 
 
         uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 
