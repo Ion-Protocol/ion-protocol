@@ -277,6 +277,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
             (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
                 / stateArgs.collateral - 1
         ); // [ray] if the debt is zero, then there is no 
+        
         // scale exchangeRate back to [wad]
         stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
 

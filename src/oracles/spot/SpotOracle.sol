@@ -40,13 +40,9 @@ abstract contract SpotOracle {
     // @dev pushes market price multiplied by the LTV
     // @return spot value of the asset in ETH [ray]
     function getSpot() external view returns (uint256 spot) {
-        uint256 price = getPrice(); // must be [wad]
-        console2.log("price: ", price);
+        uint256 price = getPrice(); // must be [wad] 
         uint256 exchangeRate = ReserveOracle(reserveOracle).currentExchangeRate(); 
-        console2.log("exchangeRate: ", exchangeRate);   
         uint256 min = Math.min(price, exchangeRate); // [wad] min the price with reserve oracle before multiplying by ltv 
-        console2.log("min: ", min);
         spot = ltv.wadMulDown(min); // [ray] * [wad] / [wad] = [ray] 
-        console2.log("spot: ", spot);
     }
 }
