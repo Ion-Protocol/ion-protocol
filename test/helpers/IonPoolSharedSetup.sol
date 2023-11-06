@@ -186,14 +186,15 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             ilkConfig = IlkData({
                 adjustedProfitMargin: minimumProfitMargin,
                 minimumKinkRate: 0,
-                adjustedAboveKinkSlope: 700e4,
-                minimumAboveKinkSlope: 700e4,
-                adjustedReserveFactor: adjustedReserveFactors[i],
-                minimumReserveFactor: adjustedReserveFactors[i],
-                minimumBaseRate: 0,
+
+                reserveFactor: adjustedReserveFactors[i],
                 adjustedBaseRate: 0,
+                minimumBaseRate: 0,
                 optimalUtilizationRate: optimalUtilizationRates[i],
-                distributionFactor: distributionFactors[i]
+                distributionFactor: distributionFactors[i],
+
+                adjustedAboveKinkSlope: 0.9999e4,
+                minimumAboveKinkSlope: 0.9999e4
             });
 
             ilkConfigs.push(ilkConfig);
@@ -283,14 +284,15 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
             assertEq(ilkConfig.adjustedProfitMargin, minimumProfitMargin);
             assertEq(ilkConfig.minimumKinkRate, 0);
-            assertEq(ilkConfig.adjustedAboveKinkSlope, 700e4);
-            assertEq(ilkConfig.minimumAboveKinkSlope, 700e4);
-            assertEq(ilkConfig.adjustedReserveFactor, adjustedReserveFactors[i]);
-            assertEq(ilkConfig.minimumReserveFactor, adjustedReserveFactors[i]);
-            assertEq(ilkConfig.minimumBaseRate, 0);
+
+            assertEq(ilkConfig.reserveFactor, adjustedReserveFactors[i]);
             assertEq(ilkConfig.adjustedBaseRate, 0);
+            assertEq(ilkConfig.minimumBaseRate, 0);
             assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
             assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
+
+            assertEq(ilkConfig.adjustedAboveKinkSlope, 700e4);
+            assertEq(ilkConfig.minimumAboveKinkSlope, 700e4);
         }
 
         assertEq(interestRateModule.collateralCount(), collaterals.length);

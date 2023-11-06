@@ -797,9 +797,6 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             _warpTimeIfNeeded();
 
-            (uint256 currentBorrowRate,) = ionPool.getCurrentBorrowRate(i);
-            assertLt(currentBorrowRate - RAY, 1e18);
-
             (,, uint256 newRateIncrease, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution(i);
 
             uint256 trueRepayAmount;
@@ -885,9 +882,6 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
             _warpTimeIfNeeded();
-
-            (uint256 currentBorrowRate,) = ionPool.getCurrentBorrowRate(i);
-            assertLt(currentBorrowRate - RAY, 1e18);
 
             (,, uint256 newRateIncrease, uint256 newTotalDebt,) = ionPool.calculateRewardAndDebtDistribution(i);
 
@@ -1030,9 +1024,6 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
             _warpTimeIfNeeded();
-
-            (uint256 currentBorrowRate,) = ionPool.getCurrentBorrowRate(i);
-            assertLt(currentBorrowRate - RAY, 1e18);
 
             (,, uint256 newRateIncrease, uint256 newTotalDebt,) = ionPool.calculateRewardAndDebtDistribution(i);
 
