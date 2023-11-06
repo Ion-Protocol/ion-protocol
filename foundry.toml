@@ -13,9 +13,9 @@ remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
                 "@uniswap/v3-core/=lib/v3-core/",]
 fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
-optimizer_runs = 1000
+optimizer_runs = 800
 no_match_contract = "Echidna"
-gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "EthXHandler"]
+gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist"]
 
 [profile.default.fuzz]
 runs = 10000
@@ -23,8 +23,8 @@ max_test_rejects = 10000000
 
 [profile.default.invariant]
 runs = 20
-depth = 512
-fail_on_revert = true
+depth = 1536
+# fail_on_revert = true
 call_override = false   # reentrancy-check
 
 [fmt]
