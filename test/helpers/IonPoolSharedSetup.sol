@@ -7,7 +7,7 @@ import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_DAY } from "src/InterestRate.sol";
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { BaseTestSetup } from "test/helpers/BaseTestSetup.sol";
@@ -112,13 +112,18 @@ contract MockSpotOracle is SpotOracle {
     }
 }
 
-// TODO: created just to build the contract, delete if unnecessary later
 contract MockReserveOracle {
-    uint256 currentExchangeRate; 
+    uint256 public currentExchangeRate;
 
-    constructor(uint256 _currentExchangeRate) {
-        currentExchangeRate = _currentExchangeRate;
+    constructor(uint256 _exchangeRate) public {
+        currentExchangeRate = _exchangeRate; 
+        console2.log("constructor exchange rate: ", currentExchangeRate);
     }
+
+    function setExchangeRate(uint256 _exchangeRate) public {
+        currentExchangeRate = _exchangeRate;
+        console2.log("set exchange rate: ", currentExchangeRate);
+    }    
 }
 
 abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
@@ -141,7 +146,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     bytes32[] internal emptyProof;
 
     // --- Configs ---
-    uint256 internal constant SPOT = 1e27; // [ray]
+    uint256 internal constant PRICE = 1e18; // [wad] market price 
+    uint256 internal constant LTV = 1e27; // [ray] max LTV for a position 
     uint256 internal constant EXCHANGE_RATE = 1e18; // [wad] 
     uint80 internal constant minimumProfitMargin = 0.85e18 / SECONDS_IN_A_DAY;
 
@@ -253,7 +259,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
             MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE); 
-            MockSpotOracle spotOracle = new MockSpotOracle(i, 1e18, address(reserveOracle), SPOT / 1e9); 
+            MockSpotOracle spotOracle = new MockSpotOracle(i, LTV, address(reserveOracle), PRICE); 
             spotOracles.push(spotOracle);
             ionPool.updateIlkSpot(i, spotOracle);
             ionPool.updateIlkDebtCeiling(i, debtCeilings[i]);
@@ -299,7 +305,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
             assertEq(ionPool.totalNormalizedDebt(i), 0);
             // assertEq(ionPool.rate(i), 1e27);
-            // assertEq(ionPool.spot(i).getSpot(), SPOT);
+            assertEq(ionPool.spot(i).getSpot(), PRICE * LTV / WAD); // [wad] * [ray] / WAD = [ray] 
             assertEq(address(ionPool.spot(i)), address(spotOracles[i]));
             assertEq(ionPool.debtCeiling(i), _getDebtCeiling(i));
             assertEq(ionPool.dust(i), 0);

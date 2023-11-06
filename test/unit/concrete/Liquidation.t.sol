@@ -5,7 +5,7 @@ pragma solidity ^0.8.21;
 import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
-import "forge-std/console.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract MockstEthReserveOracle {
     uint256 public exchangeRate;
@@ -175,11 +175,15 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(actualResultingCollateral, results.collateral, "resulting collateral");
         assertEq(actualResultingNormalizedDebt, results.normalizedDebt, "resulting normalizedDebt");
 
-        // resulting health ratio is target health ratio
-        uint256 healthRatio =
-            actualResultingCollateral.wadMulDown(sArgs.exchangeRate).wadMulDown(dArgs.liquidationThreshold);
-        healthRatio = healthRatio.wadDivDown(actualResultingNormalizedDebt).wadDivDown(rate.scaleDownToWad(27));
-        console.log("new healthRatio: ", healthRatio);
+        uint256 healthRatio = getHealthRatio(
+            actualResultingCollateral,
+            actualResultingNormalizedDebt,
+            sArgs.rate,
+            sArgs.exchangeRate,
+            dArgs.liquidationThreshold
+        );
+        
+        assertTrue(healthRatio > dArgs.targetHealth, "resulting health ratio >= target health"); 
         assertEq(healthRatio / 1e9, dArgs.targetHealth / 1e9, "resulting health ratio");
     }
 
@@ -194,10 +198,10 @@ contract LiquidationTest is LiquidationSharedSetup {
         sArgs.normalizedDebt = 1.000000000000000002e18; // [wad]
         sArgs.rate = 1e27; // [ray]
 
-        dArgs.liquidationThreshold = 0.8e27; // [wad]
-        dArgs.targetHealth = 1.25e27; // [wad]
-        dArgs.reserveFactor = 0; // [wad]
-        dArgs.maxDiscount = 0.2e27; // [wad]
+        dArgs.liquidationThreshold = 0.8e27; // [ray]
+        dArgs.targetHealth = 1.25e27; // [ray]
+        dArgs.reserveFactor = 0; // [ray]
+        dArgs.maxDiscount = 0.2e27; // [ray]
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
 
@@ -234,8 +238,10 @@ contract LiquidationTest is LiquidationSharedSetup {
             dArgs.liquidationThreshold
         );
 
-        console.log("new healthRatio: ", healthRatio);
-        assertEq(healthRatio / 1e9, dArgs.targetHealth / 1e9, "resulting health ratio");
+        console2.log("new healthRatio: ", healthRatio);
+        assertTrue(healthRatio > dArgs.targetHealth, "resulting health ratio >= target health"); 
+        assertEq(healthRatio / 1e10, dArgs.targetHealth / 1e10, "resulting health ratio"); // compare with reduced precision 
+        
     }
 
     function test_PartialLiquidationSuccessWithRate() public {
@@ -248,18 +254,17 @@ contract LiquidationTest is LiquidationSharedSetup {
         sArgs.normalizedDebt = 50e18; // [wad]
         sArgs.rate = 1.12323423423e27; // [ray]
 
-        dArgs.liquidationThreshold = 0.5e27; // [wad]
-        dArgs.targetHealth = 1.25e27; // [wad]
-        dArgs.reserveFactor = 0.02e27; // [wad]
-        dArgs.maxDiscount = 0.2e27; // [wad]
+        dArgs.liquidationThreshold = 0.5e27; // [ray]
+        dArgs.targetHealth = 1.25e27; // [ray]
+        dArgs.reserveFactor = 0.02e27; // [ray]
+        dArgs.maxDiscount = 0.2e27; // [ray]
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
 
-        console.log("expectedResultingCollateral: ", results.collateral);
-        console.log("expectedResultingDebt: ", results.normalizedDebt);
-        console.log("liquidation threshold: ", dArgs.liquidationThreshold);
-        console.log("liquidation threshold: ", uint64(dArgs.liquidationThreshold));
-        console.log("uint64 max: ", type(uint64).max);
+        console2.log("expectedResultingCollateral: ", results.collateral);
+        console2.log("expectedResultingDebt: ", results.normalizedDebt);
+        console2.log("liquidation threshold: ", dArgs.liquidationThreshold);
+        console2.log("liquidation threshold: ", uint64(dArgs.liquidationThreshold)); 
         uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation =
         new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
@@ -267,6 +272,10 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         // create position
         borrow(borrower1, ilkIndex, 100e18, 50e18);
+
+        // rate updates 
+        // TODO: update the rate variable in storage 
+        // vm.store()
 
         // exchangeRate drops
         reserveOracle1.setExchangeRate(uint72(sArgs.exchangeRate));
@@ -283,15 +292,22 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
         uint256 rate = ionPool.rate(ilkIndex);
 
+        console2.log("actualResultingCollateral: ", actualResultingCollateral);
+        console2.log("actualResultingNormalizedDebt: ", actualResultingNormalizedDebt);
+
         // resulting vault collateral and debt
         // assertEq(actualResultingCollateral, expectedResultingCollateral, "resulting collateral");
         // assertEq(actualResultingNormalizedDebt, expectedResultingNormalizedDebt, "resulting normalizedDebt");
 
         // resulting health ratio is target health ratio
-        uint256 healthRatio =
-            actualResultingCollateral.wadMulDown(sArgs.exchangeRate).wadMulDown(dArgs.liquidationThreshold);
-        healthRatio = healthRatio.wadDivDown(actualResultingNormalizedDebt).wadDivDown(rate.scaleDownToWad(27));
-        console.log("new healthRatio: ", healthRatio);
+        uint256 healthRatio = getHealthRatio(
+            actualResultingCollateral,
+            actualResultingNormalizedDebt,
+            sArgs.rate,
+            sArgs.exchangeRate,
+            dArgs.liquidationThreshold
+        );
+
         assertEq(healthRatio / 1e9, dArgs.targetHealth / 1e9, "resulting health ratio");
     }
 
@@ -369,11 +385,11 @@ contract LiquidationTest is LiquidationSharedSetup {
         dArgs.maxDiscount = 0.2e27; // [wad]
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
-        console.log("expectedResultingCollateral: ", results.collateral);
-        console.log("expectedResultingDebt: ", results.normalizedDebt);
-        console.log("liquidation threshold: ", dArgs.liquidationThreshold);
-        console.log("liquidation threshold: ", uint64(dArgs.liquidationThreshold));
-        console.log("uint64 max: ", type(uint64).max);
+        console2.log("expectedResultingCollateral: ", results.collateral);
+        console2.log("expectedResultingDebt: ", results.normalizedDebt);
+        console2.log("liquidation threshold: ", dArgs.liquidationThreshold);
+        console2.log("liquidation threshold: ", uint64(dArgs.liquidationThreshold));
+        console2.log("uint64 max: ", type(uint64).max);
 
         uint256[ILK_COUNT] memory liquidationThresholds = [uint256(dArgs.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
 

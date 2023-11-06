@@ -5,7 +5,7 @@ import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol"
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "forge-std/console.sol";
+import { console2 } from "forge-std/console2.sol";
 
 /**
  * Fixes deployment configs and fuzzes potential states
@@ -141,7 +141,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         } else if (results.category == 2) {
             vm.writeLine("fuzz_out.txt", "PARTIAL");
             uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
-            console.log("actualCollateral: ", actualCollateral);
+            console2.log("actualCollateral: ", actualCollateral);
             uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
             if (actualNormalizedDebt != 0) {
                 // Could be full liquidation if there was only 1 normalizedDebt in the beginning
@@ -152,7 +152,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                     stateArgs.exchangeRate,
                     deploymentArgs.liquidationThreshold
                 );
-                console.log("health ratio: ", healthRatio);
+                console2.log("health ratio: ", healthRatio);
                 assert(healthRatio >= deploymentArgs.targetHealth);
             }
         }
@@ -216,9 +216,19 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         assert(ionPool.unbackedDebt(protocol) == stateArgs.normalizedDebt * stateArgs.rate);
     }
 
+    function testFuzz_IsolatingPartialLiquidations() public {
+        // 1. bound discount from 0 to maxDiscount (0, 0.2] 
+        // this bounds health ratio is from [0.8, 1)  
+        // 2. fuzz liabilityValue  
+        // 3. calculate health * liabilityValue = collateralValue 
+        // collateralValue = exchangeRate * collateralBalance * collateralFactor 
+        // exchangeRate * collateralBalance = collateralVallue / collateralFactor 
+        // make this into an inequality since we allow health ratio to drop  
+    }
+
     // fuzz collateral value, liability value
     // 1)
-    // safe: normalizedDebt * rate <= collateral * exchangeRate * liquidationThreshold
+    // safe: normalizedDebt * [rate] <= collateral * [startingExchangeRate] * [liquidationThreshold]
     // liabilityValue <= collateralValue
     // if liabilityValue > collateralValue, then bound liabilityValue between 0 and collateralValue
     // unsafe: liabilityValue > collateralValue
@@ -234,29 +244,40 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
     // unsafe
     // er = 2
     // lq = 0.9 ray
-    //
+    // 
+    // fuzz logic
+    // pick collateral amount within the bound 
+    // pick normalizedDebt amount such that it is safe 
+    // assume normalizedDebt cannot be zero (otherwise it's impossible to get to unsafe health ratio)
+    // fuzz 
     function testFuzz_PartialLiquidations(uint256 depositAmt, uint256 borrowAmt, uint256 exchangeRate) public {
         // state args
         StateArgs memory stateArgs;
+        console2.log("bounding collateral");
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
         stateArgs.rate = NO_RATE;
 
         // starting position must be safe
+        console2.log("bounding normalizedDebt");
         stateArgs.normalizedDebt = bound(
             borrowAmt,
-            1,
+            0,
             (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
                 deploymentArgs.liquidationThreshold
-            ) / stateArgs.rate
+            ) / stateArgs.rate 
         ); // [wad]
+
+        vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
+
         // position must be unsafe after exchange rate change
+        console2.log("bounding exchangeRate");
         stateArgs.exchangeRate = bound(
             exchangeRate,
             minExchangeRate,
             (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
                 / stateArgs.collateral - 1
-        ); // [ray]
-        // cast exchangeRate back to [wad]
+        ); // [ray] if the debt is zero, then there is no 
+        // scale exchangeRate back to [wad]
         stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
 
         vm.assume(stateArgs.exchangeRate > 0); // throw away output if exchangeRate is zero

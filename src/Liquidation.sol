@@ -7,7 +7,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { RoundedMath, WAD, RAY } from "./libraries/math/RoundedMath.sol";
 import { IonPool } from "src/IonPool.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
-import "forge-std/console.sol";
+import { console2 } from "forge-std/console2.sol";
 
 uint8 constant ILK_COUNT = 8;
 
@@ -147,6 +147,7 @@ contract Liquidation {
     )
         external
     {
+        console2.log("--- liquidate ---"); 
         // --- Calculations ---
 
         LiquidateArgs memory liquidateArgs;
@@ -159,6 +160,8 @@ contract Liquidation {
         uint256 dust = ionPool.dust(ilkIndex);
 
         (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex);
+        console2.log("liquidationThreshold: ", liquidationThreshold);
+        console2.log("exchangeRate: ", exchangeRate);
 
         if (exchangeRate == 0) {
             revert ExchangeRateCannotBeZero(exchangeRate);
@@ -177,17 +180,21 @@ contract Liquidation {
         uint256 collateralValue = (collateral * exchangeRate).rayMulUp(liquidationThreshold); // round down in protocol
             // favor
         // uint256 debtValue = normalizedDebt * rate; stack overflow without
-
+        console2.log("collateralValue: ", collateralValue);
+        console2.log("liabiiltyValue: ", normalizedDebt * rate); 
+        console2.log("normalizedDebt: ", normalizedDebt);
+        console2.log("rate: ", rate);
         {
             // [rad] * RAY / [rad] = [ray]
             uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
             if (healthRatio >= RAY) {
                 revert VaultIsNotUnsafe(healthRatio);
             }
+            console2.log("healthRatio: ", healthRatio); 
 
             uint256 discount = RESERVE_FACTOR + (RAY - healthRatio); // [ray] + ([ray] - [ray])
             discount = discount <= MAX_DISCOUNT ? discount : MAX_DISCOUNT; // cap discount to maxDiscount
-
+            console2.log("discount: ", discount); 
             liquidateArgs.price = exchangeRate.rayMulUp(RAY - discount); // [ray] * (RAY - [ray]) / [ray] = [ray], ETH
                 // price per LST, round up in protocol favor
             liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, collateralValue, liquidationThreshold, discount);
@@ -233,6 +240,10 @@ contract Liquidation {
             liquidateArgs.dart = normalizedDebt; // pay off all debt including dust
             liquidateArgs.gemOut = normalizedDebt * rate / liquidateArgs.price; // round down in protocol favor
         } else { // if (normalizedDebt * rate - liquidateArgs.repay >= dust) do partial liquidation
+            console2.log("partial liquidations"); 
+            console2.log("repay: ", liquidateArgs.repay); 
+            console2.log("normalizedDebt: ", normalizedDebt); 
+            console2.log("rate: ", rate); 
             // repay stays unchanged
             liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad]
             liquidateArgs.dart =
