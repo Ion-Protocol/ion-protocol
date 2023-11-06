@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { IonPool } from "src/IonPool.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
-import { InterestRate, IlkData, SECONDS_IN_A_DAY } from "src/InterestRate.sol";
+import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
@@ -126,7 +126,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     // --- Configs ---
     uint256 internal constant SPOT = 1e27; // [ray]
-    uint96 internal constant minimumProfitMargin = 0.0085e27 / SECONDS_IN_A_DAY; // 0.85%
+    uint96 internal constant minimumProfitMargin = 0.0085e27 / SECONDS_IN_A_YEAR; // 0.85%
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;

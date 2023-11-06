@@ -67,7 +67,7 @@ uint8 constant MINIMUM_BASE_RATE_SHIFT = 16 + 96;
 uint8 constant OPTIMAL_UTILIZATION_SHIFT = 16 + 96 + 96;
 uint8 constant DISTRIBUTION_FACTOR_SHIFT = 16 + 96 + 96 + 16;
 
-uint48 constant SECONDS_IN_A_DAY = 31_536_000;
+uint48 constant SECONDS_IN_A_YEAR = 31_536_000;
 
 contract InterestRate {
     using RoundedMath for *;
@@ -235,7 +235,7 @@ contract InterestRate {
         uint256 collateralApyRay = apyOracle.apys(ilkIndex).scaleUpToRay(8);
         uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
 
-        uint256 collateralApyRayInSeconds = collateralApyRay / SECONDS_IN_A_DAY;
+        uint256 collateralApyRayInSeconds = collateralApyRay / SECONDS_IN_A_YEAR;
 
         uint256 utilizationRate =
         // Prevent division by 0
