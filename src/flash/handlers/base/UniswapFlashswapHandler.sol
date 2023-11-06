@@ -118,7 +118,6 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         }
     }
 
-    // TODO: Reentrancy possibility with leverage and deleverage?
     /**
      * @dev The two function parameters must be chosen carefully. If `maxCollateralToRemove` were higher then
      * `debtToRemove`, it would theoretically be possible

@@ -67,7 +67,6 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
-    // TODO: Replace all inlines with a deep fuzz config
     function testForkFuzz_FlashSwapLeverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         initialDeposit = bound(initialDeposit, 1e13, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
@@ -100,8 +99,8 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
 
         uint256 normalizedDebtCreated;
         for (uint256 i = 0; i < entries.length; i++) {
-            // keccak256("Borrow(uint8,address,address,uint256,uint256)")
-            if (entries[i].topics[0] != 0xc1bf80a66a0c1db72f87da77c6a183c34835b2dc06f7c0d713ea4bcb6bd8afa6) continue;
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
             normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
         }
 

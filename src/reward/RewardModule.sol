@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import { AccessControlDefaultAdminRulesUpgradeable } from
+    "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title RewardModule
  */
-abstract contract RewardModule is ContextUpgradeable {
+abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
     using RoundedMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -54,18 +57,7 @@ abstract contract RewardModule is ContextUpgradeable {
      */
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    /**
-     * @dev Emitted when ``s are burned by `user` in exchange for `amount` underlying tokens redeemed to
-     * `target`. `supplyFactor` is the  supply factor at the time.
-     */
-    event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
-
-    /**
-     * @dev Emitted when minting for `user` in exchange for `amount` underlying tokens from `underlyingFrom`.
-     * `supplyFactor`
-     * is the  supply factor at the time.
-     */
-    event Mint(address indexed user, address indexed underlyingFrom, uint256 amount, uint256 supplyFactor);
+    event MintToTreasury(address indexed treasury, uint256 amount, uint256 supplyFactor);
 
     struct RewardModuleStorage {
         IERC20 underlying;
@@ -78,6 +70,8 @@ abstract contract RewardModule is ContextUpgradeable {
         uint256 supplyFactor; // [RAY]
         mapping(address account => uint256) _normalizedBalances; // [WAD]
     }
+
+    bytes32 public constant ION = keccak256("ION");
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.RewardModule")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant RewardModuleStorageLocation =
@@ -118,7 +112,7 @@ abstract contract RewardModule is ContextUpgradeable {
      * @param receiverOfUnderlying to send underlying tokens to
      * @param amount to burn
      */
-    function _burn(address user, address receiverOfUnderlying, uint256 amount) internal {
+    function _burn(address user, address receiverOfUnderlying, uint256 amount) internal returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
@@ -130,7 +124,8 @@ abstract contract RewardModule is ContextUpgradeable {
         $.underlying.safeTransfer(receiverOfUnderlying, amount);
 
         emit Transfer(user, address(0), amount);
-        emit Burn(user, receiverOfUnderlying, amount, _supplyFactor);
+
+        return _supplyFactor;
     }
 
     /**
@@ -159,7 +154,7 @@ abstract contract RewardModule is ContextUpgradeable {
      * @param senderOfUnderlying address to transfer underlying tokens from
      * @param amount of reward tokens to mint
      */
-    function _mint(address user, address senderOfUnderlying, uint256 amount) internal {
+    function _mint(address user, address senderOfUnderlying, uint256 amount) internal returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
@@ -170,7 +165,8 @@ abstract contract RewardModule is ContextUpgradeable {
         $.underlying.safeTransferFrom(senderOfUnderlying, address(this), amount);
 
         emit Transfer(address(0), user, amount);
-        emit Mint(user, senderOfUnderlying, amount, _supplyFactor);
+
+        return _supplyFactor;
     }
 
     /**
@@ -207,12 +203,17 @@ abstract contract RewardModule is ContextUpgradeable {
         _mintNormalized(_treasury, amount.rayDivDown(_supplyFactor));
 
         emit Transfer(address(0), _treasury, amount);
-        emit Mint(_treasury, address(0), amount, _supplyFactor);
+        emit MintToTreasury(_treasury, amount, _supplyFactor);
     }
 
     function _setSupplyFactor(uint256 newSupplyFactor) internal {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         $.supplyFactor = newSupplyFactor;
+    }
+
+    function updateTreasury(address newTreasury) external onlyRole(ION) {
+        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        $.treasury = newTreasury;
     }
 
     // --- Getters ---
