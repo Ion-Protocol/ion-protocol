@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 // https://github.com/ethereum/hevm/blob/main/doc/src/controlling-the-unit-testing-environment.md#cheat-codes
 
+IHevm constant HEVM = IHevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+
 interface IHevm {
     function warp(uint256 x) external;
 

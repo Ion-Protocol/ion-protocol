@@ -74,27 +74,27 @@ contract InterestRate {
 
     error CollateralIndexOutOfBounds();
     error DistributionFactorsDoNotSumToOne(uint256 sum);
-    error TotalDebtsLength(uint256 collateralCount, uint256 totalDebtsLength);
+    error TotalDebtsLength(uint256 collateralCount, uint256 totalIlkDebtsLength);
 
     /**
      * @dev Packed collateral configs
      */
-    uint256 internal immutable ilkConfig0_a;
-    uint256 internal immutable ilkConfig0_b;
-    uint256 internal immutable ilkConfig1_a;
-    uint256 internal immutable ilkConfig1_b;
-    uint256 internal immutable ilkConfig2_a;
-    uint256 internal immutable ilkConfig2_b;
-    uint256 internal immutable ilkConfig3_a;
-    uint256 internal immutable ilkConfig3_b;
-    uint256 internal immutable ilkConfig4_a;
-    uint256 internal immutable ilkConfig4_b;
-    uint256 internal immutable ilkConfig5_a;
-    uint256 internal immutable ilkConfig5_b;
-    uint256 internal immutable ilkConfig6_a;
-    uint256 internal immutable ilkConfig6_b;
-    uint256 internal immutable ilkConfig7_a;
-    uint256 internal immutable ilkConfig7_b;
+    uint256 internal immutable ILKCONFIG_0A;
+    uint256 internal immutable ILKCONFIG_0B;
+    uint256 internal immutable ILKCONFIG_1A;
+    uint256 internal immutable ILKCONFIG_1B;
+    uint256 internal immutable ILKCONFIG_2A;
+    uint256 internal immutable ILKCONFIG_2B;
+    uint256 internal immutable ILKCONFIG_3A;
+    uint256 internal immutable ILKCONFIG_3B;
+    uint256 internal immutable ILKCONFIG_4A;
+    uint256 internal immutable ILKCONFIG_4B;
+    uint256 internal immutable ILKCONFIG_5A;
+    uint256 internal immutable ILKCONFIG_5B;
+    uint256 internal immutable ILKCONFIG_6A;
+    uint256 internal immutable ILKCONFIG_6B;
+    uint256 internal immutable ILKCONFIG_7A;
+    uint256 internal immutable ILKCONFIG_7B;
 
     uint256 public immutable collateralCount;
     IYieldOracle immutable apyOracle;
@@ -113,14 +113,14 @@ contract InterestRate {
 
         if (distributionFactorSum != 1e4) revert DistributionFactorsDoNotSumToOne(distributionFactorSum);
 
-        (ilkConfig0_a, ilkConfig0_b) = _packCollateralConfig(ilkDataList, 0);
-        (ilkConfig1_a, ilkConfig1_b) = _packCollateralConfig(ilkDataList, 1);
-        (ilkConfig2_a, ilkConfig2_b) = _packCollateralConfig(ilkDataList, 2);
-        (ilkConfig3_a, ilkConfig3_b) = _packCollateralConfig(ilkDataList, 3);
-        (ilkConfig4_a, ilkConfig4_b) = _packCollateralConfig(ilkDataList, 4);
-        (ilkConfig5_a, ilkConfig5_b) = _packCollateralConfig(ilkDataList, 5);
-        (ilkConfig6_a, ilkConfig6_b) = _packCollateralConfig(ilkDataList, 6);
-        (ilkConfig7_a, ilkConfig7_b) = _packCollateralConfig(ilkDataList, 7);
+        (ILKCONFIG_0A, ILKCONFIG_0B) = _packCollateralConfig(ilkDataList, 0);
+        (ILKCONFIG_1A, ILKCONFIG_1B) = _packCollateralConfig(ilkDataList, 1);
+        (ILKCONFIG_2A, ILKCONFIG_2B) = _packCollateralConfig(ilkDataList, 2);
+        (ILKCONFIG_3A, ILKCONFIG_3B) = _packCollateralConfig(ilkDataList, 3);
+        (ILKCONFIG_4A, ILKCONFIG_4B) = _packCollateralConfig(ilkDataList, 4);
+        (ILKCONFIG_5A, ILKCONFIG_5B) = _packCollateralConfig(ilkDataList, 5);
+        (ILKCONFIG_6A, ILKCONFIG_6B) = _packCollateralConfig(ilkDataList, 6);
+        (ILKCONFIG_7A, ILKCONFIG_7B) = _packCollateralConfig(ilkDataList, 7);
     }
 
     function _packCollateralConfig(
@@ -159,29 +159,29 @@ contract InterestRate {
         uint256 packedConfig_b;
 
         if (index == 0) {
-            packedConfig_a = ilkConfig0_a;
-            packedConfig_b = ilkConfig0_b;
+            packedConfig_a = ILKCONFIG_0A;
+            packedConfig_b = ILKCONFIG_0B;
         } else if (index == 1) {
-            packedConfig_a = ilkConfig1_a;
-            packedConfig_b = ilkConfig1_b;
+            packedConfig_a = ILKCONFIG_1A;
+            packedConfig_b = ILKCONFIG_1B;
         } else if (index == 2) {
-            packedConfig_a = ilkConfig2_a;
-            packedConfig_b = ilkConfig2_b;
+            packedConfig_a = ILKCONFIG_2A;
+            packedConfig_b = ILKCONFIG_2B;
         } else if (index == 3) {
-            packedConfig_a = ilkConfig3_a;
-            packedConfig_b = ilkConfig3_b;
+            packedConfig_a = ILKCONFIG_3A;
+            packedConfig_b = ILKCONFIG_3B;
         } else if (index == 4) {
-            packedConfig_a = ilkConfig4_a;
-            packedConfig_b = ilkConfig4_b;
+            packedConfig_a = ILKCONFIG_4A;
+            packedConfig_b = ILKCONFIG_4B;
         } else if (index == 5) {
-            packedConfig_a = ilkConfig5_a;
-            packedConfig_b = ilkConfig5_b;
+            packedConfig_a = ILKCONFIG_5A;
+            packedConfig_b = ILKCONFIG_5B;
         } else if (index == 6) {
-            packedConfig_a = ilkConfig6_a;
-            packedConfig_b = ilkConfig6_b;
+            packedConfig_a = ILKCONFIG_6A;
+            packedConfig_b = ILKCONFIG_6B;
         } else if (index == 7) {
-            packedConfig_a = ilkConfig7_a;
-            packedConfig_b = ilkConfig7_b;
+            packedConfig_a = ILKCONFIG_7A;
+            packedConfig_b = ILKCONFIG_7B;
         }
 
         uint72 adjustedProfitMargin =
@@ -217,12 +217,12 @@ contract InterestRate {
 
     /**
      * @param ilkIndex index of the collateral
-     * @param totalDebt total debt of the system (45 decimals)
+     * @param totalIlkDebt total debt of the collateral (45 decimals)
      * @param totalEthSupply total eth supply of the system (18 decimals)
      */
     function calculateInterestRate(
         uint256 ilkIndex,
-        uint256 totalDebt, // [RAD]
+        uint256 totalIlkDebt, // [RAD]
         uint256 totalEthSupply
     )
         external
@@ -231,21 +231,29 @@ contract InterestRate {
     {
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
 
-        uint256 distributionFactorWad = ilkData.distributionFactor.scaleUpToWad(4);
-        uint256 collateralApyRay = apyOracle.apys(ilkIndex).scaleUpToRay(8);
         uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
+        uint256 collateralApyRayInSeconds = apyOracle.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
 
-        uint256 collateralApyRayInSeconds = collateralApyRay / SECONDS_IN_A_YEAR;
-
+        // [RAD] / [WAD] = [RAY]
         uint256 utilizationRate =
         // Prevent division by 0
-         totalEthSupply == 0 ? 0 : totalDebt / (totalEthSupply.wadMulDown(distributionFactorWad)); // [RAD] / [WAD] =
-            // [RAY]
+        totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(ilkData.distributionFactor.scaleUpToWad(4))); 
 
-        // TODO: Handle case where collateralApyRayInSeconds < adjustedProfitMargin
-        uint256 adjustedBelowKinkSlope = (
-            collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate
-        ).rayDivDown(optimalUtilizationRateRay);
+        // Avoid stack too deep
+        uint256 adjustedBelowKinkSlope;
+        {
+            uint256 slopeNumerator;
+            unchecked {
+                slopeNumerator = collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate;
+            }
+
+            // Underflow occured
+            if (slopeNumerator > collateralApyRayInSeconds) {
+                slopeNumerator = 0;
+            }
+
+            adjustedBelowKinkSlope = slopeNumerator.rayDivDown(optimalUtilizationRateRay);
+        }
 
         uint256 minimumBelowKinkSlope =
             (ilkData.minimumKinkRate - ilkData.minimumBaseRate).rayDivDown(optimalUtilizationRateRay);
@@ -255,8 +263,10 @@ contract InterestRate {
             uint256 minimumBorrowRate = minimumBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.minimumBaseRate;
 
             if (adjustedBorrowRate < minimumBorrowRate) {
+                console.log("branching min", minimumBorrowRate);
                 return (minimumBorrowRate, ilkData.minimumReserveFactor.scaleUpToRay(4));
             } else {
+                console.log("branching adj", adjustedBorrowRate);
                 return (adjustedBorrowRate, ilkData.adjustedReserveFactor.scaleUpToRay(4));
             }
         } else {
@@ -269,9 +279,9 @@ contract InterestRate {
 
             // [WAD] * [RAY] / [WAD] = [RAY]
             uint256 adjustedBorrowRate =
-                uint256(ilkData.adjustedAboveKinkSlope).wadMulDown(excessUtil) + adjustedNormalRate;
+                ilkData.adjustedAboveKinkSlope.scaleUpToWad(4).wadMulDown(excessUtil) + adjustedNormalRate;
             uint256 minimumBorrowRate =
-                uint256(ilkData.minimumAboveKinkSlope).wadMulDown(excessUtil) + minimumNormalRate;
+                ilkData.minimumAboveKinkSlope.scaleUpToWad(4).wadMulDown(excessUtil) + minimumNormalRate;
 
             if (adjustedBorrowRate < minimumBorrowRate) {
                 return (minimumBorrowRate, ilkData.minimumReserveFactor.scaleUpToRay(4));

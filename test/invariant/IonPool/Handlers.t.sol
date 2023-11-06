@@ -4,14 +4,18 @@ pragma solidity 0.8.21;
 import { RoundedMath, WAD, RAY, RAD } from "src/libraries/math/RoundedMath.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
+import { SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
 
 import { IonPoolExposed } from "test/helpers/IonPoolSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
-import { IHevm } from "test/helpers/echidna/IHevm.sol";
+import { HEVM } from "test/helpers/echidna/IHevm.sol";
+import { InvariantHelpers } from "test/helpers/InvariantHelpers.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+
+import { LibString } from "solady/src/utils/LibString.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
@@ -19,20 +23,27 @@ import { StdUtils } from "forge-std/StdUtils.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-// TODO: Clean up HEVM to be in one spot
-IHevm constant hevm = IHevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
 using RoundedMath for uint256;
+using RoundedMath for uint16;
+using LibString for string;
 using Strings for uint256;
 using Strings for uint8;
 
 library DecimalToFixedPoint {
     function toFixedPointString(uint256 value, uint256 scale) internal pure returns (string memory) {
-        return string.concat(
-            value / scale == 0 ? "0" : (value / scale).toString(),
-            ".",
-            value % scale == 0 ? "0" : (value % scale).toString()
-        );
+        uint256 tenScale = 10 ** scale;
+
+        string memory valueAsString = value.toString();
+        string memory integerPartAsString = value / tenScale == 0 ? "0" : (value / tenScale).toString();
+
+        uint256 valueLength = bytes(valueAsString).length;
+        if (valueLength >= scale) {
+            return integerPartAsString.concat(string.concat(".", (valueAsString.slice(valueLength - scale))));
+        } else {
+            return integerPartAsString.concat(
+                string.concat(".", string(bytes("0")).repeat(scale - valueLength), valueAsString)
+            );
+        }
     }
 }
 
@@ -54,25 +65,30 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
     ERC20PresetMinterPauser internal immutable underlying;
     IonRegistry internal immutable registry;
 
+    uint16[] internal distributionFactors;
+
     bool immutable LOG;
     bool immutable REPORT;
     string internal constant REPORT_FILE = "report.csv";
 
     function _warpTime(uint256 warpTimeAmount) internal {
         warpTimeAmount = bound(warpTimeAmount, 100, 10_000);
-        hevm.warp(block.timestamp + warpTimeAmount);
+        HEVM.warp(block.timestamp + warpTimeAmount);
     }
 
     constructor(
         IonPoolExposed _ionPool,
         ERC20PresetMinterPauser _underlying,
         IonRegistry _registry,
+        uint16[] memory _distributionFactors,
         bool _log,
         bool _report
     ) {
         ionPool = _ionPool;
         underlying = _underlying;
         registry = _registry;
+        distributionFactors = _distributionFactors;
+
         LOG = _log;
         REPORT = _report;
     }
@@ -82,46 +98,50 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
         uint256 totalSupply;
         uint256 totalDebt;
         uint256 wethLiquidity;
+        uint256 utilizationRate;
     }
 
     struct IlkIndexedPoolState {
         uint256 totalNormalizedDebt;
         uint256 rate;
         uint256 totalGem;
+        uint256 newInterestRatePerSecond;
+        uint256 newInterestRatePerYear;
+        uint256 utilizationRate;
     }
 
     function reportAction(Actions actions, uint8 ilkIndex, uint256 amount) internal {
         vm.writeLine(REPORT_FILE, "Action, IlkIndex, Amount");
 
         if (actions == Actions.SUPPLY) {
-            vm.writeLine(REPORT_FILE, string.concat("SUPPLY, ", "-, ", amount.toFixedPointString(WAD)));
+            vm.writeLine(REPORT_FILE, string.concat("SUPPLY, ", "-, ", amount.toFixedPointString(18)));
         } else if (actions == Actions.WITHDRAW) {
-            vm.writeLine(REPORT_FILE, string.concat("WITHDRAW, ", "-, ", amount.toFixedPointString(WAD)));
+            vm.writeLine(REPORT_FILE, string.concat("WITHDRAW, ", "-, ", amount.toFixedPointString(18)));
         } else if (actions == Actions.BORROW) {
             vm.writeLine(
-                REPORT_FILE, string.concat("BORROW, ", ilkIndex.toString(), ", ", amount.toFixedPointString(WAD))
+                REPORT_FILE, string.concat("BORROW, ", ilkIndex.toString(), ", ", amount.toFixedPointString(18))
             );
         } else if (actions == Actions.REPAY) {
             vm.writeLine(
-                REPORT_FILE, string.concat("REPAY, ", ilkIndex.toString(), ", ", amount.toFixedPointString(WAD))
+                REPORT_FILE, string.concat("REPAY, ", ilkIndex.toString(), ", ", amount.toFixedPointString(18))
             );
         } else if (actions == Actions.DEPOSIT_COLLATERAL) {
             vm.writeLine(
                 REPORT_FILE,
-                string.concat("DEPOSIT_COLLATERAL, ", ilkIndex.toString(), ", ", amount.toFixedPointString(WAD))
+                string.concat("DEPOSIT_COLLATERAL, ", ilkIndex.toString(), ", ", amount.toFixedPointString(18))
             );
         } else if (actions == Actions.WITHDRAW_COLLATERAL) {
             vm.writeLine(
                 REPORT_FILE,
-                string.concat("WITHDRAW_COLLATERAL, ", ilkIndex.toString(), ", ", amount.toFixedPointString(WAD))
+                string.concat("WITHDRAW_COLLATERAL, ", ilkIndex.toString(), ", ", amount.toFixedPointString(18))
             );
         } else if (actions == Actions.GEM_JOIN) {
             vm.writeLine(
-                REPORT_FILE, string.concat("GEM_JOIN, ", ilkIndex.toString(), ", ", amount.toFixedPointString(WAD))
+                REPORT_FILE, string.concat("GEM_JOIN, ", ilkIndex.toString(), ", ", amount.toFixedPointString(18))
             );
         } else if (actions == Actions.GEM_EXIT) {
             vm.writeLine(
-                REPORT_FILE, string.concat("GEM_EXIT, ", ilkIndex.toString(), ", ", amount.toFixedPointString(WAD))
+                REPORT_FILE, string.concat("GEM_EXIT, ", ilkIndex.toString(), ", ", amount.toFixedPointString(18))
             );
         }
 
@@ -132,6 +152,7 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
         globalState.totalSupply = ionPool.totalSupply();
         globalState.totalDebt = ionPool.debt();
         globalState.wethLiquidity = ionPool.weth();
+        globalState.utilizationRate = InvariantHelpers.getUtilizationRate(ionPool);
 
         require(ilkIndexedState.length == ionPool.ilkCount(), "invariant/IonPool/Handlers.t.sol: Ilk count mismatch");
         for (uint256 i = 0; i < ilkIndexedState.length; ++i) {
@@ -139,21 +160,28 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
             ilkIndexedState[i].totalNormalizedDebt = ionPool.totalNormalizedDebt(_ilkIndex);
             ilkIndexedState[i].rate = ionPool.rate(_ilkIndex);
             ilkIndexedState[i].totalGem = registry.gemJoins(_ilkIndex).totalGem();
+            (uint256 currentBorrowRate,) = ionPool.getCurrentBorrowRate(_ilkIndex);
+            ilkIndexedState[i].newInterestRatePerSecond = currentBorrowRate;
+            ilkIndexedState[i].newInterestRatePerYear = ((currentBorrowRate - RAY) * SECONDS_IN_A_YEAR) + RAY;
+            ilkIndexedState[i].utilizationRate =
+                InvariantHelpers.getIlkSpecificUtilizationRate(ionPool, distributionFactors, _ilkIndex);
         }
 
         vm.writeLine(REPORT_FILE, "");
         vm.writeLine(REPORT_FILE, "GLOBAL STATE CHANGES");
-        vm.writeLine(REPORT_FILE, "Supply Factor, Total Supply, Total Debt, WETH Liquidity");
+        vm.writeLine(REPORT_FILE, "Supply Factor, Total Supply, Total Debt, WETH Liquidity, Utilization Rate");
         vm.writeLine(
             REPORT_FILE,
             string.concat(
-                globalState.supplyFactor.toString(),
+                globalState.supplyFactor.toFixedPointString(27),
                 ", ",
-                globalState.totalSupply.toFixedPointString(WAD),
+                globalState.totalSupply.toFixedPointString(18),
                 ", ",
-                globalState.totalDebt.toFixedPointString(RAD),
+                globalState.totalDebt.toFixedPointString(45),
                 ", ",
-                globalState.wethLiquidity.toFixedPointString(WAD)
+                globalState.wethLiquidity.toFixedPointString(18),
+                ", ",
+                globalState.utilizationRate.toFixedPointString(45)
             )
         );
 
@@ -161,15 +189,24 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
         vm.writeLine(REPORT_FILE, "ILK STATE CHANGES");
         for (uint256 i = 0; i < ilkIndexedState.length; ++i) {
             vm.writeLine(REPORT_FILE, string.concat("ILK", i.toString()));
-            vm.writeLine(REPORT_FILE, "Total Normalized Debt, Total Gem, Rate");
+            vm.writeLine(
+                REPORT_FILE,
+                "Total Normalized Debt, Total Gem, Rate, New Interest Rate (per sec), New Interest Rate (per year), Utilization Rate"
+            );
             vm.writeLine(
                 REPORT_FILE,
                 string.concat(
-                    ilkIndexedState[i].totalNormalizedDebt.toFixedPointString(WAD),
+                    ilkIndexedState[i].totalNormalizedDebt.toFixedPointString(18),
                     ", ",
-                    ilkIndexedState[i].totalGem.toFixedPointString(WAD),
+                    ilkIndexedState[i].totalGem.toFixedPointString(18),
                     ", ",
-                    ilkIndexedState[i].rate.toFixedPointString(RAY)
+                    ilkIndexedState[i].rate.toFixedPointString(27),
+                    ", ",
+                    ilkIndexedState[i].newInterestRatePerSecond.toFixedPointString(27),
+                    ", ",
+                    ilkIndexedState[i].newInterestRatePerYear.toFixedPointString(27),
+                    ", ",
+                    ilkIndexedState[i].utilizationRate.toFixedPointString(27)
                 )
             );
             vm.writeLine(REPORT_FILE, "");
@@ -186,10 +223,11 @@ contract LenderHandler is Handler {
         IonPoolExposed _ionPool,
         IonRegistry _registry,
         ERC20PresetMinterPauser _underlying,
+        uint16[] memory _distributionFactors,
         bool _log,
         bool _report
     )
-        Handler(_ionPool, _underlying, _registry, _log, _report)
+        Handler(_ionPool, _underlying, _registry, _distributionFactors, _log, _report)
     {
         underlying.approve(address(ionPool), type(uint256).max);
     }
@@ -279,10 +317,11 @@ contract BorrowerHandler is Handler {
         IonRegistry _registry,
         ERC20PresetMinterPauser _underlying,
         ERC20PresetMinterPauser[] memory _collaterals,
+        uint16[] memory _distributionFactors,
         bool _log,
         bool _report
     )
-        Handler(_ionPool, _underlying, _registry, _log, _report)
+        Handler(_ionPool, _underlying, _registry, _distributionFactors, _log, _report)
     {
         underlying.approve(address(_ionPool), type(uint256).max);
         ionPool.addOperator(address(_ionPool));
@@ -418,9 +457,10 @@ contract LiquidatorHandler is Handler {
         IonPoolExposed _ionPool,
         IonRegistry _registry,
         ERC20PresetMinterPauser _underlying,
+        uint16[] memory _distributionFactors,
         bool _log,
         bool _report
     )
-        Handler(_ionPool, _underlying, _registry, _log, _report)
+        Handler(_ionPool, _underlying, _registry, _distributionFactors, _log, _report)
     { }
 }

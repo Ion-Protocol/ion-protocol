@@ -6,7 +6,8 @@ import { IonPool } from "src/IonPool.sol";
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import { IHevm } from "test/helpers/echidna/IHevm.sol";
+import { HEVM } from "test/helpers/echidna/IHevm.sol";
+import { InvariantHelpers } from "test/helpers/InvariantHelpers.sol";
 
 import { LenderHandler, BorrowerHandler, LiquidatorHandler } from "./Handlers.t.sol";
 
@@ -20,8 +21,6 @@ import { StdUtils } from "forge-std/StdUtils.sol";
 using RoundedMath for uint256;
 
 contract ActorManager is CommonBase, StdCheats, StdUtils {
-    IHevm hevm = IHevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
     IonPool ionPool;
     LenderHandler[] internal lenders;
     BorrowerHandler[] internal borrowers;
@@ -39,24 +38,83 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         liquidators = _liquidators;
     }
 
-    function supply(uint128 lenderIndex, uint128 amount, uint128 warpTimeAmount) public {
+    // For a more interesting fuzz, we will use a custom fallback dispatcher.
+    function fuzzedFallback(
+        uint128 userIndex,
+        uint128 ilkIndex,
+        uint128 amount,
+        uint128 warpTimeAmount,
+        uint256 functionIndex
+    )
+        public
+    {
+        uint256 globalUtilizationRate = InvariantHelpers.getUtilizationRate(ionPool);
+
+        if (globalUtilizationRate < 0.5e45) {
+            functionIndex = bound(functionIndex, 0, 4);
+
+            if (functionIndex == 0) {
+                borrow(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 1) {
+                depositCollateral(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 2) {
+                gemJoin(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else {
+                withdraw(userIndex, amount, warpTimeAmount);
+            }
+        } else if (globalUtilizationRate > 0.95e45) {
+            functionIndex = bound(functionIndex, 0, 4);
+
+            if (functionIndex == 0) {
+                repay(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 1) {
+                withdrawCollateral(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 2) {
+                gemExit(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else {
+                supply(userIndex, amount, warpTimeAmount);
+            }
+        } else {
+            functionIndex = bound(functionIndex, 0, 8);
+
+            if (functionIndex == 0) {
+                borrow(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 1) {
+                depositCollateral(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 2) {
+                gemJoin(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 3) {
+                withdraw(userIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 4) {
+                repay(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 5) {
+                withdrawCollateral(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else if (functionIndex == 6) {
+                gemExit(userIndex, ilkIndex, amount, warpTimeAmount);
+            } else {
+                supply(userIndex, amount, warpTimeAmount);
+            }
+        }
+    }
+
+    function supply(uint128 lenderIndex, uint128 amount, uint128 warpTimeAmount) internal {
         lenderIndex = uint128(bound(lenderIndex, 0, lenders.length - 1));
         lenders[lenderIndex].supply(amount, warpTimeAmount);
     }
 
-    function withdraw(uint128 lenderIndex, uint128 amount, uint128 warpTimeAmount) public {
+    function withdraw(uint128 lenderIndex, uint128 amount, uint128 warpTimeAmount) internal {
         lenderIndex = uint128(bound(lenderIndex, 0, lenders.length - 1));
         lenders[lenderIndex].withdraw(amount, warpTimeAmount);
     }
 
-    function borrow(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) public {
+    function borrow(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
         ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
 
         borrowers[borrowerIndex].borrow(uint8(ilkIndex), amount, warpTimeAmount);
     }
 
-    function repay(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) public {
+    function repay(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
         ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
 
@@ -69,7 +127,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         uint128 amount,
         uint128 warpTimeAmount
     )
-        public
+        internal
     {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
         ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
@@ -83,7 +141,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         uint128 amount,
         uint128 warpTimeAmount
     )
-        public
+        internal
     {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
         ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
@@ -91,14 +149,14 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         borrowers[borrowerIndex].withdrawCollateral(uint8(ilkIndex), amount, warpTimeAmount);
     }
 
-    function gemJoin(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) public {
+    function gemJoin(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
         ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
 
         borrowers[borrowerIndex].gemJoin(uint8(ilkIndex), amount, warpTimeAmount);
     }
 
-    function gemExit(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) public {
+    function gemExit(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
         ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
 
@@ -107,10 +165,8 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
 }
 
 contract IonPool_InvariantTest is IonPoolSharedSetup {
-    IHevm hevm = IHevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
-    uint256 internal constant AMOUNT_LENDERS = 4;
-    uint256 internal constant AMOUNT_BORROWERS = 4;
+    uint256 internal constant AMOUNT_LENDERS = 2;
+    uint256 internal constant AMOUNT_BORROWERS = 2;
     uint256 internal constant AMOUNT_LIQUDIATORS = 1;
 
     LenderHandler[] internal lenders;
@@ -118,6 +174,10 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
     LiquidatorHandler[] internal liquidators;
 
     ActorManager public actorManager;
+
+    uint256 internal constant INITIAL_LENDER_SUPPLY_AMOUNT = 500e18;
+    uint256 internal constant INITIAL_BORROWER_GEM_JOIN_AMOUNT = 500e18;
+    uint256 internal constant INITIAL_BORROWER_BORROW_AMOUNT = 10e18;
 
     function setUp() public virtual override {
         bool log = vm.envOr("LOG", uint256(0)) == 1;
@@ -134,25 +194,25 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         }
 
         for (uint256 i = 0; i < AMOUNT_LENDERS; i++) {
-            LenderHandler lender = new LenderHandler(ionPool,ionRegistry, underlying, log, report);
+            LenderHandler lender = new LenderHandler(ionPool,ionRegistry, underlying, distributionFactors, log, report);
             lenders.push(lender);
             underlying.grantRole(underlying.MINTER_ROLE(), address(lender));
 
             // Initialize with some liquidity
-            lender.supply(10e18, 0);
+            lender.supply(INITIAL_LENDER_SUPPLY_AMOUNT, 0);
         }
 
         for (uint256 i = 0; i < AMOUNT_BORROWERS; i++) {
             BorrowerHandler borrower =
-                new BorrowerHandler(ionPool, ionRegistry, underlying, mintableCollaterals, log, report);
+            new BorrowerHandler(ionPool, ionRegistry, underlying, mintableCollaterals, distributionFactors, log, report);
             borrowers.push(borrower);
             for (uint8 j = 0; j < collaterals.length; j++) {
                 mintableCollaterals[j].grantRole(mintableCollaterals[j].MINTER_ROLE(), address(borrowers[i]));
 
                 // Initialize with a borrow position
-                borrower.gemJoin(j, 10e18, 0);
-                borrower.depositCollateral(j, 10e18, 0);
-                borrower.borrow(j, 0.1e18, 0);
+                borrower.gemJoin(j, INITIAL_BORROWER_GEM_JOIN_AMOUNT, 0);
+                borrower.depositCollateral(j, INITIAL_BORROWER_GEM_JOIN_AMOUNT, 0);
+                borrower.borrow(j, INITIAL_BORROWER_BORROW_AMOUNT, 0);
             }
         }
         actorManager = new ActorManager(ionPool, lenders, borrowers, liquidators);
@@ -178,10 +238,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         return !failed();
     }
 
-    function invariant_UnderlyingBalanceOfPoolPlusDebtToPoolStrictlyGreaterThanOrEqualToTotalSupply()
-        external
-        returns (bool)
-    {
+    function invariant_LiquidityInPoolPlusDebtToPoolStrictlyGreaterThanOrEqualToTotalSupply() external returns (bool) {
         uint256 totalDebt;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             uint256 totalNormalizedDebts;
@@ -192,6 +249,9 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
             totalDebt += totalNormalizedDebts.rayMulDown(ilkRate);
         }
         assertGe(ionPool.weth() + totalDebt, ionPool.totalSupply());
+        assertGe(
+            ionPool.weth().scaleUpToRad(18) + ionPool.debt(), ionPool.normalizedTotalSupply() * ionPool.supplyFactor()
+        );
 
         return !failed();
     }
