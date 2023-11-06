@@ -19,7 +19,7 @@ contract DeployYieldOracleScript is BaseScript {
 
     uint256 internal constant SCALE = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
 
-    function run() public broadcast returns (YieldOracle apyOracle) {
+    function run() public broadcast returns (YieldOracle yieldOracle) {
         string[] memory configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
         assert(configKeys.length == ILK_COUNT);
 
@@ -43,8 +43,9 @@ contract DeployYieldOracleScript is BaseScript {
             historicalExchangeRates[i] = exchangesRates;
         }
 
-        apyOracle =
-        new YieldOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
+        yieldOracle =
+        // TODO: Fix admin
+        new YieldOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));
     }
 
     function configureDeployment() external {
