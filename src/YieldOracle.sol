@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { IonPool } from "src/IonPool.sol";
 import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
+
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -27,7 +31,7 @@ uint32 constant ILK_COUNT = 3;
 // Seconds in 23.5 hours. This will allow for updates around the same time of day
 uint256 constant UPDATE_LOCK_LENGTH = 84_600;
 
-contract YieldOracle is IYieldOracle {
+contract YieldOracle is IYieldOracle, Ownable2Step {
     using Math for uint256;
     using SafeCast for uint256;
 
@@ -43,9 +47,11 @@ contract YieldOracle is IYieldOracle {
     uint32[ILK_COUNT] public apys;
 
     uint64[ILK_COUNT][LOOK_BACK] public historicalExchangeRates;
-    address public immutable address0;
-    address public immutable address1;
-    address public immutable address2;
+    address public immutable ADDRESS0;
+    address public immutable ADDRESS1;
+    address public immutable ADDRESS2;
+
+    IonPool public ionPool;
 
     uint32 public currentIndex;
     uint48 public lastUpdated;
@@ -54,24 +60,36 @@ contract YieldOracle is IYieldOracle {
         uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
         address _lido,
         address _stader,
-        address _swell
-    ) {
+        address _swell,
+        address owner
+    )
+        Ownable(owner)
+    {
         historicalExchangeRates = _historicalExchangeRates;
 
-        address0 = _lido;
-        address1 = _stader;
-        address2 = _swell;
+        ADDRESS0 = _lido;
+        ADDRESS1 = _stader;
+        ADDRESS2 = _swell;
 
-        updateAll();
+        _updateAll();
     }
 
-    function updateAll() public {
+    function updateIonPool(IonPool _ionPool) external onlyOwner {
+        ionPool = _ionPool;
+    }
+
+    function updateAll() external {
+        ionPool.accrueInterest();
+        _updateAll();
+    }
+
+    function _updateAll() internal {
         if (lastUpdated + UPDATE_LOCK_LENGTH > block.timestamp) revert AlreadyUpdated();
 
         uint256 _currentIndex = currentIndex;
         uint64[ILK_COUNT] storage previousExchangeRates = historicalExchangeRates[_currentIndex];
 
-        for (uint256 i = 0; i < ILK_COUNT;) {
+        for (uint8 i = 0; i < ILK_COUNT;) {
             uint64 newExchangeRate = _getExchangeRate(i);
             uint64 previousExchangeRate = previousExchangeRates[i];
 
@@ -89,30 +107,34 @@ contract YieldOracle is IYieldOracle {
             emit ApyUpdate(i, newApy);
 
             // forgefmt: disable-next-line
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         // update Apy, history with new exchangeRates, and currentIndex
         currentIndex = (currentIndex + 1) % LOOK_BACK;
-        lastUpdated = block.timestamp.toUint48();
+        // Unsafe cast OK
+        lastUpdated = uint48(block.timestamp);
     }
 
     // TODO: Move to a library
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            IWstEth lido = IWstEth(address0);
+            IWstEth lido = IWstEth(ADDRESS0);
             exchangeRate = (lido.stEthPerToken()).toUint64();
         } else if (ilkIndex == 1) {
             // TODO: Use stader deposit contract `getExchangeRate()` instead
-            IStaderOracle stader = IStaderOracle(address1);
+            IStaderOracle stader = IStaderOracle(ADDRESS1);
             (, uint256 totalETHBalance, uint256 totalETHXSupply) = stader.exchangeRate();
             exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply)).toUint64();
         } else {
-            ISwEth swell = ISwEth(address2);
+            ISwEth swell = ISwEth(ADDRESS2);
             exchangeRate = (swell.swETHToETHRate()).toUint64();
         }
     }
 
+    // TODO: Move to library
     function _computeStaderExchangeRate(
         uint256 totalETHBalance,
         uint256 totalETHXSupply

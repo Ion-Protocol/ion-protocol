@@ -229,7 +229,6 @@ contract InterestRate {
         view
         returns (uint256, uint256)
     {
-        // TODO: Validate input
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
 
         uint256 distributionFactorWad = ilkData.distributionFactor.scaleUpToWad(4);

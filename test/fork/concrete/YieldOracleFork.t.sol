@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { IonPool } from "src/IonPool.sol";
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { YieldOracle, ILK_COUNT, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION } from "src/YieldOracle.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+
+import { MockIonPool } from "test/helpers/MockIonPool.sol";
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
@@ -17,9 +20,10 @@ contract YieldOracleExposed is YieldOracle {
         uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
         address _lido,
         address _stader,
-        address _swell
+        address _swell,
+        address owner
     )
-        YieldOracle(_historicalExchangeRates, _lido, _stader, _swell)
+        YieldOracle(_historicalExchangeRates, _lido, _stader, _swell, owner)
     { }
 
     function getFullApysArray() external view returns (uint32[ILK_COUNT] memory) {
@@ -107,9 +111,13 @@ contract YieldOracle_ForkTest is Test {
         uint256 mainnetFork = vm.createFork(vm.envString("MAINNET_RPC_URL"), blockNumberAtLastUpdate + 1);
         vm.selectFork(mainnetFork);
 
+        IonPool mockIonPool = IonPool(address(new MockIonPool()));
+
         apyOracle =
-        new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
+        new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));
+        apyOracle.updateIonPool(mockIonPool);
         vm.makePersistent(address(apyOracle));
+        vm.makePersistent(address(mockIonPool));
 
         apysHistory.push(apyOracle.getFullApysArray());
         historicalExchangeRatesHistory.push(apyOracle.getFullHistoricalExchangesRatesArray());

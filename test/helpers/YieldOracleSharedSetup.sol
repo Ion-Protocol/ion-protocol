@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { Test } from "forge-std/Test.sol";
+import { IonPool } from "src/IonPool.sol";
 import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
-import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
+import { YieldOracle, LOOK_BACK, ILK_COUNT } from "src/YieldOracle.sol";
+
+import { MockIonPool } from "test/helpers/MockIonPool.sol";
+
+import { Test } from "forge-std/Test.sol";
 
 // Mocks
 uint256 constant WST_ETH_EXCHANGE_RATE = 1.2e18;
@@ -82,12 +86,17 @@ abstract contract YieldOracleSharedSetup is Test {
             historicalExchangeRatesInitial[i] = baseRates;
         }
 
+        IonPool mockIonPool = IonPool(address(new MockIonPool()));
+
         oracle = new YieldOracle(
             historicalExchangeRatesInitial, 
             address(lidoOracle),
             address(staderOracle),
-            address(swellOracle)
+            address(swellOracle),
+            address(this)
         );
+
+        oracle.updateIonPool(mockIonPool);
     }
 
     function test_setUp() public virtual {
