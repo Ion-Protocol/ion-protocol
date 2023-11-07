@@ -238,7 +238,6 @@ contract LiquidationTest is LiquidationSharedSetup {
             dArgs.liquidationThreshold
         );
 
-        console2.log("new healthRatio: ", healthRatio);
         assertTrue(healthRatio > dArgs.targetHealth, "resulting health ratio >= target health"); 
         assertEq(healthRatio / 1e10, dArgs.targetHealth / 1e10, "resulting health ratio"); // compare with reduced precision 
         
@@ -261,10 +260,6 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
 
-        console2.log("expectedResultingCollateral: ", results.collateral);
-        console2.log("expectedResultingDebt: ", results.normalizedDebt);
-        console2.log("liquidation threshold: ", dArgs.liquidationThreshold);
-        console2.log("liquidation threshold: ", uint64(dArgs.liquidationThreshold)); 
         uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation =
         new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
@@ -290,9 +285,6 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
         uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
         uint256 rate = ionPool.rate(ilkIndex);
-
-        console2.log("actualResultingCollateral: ", actualResultingCollateral);
-        console2.log("actualResultingNormalizedDebt: ", actualResultingNormalizedDebt);
 
         // resulting vault collateral and debt
         // assertEq(actualResultingCollateral, expectedResultingCollateral, "resulting collateral");
@@ -387,11 +379,6 @@ contract LiquidationTest is LiquidationSharedSetup {
         dArgs.dust = dust; // [rad] 
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
-        console2.log("expectedResultingCollateral: ", results.collateral);
-        console2.log("expectedResultingDebt: ", results.normalizedDebt);
-        console2.log("liquidation threshold: ", dArgs.liquidationThreshold);
-        console2.log("liquidation threshold: ", uint64(dArgs.liquidationThreshold));
-        console2.log("uint64 max: ", type(uint64).max);
 
         uint256[ILK_COUNT] memory liquidationThresholds = [uint256(dArgs.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
 

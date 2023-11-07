@@ -77,7 +77,6 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(totalSupply));
         (, uint256 newTotalEthBalance, uint256 newTotalEthSupply) = IStaderOracle(STADER_ORACLE).exchangeRate();
         newExchangeRate = newTotalEthBalance.wadDivDown(newTotalEthSupply); 
-        console2.log("newExchangeRate: ", newExchangeRate);
     }
 
     function changeStEthClBalance(uint256 clBalance) internal returns (uint256 newExchangeRate) {
