@@ -530,6 +530,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         uint104 _totalNormalizedDebt = _add($.ilks[ilkIndex].totalNormalizedDebt, changeInNormalizedDebt).toUint104();
         int256 changeInDebt = ilkRate.toInt256() * changeInNormalizedDebt;
 
+        console2.log("ilkRate: ", ilkRate);
         uint256 newTotalDebtInVault = ilkRate * vault.normalizedDebt;
 
         // Prevent stack too deep
@@ -572,6 +573,7 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         }
 
         // vault has no debt, or a non-dusty amount
+        console2.log("newTotalDebtInVault: ", newTotalDebtInVault);
         if (both(vault.normalizedDebt != 0, newTotalDebtInVault < $.ilks[ilkIndex].dust)) {
             revert VaultCannotBeDusty(newTotalDebtInVault, $.ilks[ilkIndex].dust);
         }
@@ -579,10 +581,11 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
         $.vaults[ilkIndex][u] = vault;
         $.ilks[ilkIndex].totalNormalizedDebt = _totalNormalizedDebt;
-
+        console2.log("before transfer");
         // If changeInDebt < 0, it is a repayment and WETH is being transferred
         // into the protocol
         _transferWeth(w, changeInDebt);
+        console2.log("after transfer");
     }
 
     // --- Settlement ---
@@ -625,6 +628,8 @@ contract IonPool is IonPausableUpgradeable, AccessControlDefaultAdminRulesUpgrad
             underlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
+            console2.log("supplied balance: ", underlying().balanceOf(address(this)));
+            console2.log("sender balance: ", underlying().balanceOf(msg.sender)); 
             uint256 amountWad = uint256(amount) / RAY;
             $.weth -= amountWad;
             underlying().safeTransfer(user, amountWad);

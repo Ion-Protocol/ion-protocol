@@ -10,7 +10,7 @@ import { console2 } from "forge-std/console2.sol";
 /**
  * Fixes deployment configs and fuzzes potential states
  */
-contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
+contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
     using RoundedMath for uint256;
     using SafeCast for *;
 
@@ -41,7 +41,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         ionPool.updateIlkDust(ilkIndex, deploymentArgs.dust);
 
         // fuzz configs
-        minDepositAmt = 1;
+        minDepositAmt = 1e18;
         maxDepositAmt = 10_000e18;
         minBorrowAmt = 1;
         maxBorrowAmt = 10_000e18;
@@ -63,6 +63,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
 
     //     uint256 liabilityValue = stateArgs.normalizedDebt * NO_RATE;
 
+
     //     // fuzzes asserts in helper function
     //     Results memory results = calculateExpectedLiquidationResults(deploymentArgs, stateArgs);
 
@@ -74,36 +75,55 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
     //     }
     // }
 
-    /**
-     * In a partial liquidation scenario, target health ratio should always be reached.
-     */
-    function testFuzz_AllLiquidationCategories(uint256 depositAmt, uint256 borrowAmt, uint256 exchangeRate) public {
+    // runs 10,000 allowed misses 10,000 
+    function testFuzz_AllLiquidationCategoriesWithRate(uint256 depositAmt, uint256 borrowAmt, uint256 exchangeRate, uint104 rate) public {
         // state args
         StateArgs memory stateArgs;
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
-        stateArgs.normalizedDebt = bound(borrowAmt, minDepositAmt, maxDepositAmt);
-        stateArgs.exchangeRate = bound(exchangeRate, minExchangeRate, startingExchangeRate); // [wad]
-        stateArgs.rate = NO_RATE;
-
+        
+        // TODO: min rate as 1 throws uint104 casting error in ionPool
+        stateArgs.rate = bound(rate, 1e18, 10e27); 
+        // bound rate somehow? 
+        ionPool.setRate(ilkIndex, uint104(stateArgs.rate)); 
+        
         // starting position must be safe
-        // [wad] * [ray] <= [wad] * [ray]
-        vm.assume(
-            stateArgs.normalizedDebt * stateArgs.rate
-                <= (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
-                    deploymentArgs.liquidationThreshold
-                )
-        );
+        uint256 maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+                deploymentArgs.liquidationThreshold
+            ) / stateArgs.rate; 
+        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;   
 
-        // position needs to be unsafe after exchange rate change
-        vm.assume(
-            stateArgs.normalizedDebt * stateArgs.rate
-                > (stateArgs.collateral * stateArgs.exchangeRate.scaleUpToRay(18)).rayMulDown(
-                    deploymentArgs.liquidationThreshold
-                )
-        );
+        console2.log("minBorrowAmt: ", minBorrowAmt);
+        console2.log("maxBorrowAmt: ", maxBorrowAmt);
+        stateArgs.normalizedDebt = bound(
+            borrowAmt,
+            minBorrowAmt, 
+            maxBorrowAmt 
+        ); // [wad]
+        console2.log("stateArgs.normalizedDebt: ", stateArgs.normalizedDebt);
+        vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
+        
+        // position must be unsafe after exchange rate change
+        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
+                / stateArgs.collateral;
+        vm.assume(maxExchangeRate != 0); 
+        maxExchangeRate = maxExchangeRate - 1; 
+        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate; 
 
-        Results memory results = calculateExpectedLiquidationResults(deploymentArgs, stateArgs);
+        stateArgs.exchangeRate = bound(
+            exchangeRate,
+            minExchangeRate, // if 1, max can be lower than min and it will fail 
+            maxExchangeRate 
+        ); // [ray] if the debt is zero, then there is no 
+        
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
+        vm.assume(stateArgs.exchangeRate > 0); 
 
+        // dust is set to 10% of total debt 
+        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / 10; // [rad] 
+        console2.log("deploymentArgs.dust: ", deploymentArgs.dust);
+
+        ionPool.updateIlkDust(ilkIndex, deploymentArgs.dust);
+      
         // liquidations contract
         uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation = new Liquidation(
@@ -118,6 +138,110 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
+        Results memory results = calculateExpectedLiquidationResults(deploymentArgs, stateArgs);
+        
+        // lender
+
+        uint256 supplyAmt = stateArgs.normalizedDebt * stateArgs.rate / RAY + 1; 
+        supply(lender1, supplyAmt);
+        // borrower makes a SAFE position
+        borrow(borrower1, ilkIndex, stateArgs.collateral, stateArgs.normalizedDebt);
+        // exchange rate changes based on fuzz
+        reserveOracle1.setExchangeRate(stateArgs.exchangeRate.toUint72());
+        // keeper
+        liquidate(keeper1, ilkIndex, borrower1);
+
+        if (results.category == 0) {
+            // protocol
+            vm.writeLine("fuzz_out.txt", "PROTOCOL");
+            assert(ionPool.collateral(ilkIndex, borrower1) == 0);
+            assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
+        } else if (results.category == 1) {
+            // dust
+            // assert(false); // to see if it's ever reaching this branch
+            // ffi to see when this branch gets hit
+            vm.writeLine("fuzz_out.txt", "DUST");
+            assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
+        } else if (results.category == 2) {
+            vm.writeLine("fuzz_out.txt", "PARTIAL");
+            uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
+            console2.log("actualCollateral: ", actualCollateral);
+            uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+            if (actualNormalizedDebt != 0) {
+                // Could be full liquidation if there was only 1 normalizedDebt in the beginning
+                uint256 healthRatio = getHealthRatio(
+                    actualCollateral,
+                    actualNormalizedDebt,
+                    stateArgs.rate,
+                    stateArgs.exchangeRate,
+                    deploymentArgs.liquidationThreshold
+                );
+                console2.log("health ratio: ", healthRatio);
+                assert(healthRatio >= deploymentArgs.targetHealth);
+            }
+        }
+    }
+
+    /**
+     * Checks all possible liquidation outcomes. 
+     * NOTE: runs = 100,000 max_test_rejects = 100,000 
+     */
+    function testFuzz_AllLiquidationCategoriesNoRate(uint256 depositAmt, uint256 borrowAmt, uint256 exchangeRate) public {
+        // state args
+        StateArgs memory stateArgs;
+        stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
+        stateArgs.rate = NO_RATE;
+        
+        // starting position must be safe
+        uint256 maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+                deploymentArgs.liquidationThreshold
+            ) / stateArgs.rate; 
+        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;   
+
+        console2.log("minBorrowAmt: ", minBorrowAmt);
+        console2.log("maxBorrowAmt: ", maxBorrowAmt);
+        stateArgs.normalizedDebt = bound(
+            borrowAmt,
+            minBorrowAmt, 
+            maxBorrowAmt 
+        ); // [wad]
+        console2.log("stateArgs.normalizedDebt: ", stateArgs.normalizedDebt);
+        vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
+        
+        // position must be unsafe after exchange rate change
+        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
+                / stateArgs.collateral - 1; 
+        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate; 
+
+        stateArgs.exchangeRate = bound(
+            exchangeRate,
+            minExchangeRate, // if 1, max can be lower than min and it will fail 
+            maxExchangeRate 
+        ); // [ray] if the debt is zero, then there is no 
+        
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
+        vm.assume(stateArgs.exchangeRate > 0); 
+
+        // dust is set to 10% of total debt 
+        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / 10; // [rad] 
+        ionPool.updateIlkDust(ilkIndex, deploymentArgs.dust);
+      
+        // liquidations contract
+        uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        liquidation = new Liquidation(
+            address(ionPool), 
+            revenueRecipient, 
+            protocol,
+            exchangeRateOracles, 
+            liquidationThresholds, 
+            deploymentArgs.targetHealth, 
+            deploymentArgs.reserveFactor, 
+            deploymentArgs.maxDiscount
+        );
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
+
+        Results memory results = calculateExpectedLiquidationResults(deploymentArgs, stateArgs);
+        
         // lender
         supply(lender1, stateArgs.normalizedDebt);
         // borrower makes a SAFE position
@@ -216,16 +340,6 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         assert(ionPool.unbackedDebt(protocol) == stateArgs.normalizedDebt * stateArgs.rate);
     }
 
-    function testFuzz_IsolatingPartialLiquidations() public {
-        // 1. bound discount from 0 to maxDiscount (0, 0.2] 
-        // this bounds health ratio is from [0.8, 1)  
-        // 2. fuzz liabilityValue  
-        // 3. calculate health * liabilityValue = collateralValue 
-        // collateralValue = exchangeRate * collateralBalance * collateralFactor 
-        // exchangeRate * collateralBalance = collateralVallue / collateralFactor 
-        // make this into an inequality since we allow health ratio to drop  
-    }
-
     // fuzz collateral value, liability value
     // 1)
     // safe: normalizedDebt * [rate] <= collateral * [startingExchangeRate] * [liquidationThreshold]
@@ -240,25 +354,13 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
     // normalizedDebt * rate > collateral * exchangeRate * liquidationThreshold
     // normalizedDebt * rate / collateral / liquidationthreshold > exchangeRate
     // exchangeRate = bound(0, normalizedDebt * rate / collateral / liquidationthreshold)
-    //
-    // unsafe
-    // er = 2
-    // lq = 0.9 ray
-    // 
-    // fuzz logic
-    // pick collateral amount within the bound 
-    // pick normalizedDebt amount such that it is safe 
-    // assume normalizedDebt cannot be zero (otherwise it's impossible to get to unsafe health ratio)
-    // fuzz 
     function testFuzz_PartialLiquidations(uint256 depositAmt, uint256 borrowAmt, uint256 exchangeRate) public {
         // state args
         StateArgs memory stateArgs;
-        console2.log("bounding collateral");
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
         stateArgs.rate = NO_RATE;
 
         // starting position must be safe
-        console2.log("bounding normalizedDebt");
         stateArgs.normalizedDebt = bound(
             borrowAmt,
             0,
@@ -382,21 +484,6 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
      
         assert(actualNormalizedDebt == 0);
     }
-
-    // resulting target health can be extremely high with miniscule debt amounts
-    // function testFuzz_PartialCaseResultingTargetHealthRatioBound(
-
-    // ) public {
-
-    // }
-    // function testFuzz_PartialLiquidationToTargetHealthRatioFuzzedRate(
-    //     uint256 exchangeRate,
-    //     uint256 depositAmt,
-    //     uint256 borrowAmt,
-    //     uint256 rate
-    // ) public {
-
-    // }
 }
 
 // contract LiquidationFuzzBoundedConfigs is LiquidationSharedSetup {

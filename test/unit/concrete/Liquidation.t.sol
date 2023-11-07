@@ -274,8 +274,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         borrow(borrower1, ilkIndex, 100e18, 50e18);
 
         // rate updates 
-        // TODO: update the rate variable in storage 
-        // vm.store()
+        ionPool.setRate(ilkIndex, uint104(sArgs.rate)); 
 
         // exchangeRate drops
         reserveOracle1.setExchangeRate(uint72(sArgs.exchangeRate));
@@ -368,8 +367,10 @@ contract LiquidationTest is LiquidationSharedSetup {
      * Resulting collateral should be zero or above zero
      */
     function test_LiquidatorPaysForDust() public {
+
+        uint256 dust = uint256(0.5 ether).scaleUpToRad(18);  
         // set dust
-        ionPool.updateIlkDust(ilkIndex, uint256(0.5 ether).scaleUpToRad(18)); // [rad]
+        ionPool.updateIlkDust(ilkIndex, dust); // [rad]
 
         // calculating resulting state after liquidations
         DeploymentArgs memory dArgs;
@@ -383,6 +384,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         dArgs.targetHealth = 1.25e27; // [wad]
         dArgs.reserveFactor = 0e27; // [wad]
         dArgs.maxDiscount = 0.2e27; // [wad]
+        dArgs.dust = dust; // [rad] 
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
         console2.log("expectedResultingCollateral: ", results.collateral);
