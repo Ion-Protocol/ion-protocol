@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
@@ -58,7 +58,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
 
     constructor(
         uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
-        address _lido,
+        address _wstEth,
         address _stader,
         address _swell,
         address owner
@@ -67,7 +67,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     {
         historicalExchangeRates = _historicalExchangeRates;
 
-        ADDRESS0 = _lido;
+        ADDRESS0 = _wstEth;
         ADDRESS1 = _stader;
         ADDRESS2 = _swell;
 
@@ -118,33 +118,16 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
         lastUpdated = uint48(block.timestamp);
     }
 
-    // TODO: Move to a library
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            IWstEth lido = IWstEth(ADDRESS0);
-            exchangeRate = (lido.stEthPerToken()).toUint64();
+            IWstEth wstEth = IWstEth(ADDRESS0);
+            exchangeRate = wstEth.stEthPerToken().toUint64();
         } else if (ilkIndex == 1) {
-            // TODO: Use stader deposit contract `getExchangeRate()` instead
-            IStaderOracle stader = IStaderOracle(ADDRESS1);
-            (, uint256 totalETHBalance, uint256 totalETHXSupply) = stader.exchangeRate();
-            exchangeRate = (_computeStaderExchangeRate(totalETHBalance, totalETHXSupply)).toUint64();
+            IStaderStakePoolsManager stader = IStaderStakePoolsManager(ADDRESS1);
+            exchangeRate = stader.getExchangeRate().toUint64();
         } else {
             ISwEth swell = ISwEth(ADDRESS2);
-            exchangeRate = (swell.swETHToETHRate()).toUint64();
+            exchangeRate = swell.swETHToETHRate().toUint64();
         }
-    }
-
-    // TODO: Move to library
-    function _computeStaderExchangeRate(
-        uint256 totalETHBalance,
-        uint256 totalETHXSupply
-    )
-        internal
-        pure
-        returns (uint256)
-    {
-        if (totalETHBalance == 0 || totalETHXSupply == 0) return (10 ** PROVIDER_PRECISION);
-
-        return totalETHBalance * (10 ** PROVIDER_PRECISION) / totalETHXSupply;
     }
 }

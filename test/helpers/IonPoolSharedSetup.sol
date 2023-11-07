@@ -91,7 +91,14 @@ contract MockWhitelist {
 contract MockSpotOracle is SpotOracle {
     uint256 price;
 
-    constructor(uint8 ilkIndex, uint256 ltv, address reserveOracle, uint256 _price) SpotOracle(ilkIndex, ltv, reserveOracle) {
+    constructor(
+        uint8 ilkIndex,
+        uint256 ltv,
+        address reserveOracle,
+        uint256 _price
+    )
+        SpotOracle(ilkIndex, ltv, reserveOracle)
+    {
         price = _price;
     }
 
@@ -106,7 +113,7 @@ contract MockSpotOracle is SpotOracle {
 
 // TODO: created just to build the contract, delete if unnecessary later
 contract MockReserveOracle {
-    uint256 public currentExchangeRate; 
+    uint256 public currentExchangeRate;
 
     constructor(uint256 _currentExchangeRate) {
         currentExchangeRate = _currentExchangeRate;
@@ -134,7 +141,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     // --- Configs ---
     uint256 internal constant SPOT = 1e27; // [ray]
-    uint256 internal constant EXCHANGE_RATE = 1e18; // [wad] 
+    uint256 internal constant EXCHANGE_RATE = 1e18; // [wad]
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
@@ -252,8 +259,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
-            MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE); 
-            MockSpotOracle spotOracle = new MockSpotOracle(i, 1e27, address(reserveOracle), SPOT / 1e9); 
+            MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE);
+            MockSpotOracle spotOracle = new MockSpotOracle(i, 1e27, address(reserveOracle), SPOT / 1e9);
             spotOracles.push(spotOracle);
             ionPool.updateIlkSpot(i, spotOracle);
             ionPool.updateIlkDebtCeiling(i, debtCeilings[i]);

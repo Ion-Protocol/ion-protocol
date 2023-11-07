@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IStaderDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { EthXHandler } from "src/flash/handlers/EthXHandler.sol";
 import { IonPool } from "src/IonPool.sol";
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
@@ -28,7 +28,7 @@ import { console2 } from "forge-std/console2.sol";
 
 using RoundedMath for uint256;
 using RoundedMath for uint104;
-using StaderLibrary for IStaderDeposit;
+using StaderLibrary for IStaderStakePoolsManager;
 
 contract EthXHandler_ForkBase is IonHandler_ForkBase {
     uint8 internal constant ilkIndex = 1;

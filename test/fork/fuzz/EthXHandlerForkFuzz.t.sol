@@ -6,12 +6,12 @@ import { EthXHandler_ForkBase } from "test/fork/concrete/EthXHandlerFork.t.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
-import { IStaderDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
 
 import { Vm } from "forge-std/Vm.sol";
 
-using StaderLibrary for IStaderDeposit;
+using StaderLibrary for IStaderStakePoolsManager;
 
 abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
     using RoundedMath for *;

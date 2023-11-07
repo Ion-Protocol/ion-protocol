@@ -660,7 +660,6 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         if (amount < 0) {
-            // TODO: Round up using mulmod
             uint256 amountUint = uint256(-amount);
             uint256 amountWad = amountUint / RAY;
             if (amountUint % RAY > 0) ++amountWad;

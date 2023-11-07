@@ -2,17 +2,18 @@
 pragma solidity 0.8.21;
 
 import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
-import { IStaderDeposit, IStaderConfig } from "src/interfaces/DepositInterfaces.sol";
+import { IStaderStakePoolsManager, IStaderConfig } from "src/interfaces/ProviderInterfaces.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { Test } from "forge-std/Test.sol";
 
 contract StaderLibrary_FuzzTest is Test {
-    using StaderLibrary for IStaderDeposit;
+    using StaderLibrary for IStaderStakePoolsManager;
 
     // TODO: Move mainnet constants to one solidity file
-    IStaderDeposit private constant MAINNET_STADER_DEPOSIT = IStaderDeposit(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
+    IStaderStakePoolsManager private constant MAINNET_STADER_DEPOSIT =
+        IStaderStakePoolsManager(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
     address constant MAINNET_ETHX = 0xA35b1B31Ce002FBF2058D22F30f95D405200A15b;
 
     function setUp() external {

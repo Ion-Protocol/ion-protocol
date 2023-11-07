@@ -27,7 +27,6 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleAggregation() public {
-
         MockFeed mockFeed1 = new MockFeed();
         MockFeed mockFeed2 = new MockFeed();
         MockFeed mockFeed3 = new MockFeed();
@@ -52,7 +51,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 expectedExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
 
-        swEthReserveOracle.updateExchangeRate(); 
+        swEthReserveOracle.updateExchangeRate();
         uint256 actualExchangeRate = swEthReserveOracle.currentExchangeRate();
 
         // should output the expected as the minimum
@@ -85,7 +84,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         // set swETH exchange rate to be lower
         vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(newRateToStore));
-        swEthReserveOracle.updateExchangeRate(); 
+        swEthReserveOracle.updateExchangeRate();
 
         uint256 newExchangeRate = swEthReserveOracle.currentExchangeRate();
 
@@ -109,7 +108,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         // set Swell exchange rate to be lower
         vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(newRateToStore));
-        swEthReserveOracle.updateExchangeRate(); 
+        swEthReserveOracle.updateExchangeRate();
 
         uint256 newExchangeRate = swEthReserveOracle.currentExchangeRate();
 
@@ -134,8 +133,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         // set Swell exchange rate to new but within bounds
         vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(newRateToStore));
-        swEthReserveOracle.updateExchangeRate(); 
-
+        swEthReserveOracle.updateExchangeRate();
 
         uint256 newExchangeRate = swEthReserveOracle.currentExchangeRate();
 
@@ -161,7 +159,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
             MAX_CHANGE
         );
 
-        swEthReserveOracle.updateExchangeRate(); 
+        swEthReserveOracle.updateExchangeRate();
 
         // should be a min of
         // protocol exchange rate = 1.03
@@ -188,7 +186,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
             MAX_CHANGE
         );
 
-        swEthReserveOracle.updateExchangeRate(); 
+        swEthReserveOracle.updateExchangeRate();
 
         uint256 expectedMinExchangeRate = (0.9 ether + 0.8 ether) / 2;
 
@@ -207,7 +205,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         mockFeed1.setExchangeRate(SWETH_ILK_INDEX, mockFeed1ExchangeRate);
         mockFeed2.setExchangeRate(SWETH_ILK_INDEX, mockFeed2ExchangeRate);
         mockFeed3.setExchangeRate(SWETH_ILK_INDEX, mockFeed3ExchangeRate);
-        
+
         address[] memory feeds = new address[](3);
         feeds[0] = address(mockFeed1);
         feeds[1] = address(mockFeed2);
@@ -223,6 +221,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         swEthReserveOracle.updateExchangeRate();
 
         uint256 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
-        assertEq(swEthReserveOracle.currentExchangeRate(), swEthReserveOracle.currentExchangeRate(), "min exchange rate");
+        assertEq(
+            swEthReserveOracle.currentExchangeRate(), swEthReserveOracle.currentExchangeRate(), "min exchange rate"
+        );
     }
 }

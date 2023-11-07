@@ -232,7 +232,8 @@ contract Liquidation {
             liquidateArgs.repay = normalizedDebt * rate; // bound repay to total debt
             liquidateArgs.dart = normalizedDebt; // pay off all debt including dust
             liquidateArgs.gemOut = normalizedDebt * rate / liquidateArgs.price; // round down in protocol favor
-        } else { // if (normalizedDebt * rate - liquidateArgs.repay >= dust) do partial liquidation
+        } else {
+            // if (normalizedDebt * rate - liquidateArgs.repay >= dust) do partial liquidation
             // repay stays unchanged
             liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad]
             liquidateArgs.dart =

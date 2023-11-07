@@ -14,7 +14,7 @@ contract MockReserveOracle {
     function setExchangeRate(uint72 _exchangeRate) public {
         exchangeRate = _exchangeRate;
         console.log("set exchange rate: ", exchangeRate);
-    }    
+    }
 }
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {

@@ -357,7 +357,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
 
         // dust liquidations should result in zero debt
         uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
-     
+
         assert(actualNormalizedDebt == 0);
     }
 

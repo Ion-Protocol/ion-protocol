@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.21;
 
-import { IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
+import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
-
-// https://etherscan.io/address/0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737
 
 uint8 constant ethXDecimals = 18;
 
@@ -30,8 +28,7 @@ contract EthXReserveOracle is ReserveOracle {
 
     // @dev exchange rate is total LST supply divided by total underlying ETH
     // NOTE:
-    function _getProtocolExchangeRate() internal view override returns (uint256 protocolExchangeRate) {
-        (, uint256 totalEthBalance, uint256 totalEthXSupply) = IStaderOracle(protocolFeed).exchangeRate();
-        protocolExchangeRate = totalEthBalance.wadDivDown(totalEthXSupply);
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
+        return IStaderStakePoolsManager(protocolFeed).getExchangeRate();
     }
 }

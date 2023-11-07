@@ -6,12 +6,12 @@ import { WstEthHandler_ForkBase } from "test/fork/concrete/WstEthHandlerFork.t.s
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
-import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
 
 import { Vm } from "forge-std/Vm.sol";
 
-using LidoLibrary for ILidoWStEthDeposit;
+using LidoLibrary for IWstEth;
 
 abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
     using RoundedMath for *;

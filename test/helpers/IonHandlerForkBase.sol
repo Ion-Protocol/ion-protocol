@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
-import { ILidoWStEthDeposit, IStaderDeposit, ISwellDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 
@@ -39,9 +39,10 @@ interface IComposableStableSwapPool {
 abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     uint256 constant INITIAL_THIS_UNDERLYING_BALANCE = 20e18;
 
-    ILidoWStEthDeposit constant MAINNET_WSTETH = ILidoWStEthDeposit(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
-    IStaderDeposit constant MAINNET_STADER = IStaderDeposit(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
-    ISwellDeposit constant MAINNET_SWELL = ISwellDeposit(0xf951E335afb289353dc249e82926178EaC7DEd78);
+    IWstEth constant MAINNET_WSTETH = IWstEth(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    IStaderStakePoolsManager constant MAINNET_STADER =
+        IStaderStakePoolsManager(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
+    ISwEth constant MAINNET_SWELL = ISwEth(0xf951E335afb289353dc249e82926178EaC7DEd78);
 
     AggregatorV2V3Interface constant STETH_ETH_CHAINLINK =
         AggregatorV2V3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);

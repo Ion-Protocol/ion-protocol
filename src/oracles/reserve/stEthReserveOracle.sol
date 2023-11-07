@@ -2,20 +2,13 @@
 
 pragma solidity ^0.8.13;
 
-import { ILido, IWstEth } from "src/interfaces/ProviderInterfaces.sol";
+import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { console2 } from "forge-std/console2.sol";
 
 contract StEthReserveOracle is ReserveOracle {
-    using RoundedMath for uint256;
-
-    address public immutable lido;
     address public immutable wstEth;
 
     constructor(
-        address _lido,
         address _wstEth,
         uint8 _ilkIndex,
         address[] memory _feeds,
@@ -24,7 +17,6 @@ contract StEthReserveOracle is ReserveOracle {
     )
         ReserveOracle(_ilkIndex, _feeds, _quorum, _maxChange)
     {
-        lido = _lido;
         wstEth = _wstEth;
         initializeExchangeRate();
     }

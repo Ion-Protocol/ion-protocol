@@ -2,8 +2,8 @@
 pragma solidity 0.8.21;
 
 import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
-import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
-import { ILidoStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
+import { IStEth } from "src/interfaces/ProviderInterfaces.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -11,9 +11,9 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract LidoLibrary_FuzzTest is Test {
-    using LidoLibrary for ILidoWStEthDeposit;
+    using LidoLibrary for IWstEth;
 
-    ILidoWStEthDeposit private constant MAINNET_WSTETH = ILidoWStEthDeposit(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
+    IWstEth private constant MAINNET_WSTETH = IWstEth(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
 
     function setUp() external {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
@@ -26,7 +26,7 @@ contract LidoLibrary_FuzzTest is Test {
 
         uint256 ethAmountIn = LidoLibrary.getEthAmountInForLstAmountOut(MAINNET_WSTETH, lstAmount);
 
-        ILidoStEthDeposit stEth = ILidoStEthDeposit(MAINNET_WSTETH.stETH());
+        IStEth stEth = IStEth(MAINNET_WSTETH.stETH());
         vm.assume(ethAmountIn < stEth.getCurrentStakeLimit());
 
         vm.deal(address(this), ethAmountIn);
@@ -38,7 +38,7 @@ contract LidoLibrary_FuzzTest is Test {
         vm.assume(ethAmount != 0);
         vm.assume(ethAmount < type(uint128).max);
 
-        ILidoStEthDeposit stEth = ILidoStEthDeposit(MAINNET_WSTETH.stETH());
+        IStEth stEth = IStEth(MAINNET_WSTETH.stETH());
         vm.assume(ethAmount < stEth.getCurrentStakeLimit());
         uint256 lstAmountOut = LidoLibrary.getLstAmountOutForEthAmountIn(MAINNET_WSTETH, ethAmount);
 

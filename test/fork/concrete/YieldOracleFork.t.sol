@@ -55,20 +55,6 @@ contract YieldOracle_ForkTest is Test {
     uint64[ILK_COUNT][] apysHistory;
     uint64[ILK_COUNT][LOOK_BACK][] historicalExchangeRatesHistory;
 
-    function _computeStaderExchangeRate(
-        uint256 totalETHBalance,
-        uint256 totalETHXSupply
-    )
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 decimals = 10 ** 18;
-        uint256 newExchangeRate =
-            (totalETHBalance == 0 || totalETHXSupply == 0) ? decimals : totalETHBalance * decimals / totalETHXSupply;
-        return newExchangeRate;
-    }
-
     // We go back a certain amount of days and pretend the oracle was being
     // launched that many days ago. Then move the days forward until the current
     // day is reached. We run tests on these changes to make sure the expected
@@ -112,6 +98,8 @@ contract YieldOracle_ForkTest is Test {
         vm.selectFork(mainnetFork);
 
         IonPool mockIonPool = IonPool(address(new MockIonPool()));
+
+        console2.log(staderExchangeRateAddress);
 
         apyOracle =
         new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));

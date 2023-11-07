@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { ISwellDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { SwEthHandler } from "src/flash/handlers/SwEthHandler.sol";
 import { IonPool } from "src/IonPool.sol";
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
@@ -28,7 +28,7 @@ import { console2 } from "forge-std/console2.sol";
 
 using RoundedMath for uint256;
 using RoundedMath for uint104;
-using SwellLibrary for ISwellDeposit;
+using SwellLibrary for ISwEth;
 
 contract SwEthHandler_ForkBase is IonHandler_ForkBase {
     uint8 internal constant ilkIndex = 2;

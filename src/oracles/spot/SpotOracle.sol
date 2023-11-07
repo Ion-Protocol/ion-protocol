@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.21;
 
-
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
@@ -15,11 +14,11 @@ abstract contract SpotOracle {
     uint8 public immutable ilkIndex;
     uint256 public immutable ltv; // max LTV for a position (below liquidation threshold) [ray]
 
-    ReserveOracle public immutable reserveOracle; 
+    ReserveOracle public immutable reserveOracle;
 
-    // --- Errrors --- 
+    // --- Errors ---
     error InvalidLtv(uint256 ltv);
-    error InvalidReserveOracle(address _reserveOracle); 
+    error InvalidReserveOracle(address _reserveOracle);
 
     constructor(uint8 _ilkIndex, uint256 _ltv, address _reserveOracle) {
         ilkIndex = _ilkIndex;
@@ -27,7 +26,7 @@ abstract contract SpotOracle {
             revert InvalidLtv(_ltv);
         }
         if (address(_reserveOracle) == address(0)) {
-            revert InvalidReserveOracle(address(_reserveOracle)); 
+            revert InvalidReserveOracle(address(_reserveOracle));
         }
         ltv = _ltv;
         reserveOracle = ReserveOracle(_reserveOracle);
@@ -42,11 +41,12 @@ abstract contract SpotOracle {
     function getSpot() external view returns (uint256 spot) {
         uint256 price = getPrice(); // must be [wad]
         console2.log("price: ", price);
-        uint256 exchangeRate = ReserveOracle(reserveOracle).currentExchangeRate(); 
-        console2.log("exchangeRate: ", exchangeRate);   
-        uint256 min = Math.min(price, exchangeRate); // [wad] min the price with reserve oracle before multiplying by ltv 
+        uint256 exchangeRate = ReserveOracle(reserveOracle).currentExchangeRate();
+        console2.log("exchangeRate: ", exchangeRate);
+        uint256 min = Math.min(price, exchangeRate); // [wad] min the price with reserve oracle before multiplying by
+            // ltv
         console2.log("min: ", min);
-        spot = ltv.wadMulDown(min); // [ray] * [wad] / [wad] = [ray] 
+        spot = ltv.wadMulDown(min); // [ray] * [wad] / [wad] = [ray]
         console2.log("ltv", ltv);
         console2.log("spot: ", spot);
     }

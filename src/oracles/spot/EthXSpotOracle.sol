@@ -41,7 +41,7 @@ contract EthXSpotOracle is SpotOracle {
         uint256 usdPerEthX = uint256(redstoneEthXPriceFeed.latestAnswer()).scaleUpToWad(REDSTONE_DECIMALS); //
 
         // usd per ETH
-        (, int256 _usdPerEth, , ,) = usdPerEthChainlink.latestRoundData(); // price of stETH denominated in ETH
+        (, int256 _usdPerEth,,,) = usdPerEthChainlink.latestRoundData(); // price of stETH denominated in ETH
         uint256 usdPerEth = uint256(_usdPerEth).scaleUpToWad(CHAINLINK_DECIMALS); // price of stETH denominated in ETH
 
         // (USD per ETHx) / (USD per ETH) = (USD per ETHx) * (ETH per USD) = ETH per ETHx

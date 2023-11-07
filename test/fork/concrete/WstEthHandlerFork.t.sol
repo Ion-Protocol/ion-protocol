@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 import { WstEthHandler } from "src/flash/handlers/WstEthHandler.sol";
 import { IonPool } from "src/IonPool.sol";
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
@@ -28,7 +28,7 @@ import { console2 } from "forge-std/console2.sol";
 
 using RoundedMath for uint256;
 using RoundedMath for uint104;
-using LidoLibrary for ILidoWStEthDeposit;
+using LidoLibrary for IWstEth;
 
 contract WstEthHandler_ForkBase is IonHandler_ForkBase {
     uint8 internal constant ilkIndex = 0;

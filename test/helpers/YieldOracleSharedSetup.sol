@@ -14,7 +14,7 @@ uint256 constant WST_ETH_EXCHANGE_RATE = 1.2e18;
 uint256 constant STADER_ETH_EXCHANGE_RATE = 1.1e18;
 uint256 constant SWELL_ETH_EXCHANGE_RATE = 1.15e18;
 
-contract MockLido is IWstEth {
+contract MockLido {
     uint256 _exchangeRate = WST_ETH_EXCHANGE_RATE;
 
     function stEthPerToken() external view returns (uint256) {
@@ -26,12 +26,11 @@ contract MockLido is IWstEth {
     }
 }
 
-contract MockStader is IStaderOracle {
+contract MockStader {
     uint256 _exchangeRate = STADER_ETH_EXCHANGE_RATE;
 
-    function exchangeRate() external view returns (uint256, uint256, uint256) {
-        uint256 totalEthXSupply = 1.2e18;
-        return (0, totalEthXSupply * _exchangeRate / 1e18, totalEthXSupply);
+    function getExchangeRate() external view returns (uint256) {
+        return _exchangeRate;
     }
 
     function setNewRate(uint256 newRate) external {
@@ -39,7 +38,7 @@ contract MockStader is IStaderOracle {
     }
 }
 
-contract MockSwell is ISwEth {
+contract MockSwell {
     uint256 _exchangeRate = SWELL_ETH_EXCHANGE_RATE;
 
     function getRate() external view returns (uint256) {

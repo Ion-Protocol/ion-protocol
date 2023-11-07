@@ -3,13 +3,11 @@ pragma solidity ^0.8.21;
 
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
-import { ILido, IWstEth, IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
 import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
-
-import { console2 } from "forge-std/console2.sol";
 
 contract MockFeed {
     mapping(uint8 ilkIndex => uint256 exchangeRate) public exchangeRates;
@@ -35,7 +33,7 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
 
     // default reserve oracle configs
     uint256 constant MAX_CHANGE = 1e27; // 100%
-    uint8 constant ILK_INDEX = 0; 
+    uint8 constant ILK_INDEX = 0;
     uint8 constant QUORUM = 0;
 
     address constant LIDO = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
@@ -47,6 +45,7 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     address constant SWETH = 0xf951E335afb289353dc249e82926178EaC7DEd78;
     bytes32 constant SWETH_TO_ETH_RATE_SLOT = 0x0000000000000000000000000000000000000000000000000000000000000095;
 
+    address constant STADER_STAKE_POOLS_MANAGER = 0xcf5EA1b38380f6aF39068375516Daf40Ed70D299;
     address constant STADER_ORACLE = 0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737;
     bytes32 constant STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT =
         0x0000000000000000000000000000000000000000000000000000000000000103;
@@ -72,12 +71,16 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
         mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");
     }
 
-    function changeStaderOracleExchangeRate(uint256 totalEthBalance, uint256 totalSupply) internal returns (uint256 newExchangeRate) {
+    function changeStaderOracleExchangeRate(
+        uint256 totalEthBalance,
+        uint256 totalSupply
+    )
+        internal
+        returns (uint256 newExchangeRate)
+    {
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(totalEthBalance));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(totalSupply));
-        (, uint256 newTotalEthBalance, uint256 newTotalEthSupply) = IStaderOracle(STADER_ORACLE).exchangeRate();
-        newExchangeRate = newTotalEthBalance.wadDivDown(newTotalEthSupply); 
-        console2.log("newExchangeRate: ", newExchangeRate);
+        newExchangeRate = IStaderStakePoolsManager(STADER_STAKE_POOLS_MANAGER).getExchangeRate();
     }
 
     function changeStEthClBalance(uint256 clBalance) internal returns (uint256 newExchangeRate) {
@@ -86,9 +89,8 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
         newExchangeRate = IWstEth(WSTETH).stEthPerToken();
     }
 
-    function changeSwEthExchangeRate(uint256 exchangeRate) internal returns (uint256 newExchangeRate) { 
+    function changeSwEthExchangeRate(uint256 exchangeRate) internal returns (uint256 newExchangeRate) {
         // set swETH exchange rate to be lower
         vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(exchangeRate));
     }
-    
 }

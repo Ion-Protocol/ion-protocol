@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { SwellLibrary } from "src/libraries/SwellLibrary.sol";
-import { ISwellDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -10,9 +10,9 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract SwellLibrary_FuzzTest is Test {
-    using SwellLibrary for ISwellDeposit;
+    using SwellLibrary for ISwEth;
 
-    ISwellDeposit private constant MAINNET_SWELL = ISwellDeposit(0xf951E335afb289353dc249e82926178EaC7DEd78);
+    ISwEth private constant MAINNET_SWELL = ISwEth(0xf951E335afb289353dc249e82926178EaC7DEd78);
 
     function setUp() external {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
