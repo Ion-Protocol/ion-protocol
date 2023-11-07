@@ -275,8 +275,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
     }
 
-    function test_setUp() public virtual override {
-        super.test_setUp();
+    function test_SetUp() public virtual override {
+        super.test_SetUp();
         assertEq(address(ionPool.underlying()), _getUnderlying());
         assertEq(ionPool.implementation(), address(ionPoolImpl));
 

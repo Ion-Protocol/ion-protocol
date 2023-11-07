@@ -111,7 +111,7 @@ contract YieldOracle_ForkTest is Test {
         historicalExchangeRatesHistory.push(apyOracle.getFullHistoricalExchangesRatesArray());
     }
 
-    function testFork_apyOracleUpdatesWithRealData() public {
+    function testFork_YieldOracleUpdatesWithRealData() public {
         for (uint256 i = 0; i < blockNumbersToRollTo.length; i++) {
             vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), blockNumbersToRollTo[i]);
             uint64 currentIndex = apyOracle.currentIndex();

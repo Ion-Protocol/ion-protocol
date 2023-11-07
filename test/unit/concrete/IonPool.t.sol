@@ -47,7 +47,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
         }
     }
 
-    function test_setUp() public override {
+    function test_SetUp() public override {
         assertEq(ionPool.weth(), INITIAL_LENDER_UNDERLYING_BALANCE);
         assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
         assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
@@ -1037,7 +1037,7 @@ contract IonPool_InterestTest is IonPoolSharedSetup {
         }
     }
 
-    // function test_accrueInterest() public {
+    // function test_AccrueInterest() public {
     //     uint256 collateralDepositAmount = 10e18;
     //     uint256 normalizedBorrowAmount = 5e18;
 
@@ -1090,7 +1090,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
     // Random non admin address
     address internal immutable NON_ADMIN = vm.addr(33);
 
-    function test_initializeIlk() public {
+    function test_InitializeIlk() public {
         address newIlkAddress = vm.addr(12_451_234);
 
         vm.expectRevert(
@@ -1120,7 +1120,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         ionPool.initializeIlk(address(0));
     }
 
-    function test_updateIlkSpot() public {
+    function test_UpdateIlkSpot() public {
         SpotOracle newSpotAddress = SpotOracle(vm.addr(12_451_234));
 
         for (uint8 i = 0; i < collaterals.length; i++) {
@@ -1140,7 +1140,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         }
     }
 
-    function test_updateIlkDebtCeiling() public {
+    function test_UpdateIlkDebtCeiling() public {
         uint256 newIlkDebtCeiling = 200e45;
 
         for (uint8 i = 0; i < collaterals.length; i++) {
@@ -1160,7 +1160,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         }
     }
 
-    function test_updateIlkDust() public {
+    function test_UpdateIlkDust() public {
         uint256 newIlkDust = 2e45;
 
         for (uint8 i = 0; i < collaterals.length; i++) {
@@ -1180,7 +1180,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         }
     }
 
-    function test_updateInterestRateModule() public {
+    function test_UpdateInterestRateModule() public {
         vm.expectRevert(abi.encodeWithSelector(IonPool.InvalidInterestRateModule.selector, 0));
         ionPool.updateInterestRateModule(InterestRate(address(0)));
 
@@ -1242,7 +1242,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         assertEq(ionPool.whitelist(), newWhitelist);
     }
 
-    function test_pauseUnsafeActions() public {
+    function test_PauseUnsafeActions() public {
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
         );
@@ -1260,7 +1260,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         ionPool.pauseUnsafeActions();
     }
 
-    function test_unpauseUnsafeActions() public {
+    function test_UnpauseUnsafeActions() public {
         vm.expectRevert(
             abi.encodeWithSelector(IonPausableUpgradeable.ExpectedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
         );
@@ -1281,7 +1281,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), false);
     }
 
-    function test_pauseSafeActions() public {
+    function test_PauseSafeActions() public {
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
         );
@@ -1299,7 +1299,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         ionPool.pauseSafeActions();
     }
 
-    function test_unpauseSafeActions() public {
+    function test_UnpauseSafeActions() public {
         vm.expectRevert(
             abi.encodeWithSelector(IonPausableUpgradeable.ExpectedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
         );

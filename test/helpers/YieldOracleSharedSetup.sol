@@ -98,7 +98,7 @@ abstract contract YieldOracleSharedSetup is Test {
         oracle.updateIonPool(mockIonPool);
     }
 
-    function test_setUp() public virtual {
+    function test_SetUp() public virtual {
         for (uint256 i = 0; i < historicalExchangeRatesInitial.length; i++) {
             for (uint256 j = 0; j < historicalExchangeRatesInitial[i].length; j++) {
                 if (i == 0) {

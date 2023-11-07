@@ -20,7 +20,7 @@ contract StaderLibrary_FuzzTest is Test {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
     }
 
-    function testForkFuzz_getEthAmountInForLstAmountOut(uint256 lstAmount) external {
+    function testForkFuzz_GetEthAmountInForLstAmountOut(uint256 lstAmount) external {
         vm.assume(lstAmount != 0);
         vm.assume(lstAmount < type(uint96).max);
 
@@ -38,7 +38,7 @@ contract StaderLibrary_FuzzTest is Test {
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(this)), lstAmount);
     }
 
-    function testForkFuzz_getLstAmountOutForEthAmountIn(uint256 ethAmount) external {
+    function testForkFuzz_GetLstAmountOutForEthAmountIn(uint256 ethAmount) external {
         vm.assume(ethAmount != 0);
         vm.assume(ethAmount < type(uint96).max);
 

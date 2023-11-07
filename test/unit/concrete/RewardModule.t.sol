@@ -21,7 +21,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         underlying.mint(address(this), INITIAL_UNDERYLING);
     }
 
-    function test_setUp() external {
+    function test_SetUp() external {
         assertEq(rewardModule.name(), NAME);
         assertEq(rewardModule.symbol(), SYMBOL);
         assertEq(rewardModule.decimals(), DECIMALS);
@@ -31,7 +31,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), 0);
     }
 
-    function test_mintRewardBasic() external {
+    function test_MintRewardBasic() external {
         uint256 amountOfRewards = 100e18;
 
         underlying.approve(address(rewardModule), INITIAL_UNDERYLING);
@@ -57,7 +57,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         rewardModule.mintToTreasury(1 wei);
     }
 
-    function test_burnRewardBasic() external {
+    function test_BurnRewardBasic() external {
         uint256 amountOfRewards = 100e18;
 
         underlying.approve(address(rewardModule), INITIAL_UNDERYLING);
@@ -73,7 +73,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         assertEq(rewardModule.balanceOf(address(this)), 0);
     }
 
-    function test_mintRewardWithSupplyFactorChange() external {
+    function test_MintRewardWithSupplyFactorChange() external {
         uint256 amountOfRewards = 100e18;
         uint256 supplyFactorOld = rewardModule.supplyFactor();
 
@@ -117,7 +117,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         rewardModule.mint(address(this), 1 wei);
     }
 
-    function test_burnRewardWithSupplyFactorChange() external {
+    function test_BurnRewardWithSupplyFactorChange() external {
         uint256 amountOfRewards = 100e18;
         uint256 supplyFactorOld = rewardModule.supplyFactor();
 

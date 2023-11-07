@@ -19,7 +19,7 @@ contract SwellLibrary_FuzzTest is Test {
     }
 
     // Checks that ethAmountIn given by function
-    function testForkFuzz_getEthAmountInForLstAmountOut(uint256 lstAmount) external {
+    function testForkFuzz_GetEthAmountInForLstAmountOut(uint256 lstAmount) external {
         vm.assume(lstAmount != 0);
         vm.assume(lstAmount < type(uint128).max);
 
@@ -31,7 +31,7 @@ contract SwellLibrary_FuzzTest is Test {
         assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(this)), lstAmount);
     }
 
-    function testForkFuzz_getLstAmountOutForEthAmountIn(uint256 ethAmount) external {
+    function testForkFuzz_GetLstAmountOutForEthAmountIn(uint256 ethAmount) external {
         vm.assume(ethAmount != 0);
         vm.assume(ethAmount < type(uint128).max);
 
