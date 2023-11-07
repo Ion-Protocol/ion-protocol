@@ -9,7 +9,7 @@ interface IWstEth {
     function getStETHByWstETH(uint256 stEthAmount) external view returns (uint256 wstEthAmount);
 }
 
-contract StEthSpotOracle is SpotOracle {
+contract WstEthSpotOracle is SpotOracle {
     IChainlink immutable stEthToEthChainlink;
     IWstEth immutable wstEth;
 

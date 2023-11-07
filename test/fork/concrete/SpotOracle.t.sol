@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { SwEthSpotOracle } from "src/oracles/spot/SwEthSpotOracle.sol";
-import { StEthSpotOracle } from "src/oracles/spot/StEthSpotOracle.sol";
+import { WstEthSpotOracle } from "src/oracles/spot/WstEthSpotOracle.sol";
 import { EthXSpotOracle } from "src/oracles/spot/EthXSpotOracle.sol";
 
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
@@ -79,14 +79,14 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
     // --- stETH Spot Oracle Test ---
 
-    function test_StEthSpotOracleViewPrice() public {
+    function test_WstEthSpotOracleViewPrice() public {
         // mainnet values
         // stETH per wstETH = 1143213397000524230
         // ETH per stETH    =  999698915670794300
         // ETH per wstETH   = (ETH per stETH) * (stETH per wstETH) = 1.1428692e18 (1142869193361749358)
         uint256 ltv = 0.5e27; // 0.5
 
-        stEthSpotOracle = new StEthSpotOracle(
+        stEthSpotOracle = new WstEthSpotOracle(
             STETH_ILK_INDEX, 
             ltv,
             address(stEthReserveOracle), 
@@ -98,10 +98,10 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         assertEq(price, 1_142_869_193_361_749_358, "ETH per wstETH price");
     }
 
-    function test_StEthSpotOracleViewSpot() public {
+    function test_WstEthSpotOracleViewSpot() public {
         uint256 ltv = 0.8e27; // 0.8
 
-        stEthSpotOracle = new StEthSpotOracle(
+        stEthSpotOracle = new WstEthSpotOracle(
             STETH_ILK_INDEX, 
             ltv, 
             address(stEthReserveOracle),
@@ -115,10 +115,10 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         assertEq(stEthSpotOracle.getSpot(), expectedSpot, "spot");
     }
 
-    function test_StEthSpotOracleUsesPriceAsMin() public {
+    function test_WstEthSpotOracleUsesPriceAsMin() public {
         uint256 ltv = 1e27; // 1 100%
 
-        stEthSpotOracle = new StEthSpotOracle(
+        stEthSpotOracle = new WstEthSpotOracle(
             STETH_ILK_INDEX, 
             ltv, 
             address(stEthReserveOracle),
