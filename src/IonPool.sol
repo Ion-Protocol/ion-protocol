@@ -15,8 +15,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 contract IonPool is IonPausableUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
@@ -378,22 +376,14 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         if (timestampIncrease > 0) {
-            console.log("1");
             Ilk storage ilk = $.ilks[ilkIndex];
-            console.log("2", ilk.rate, newRateIncrease, timestampIncrease);
             ilk.rate += newRateIncrease;
-            console.log("3");
             ilk.lastRateUpdate += timestampIncrease;
-            console.log("4");
             uint256 newTotalDebt = $.debt + newDebtIncrease;
-            console.log("5");
             $.debt = newTotalDebt;
-            console.log("6");
 
             _setSupplyFactor(supplyFactor() + supplyFactorIncrease);
-            console.log("7");
             _mintToTreasury(treasuryMintAmount);
-            console.log("8");
         }
     }
 
@@ -427,7 +417,6 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         if (borrowRate == 0) return (0, 0, 0, 0, 0);
 
         uint256 borrowRateExpT = _rpow(borrowRate + RAY, block.timestamp - ilk.lastRateUpdate, RAY);
-        console.log("borrowRate", borrowRate, borrowRate + RAY, borrowRateExpT);
 
         // Unsafe cast OK
         timestampIncrease = uint48(block.timestamp) - ilk.lastRateUpdate;

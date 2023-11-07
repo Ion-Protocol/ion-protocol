@@ -4,8 +4,6 @@ pragma solidity 0.8.21;
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
 import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 // forgefmt: disable-start
 
 struct IlkData {
@@ -165,8 +163,6 @@ contract InterestRate {
             uint256(ilkData.adjustedAboveKinkSlope) << ADJUSTED_ABOVE_KINK_SLOPE_SHIFT
                 | uint256(ilkData.minimumAboveKinkSlope) << MINIMUM_ABOVE_KINK_SLOPE_SHIFT
         );
-
-        console.log("packedConfig_c", packedConfig_c);
     }
 
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
@@ -224,8 +220,6 @@ contract InterestRate {
             uint96((packedConfig_c & ADJUSTED_ABOVE_KINK_SLOPE_MASK) >> ADJUSTED_ABOVE_KINK_SLOPE_SHIFT);
         uint96 minimumAboveKinkSlope =
             uint96((packedConfig_c & MINIMUM_ABOVE_KINK_SLOPE_MASK) >> MINIMUM_ABOVE_KINK_SLOPE_SHIFT);
-
-        console.log(packedConfig_c, packedConfig_c & ADJUSTED_ABOVE_KINK_SLOPE_MASK, (packedConfig_c & ADJUSTED_ABOVE_KINK_SLOPE_MASK) >> ADJUSTED_ABOVE_KINK_SLOPE_SHIFT);
 
         ilkData = IlkData({
             adjustedProfitMargin: adjustedProfitMargin,
@@ -285,17 +279,13 @@ contract InterestRate {
         uint256 minimumBelowKinkSlope =
             (ilkData.minimumKinkRate - ilkData.minimumBaseRate).rayDivDown(optimalUtilizationRateRay);
 
-        console.log("util", utilizationRate, totalIlkDebt, totalEthSupply);
-        console.log("opt", optimalUtilizationRateRay);
         if (utilizationRate < optimalUtilizationRateRay) {
             uint256 adjustedBorrowRate = adjustedBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.adjustedBaseRate;
             uint256 minimumBorrowRate = minimumBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.minimumBaseRate;
 
             if (adjustedBorrowRate < minimumBorrowRate) {
-                console.log("branching min", minimumBorrowRate);
                 return (minimumBorrowRate, ilkData.reserveFactor.scaleUpToRay(4));
             } else {
-                console.log("branching adj", adjustedBorrowRate);
                 return (adjustedBorrowRate, ilkData.reserveFactor.scaleUpToRay(4));
             }
         } else {
@@ -308,9 +298,6 @@ contract InterestRate {
 
             // [WAD] * [RAY] / [WAD] = [RAY]
             uint256 adjustedBorrowRate = ilkData.adjustedAboveKinkSlope.rayMulDown(excessUtil) + adjustedNormalRate;
-            console.log(
-                "adjustedBorrowRate", adjustedBorrowRate, adjustedBelowKinkSlope, ilkData.adjustedAboveKinkSlope
-            );
             uint256 minimumBorrowRate = ilkData.minimumAboveKinkSlope.rayMulDown(excessUtil) + minimumNormalRate;
 
             if (adjustedBorrowRate < minimumBorrowRate) {

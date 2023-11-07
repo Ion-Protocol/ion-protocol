@@ -17,6 +17,8 @@ uint256 constant COLLATERAL_COUNT = 3;
 using RoundedMath for uint256;
 using Strings for uint256;
 
+// TODO: Rename all tests using proper casing
+
 abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEvents {
     bool changeSupplyFactor;
     uint256 newSupplyFactor;
@@ -750,7 +752,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
         uint256 normalizedRepayAmount;
     }
 
-    function testFuzz_Repay(
+    function testFuzz_Repay1(
         uint256 collateralDepositAmount,
         uint256 normalizedBorrowAmount,
         uint256 normalizedRepayAmount
@@ -1306,7 +1308,7 @@ contract IonPool_BorrowerFuzzTest is IonPool_BorrowerFuzzTestBase {
         warpTime = true;
         warpTimeAmount = bound(_warpTimeAmount, 100, 10_000);
 
-        testFuzz_Repay(collateralDepositAmount, normalizedBorrowAmount, normalizedRepayAmount);
+        testFuzz_Repay1(collateralDepositAmount, normalizedBorrowAmount, normalizedRepayAmount);
     }
 
     function testFuzz_RepayForDifferentAddress_WithTimeWarp(

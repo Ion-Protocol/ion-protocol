@@ -126,7 +126,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     // --- Configs ---
     uint256 internal constant SPOT = 1e27; // [ray]
-    uint96 internal constant minimumProfitMargin = 0.0085e27 / SECONDS_IN_A_YEAR; // 0.85%
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
@@ -136,6 +135,18 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
 
     ERC20PresetMinterPauser[] internal mintableCollaterals = [wstEth, ethX, swEth];
+
+    uint96 internal constant wstEthMinimumProfitMargin = 70677685926057170; // 7.0677685926057170E-11 in RAY
+    uint96 internal constant ethXMinimumProfitMargin = 91263663293261740; // 9.1263663293261740E-11 in RAY
+    uint96 internal constant swEthMinimumProfitMargin = 81452622424649230; // 8.145262242464923e-11 in RAY
+
+    uint96 internal constant wstEthAdjustedAboveKinkSlope = 25017682370176442000; // 2.5017682370176444e-08 in RAY
+    uint96 internal constant ethXAdjustedAboveKinkSlope = 39693222042558280000; // 3.9693222042558285e-08 in RAY
+    uint96 internal constant swEthAdjustedAboveKinkSlope = 21397408289658417000; // 2.1397408289658418e-08 in RAY
+
+    uint96 internal constant wstEthMinimumAboveKinkSlope = 26390655175013278000; 
+    uint96 internal constant ethXMinimumAboveKinkSlope = 48899593146619404000;
+    uint96 internal constant swEthMinimumAboveKinkSlope = 21366508315720827000;
 
     uint16 internal constant wstEthAdjustedReserveFactor = 0.1e4;
     uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
@@ -155,6 +166,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
+    uint96[] internal minimumProfitMargins = [wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin];
     uint16[] internal adjustedReserveFactors =
         [wstEthAdjustedReserveFactor, ethXAdjustedReserveFactor, swEthAdjustedReserveFactor];
     uint16[] internal optimalUtilizationRates =
@@ -162,6 +174,9 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     uint16[] internal distributionFactors = [wstEthDistributionFactor, ethXDistributionFactor, swEthDistributionFactor];
     uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
     MockSpotOracle[] internal spotOracles;
+
+    uint96[] internal adjustedAboveKinkSlopes = [wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope];
+    uint96[] internal minimumAboveKinkSlopes = [wstEthMinimumAboveKinkSlope, ethXMinimumAboveKinkSlope, swEthMinimumAboveKinkSlope];
 
     IlkData[] ilkConfigs;
 
@@ -184,7 +199,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         IlkData memory ilkConfig;
         for (uint256 i = 0; i < collaterals.length; i++) {
             ilkConfig = IlkData({
-                adjustedProfitMargin: minimumProfitMargin,
+                adjustedProfitMargin: minimumProfitMargins[i],
                 minimumKinkRate: 0,
 
                 reserveFactor: adjustedReserveFactors[i],
@@ -193,8 +208,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
                 optimalUtilizationRate: optimalUtilizationRates[i],
                 distributionFactor: distributionFactors[i],
 
-                adjustedAboveKinkSlope: 0.9999e4,
-                minimumAboveKinkSlope: 0.9999e4
+                adjustedAboveKinkSlope: adjustedAboveKinkSlopes[i],
+                minimumAboveKinkSlope: minimumAboveKinkSlopes[i]
             });
 
             ilkConfigs.push(ilkConfig);
@@ -282,7 +297,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             // assertEq(reserveFactor, adjustedReserveFactors[i].scaleUpToRay(4));
 
             IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
-            assertEq(ilkConfig.adjustedProfitMargin, minimumProfitMargin);
+            assertEq(ilkConfig.adjustedProfitMargin, minimumProfitMargins[i]);
             assertEq(ilkConfig.minimumKinkRate, 0);
 
             assertEq(ilkConfig.reserveFactor, adjustedReserveFactors[i]);
@@ -291,8 +306,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
             assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
 
-            assertEq(ilkConfig.adjustedAboveKinkSlope, 700e4);
-            assertEq(ilkConfig.minimumAboveKinkSlope, 700e4);
+            assertEq(ilkConfig.adjustedAboveKinkSlope, adjustedAboveKinkSlopes[i]);
+            assertEq(ilkConfig.minimumAboveKinkSlope, minimumAboveKinkSlopes[i]);
         }
 
         assertEq(interestRateModule.collateralCount(), collaterals.length);

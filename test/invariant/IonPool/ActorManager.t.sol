@@ -297,14 +297,14 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         return !failed();
     }
 
-    function invariant_SumOfAllIlkTotalNormalizedDebtTimesIlkRateEqualsTotalDebt() external returns (bool) {
+    function invariant_SumOfAllIlkTotalNormalizedDebtTimesIlkRateEqualsTotalDebtPlusUnbackedDebt() external returns (bool) {
         uint256 totalDebt;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             uint256 totalNormalizedDebt = ionPool.totalNormalizedDebt(i);
             uint256 ilkRate = ionPool.rate(i);
             totalDebt += totalNormalizedDebt * ilkRate;
         }
-        assertEq(totalDebt, ionPool.debt());
+        assertEq(totalDebt, ionPool.debt() + ionPool.totalUnbackedDebt());
 
         return !failed();
     }
