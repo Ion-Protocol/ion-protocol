@@ -9,7 +9,7 @@ import { EthXSpotOracle } from "src/oracles/spot/EthXSpotOracle.sol";
 
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
-import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
+import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { EthXReserveOracle } from "src/oracles/reserve/EthxReserveOracle.sol";
 
 import { IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
@@ -51,7 +51,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
         // instantiate reserve oracles
         address[] memory feeds = new address[](3);
-        stEthReserveOracle = new StEthReserveOracle(
+        stEthReserveOracle = new WstEthReserveOracle(
             WSTETH,
             ILK_INDEX,
             feeds,

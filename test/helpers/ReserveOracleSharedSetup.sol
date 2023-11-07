@@ -2,7 +2,7 @@
 pragma solidity ^0.8.21;
 
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
+import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { IWstEth, IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
