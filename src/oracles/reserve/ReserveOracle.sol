@@ -5,7 +5,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
@@ -14,7 +14,7 @@ uint8 constant MAX_FEED_COUNT = 3;
 
 abstract contract ReserveOracle is Ownable {
     using SafeCast for *;
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     uint8 public immutable ilkIndex;
 

@@ -2,10 +2,10 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 library InvariantHelpers {
-    using RoundedMath for *;
+    using WadRayMath for *;
 
     /**
      * @return utilizationRate in RAD

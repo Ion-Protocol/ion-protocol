@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 import { IIonPoolEvents } from "test/helpers/IIonPoolEvents.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
@@ -14,7 +14,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 uint256 constant COLLATERAL_COUNT = 3;
 
-using RoundedMath for uint256;
+using WadRayMath for uint256;
 using Strings for uint256;
 
 abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEvents {

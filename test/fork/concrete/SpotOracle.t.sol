@@ -15,13 +15,13 @@ import { EthXReserveOracle } from "src/oracles/reserve/EthxReserveOracle.sol";
 import { IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
 // fork tests for integrating with external contracts
 contract SpotOracleForkTest is ReserveOracleSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     // spot oracle constructor configs
     address constant MAINNET_ETH_PER_STETH_CHAINLINK = 0x86392dC19c0b719886221c78AB11eb8Cf5c52812;

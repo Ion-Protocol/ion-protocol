@@ -4,12 +4,12 @@ pragma solidity ^0.8.21;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { console2 } from "forge-std/console2.sol";
 
 // pushes spot price from value feeds to the IonPool contract
 abstract contract SpotOracle {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     uint8 public immutable ilkIndex;
     uint256 public immutable ltv; // max LTV for a position (below liquidation threshold) [ray]

@@ -3,12 +3,12 @@ pragma solidity 0.8.21;
 
 import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 uint8 constant ethXDecimals = 18;
 
 contract EthXReserveOracle is ReserveOracle {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     address public protocolFeed;
 

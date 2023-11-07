@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "forge-std/console.sol";
@@ -11,7 +11,7 @@ import "forge-std/console.sol";
  * Fixes deployment configs and fuzzes potential states
  */
 contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeCast for *;
 
     DeploymentArgs internal deploymentArgs;
@@ -382,7 +382,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
 // }
 
 // contract LiquidationFuzzTest is LiquidationSharedSetup {
-//     using RoundedMath for uint256;
+//     using WadRayMath for uint256;
 
 //     address constant REVENUE_RECIPIENT = address(1);
 //     address constant BORROWER = address(2);

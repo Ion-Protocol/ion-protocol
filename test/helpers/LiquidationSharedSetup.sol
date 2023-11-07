@@ -5,7 +5,7 @@ pragma solidity ^0.8.21;
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import "forge-std/console.sol";
 
 contract MockReserveOracle {
@@ -18,7 +18,7 @@ contract MockReserveOracle {
 }
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     uint256 constant WAD = 1e18;
     uint256 constant RAY = 1e27;

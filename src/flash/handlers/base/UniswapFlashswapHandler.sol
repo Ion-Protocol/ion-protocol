@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -25,7 +25,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
  * Uniswap enforces that callback is only called on `msg.sender`.
  */
 abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
-    using RoundedMath for *;
+    using WadRayMath for *;
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 

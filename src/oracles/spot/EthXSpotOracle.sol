@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { IChainlink } from "src/interfaces/IChainlink.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 interface IRedstonePriceFeed {
     function latestAnswer() external view returns (int256 answer);
@@ -14,7 +14,7 @@ uint8 constant REDSTONE_DECIMALS = 8;
 uint8 constant CHAINLINK_DECIMALS = 8;
 
 contract EthXSpotOracle is SpotOracle {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     IRedstonePriceFeed immutable redstoneEthXPriceFeed;
     IChainlink immutable usdPerEthChainlink;

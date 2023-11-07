@@ -5,7 +5,7 @@ import { Whitelist } from "src/Whitelist.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { RewardModule } from "src/reward/RewardModule.sol";
 import { InterestRate } from "src/InterestRate.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -18,7 +18,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 contract IonPool is IonPausableUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
-    using RoundedMath for *;
+    using WadRayMath for *;
     using Math for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 

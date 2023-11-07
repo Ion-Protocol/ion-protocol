@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 
 library SwellLibrary {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     function getEthAmountInForLstAmountOut(ISwEth swEth, uint256 lstAmount) internal view returns (uint256) {
         return lstAmount.wadDivUp(swEth.ethToSwETHRate());

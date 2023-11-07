@@ -6,11 +6,11 @@ import { console2 } from "forge-std/Script.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { YieldOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "src/YieldOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 contract DeployYieldOracleScript is BaseScript {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
 

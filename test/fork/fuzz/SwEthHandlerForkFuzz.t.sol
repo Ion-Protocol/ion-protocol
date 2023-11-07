@@ -5,7 +5,7 @@ import { SwEthHandler_ForkBase } from "test/fork/concrete/SwEthHandlerFork.t.sol
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { SwellLibrary } from "src/libraries/SwellLibrary.sol";
 
@@ -14,7 +14,7 @@ import { Vm } from "forge-std/Vm.sol";
 using SwellLibrary for ISwEth;
 
 abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
-    using RoundedMath for *;
+    using WadRayMath for *;
 
     function testForkFuzz_FlashLoanCollateral(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         initialDeposit = bound(initialDeposit, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);

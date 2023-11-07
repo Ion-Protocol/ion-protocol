@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
 import { IWstEth, IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 
 contract MockFeed {
     mapping(uint8 ilkIndex => uint256 exchangeRate) public exchangeRates;
@@ -25,7 +25,7 @@ contract MockFeed {
 
 // fork tests for integrating with external contracts
 contract ReserveOracleSharedSetup is IonPoolSharedSetup {
-    using RoundedMath for *;
+    using WadRayMath for *;
 
     uint8 constant STETH_ILK_INDEX = 0;
     uint8 constant SWETH_ILK_INDEX = 1;

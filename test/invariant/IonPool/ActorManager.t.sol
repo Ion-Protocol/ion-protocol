@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { GemJoin } from "src/join/GemJoin.sol";
 import { IonPool } from "src/IonPool.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
 import { HEVM } from "test/helpers/echidna/IHevm.sol";
@@ -18,7 +18,7 @@ import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
 
-using RoundedMath for uint256;
+using WadRayMath for uint256;
 
 contract ActorManager is CommonBase, StdCheats, StdUtils {
     IonPool ionPool;

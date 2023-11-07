@@ -2,11 +2,11 @@
 pragma solidity 0.8.21;
 
 import { IStaderStakePoolsManager, IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 library StaderLibrary {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using Math for uint256;
 
     function getEthAmountInForLstAmountOut(

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from
@@ -13,7 +13,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  * @title RewardModule
  */
 abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeERC20 for IERC20;
 
     /**

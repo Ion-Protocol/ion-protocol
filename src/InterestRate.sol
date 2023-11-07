@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 // forgefmt: disable-start
 
@@ -73,7 +73,7 @@ uint8 constant MINIMUM_ABOVE_KINK_SLOPE_SHIFT = 96;
 uint48 constant SECONDS_IN_A_YEAR = 31_536_000;
 
 contract InterestRate {
-    using RoundedMath for *;
+    using WadRayMath for *;
 
     error CollateralIndexOutOfBounds();
     error DistributionFactorsDoNotSumToOne(uint256 sum);

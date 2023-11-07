@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { IStEth, IWstEth } from "src/interfaces/ProviderInterfaces.sol";

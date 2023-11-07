@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardModule } from "src/reward/RewardModule.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 import { RewardModuleSharedSetup } from "test/helpers/RewardModuleSharedSetup.sol";
 
@@ -13,7 +13,7 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     function testFuzz_MintRewardBasic(uint256 amountOfRewards) external {
         vm.assume(amountOfRewards != 0);

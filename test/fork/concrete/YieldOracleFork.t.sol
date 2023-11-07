@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { YieldOracle, ILK_COUNT, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION } from "src/YieldOracle.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -40,7 +40,7 @@ contract YieldOracleExposed is YieldOracle {
 }
 
 contract YieldOracle_ForkTest is Test {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeCast for uint256;
     using Strings for *;
 

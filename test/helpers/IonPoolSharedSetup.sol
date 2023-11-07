@@ -7,7 +7,7 @@ import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { BaseTestSetup } from "test/helpers/BaseTestSetup.sol";
@@ -22,7 +22,7 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
 
-using RoundedMath for uint16;
+using WadRayMath for uint16;
 
 // struct IlkData {
 //                                                        _

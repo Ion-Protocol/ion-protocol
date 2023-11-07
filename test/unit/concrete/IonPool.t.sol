@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { GemJoin } from "src/join/GemJoin.sol";
 import { IonPool } from "src/IonPool.sol";
-import { WAD, RAY, RAD, RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WAD, RAY, RAD, WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { InterestRate, IlkData } from "src/InterestRate.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
@@ -19,7 +19,7 @@ import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.so
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 using Strings for uint256;
-using RoundedMath for uint256;
+using WadRayMath for uint256;
 
 contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
     function setUp() public override {

@@ -3,10 +3,10 @@ pragma solidity 0.8.21;
 
 import { IStEth } from "src/interfaces/ProviderInterfaces.sol";
 import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 library LidoLibrary {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     error WstEthDepositFailed();
 

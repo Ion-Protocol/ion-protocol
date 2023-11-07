@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RoundedMath, WAD, RAY, RAD } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, WAD, RAY, RAD } from "src/libraries/math/WadRayMath.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
@@ -23,8 +23,8 @@ import { StdUtils } from "forge-std/StdUtils.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-using RoundedMath for uint256;
-using RoundedMath for uint16;
+using WadRayMath for uint256;
+using WadRayMath for uint16;
 using LibString for string;
 using Strings for uint256;
 using Strings for uint8;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import { IWstEth, IStaderStakePoolsManager, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";

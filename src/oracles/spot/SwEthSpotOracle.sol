@@ -6,7 +6,7 @@ import { TickMath } from "src/libraries/uniswap/TickMath.sol";
 import { UniswapOracleLibrary } from "src/libraries/uniswap/UniswapOracleLibrary.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SpotOracle } from "./SpotOracle.sol";
-import { WAD } from "src/libraries/math/RoundedMath.sol";
+import { WAD } from "src/libraries/math/WadRayMath.sol";
 
 contract SwEthSpotOracle is SpotOracle {
     using Math for uint256;

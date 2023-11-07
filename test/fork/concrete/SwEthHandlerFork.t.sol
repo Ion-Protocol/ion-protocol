@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { SwEthHandler } from "src/flash/handlers/SwEthHandler.sol";
 import { IonPool } from "src/IonPool.sol";
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import {
     BalancerFlashloanDirectMintHandler, VAULT
 } from "src/flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
@@ -26,8 +26,8 @@ import { Vm } from "forge-std/Vm.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
 
-using RoundedMath for uint256;
-using RoundedMath for uint104;
+using WadRayMath for uint256;
+using WadRayMath for uint104;
 using SwellLibrary for ISwEth;
 
 contract SwEthHandler_ForkBase is IonHandler_ForkBase {

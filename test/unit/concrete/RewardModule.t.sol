@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardModule } from "src/reward/RewardModule.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { RewardModuleSharedSetup } from "test/helpers/RewardModuleSharedSetup.sol";
 
@@ -12,7 +12,7 @@ import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/Mes
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract RewardModule_UnitTest is RewardModuleSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     uint256 internal constant INITIAL_UNDERYLING = 1000e18;
 
