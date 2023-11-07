@@ -14,13 +14,7 @@ contract MockReserveOracle {
     function setExchangeRate(uint72 _exchangeRate) public {
         exchangeRate = _exchangeRate;
         console.log("set exchange rate: ", exchangeRate);
-    }
-
-    // @dev called by Liquidation.sol
-    function getExchangeRate() public returns (uint72) {
-        console.log("return: ", exchangeRate);
-        return exchangeRate;
-    }
+    }    
 }
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {
@@ -102,7 +96,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
      * @dev Converts percentage to WAD. Used for instantiating liquidationThreshold arrays
      * @param percentages number out of 100 ex) 75 input will return
      */
-    function getPercentageInWad(uint8[ILK_COUNT] memory percentages) internal returns (uint64[] memory results) {
+    function getPercentageInWad(uint8[ILK_COUNT] memory percentages) internal pure returns (uint64[] memory results) {
         for (uint8 i = 0; i < ILK_COUNT; i++) {
             results[i] = uint64((uint256(percentages[i]) * WAD) / 100);
         }

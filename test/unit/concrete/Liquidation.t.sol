@@ -13,11 +13,6 @@ contract MockstEthReserveOracle {
     function setExchangeRate(uint256 _exchangeRate) public {
         exchangeRate = _exchangeRate;
     }
-    // @dev called by Liquidation.sol
-
-    function getExchangeRate(uint256 ilkIndex) public view returns (uint256) {
-        return exchangeRate;
-    }
 }
 
 contract LiquidationTest is LiquidationSharedSetup {

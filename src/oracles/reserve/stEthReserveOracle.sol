@@ -9,7 +9,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { console2 } from "forge-std/console2.sol";
 
 contract StEthReserveOracle is ReserveOracle {
-    using SafeCast for uint256;
     using RoundedMath for uint256;
 
     address public immutable lido;
@@ -20,26 +19,25 @@ contract StEthReserveOracle is ReserveOracle {
         address _wstEth,
         uint8 _ilkIndex,
         address[] memory _feeds,
-        uint8 _quorum
+        uint8 _quorum,
+        uint256 _maxChange
     )
-        ReserveOracle(_ilkIndex, _feeds, _quorum)
+        ReserveOracle(_ilkIndex, _feeds, _quorum, _maxChange)
     {
         lido = _lido;
         wstEth = _wstEth;
-        exchangeRate = _getProtocolExchangeRate();
+        initializeExchangeRate();
     }
 
-    // @dev converts wstETH to stETH to ETH for ETH per wstETH
+    // @dev Returns the exchange rate for wstETH to stETH. This function only needs to return the
+    //      wstETH to stETH exchange rate as the stETH to ETH exchange rate is 1:1.
+    // NOTE: In a slashing event, the loss for the staker is represented through a decrease in the
+    //       wstETH to stETH exchange rate inside the wstETH contract. The stETH to ETH ratio in
+    //       the Lido contract will still remain 1:1 as it rebases.
     // stETH / wstETH = stEth per wstEth
     // ETH / stETH = total ether value / total stETH supply
     // ETH / wstETH = (ETH / stETH) * (stETH / wstETH)
-    // NOTE: stEth might not be deployed until the offchain reserve oracle for stEth is production ready.
-    // TODO: Add Lido's transient balance on top.
-    function _getProtocolExchangeRate() internal view override returns (uint72) {
-        uint256 bufferedEther = ILido(lido).getBufferedEther();
-        (,, uint256 beaconBalance) = ILido(lido).getBeaconStat();
-        uint256 ethPerStEth = (beaconBalance + bufferedEther).wadDivDown(ILido(lido).totalSupply());
-        uint256 stEthPerWstEth = IWstEth(wstEth).stEthPerToken();
-        return ethPerStEth.wadMulDown(stEthPerWstEth).toUint72();
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
+        return IWstEth(wstEth).stEthPerToken();
     }
 }

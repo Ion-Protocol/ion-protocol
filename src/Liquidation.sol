@@ -91,7 +91,7 @@ contract Liquidation {
             liquidationThreshold = LIQUIDATION_THRESHOLD_2;
         }
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
-        exchangeRate = ReserveOracle(exchangeRateOracle).getExchangeRate();
+        exchangeRate = ReserveOracle(exchangeRateOracle).currentExchangeRate();
         exchangeRate = uint256(exchangeRate).scaleUpToRay(18);
     }
 
@@ -221,7 +221,7 @@ contract Liquidation {
                 ilkIndex,
                 vault,
                 PROTOCOL, // TODO: this should go to PROTOCOL multisig
-                PROTOCOL, // TODO: this should go to PROTOCOL multisig
+                PROTOCOL, // TODO: this should go to PROTOCOL mul
                 -int256(liquidateArgs.gemOut),
                 -int256(liquidateArgs.dart)
             );
@@ -232,7 +232,7 @@ contract Liquidation {
             liquidateArgs.repay = normalizedDebt * rate; // bound repay to total debt
             liquidateArgs.dart = normalizedDebt; // pay off all debt including dust
             liquidateArgs.gemOut = normalizedDebt * rate / liquidateArgs.price; // round down in protocol favor
-        } else if (normalizedDebt * rate - liquidateArgs.repay >= dust) {
+        } else { // if (normalizedDebt * rate - liquidateArgs.repay >= dust) do partial liquidation
             // repay stays unchanged
             liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad]
             liquidateArgs.dart =

@@ -16,10 +16,11 @@ contract StEthSpotOracle is SpotOracle {
     constructor(
         uint8 _ilkIndex,
         uint256 _ltv,
+        address _reserveOracle,
         address _stEthToEthChainlink,
         address _wstETH
     )
-        SpotOracle(_ilkIndex, _ltv)
+        SpotOracle(_ilkIndex, _ltv, _reserveOracle)
     {
         stEthToEthChainlink = IChainlink(_stEthToEthChainlink);
         wstEth = IWstEth(_wstETH);
@@ -27,9 +28,12 @@ contract StEthSpotOracle is SpotOracle {
 
     // @dev Because the collateral amount in the core contract is denominated in amount of wstETH tokens,
     //      spot needs to equal (stETH/wstETH) * (ETH/stETH) * liquidationThreshold
+    // NOTE: If the beaconchain reserve decreases, the wstEth to stEth conversion will be directly impacted, 
+    //       but the stEth to Eth conversion will simply be determined by the chainlink price oracle.  
     function getPrice() public view override returns (uint256 ethPerWstEth) {
         // get price from the protocol feed
-        uint256 ethPerStEth = stEthToEthChainlink.latestAnswer(); // price of stETH denominated in ETH
+        (, int256 _ethPerStEth, , ,) = stEthToEthChainlink.latestRoundData(); // price of stETH denominated in ETH
+        uint256 ethPerStEth = uint256(_ethPerStEth); 
         // collateral * wstEthInEth = collateralInEth
         ethPerWstEth = wstEth.getStETHByWstETH(uint256(ethPerStEth)); // stEth per wstEth
     }

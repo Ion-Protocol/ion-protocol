@@ -22,10 +22,11 @@ contract EthXSpotOracle is SpotOracle {
     constructor(
         uint8 _ilkIndex,
         uint256 _ltv,
+        address _reserveOracle,
         address _redstoneEthXPriceFeed,
         address _usdPerEthChainlink
     )
-        SpotOracle(_ilkIndex, _ltv)
+        SpotOracle(_ilkIndex, _ltv, _reserveOracle)
     {
         redstoneEthXPriceFeed = IRedstonePriceFeed(_redstoneEthXPriceFeed);
         usdPerEthChainlink = IChainlink(_usdPerEthChainlink);
@@ -36,9 +37,13 @@ contract EthXSpotOracle is SpotOracle {
     function getPrice() public view override returns (uint256 ethPerEthX) {
         // get price from the protocol feed
         // usd per ETHx
+
         uint256 usdPerEthX = uint256(redstoneEthXPriceFeed.latestAnswer()).scaleUpToWad(REDSTONE_DECIMALS); //
+
         // usd per ETH
-        uint256 usdPerEth = usdPerEthChainlink.latestAnswer().scaleUpToWad(CHAINLINK_DECIMALS);
+        (, int256 _usdPerEth, , ,) = usdPerEthChainlink.latestRoundData(); // price of stETH denominated in ETH
+        uint256 usdPerEth = uint256(_usdPerEth).scaleUpToWad(CHAINLINK_DECIMALS); // price of stETH denominated in ETH
+
         // (USD per ETHx) / (USD per ETH) = (USD per ETHx) * (ETH per USD) = ETH per ETHx
         ethPerEthX = usdPerEthX.wadDivDown(usdPerEth);
     }

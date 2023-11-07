@@ -14,7 +14,7 @@ contract SwEthSpotOracle is SpotOracle {
     IUniswapV3Pool immutable POOL;
     uint32 immutable SECONDS_AGO;
 
-    constructor(uint8 _ilkIndex, uint256 _ltv, address _uniswapPool, uint32 _secondsAgo) SpotOracle(_ilkIndex, _ltv) {
+    constructor(uint8 _ilkIndex, uint256 _ltv, address _reserveOracle, address _uniswapPool, uint32 _secondsAgo) SpotOracle(_ilkIndex, _ltv, _reserveOracle) {
         POOL = IUniswapV3Pool(_uniswapPool);
         SECONDS_AGO = _secondsAgo;
     }

@@ -31,13 +31,14 @@ contract MockModifiers {
         bytes32[] memory proof
     )
         external
+        view
         onlyWhitelistedBorrowers(ilkIndex, proof)
         returns (bool)
     {
         return true;
     }
 
-    function onlyLendersFunction(bytes32[] memory proof) external onlyWhitelistedLenders(proof) returns (bool) {
+    function onlyLendersFunction(bytes32[] memory proof) external view onlyWhitelistedLenders(proof) returns (bool) {
         return true;
     }
 }
