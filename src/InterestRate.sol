@@ -78,6 +78,7 @@ contract InterestRate {
     error CollateralIndexOutOfBounds();
     error DistributionFactorsDoNotSumToOne(uint256 sum);
     error TotalDebtsLength(uint256 collateralCount, uint256 totalIlkDebtsLength);
+    error InvalidYieldOracleAddress();
 
     /**
      * @dev Packed collateral configs
@@ -111,6 +112,8 @@ contract InterestRate {
     IYieldOracle immutable apyOracle;
 
     constructor(IlkData[] memory ilkDataList, IYieldOracle _apyOracle) {
+        if (address(_apyOracle) == address(0)) revert InvalidYieldOracleAddress();
+
         collateralCount = ilkDataList.length;
         apyOracle = _apyOracle;
 
@@ -224,13 +227,11 @@ contract InterestRate {
         ilkData = IlkData({
             adjustedProfitMargin: adjustedProfitMargin,
             minimumKinkRate: minimumKinkRate,
-
             reserveFactor: reserveFactor,
             adjustedBaseRate: adjustedBaseRate,
             minimumBaseRate: minimumBaseRate,
             optimalUtilizationRate: optimalUtilizationRate,
             distributionFactor: distributionFactor,
-
             adjustedAboveKinkSlope: adjustedAboveKinkSlope,
             minimumAboveKinkSlope: minimumAboveKinkSlope
         });

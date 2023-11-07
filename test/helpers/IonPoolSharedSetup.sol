@@ -136,17 +136,17 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     ERC20PresetMinterPauser[] internal mintableCollaterals = [wstEth, ethX, swEth];
 
-    uint96 internal constant wstEthMinimumProfitMargin = 70677685926057170; // 7.0677685926057170E-11 in RAY
-    uint96 internal constant ethXMinimumProfitMargin = 91263663293261740; // 9.1263663293261740E-11 in RAY
-    uint96 internal constant swEthMinimumProfitMargin = 81452622424649230; // 8.145262242464923e-11 in RAY
+    uint96 internal constant wstEthMinimumProfitMargin = 70_677_685_926_057_170; // 7.0677685926057170E-11 in RAY
+    uint96 internal constant ethXMinimumProfitMargin = 91_263_663_293_261_740; // 9.1263663293261740E-11 in RAY
+    uint96 internal constant swEthMinimumProfitMargin = 81_452_622_424_649_230; // 8.145262242464923e-11 in RAY
 
-    uint96 internal constant wstEthAdjustedAboveKinkSlope = 25017682370176442000; // 2.5017682370176444e-08 in RAY
-    uint96 internal constant ethXAdjustedAboveKinkSlope = 39693222042558280000; // 3.9693222042558285e-08 in RAY
-    uint96 internal constant swEthAdjustedAboveKinkSlope = 21397408289658417000; // 2.1397408289658418e-08 in RAY
+    uint96 internal constant wstEthAdjustedAboveKinkSlope = 25_017_682_370_176_442_000; // 2.5017682370176444e-08 in RAY
+    uint96 internal constant ethXAdjustedAboveKinkSlope = 39_693_222_042_558_280_000; // 3.9693222042558285e-08 in RAY
+    uint96 internal constant swEthAdjustedAboveKinkSlope = 21_397_408_289_658_417_000; // 2.1397408289658418e-08 in RAY
 
-    uint96 internal constant wstEthMinimumAboveKinkSlope = 26390655175013278000; 
-    uint96 internal constant ethXMinimumAboveKinkSlope = 48899593146619404000;
-    uint96 internal constant swEthMinimumAboveKinkSlope = 21366508315720827000;
+    uint96 internal constant wstEthMinimumAboveKinkSlope = 26_390_655_175_013_278_000;
+    uint96 internal constant ethXMinimumAboveKinkSlope = 48_899_593_146_619_404_000;
+    uint96 internal constant swEthMinimumAboveKinkSlope = 21_366_508_315_720_827_000;
 
     uint16 internal constant wstEthAdjustedReserveFactor = 0.1e4;
     uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
@@ -166,7 +166,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
-    uint96[] internal minimumProfitMargins = [wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin];
+    uint96[] internal minimumProfitMargins =
+        [wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin];
     uint16[] internal adjustedReserveFactors =
         [wstEthAdjustedReserveFactor, ethXAdjustedReserveFactor, swEthAdjustedReserveFactor];
     uint16[] internal optimalUtilizationRates =
@@ -175,8 +176,10 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
     MockSpotOracle[] internal spotOracles;
 
-    uint96[] internal adjustedAboveKinkSlopes = [wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope];
-    uint96[] internal minimumAboveKinkSlopes = [wstEthMinimumAboveKinkSlope, ethXMinimumAboveKinkSlope, swEthMinimumAboveKinkSlope];
+    uint96[] internal adjustedAboveKinkSlopes =
+        [wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope];
+    uint96[] internal minimumAboveKinkSlopes =
+        [wstEthMinimumAboveKinkSlope, ethXMinimumAboveKinkSlope, swEthMinimumAboveKinkSlope];
 
     IlkData[] ilkConfigs;
 
@@ -201,13 +204,11 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             ilkConfig = IlkData({
                 adjustedProfitMargin: minimumProfitMargins[i],
                 minimumKinkRate: 0,
-
                 reserveFactor: adjustedReserveFactors[i],
                 adjustedBaseRate: 0,
                 minimumBaseRate: 0,
                 optimalUtilizationRate: optimalUtilizationRates[i],
                 distributionFactor: distributionFactors[i],
-
                 adjustedAboveKinkSlope: adjustedAboveKinkSlopes[i],
                 minimumAboveKinkSlope: minimumAboveKinkSlopes[i]
             });
