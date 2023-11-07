@@ -18,7 +18,7 @@ contract StEthReserveOracle is ReserveOracle {
         ReserveOracle(_ilkIndex, _feeds, _quorum, _maxChange)
     {
         wstEth = _wstEth;
-        initializeExchangeRate();
+        _initializeExchangeRate();
     }
 
     // @dev Returns the exchange rate for wstETH to stETH. This function only needs to return the

@@ -145,7 +145,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     // --- Configs ---
     uint256 internal constant PRICE = 1e18; // [wad] market price 
     uint256 internal constant LTV = 1e27; // [ray] max LTV for a position 
-    uint256 internal constant SPOT = 1e27; // [ray] spot variable
     uint256 internal constant EXCHANGE_RATE = 1e18; // [wad] 
     uint80 internal constant minimumProfitMargin = 0.85e18 / SECONDS_IN_A_YEAR;
     uint256 internal constant DUST = 0; // [rad] 
@@ -312,10 +311,9 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
             // assertEq(ionPool.totalNormalizedDebt(i), 0);
             // assertEq(ionPool.rate(i), 1e27);
-            assertEq(ionPool.spot(i).getSpot(), PRICE * LTV / WAD, "spot"); // [wad] * [ray] / WAD = [ray] 
+            assertEq(ionPool.spot(i).getSpot(), _getSpot(i), "spot value"); // [wad] * [ray] / WAD = [ray] 
             assertEq(address(ionPool.spot(i)), address(spotOracles[i]), "spot oracle");
             
-            // TODO: fix debtCeiling and dust override
             assertEq(ionPool.debtCeiling(i), _getDebtCeiling(i), "debt ceiling");
             assertEq(ionPool.dust(i), DUST, "dust");
 
@@ -350,6 +348,10 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         _collaterals[0] = IERC20(address(wstEth));
         _collaterals[1] = IERC20(address(ethX));
         _collaterals[2] = IERC20(address(swEth));
+    }
+
+    function _getSpot(uint8 ilkIndex) internal view virtual returns (uint256) {
+        return PRICE * LTV / WAD; 
     }
 
     function _getDebtCeiling(uint8 ilkIndex) internal view virtual returns (uint256) {

@@ -87,8 +87,7 @@ abstract contract ReserveOracle is Ownable {
         return Math.max(min, Math.min(max, value));
     }
 
-    // TODO: Why public?
-    function initializeExchangeRate() public {
+    function _initializeExchangeRate() internal {
         currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
         if (currentExchangeRate == 0) {
             revert InvalidInitialization(currentExchangeRate);
