@@ -6,7 +6,7 @@ import { TickMath } from "src/libraries/uniswap/TickMath.sol";
 import { UniswapOracleLibrary } from "src/libraries/uniswap/UniswapOracleLibrary.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SpotOracle } from "./SpotOracle.sol";
-import { WAD } from "src/libraries/math/RoundedMath.sol";
+import { WAD } from "src/libraries/math/WadRayMath.sol";
 
 contract SwEthSpotOracle is SpotOracle {
     using Math for uint256;
@@ -14,7 +14,15 @@ contract SwEthSpotOracle is SpotOracle {
     IUniswapV3Pool immutable POOL;
     uint32 immutable SECONDS_AGO;
 
-    constructor(uint8 _ilkIndex, uint256 _ltv, address _reserveOracle, address _uniswapPool, uint32 _secondsAgo) SpotOracle(_ilkIndex, _ltv, _reserveOracle) {
+    constructor(
+        uint8 _ilkIndex,
+        uint256 _ltv,
+        address _reserveOracle,
+        address _uniswapPool,
+        uint32 _secondsAgo
+    )
+        SpotOracle(_ilkIndex, _ltv, _reserveOracle)
+    {
         POOL = IUniswapV3Pool(_uniswapPool);
         SECONDS_AGO = _secondsAgo;
     }

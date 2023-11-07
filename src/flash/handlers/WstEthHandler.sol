@@ -6,7 +6,7 @@ import { IonHandlerBase } from "./base/IonHandlerBase.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
 import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
-import { ILidoWStEthDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -15,7 +15,7 @@ import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswa
 import { Whitelist } from "src/Whitelist.sol";
 
 contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
-    using LidoLibrary for ILidoWStEthDeposit;
+    using LidoLibrary for IWstEth;
 
     constructor(
         uint8 _ilkIndex,
@@ -33,6 +33,6 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
 
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
         weth.withdraw(amountWeth);
-        return ILidoWStEthDeposit(address(lstToken)).depositForLst(amountWeth);
+        return IWstEth(address(lstToken)).depositForLst(amountWeth);
     }
 }

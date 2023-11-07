@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IStaderDeposit, IStaderOracle } from "src/interfaces/DepositInterfaces.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { IStaderStakePoolsManager, IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 library StaderLibrary {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using Math for uint256;
 
     function getEthAmountInForLstAmountOut(
-        IStaderDeposit staderDeposit,
+        IStaderStakePoolsManager staderDeposit,
         uint256 lstAmount
     )
         internal
@@ -22,7 +22,7 @@ library StaderLibrary {
     }
 
     function getLstAmountOutForEthAmountIn(
-        IStaderDeposit staderDeposit,
+        IStaderStakePoolsManager staderDeposit,
         uint256 ethAmount
     )
         internal
@@ -32,7 +32,7 @@ library StaderLibrary {
         return staderDeposit.previewDeposit(ethAmount);
     }
 
-    function depositForLst(IStaderDeposit staderDeposit, uint256 ethAmount) internal returns (uint256) {
+    function depositForLst(IStaderStakePoolsManager staderDeposit, uint256 ethAmount) internal returns (uint256) {
         return staderDeposit.deposit{ value: ethAmount }(address(this));
     }
 }

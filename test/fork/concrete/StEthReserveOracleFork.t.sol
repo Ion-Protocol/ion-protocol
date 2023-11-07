@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
-import { ILido, IWstEth } from "src/interfaces/ProviderInterfaces.sol";
+import { IStEth, IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
 
@@ -17,7 +17,8 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        StEthReserveOracle stEthReserveOracle =
+            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 protocolExchangeRate = stEthReserveOracle.getProtocolExchangeRate();
         assertEq(protocolExchangeRate, 1_143_213_397_000_524_230, "protocol exchange rate");
@@ -45,18 +46,19 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[2] = address(mockFeed3);
 
         uint8 quorum = 3;
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        StEthReserveOracle stEthReserveOracle =
+            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint72 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
 
-        stEthReserveOracle.updateExchangeRate(); 
+        stEthReserveOracle.updateExchangeRate();
         uint256 protocolExchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // should output the expected as the minimum
         assertEq(protocolExchangeRate, expectedMinExchangeRate, "protocol exchange rate");
     }
-    
-    // --- Errors --- 
+
+    // --- Errors ---
     function test_RevertWhen_StEthInvalidInitialization() public {
         MockFeed mockFeed1 = new MockFeed();
         MockFeed mockFeed2 = new MockFeed();
@@ -64,15 +66,15 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
-        feeds[0] = address(mockFeed1); 
-        feeds[1] = address(mockFeed2); 
-        feeds[2] = address(mockFeed3); 
+        feeds[0] = address(mockFeed1);
+        feeds[1] = address(mockFeed2);
+        feeds[2] = address(mockFeed3);
         uint8 quorum = 3;
 
         vm.expectRevert(abi.encodeWithSelector(ReserveOracle.InvalidInitialization.selector, 0));
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
     }
-    
+
     // --- Slashing Scenario ---
 
     /**
@@ -82,14 +84,14 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
     function test_StEthTotalPooledEtherPostSlashing() public {
         uint256 clBalanceDiff = 5 ether;
 
-        uint256 totalPooledEther = ILido(LIDO).getTotalPooledEther();
+        uint256 totalPooledEther = IStEth(LIDO).getTotalPooledEther();
         uint256 clBalance = uint256(vm.load(LIDO, LIDO_CL_BALANCE_SLOT));
 
         uint256 newClBalance = clBalance - clBalanceDiff;
         vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(newClBalance));
         assertEq(uint256(vm.load(LIDO, LIDO_CL_BALANCE_SLOT)), newClBalance);
 
-        uint256 newTotalPooledEther = ILido(LIDO).getTotalPooledEther(); // change in CL_BALANCE should change
+        uint256 newTotalPooledEther = IStEth(LIDO).getTotalPooledEther(); // change in CL_BALANCE should change
             // totalPooledEther
 
         assertEq(totalPooledEther - newTotalPooledEther, clBalanceDiff);
@@ -110,7 +112,7 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 newClBalance = clBalance - clBalanceDiff;
         vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(newClBalance));
 
-        uint256 newTotalPooledEther = ILido(LIDO).getTotalPooledEther();
+        uint256 newTotalPooledEther = IStEth(LIDO).getTotalPooledEther();
 
         uint256 expectedNewEthPerShare = 1 ether * newTotalPooledEther / totalShares; // shares * totalPooledEther /
             // totalShares [truncate quotient]
@@ -130,13 +132,14 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets prevExchangeRate to be the current exchangeRate in constructor
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        StEthReserveOracle stEthReserveOracle =
+            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 exchangeRate = stEthReserveOracle.currentExchangeRate();
         // set Lido exchange rate to be lower
         vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(newClBalance));
 
-        stEthReserveOracle.updateExchangeRate(); 
+        stEthReserveOracle.updateExchangeRate();
         uint256 newExchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // should output the min
@@ -152,14 +155,15 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets currentExchange rate to be the current exchangeRate in constructor
-        StEthReserveOracle stEthReserveOracle = new StEthReserveOracle(LIDO, WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        StEthReserveOracle stEthReserveOracle =
+            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 exchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // set Lido exchange rate to be lower
         vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(newClBalance));
-        stEthReserveOracle.updateExchangeRate(); 
-        
+        stEthReserveOracle.updateExchangeRate();
+
         uint256 newExchangeRate = stEthReserveOracle.currentExchangeRate();
 
         // should output the min

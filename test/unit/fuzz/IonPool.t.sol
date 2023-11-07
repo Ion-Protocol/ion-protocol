@@ -2,22 +2,22 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
+import { IIonPoolEvents } from "test/helpers/IIonPoolEvents.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
+
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 uint256 constant COLLATERAL_COUNT = 3;
 
-using RoundedMath for uint256;
+using WadRayMath for uint256;
+using Strings for uint256;
 
-abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Burn(address indexed user, address indexed target, uint256 amount, uint256 supplyFactor);
-    event Mint(address indexed user, address indexed underlyingFrom, uint256 amount, uint256 supplyFactor);
-
+abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEvents {
     bool changeSupplyFactor;
     uint256 newSupplyFactor;
 
@@ -27,7 +27,6 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
             uint256 oldSupplyFactor = ionPool.supplyFactor();
             ionPool.setSupplyFactor(newSupplyFactor);
             interestCreated = totalSupply.rayMulDown(newSupplyFactor - oldSupplyFactor);
-            console.log("interestCreated", interestCreated);
 
             _depositInterestGains(interestCreated);
         }
@@ -53,10 +52,19 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
 
         underlying.mint(lender1, supplyAmount);
 
+        uint256 currentTotalDebt = ionPool.debt();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), lender1, supplyAmount);
         vm.expectEmit(true, true, true, true);
-        emit Mint(lender1, lender1, supplyAmount, currentSupplyFactor);
+        emit Supply(
+            lender1,
+            lender1,
+            supplyAmount,
+            currentSupplyFactor + supplyFactorIncrease,
+            currentTotalDebt + newDebtIncrease
+        );
         vm.prank(lender1);
         ionPool.supply(lender1, supplyAmount, new bytes32[](0));
 
@@ -77,10 +85,19 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
 
         uint256 supplyAmountBeforeSupply = ionPool.weth();
 
+        uint256 currentTotalDebt = ionPool.debt();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), address(this), supplyAmount);
         vm.expectEmit(true, true, true, true);
-        emit Mint(address(this), lender1, supplyAmount, currentSupplyFactor);
+        emit Supply(
+            address(this),
+            lender1,
+            supplyAmount,
+            currentSupplyFactor + supplyFactorIncrease,
+            currentTotalDebt + newDebtIncrease
+        );
         vm.prank(lender1);
         ionPool.supply(address(this), supplyAmount, new bytes32[](0));
 
@@ -91,7 +108,17 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
         assertLe(ionPool.balanceOf(address(this)) - roundingError, supplyAmount);
     }
 
+    struct FuzzWithdrawBaseLocs {
+        uint256 currentTotalDebt;
+        uint256 supplyFactorIncrease;
+        uint256 newDebtIncrease;
+        uint256 withdrawAmount;
+    }
+
     function testFuzz_WithdrawBase(uint256 supplyAmount, uint256 withdrawAmount) public {
+        FuzzWithdrawBaseLocs memory locs;
+        locs.withdrawAmount = withdrawAmount;
+
         vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
         underlying.mint(lender1, supplyAmount);
 
@@ -107,17 +134,26 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
         assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase);
 
         uint256 currentSupplyFactor = ionPool.supplyFactor();
-        withdrawAmount = bound(withdrawAmount, 0, supplyAmountAfterRebase);
-        vm.assume(withdrawAmount > 0);
+        locs.withdrawAmount = bound(locs.withdrawAmount, 0, supplyAmountAfterRebase);
+        vm.assume(locs.withdrawAmount > 0);
 
         uint256 underlyingBeforeWithdraw = underlying.balanceOf(lender1);
         uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
 
+        locs.currentTotalDebt = ionPool.debt();
+        (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+
         vm.expectEmit(true, true, true, true);
-        emit Transfer(lender1, address(0), withdrawAmount);
+        emit Transfer(lender1, address(0), locs.withdrawAmount);
         vm.expectEmit(true, true, true, true);
-        emit Burn(lender1, lender1, withdrawAmount, currentSupplyFactor);
-        ionPool.withdraw(lender1, withdrawAmount);
+        emit Withdraw(
+            lender1,
+            lender1,
+            locs.withdrawAmount,
+            currentSupplyFactor + locs.supplyFactorIncrease,
+            locs.currentTotalDebt + locs.newDebtIncrease
+        );
+        ionPool.withdraw(lender1, locs.withdrawAmount);
 
         uint256 underlyingAfterWithdraw = underlying.balanceOf(lender1);
         uint256 rewardAssetBalanceAfterWithdraw = ionPool.balanceOf(lender1);
@@ -125,16 +161,19 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
         uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
         uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
 
-        assertEq(ionPool.weth(), supplyAmountAfterRebase - withdrawAmount);
-        assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + withdrawAmount);
+        assertEq(ionPool.weth(), supplyAmountAfterRebase - locs.withdrawAmount);
+        assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + locs.withdrawAmount);
         // Most important invariant
         assertGe(rewardAssetBurned, underlyingWithdrawn);
 
         uint256 roundingError = currentSupplyFactor / RAY;
-        assertLt(ionPool.balanceOf(lender1), lender1BalanceAfterRebase - withdrawAmount + roundingError);
+        assertLt(ionPool.balanceOf(lender1), lender1BalanceAfterRebase - locs.withdrawAmount + roundingError);
     }
 
     function testFuzz_WithdrawBaseToDifferentAddress(uint256 supplyAmount, uint256 withdrawAmount) public {
+        FuzzWithdrawBaseLocs memory locs;
+        locs.withdrawAmount = withdrawAmount;
+
         vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
         underlying.mint(lender1, supplyAmount);
 
@@ -150,17 +189,26 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
         assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase);
 
         uint256 currentSupplyFactor = ionPool.supplyFactor();
-        withdrawAmount = bound(withdrawAmount, 0, supplyAmountAfterRebase);
-        vm.assume(withdrawAmount > 0);
+        locs.withdrawAmount = bound(locs.withdrawAmount, 0, supplyAmountAfterRebase);
+        vm.assume(locs.withdrawAmount > 0);
 
         uint256 underlyingBeforeWithdraw = underlying.balanceOf(lender2);
         uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
 
+        locs.currentTotalDebt = ionPool.debt();
+        (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+
         vm.expectEmit(true, true, true, true);
-        emit Transfer(lender1, address(0), withdrawAmount);
+        emit Transfer(lender1, address(0), locs.withdrawAmount);
         vm.expectEmit(true, true, true, true);
-        emit Burn(lender1, lender2, withdrawAmount, currentSupplyFactor);
-        ionPool.withdraw(lender2, withdrawAmount);
+        emit Withdraw(
+            lender1,
+            lender2,
+            locs.withdrawAmount,
+            currentSupplyFactor + locs.supplyFactorIncrease,
+            locs.currentTotalDebt + locs.newDebtIncrease
+        );
+        ionPool.withdraw(lender2, locs.withdrawAmount);
 
         uint256 underlyingAfterWithdraw = underlying.balanceOf(lender2);
         uint256 rewardAssetBalanceAfterWithdraw = ionPool.balanceOf(lender1);
@@ -168,33 +216,36 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup {
         uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
         uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
 
-        assertEq(ionPool.weth(), supplyAmountAfterRebase - withdrawAmount);
-        assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + withdrawAmount);
+        assertEq(ionPool.weth(), supplyAmountAfterRebase - locs.withdrawAmount);
+        assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + locs.withdrawAmount);
         // Most important invariant
         assertGe(rewardAssetBurned, underlyingWithdrawn);
 
         uint256 roundingError = currentSupplyFactor / RAY;
-        assertLt(ionPool.balanceOf(lender1), lender1BalanceAfterRebase - withdrawAmount + roundingError);
+        assertLt(ionPool.balanceOf(lender1), lender1BalanceAfterRebase - locs.withdrawAmount + roundingError);
     }
 }
 
-abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
-    event WithdrawCollateral(uint8 indexed ilkIndex, address indexed user, address indexed recipient, uint256 amount);
-    event DepositCollateral(uint8 indexed ilkIndex, address indexed user, address indexed depositor, uint256 amount);
-    event Borrow(
-        uint8 indexed ilkIndex,
-        address indexed user,
-        address indexed recipient,
-        uint256 amountOfNormalizedDebt,
-        uint256 ilkRate
-    );
-    event Repay(
-        uint8 indexed ilkIndex,
-        address indexed user,
-        address indexed payer,
-        uint256 amountOfNormalizedDebt,
-        uint256 ilkRate
-    );
+abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEvents {
+    bool changeRate;
+    uint104[COLLATERAL_COUNT] newRates;
+
+    function _changeRateIfNeeded() internal prankAgnostic {
+        if (changeRate) {
+            for (uint8 i = 0; i < newRates.length; i++) {
+                ionPool.setRate(i, newRates[i]);
+            }
+        }
+    }
+
+    bool warpTime;
+    uint256 warpTimeAmount;
+
+    function _warpTimeIfNeeded() internal prankAgnostic {
+        if (warpTime) {
+            vm.warp(block.timestamp + warpTimeAmount);
+        }
+    }
 
     function testFuzz_DepositCollateral(uint256 depositAmount) public {
         vm.assume(depositAmount < type(uint128).max);
@@ -469,13 +520,16 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
     )
         public
     {
+        _changeRateIfNeeded();
         require(COLLATERAL_COUNT == ionPool.ilkCount(), "IonPoolFuzz: Invalid Config");
 
         uint256 borrowedSoFar;
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < 1; i++) {
+            uint256 rate = ionPool.rate(i);
+
             // This 1:1 ratio is OK since ltv is set at 100%
             uint256 collateralDepositAmount = bound(collateralDepositAmounts[i], 0, debtCeilings[i].scaleDownToWad(45));
-            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount);
+            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount * SPOT / rate);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -485,18 +539,19 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
             ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
             vm.stopPrank();
 
-            uint256 rate = ionPool.rate(i);
             uint256 liquidityBefore = ionPool.weth();
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
 
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
             assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
 
             vm.expectEmit(true, true, true, true);
-            emit Borrow(i, borrower1, borrower1, normalizedBorrowAmount, RAY);
+            emit Borrow(
+                i, borrower1, borrower1, normalizedBorrowAmount, rate, ionPool.debt() + normalizedBorrowAmount * rate
+            );
             vm.prank(borrower1);
             ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
 
-            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
             borrowedSoFar += liquidityRemoved;
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
@@ -512,13 +567,16 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
     )
         public
     {
+        _changeRateIfNeeded();
         require(COLLATERAL_COUNT == ionPool.ilkCount(), "IonPoolFuzz: Invalid Config");
 
         uint256 borrowedSoFar;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            uint256 rate = ionPool.rate(i);
+
             // This 1:1 ratio is OK since ltv is set at 100%
             uint256 collateralDepositAmount = bound(collateralDepositAmounts[i], 0, debtCeilings[i].scaleDownToWad(45));
-            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount);
+            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount * SPOT / rate);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -528,14 +586,16 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
             ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
             vm.stopPrank();
 
-            uint256 rate = ionPool.rate(i);
             uint256 liquidityBefore = ionPool.weth();
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
 
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
             assertEq(underlying.balanceOf(borrower2), borrowedSoFar);
 
             vm.expectEmit(true, true, true, true);
-            emit Borrow(i, borrower1, borrower2, normalizedBorrowAmount, RAY);
+            emit Borrow(
+                i, borrower1, borrower2, normalizedBorrowAmount, rate, ionPool.debt() + normalizedBorrowAmount * rate
+            );
             vm.prank(borrower1);
             ionPool.borrow({
                 ilkIndex: i,
@@ -545,7 +605,6 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
                 proof: new bytes32[](0)
             });
 
-            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
             borrowedSoFar += liquidityRemoved;
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
@@ -599,13 +658,16 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
     )
         public
     {
+        _changeRateIfNeeded();
         require(COLLATERAL_COUNT == ionPool.ilkCount(), "IonPoolFuzz: Invalid Config");
 
         uint256 borrowedSoFar;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            uint256 rate = ionPool.rate(i);
+
             // This 1:1 ratio is OK since ltv is set at 100%
             uint256 collateralDepositAmount = bound(collateralDepositAmounts[i], 0, debtCeilings[i].scaleDownToWad(45));
-            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount);
+            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount * SPOT / rate);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -615,9 +677,9 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
             ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
             vm.stopPrank();
 
-            uint256 rate = ionPool.rate(i);
             uint256 liquidityBefore = ionPool.weth();
 
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
             assertEq(underlying.balanceOf(borrower2), borrowedSoFar);
 
@@ -625,7 +687,9 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
             ionPool.addOperator(borrower2);
 
             vm.expectEmit(true, true, true, true);
-            emit Borrow(i, borrower1, borrower2, normalizedBorrowAmount, RAY);
+            emit Borrow(
+                i, borrower1, borrower2, normalizedBorrowAmount, rate, ionPool.debt() + normalizedBorrowAmount * rate
+            );
             vm.prank(borrower2);
             ionPool.borrow({
                 ilkIndex: i,
@@ -635,7 +699,6 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
                 proof: new bytes32[](0)
             });
 
-            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
             borrowedSoFar += liquidityRemoved;
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
@@ -680,6 +743,13 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
         }
     }
 
+    struct RepayLocs {
+        uint256 borrowedSoFar;
+        uint256 repaidSoFar;
+        uint256 fundsCollectedForRepayment;
+        uint256 normalizedRepayAmount;
+    }
+
     function testFuzz_Repay(
         uint256 collateralDepositAmount,
         uint256 normalizedBorrowAmount,
@@ -690,12 +760,11 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
         vm.prank(borrower1);
         underlying.approve(address(ionPool), type(uint256).max);
 
-        uint256 borrowedSoFar;
-        uint256 repaidSoFar;
+        RepayLocs memory locs;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             collateralDepositAmount = bound(collateralDepositAmount, 0, debtCeilings[i].scaleDownToWad(45));
             normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount);
-            normalizedRepayAmount = bound(normalizedRepayAmount, 0, normalizedBorrowAmount);
+            locs.normalizedRepayAmount = bound(normalizedRepayAmount, 0, normalizedBorrowAmount);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -708,37 +777,64 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
             uint256 rate = ionPool.rate(i);
             uint256 liquidityBefore = ionPool.weth();
 
-            uint256 trueBorrowAmount = normalizedBorrowAmount.rayMulDown(rate);
-            uint256 trueRepayAmount = normalizedRepayAmount.rayMulUp(rate);
-
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar - repaidSoFar);
+            assertEq(
+                underlying.balanceOf(borrower1), locs.borrowedSoFar + locs.fundsCollectedForRepayment - locs.repaidSoFar
+            );
 
             vm.prank(borrower1);
             ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
 
-            borrowedSoFar += trueBorrowAmount;
-
             uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+            locs.borrowedSoFar += liquidityRemoved;
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
             assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar - repaidSoFar);
+            assertEq(
+                underlying.balanceOf(borrower1), locs.borrowedSoFar + locs.fundsCollectedForRepayment - locs.repaidSoFar
+            );
 
-            vm.expectEmit(true, true, true, true);
-            emit Repay(i, borrower1, borrower1, normalizedRepayAmount, rate);
-            vm.prank(borrower1);
-            ionPool.repay(i, borrower1, borrower1, normalizedRepayAmount);
+            _warpTimeIfNeeded();
 
-            repaidSoFar += trueRepayAmount;
+            (,, uint256 newRateIncrease, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution(i);
 
-            uint256 liquidityAdded = normalizedRepayAmount.rayMulUp(rate);
+            uint256 trueRepayAmount;
+            {
+                uint256 totalChangeInDebt = (locs.normalizedRepayAmount * (rate + newRateIncrease));
+                trueRepayAmount = totalChangeInDebt / RAY;
 
-            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - normalizedRepayAmount);
-            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount - normalizedRepayAmount);
-            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved + liquidityAdded);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar - repaidSoFar);
+                // Handle extra dust that might come from repayment
+                if (totalChangeInDebt % RAY > 0) ++trueRepayAmount;
+                if (trueRepayAmount > underlying.balanceOf(borrower1)) {
+                    uint256 interestToPay = trueRepayAmount - underlying.balanceOf(borrower1);
+                    locs.fundsCollectedForRepayment += interestToPay;
+                    underlying.mint(borrower1, interestToPay);
+                }
+
+                vm.expectEmit(true, true, true, true);
+                emit Repay(
+                    i,
+                    borrower1,
+                    borrower1,
+                    locs.normalizedRepayAmount,
+                    rate + newRateIncrease,
+                    ionPool.debt() + newDebtIncrease - totalChangeInDebt
+                );
+                vm.prank(borrower1);
+                ionPool.repay(i, borrower1, borrower1, locs.normalizedRepayAmount);
+            }
+
+            rate = ionPool.rate(i);
+
+            locs.repaidSoFar += trueRepayAmount;
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - locs.normalizedRepayAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount - locs.normalizedRepayAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved + trueRepayAmount);
+            assertEq(
+                underlying.balanceOf(borrower1), locs.borrowedSoFar + locs.fundsCollectedForRepayment - locs.repaidSoFar
+            );
         }
     }
 
@@ -754,12 +850,11 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
         vm.prank(borrower2);
         underlying.approve(address(ionPool), type(uint256).max);
 
-        uint256 borrowedSoFar;
-        uint256 repaidSoFar;
+        RepayLocs memory locs;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             collateralDepositAmount = bound(collateralDepositAmount, 0, debtCeilings[i].scaleDownToWad(45));
             normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount);
-            normalizedRepayAmount = bound(normalizedRepayAmount, 0, normalizedBorrowAmount);
+            locs.normalizedRepayAmount = bound(normalizedRepayAmount, 0, normalizedBorrowAmount);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -772,44 +867,58 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
             uint256 rate = ionPool.rate(i);
             uint256 liquidityBefore = ionPool.weth();
 
-            uint256 trueBorrowAmount = normalizedBorrowAmount.rayMulDown(rate);
-            uint256 trueRepayAmount = normalizedRepayAmount.rayMulUp(rate);
-
-            underlying.mint(borrower2, trueRepayAmount);
-
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
+            assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
             vm.prank(borrower1);
             ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
 
-            borrowedSoFar += trueBorrowAmount;
-
             uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+            locs.borrowedSoFar += liquidityRemoved;
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
             assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
+            assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
-            vm.expectEmit(true, true, true, true);
-            emit Repay(i, borrower1, borrower2, normalizedRepayAmount, rate);
-            vm.prank(borrower2);
-            ionPool.repay({
-                ilkIndex: i,
-                user: borrower1,
-                payer: borrower2,
-                amountOfNormalizedDebt: normalizedRepayAmount
-            });
+            _warpTimeIfNeeded();
 
-            repaidSoFar += trueRepayAmount;
+            (,, uint256 newRateIncrease, uint256 newTotalDebt,) = ionPool.calculateRewardAndDebtDistribution(i);
 
-            uint256 liquidityAdded = normalizedRepayAmount.rayMulUp(rate);
+            uint256 trueRepayAmount;
+            {
+                uint256 totalChangeInDebt = (locs.normalizedRepayAmount * (rate + newRateIncrease));
+                trueRepayAmount = totalChangeInDebt / RAY;
 
-            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - normalizedRepayAmount);
-            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount - normalizedRepayAmount);
-            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved + liquidityAdded);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
+                // Handle extra dust that might come from repayment
+                if (totalChangeInDebt % RAY > 0) ++trueRepayAmount;
+
+                underlying.mint(borrower2, trueRepayAmount);
+
+                vm.expectEmit(true, true, true, true);
+                emit Repay(
+                    i,
+                    borrower1,
+                    borrower2,
+                    locs.normalizedRepayAmount,
+                    rate + newRateIncrease,
+                    ionPool.debt() + newTotalDebt - totalChangeInDebt
+                );
+                vm.prank(borrower2);
+                ionPool.repay({
+                    ilkIndex: i,
+                    user: borrower1,
+                    payer: borrower2,
+                    amountOfNormalizedDebt: locs.normalizedRepayAmount
+                });
+            }
+
+            locs.repaidSoFar += trueRepayAmount;
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - locs.normalizedRepayAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount - locs.normalizedRepayAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved + trueRepayAmount);
+            assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
             assertEq(underlying.balanceOf(borrower2), 0);
         }
     }
@@ -883,12 +992,11 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
         vm.prank(borrower2);
         underlying.approve(address(ionPool), type(uint256).max);
 
-        uint256 borrowedSoFar;
-        uint256 repaidSoFar;
+        RepayLocs memory locs;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             collateralDepositAmount = bound(collateralDepositAmount, 0, debtCeilings[i].scaleDownToWad(45));
             normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount);
-            normalizedRepayAmount = bound(normalizedRepayAmount, 0, normalizedBorrowAmount);
+            locs.normalizedRepayAmount = bound(normalizedRepayAmount, 0, normalizedBorrowAmount);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -901,86 +1009,62 @@ abstract contract IonPool_BorrowerFuzzTest is IonPoolSharedSetup {
             uint256 rate = ionPool.rate(i);
             uint256 liquidityBefore = ionPool.weth();
 
-            uint256 trueBorrowAmount = normalizedBorrowAmount.rayMulDown(rate);
-            uint256 trueRepayAmount = normalizedRepayAmount.rayMulUp(rate);
-
-            underlying.mint(borrower2, trueRepayAmount);
-
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
+            assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
             vm.prank(borrower1);
             ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
 
-            borrowedSoFar += trueBorrowAmount;
-
             uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+            locs.borrowedSoFar += liquidityRemoved;
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
             assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
+            assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
-            vm.prank(borrower2);
-            ionPool.addOperator(borrower1);
+            _warpTimeIfNeeded();
 
-            vm.expectEmit(true, true, true, true);
-            emit Repay(i, borrower1, borrower2, normalizedRepayAmount, rate);
-            vm.prank(borrower1);
-            ionPool.repay({
-                ilkIndex: i,
-                user: borrower1,
-                payer: borrower2,
-                amountOfNormalizedDebt: normalizedRepayAmount
-            });
+            (,, uint256 newRateIncrease, uint256 newTotalDebt,) = ionPool.calculateRewardAndDebtDistribution(i);
 
-            repaidSoFar += trueRepayAmount;
+            uint256 trueRepayAmount;
+            {
+                uint256 totalChangeInDebt = (locs.normalizedRepayAmount * (rate + newRateIncrease));
+                trueRepayAmount = totalChangeInDebt / RAY;
 
-            uint256 liquidityAdded = normalizedRepayAmount.rayMulUp(rate);
+                // Handle extra dust that might come from repayment
+                if (totalChangeInDebt % RAY > 0) ++trueRepayAmount;
 
-            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - normalizedRepayAmount);
-            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount - normalizedRepayAmount);
-            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved + liquidityAdded);
-            assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
+                underlying.mint(borrower2, trueRepayAmount);
+
+                vm.prank(borrower2);
+                ionPool.addOperator(borrower1);
+
+                vm.expectEmit(true, true, true, true);
+                emit Repay(
+                    i,
+                    borrower1,
+                    borrower2,
+                    locs.normalizedRepayAmount,
+                    rate + newRateIncrease,
+                    ionPool.debt() + newTotalDebt - totalChangeInDebt
+                );
+                vm.prank(borrower1);
+                ionPool.repay({
+                    ilkIndex: i,
+                    user: borrower1,
+                    payer: borrower2,
+                    amountOfNormalizedDebt: locs.normalizedRepayAmount
+                });
+            }
+
+            locs.repaidSoFar += trueRepayAmount;
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - locs.normalizedRepayAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount - locs.normalizedRepayAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved + trueRepayAmount);
+            assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
             assertEq(underlying.balanceOf(borrower2), 0);
-        }
-    }
-}
-
-// TODO: Test borrow actions with changing rate and changing time
-contract IonPool_FuzzTest is IonPoolSharedSetup {
-    event MintAndBurnGem(uint8 indexed ilkIndex, address indexed usr, int256 wad);
-    event TransferGem(uint8 indexed ilkIndex, address indexed src, address indexed dst, uint256 wad);
-
-    function setUp() public override {
-        super.setUp();
-
-        ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
-
-        vm.startPrank(lender2);
-        underlying.approve(address(ionPool), type(uint256).max);
-        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE, new bytes32[](0));
-        vm.stopPrank();
-
-        vm.prank(lender1);
-        underlying.approve(address(ionPool), type(uint256).max);
-
-        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            vm.prank(borrower1);
-            collaterals[i].approve(address(gemJoins[i]), type(uint256).max);
-        }
-    }
-
-    function test_setUp() public override {
-        super.test_setUp();
-
-        assertEq(ionPool.weth(), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
-
-        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            assertEq(collaterals[i].allowance(borrower1, address(gemJoins[i])), type(uint256).max);
         }
     }
 
@@ -1121,5 +1205,137 @@ contract IonPool_LenderFuzzTest is IonPool_LenderFuzzTestBase {
         changeSupplyFactor = true;
         newSupplyFactor = bound(_newSupplyFactor, 1e27, 10e27);
         testFuzz_WithdrawBaseToDifferentAddress(supplyAmount, withdrawAmount);
+    }
+}
+
+contract IonPool_BorrowerFuzzTest is IonPool_BorrowerFuzzTestBase {
+    function setUp() public override {
+        super.setUp();
+
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ERC20PresetMinterPauser(_getUnderlying()).mint(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        vm.startPrank(lender2);
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.supply(lender2, INITIAL_LENDER_UNDERLYING_BALANCE, new bytes32[](0));
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            collaterals[i].approve(address(gemJoins[i]), type(uint256).max);
+        }
+    }
+
+    function test_SetUp() public override {
+        super.test_SetUp();
+
+        assertEq(ionPool.weth(), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            assertEq(collaterals[i].allowance(borrower1, address(gemJoins[i])), type(uint256).max);
+        }
+    }
+
+    function testFuzz_Borrow_WithRateChange(
+        uint256[COLLATERAL_COUNT] memory collateralDepositAmounts,
+        uint256 normalizedBorrowAmount,
+        uint104[COLLATERAL_COUNT] memory _newRates
+    )
+        public
+    {
+        changeRate = true;
+
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            // Disable debt ceiling for this test
+            ionPool.updateIlkDebtCeiling(i, type(uint256).max);
+
+            newRates[i] = uint104(bound(_newRates[i], 1e27, 10e27));
+        }
+
+        testFuzz_Borrow(collateralDepositAmounts, normalizedBorrowAmount);
+    }
+
+    function testFuzz_BorrowToDifferentAddress_WithRateChange(
+        uint256[COLLATERAL_COUNT] memory collateralDepositAmounts,
+        uint256 normalizedBorrowAmount,
+        uint104[COLLATERAL_COUNT] memory _newRates
+    )
+        public
+    {
+        changeRate = true;
+
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            // Disable debt ceiling for this test
+            ionPool.updateIlkDebtCeiling(i, type(uint256).max);
+
+            newRates[i] = uint104(bound(_newRates[i], 1e27, 10e27));
+        }
+
+        testFuzz_BorrowToDifferentAddress(collateralDepositAmounts, normalizedBorrowAmount);
+    }
+
+    function testFuzz_BorrowFromDifferentAddressWithConsent_WithRateChange(
+        uint256[COLLATERAL_COUNT] memory collateralDepositAmounts,
+        uint256 normalizedBorrowAmount,
+        uint104[COLLATERAL_COUNT] memory _newRates
+    )
+        public
+    {
+        changeRate = true;
+
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            // Disable debt ceiling for this test
+            ionPool.updateIlkDebtCeiling(i, type(uint256).max);
+
+            newRates[i] = uint104(bound(_newRates[i], 1e27, 10e27));
+        }
+
+        testFuzz_BorrowFromDifferentAddressWithConsent(collateralDepositAmounts, normalizedBorrowAmount);
+    }
+
+    function testFuzz_Repay_WithTimeWarp(
+        uint256 collateralDepositAmount,
+        uint256 normalizedBorrowAmount,
+        uint256 normalizedRepayAmount,
+        uint256 _warpTimeAmount
+    )
+        public
+    {
+        warpTime = true;
+        warpTimeAmount = bound(_warpTimeAmount, 100, 10_000);
+
+        testFuzz_Repay(collateralDepositAmount, normalizedBorrowAmount, normalizedRepayAmount);
+    }
+
+    function testFuzz_RepayForDifferentAddress_WithTimeWarp(
+        uint256 collateralDepositAmount,
+        uint256 normalizedBorrowAmount,
+        uint256 normalizedRepayAmount,
+        uint256 _warpTimeAmount
+    )
+        public
+    {
+        warpTime = true;
+        warpTimeAmount = bound(_warpTimeAmount, 100, 10_000);
+
+        testFuzz_RepayForDifferentAddress(collateralDepositAmount, normalizedBorrowAmount, normalizedRepayAmount);
+    }
+
+    function testFuzz_RepayFromDifferentAddressWithConsent_WithTimeWarp(
+        uint256 collateralDepositAmount,
+        uint256 normalizedBorrowAmount,
+        uint256 normalizedRepayAmount,
+        uint256 _warpTimeAmount
+    )
+        public
+    {
+        warpTime = true;
+        warpTimeAmount = bound(_warpTimeAmount, 100, 10_000);
+
+        testFuzz_RepayFromDifferentAddressWithConsent(
+            collateralDepositAmount, normalizedBorrowAmount, normalizedRepayAmount
+        );
     }
 }

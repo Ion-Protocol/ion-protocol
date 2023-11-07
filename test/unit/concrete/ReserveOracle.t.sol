@@ -1,7 +1,7 @@
 // // SPDX-License-Identifier: MIT
 // pragma solidity ^0.8.21;
 
-// import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+// import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 // import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
 // import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
 // import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
@@ -25,7 +25,7 @@
 
 // // fork tests for integrating with external contracts
 // contract ReserveOracleTest is IonPoolSharedSetup {
-//     using RoundedMath for uint256;
+//     using WadRayMath for uint256;
 
 //     uint8 constant STETH_ILK_INDEX = 0;
 //     uint8 constant ETHX_ILK_INDEX = 1;

@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardModuleExposed } from "../../helpers/RewardModuleSharedSetup.sol";
-import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
@@ -20,7 +20,7 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
 }
 
 contract UserHandler is Handler {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     constructor(
         RewardModuleExposed _rewardModule,
@@ -52,7 +52,7 @@ contract UserHandler is Handler {
 }
 
 contract SupplyFactorIncreaseHandler is Handler {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     constructor(
         RewardModuleExposed _rewardModule,

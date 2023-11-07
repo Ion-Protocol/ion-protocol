@@ -4,8 +4,8 @@ pragma solidity ^0.8.21;
 
 import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
-import { console2 } from "forge-std/console2.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import "forge-std/console.sol";
 
 contract MockstEthReserveOracle {
     uint256 public exchangeRate;
@@ -16,7 +16,7 @@ contract MockstEthReserveOracle {
 }
 
 contract LiquidationTest is LiquidationSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     function test_ExchangeRateCannotBeZero() public {
         // deploy liquidations contract

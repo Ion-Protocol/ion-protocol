@@ -6,11 +6,11 @@ import { console2 } from "forge-std/Script.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { YieldOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "src/YieldOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 contract DeployYieldOracleScript is BaseScript {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
 
@@ -19,7 +19,7 @@ contract DeployYieldOracleScript is BaseScript {
 
     uint256 internal constant SCALE = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
 
-    function run() public broadcast returns (YieldOracle apyOracle) {
+    function run() public broadcast returns (YieldOracle yieldOracle) {
         string[] memory configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
         assert(configKeys.length == ILK_COUNT);
 
@@ -43,8 +43,9 @@ contract DeployYieldOracleScript is BaseScript {
             historicalExchangeRates[i] = exchangesRates;
         }
 
-        apyOracle =
-        new YieldOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
+        yieldOracle =
+        // TODO: Fix admin
+        new YieldOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));
     }
 
     function configureDeployment() external {

@@ -5,14 +5,14 @@ pragma solidity ^0.8.21;
 import { IonPoolSharedSetup, MockReserveOracle } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/RoundedMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { console2 } from "forge-std/console2.sol";
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using Math for uint256; 
     using Strings for uint256;
     using SafeCast for *; 

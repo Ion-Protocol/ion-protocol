@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardModule } from "src/reward/RewardModule.sol";
-import { RoundedMath, RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 import { RewardModuleSharedSetup } from "test/helpers/RewardModuleSharedSetup.sol";
 
@@ -13,9 +13,9 @@ import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
-    function testFuzz_mintRewardBasic(uint256 amountOfRewards) external {
+    function testFuzz_MintRewardBasic(uint256 amountOfRewards) external {
         vm.assume(amountOfRewards != 0);
         // Prevent overflow
         vm.assume(amountOfRewards < 2 ** 128);
@@ -32,7 +32,7 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
     }
 
-    function testFuzz_burnRewardBasic(uint256 amountOfRewards) external {
+    function testFuzz_BurnRewardBasic(uint256 amountOfRewards) external {
         vm.assume(amountOfRewards != 0);
         // Prevent overflow
         vm.assume(amountOfRewards < 2 ** 128);
@@ -53,7 +53,7 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         assertEq(rewardModule.balanceOf(address(this)), 0);
     }
 
-    function testFuzz_mintRewardWithSupplyFactorChange(uint256 amountOfRewards, uint256 supplyFactorNew) external {
+    function testFuzz_MintRewardWithSupplyFactorChange(uint256 amountOfRewards, uint256 supplyFactorNew) external {
         vm.assume(amountOfRewards != 0);
         // Prevent overflow
         vm.assume(amountOfRewards < 2 ** 128);
@@ -94,7 +94,7 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
     }
 
-    function testFuzz_burnRewardWithSupplyFactorChange(uint256 amountOfRewards, uint256 supplyFactorNew) external {
+    function testFuzz_BurnRewardWithSupplyFactorChange(uint256 amountOfRewards, uint256 supplyFactorNew) external {
         vm.assume(amountOfRewards != 0);
         // Prevent overflow
         vm.assume(amountOfRewards < 2 ** 128);

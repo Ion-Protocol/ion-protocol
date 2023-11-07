@@ -2,12 +2,12 @@
 pragma solidity ^0.8.21;
 
 import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
-import { IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
+import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
 
 contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
-    using RoundedMath for *;
+    using WadRayMath for *;
 
     // --- ETHx Reserve Oracle Test ---
 
@@ -16,7 +16,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
         EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
-            STADER_ORACLE,
+            STADER_STAKE_POOLS_MANAGER,
             ETHX_ILK_INDEX,
             feeds,
             quorum,
@@ -48,7 +48,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[1] = address(mockFeed2);
         feeds[2] = address(mockFeed3);
         EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
-            STADER_ORACLE,
+            STADER_STAKE_POOLS_MANAGER,
             ETHX_ILK_INDEX,
             feeds,
             quorum,
@@ -63,17 +63,13 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
 
     // verifying that the change in the swETH storage slot is reflected in exchangeRate()
     function test_EthXReserveOracleForkExchcangeRateChange() public {
-        (, uint256 totalEthBalance, uint256 totalEthXSupply) = IStaderOracle(STADER_ORACLE).exchangeRate();
-        uint256 currExchangeRate = totalEthBalance.wadDivDown(totalEthXSupply);
-
         uint256 newTotalSupplyToStore = 2 ether;
         uint256 newTotalEthBalanceToStore = 1 ether;
         uint256 expectedExchangeRate = 0.5 ether;
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
 
-        (, uint256 newTotalEthBalance, uint256 newTotalEthSupply) = IStaderOracle(STADER_ORACLE).exchangeRate();
-        uint256 newExchangeRate = newTotalEthBalance.wadDivDown(newTotalEthSupply);
+        uint256 newExchangeRate = IStaderStakePoolsManager(STADER_STAKE_POOLS_MANAGER).getExchangeRate();
         assertEq(newExchangeRate, expectedExchangeRate, "new exchange rate");
     }
 
@@ -89,14 +85,15 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets currentExchangeRate to be the current exchangeRate in constructor
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ETHX_ILK_INDEX, feeds, quorum, maxChange);
+        EthXReserveOracle ethXReserveOracle =
+            new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 exchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // set EthX exchange rate to be lower
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
-        ethXReserveOracle.updateExchangeRate(); 
+        ethXReserveOracle.updateExchangeRate();
 
         uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 
@@ -115,7 +112,8 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets currentExchangeRate to be the current exchangeRate in constructor
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ETHX_ILK_INDEX, feeds, quorum,
+        EthXReserveOracle ethXReserveOracle =
+        new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum,
     maxChange);
 
         uint256 exchangeRate = ethXReserveOracle.currentExchangeRate();
@@ -123,7 +121,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         // set Swell exchange rate to be lower
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
-        ethXReserveOracle.updateExchangeRate(); 
+        ethXReserveOracle.updateExchangeRate();
 
         uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 
@@ -143,15 +141,14 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets currentExchangeRate to be the current exchangeRate in constructor
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(STADER_ORACLE, ETHX_ILK_INDEX, feeds, quorum,
+        EthXReserveOracle ethXReserveOracle =
+        new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum,
     maxChange);
-
-        uint256 currentExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         // set Swell exchange rate to new but within bounds
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_ETH_BALANCE_SLOT, bytes32(newTotalEthBalanceToStore));
-        ethXReserveOracle.updateExchangeRate(); 
+        ethXReserveOracle.updateExchangeRate();
 
         uint256 newExchangeRate = ethXReserveOracle.currentExchangeRate();
 

@@ -5,7 +5,7 @@ import { IonPool } from "src/IonPool.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -28,7 +28,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  */
 abstract contract IonHandlerBase {
     using SafeERC20 for IERC20;
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     error CannotSendEthToContract();
 
@@ -40,12 +40,11 @@ abstract contract IonHandlerBase {
     IWETH9 immutable weth;
     uint8 immutable ilkIndex;
     IonPool immutable ionPool;
-    // TODO: Instead of passing registry, just pass GemJoin directly
     GemJoin immutable gemJoin;
     IERC20 immutable lstToken;
     Whitelist immutable whitelist;
 
-    modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
+    modifier onlyWhitelistedBorrowers(uint8, bytes32[] memory proof) {
         whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, proof);
         _;
     }

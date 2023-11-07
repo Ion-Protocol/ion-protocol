@@ -17,6 +17,8 @@ contract GemJoin is Ownable2Step, Pausable {
     IonPool public immutable pool;
     uint8 public immutable ilkIndex;
 
+    uint256 public totalGem;
+
     constructor(IonPool _pool, IERC20 _gem, uint8 _ilkIndex, address owner) Ownable(owner) {
         gem = _gem;
         pool = _pool;
@@ -34,12 +36,16 @@ contract GemJoin is Ownable2Step, Pausable {
     function join(address user, uint256 amount) external whenNotPaused {
         if (int256(amount) < 0) revert Int256Overflow();
 
+        totalGem += amount;
+
         pool.mintAndBurnGem(ilkIndex, user, int256(amount));
         gem.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function exit(address user, uint256 amount) external whenNotPaused {
         if (int256(amount) < 0) revert Int256Overflow();
+
+        totalGem -= amount;
 
         pool.mintAndBurnGem(ilkIndex, msg.sender, -int256(amount));
         gem.safeTransfer(user, amount);

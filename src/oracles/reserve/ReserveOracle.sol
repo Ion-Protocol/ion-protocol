@@ -5,7 +5,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
@@ -14,7 +14,7 @@ uint8 constant MAX_FEED_COUNT = 3;
 
 abstract contract ReserveOracle is Ownable {
     using SafeCast for *;
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     uint8 public immutable ilkIndex;
 
@@ -28,13 +28,13 @@ abstract contract ReserveOracle is Ownable {
     IReserveFeed public immutable feed1;
     IReserveFeed public immutable feed2;
 
-    // --- Events --- 
+    // --- Events ---
     event UpdateExchangeRate(uint256 exchangeRate);
 
     // --- Errors ---
     error InvalidQuorum(uint8 quorum);
     error InvalidFeedLength(uint256 length);
-    error InvalidInitialization(uint256 exchangeRate); 
+    error InvalidInitialization(uint256 exchangeRate);
 
     // --- Override ---
     function _getProtocolExchangeRate() internal view virtual returns (uint256);
@@ -87,23 +87,26 @@ abstract contract ReserveOracle is Ownable {
         return Math.max(min, Math.min(max, value));
     }
 
+    // TODO: Why public?
     function initializeExchangeRate() public {
         currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
         if (currentExchangeRate == 0) {
-            revert InvalidInitialization(currentExchangeRate); 
+            revert InvalidInitialization(currentExchangeRate);
         }
     }
 
-    // @dev Takes the minimum between the aggregated values and the protocol exchange rate, 
-    //      then bounds it up to the maximum change and writes the bounded value to the state.  
-    // NOTE: keepers should call this update to reflect recent values 
+    // @dev Takes the minimum between the aggregated values and the protocol exchange rate,
+    //      then bounds it up to the maximum change and writes the bounded value to the state.
+    // NOTE: keepers should call this update to reflect recent values
     function updateExchangeRate() public {
-        console2.log("updateExchangeRate");
-        uint256 _currentExchangeRate = currentExchangeRate; 
+        uint256 _currentExchangeRate = currentExchangeRate;
+
         uint256 minimum = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
         uint256 diff = _currentExchangeRate.rayMulDown(maxChange);
-        uint256 bounded = _bound(minimum, _currentExchangeRate - diff, _currentExchangeRate + diff); 
-        currentExchangeRate = bounded; 
+
+        uint256 bounded = _bound(minimum, _currentExchangeRate - diff, _currentExchangeRate + diff);
+        currentExchangeRate = bounded;
+
         emit UpdateExchangeRate(bounded);
     }
 }

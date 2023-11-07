@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -11,6 +11,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  */
 contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
     using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeCast for *;
 
     DeploymentArgs internal deploymentArgs;

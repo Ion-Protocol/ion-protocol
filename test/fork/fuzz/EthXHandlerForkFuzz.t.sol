@@ -5,16 +5,16 @@ import { EthXHandler_ForkBase } from "test/fork/concrete/EthXHandlerFork.t.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { RoundedMath, WAD, RAY } from "src/libraries/math/RoundedMath.sol";
-import { IStaderDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
+import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
 
 import { Vm } from "forge-std/Vm.sol";
 
-using StaderLibrary for IStaderDeposit;
+using StaderLibrary for IStaderStakePoolsManager;
 
 abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
-    using RoundedMath for *;
+    using WadRayMath for *;
 
     uint256 minDeposit;
     uint256 maxDeposit;
@@ -77,7 +77,6 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
-    // TODO: Replace all inlines with a deep fuzz config
     function testForkFuzz_FlashSwapLeverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         initialDeposit = bound(initialDeposit, minDeposit, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
@@ -110,8 +109,8 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
 
         uint256 normalizedDebtCreated;
         for (uint256 i = 0; i < entries.length; i++) {
-            // keccak256("Borrow(uint8,address,address,uint256,uint256)")
-            if (entries[i].topics[0] != 0xc1bf80a66a0c1db72f87da77c6a183c34835b2dc06f7c0d713ea4bcb6bd8afa6) continue;
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
             normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
         }
 

@@ -1,7 +1,8 @@
-workers: 5
-
+workers: 1
 testLimit: 50000
 seqLen: 1024
+
+codeSize: 0x9000
 
 solcArgs: "--optimize --optimize-runs 1000"
 
@@ -33,12 +34,12 @@ allContracts: false
 filterBlacklist: false # if false, allows filterFunctions
 filterFunctions:
   [
-    "IonPool_Echidna.supply(uint8,uint88)",
-    "IonPool_Echidna.withdraw(uint8,uint88)",
-    "IonPool_Echidna.borrow(uint8,uint8,uint128)",
-    "IonPool_Echidna.repay(uint8,uint8,uint128)",
-    "IonPool_Echidna.depositCollateral(uint8,uint8,uint128)",
-    "IonPool_Echidna.withdrawCollateral(uint8,uint8,uint128)",
-    "IonPool_Echidna.gemJoin(uint8,uint8,uint128)",
-    "IonPool_Echidna.gemExit(uint8,uint8,uint128)",
+    "IonPool_Echidna.supply(uint8,uint88,uint48)",
+    "IonPool_Echidna.withdraw(uint8,uint88,uint48)",
+    "IonPool_Echidna.borrow(uint8,uint8,uint128,uint48)",
+    "IonPool_Echidna.repay(uint8,uint8,uint128,uint48)",
+    "IonPool_Echidna.depositCollateral(uint8,uint8,uint128,uint48)",
+    "IonPool_Echidna.withdrawCollateral(uint8,uint8,uint128,uint48)",
+    "IonPool_Echidna.gemJoin(uint8,uint8,uint128,uint48)",
+    "IonPool_Echidna.gemExit(uint8,uint8,uint128,uint48)",
   ]

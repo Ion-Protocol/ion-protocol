@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { RewardModuleSharedSetup } from "../../helpers/RewardModuleSharedSetup.sol";
 import { UserHandler, SupplyFactorIncreaseHandler } from "./Handlers.t.sol";
-import { RoundedMath } from "../../../src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
@@ -71,7 +71,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
  * increased.
  */
 contract RewardModule_InvariantTest is RewardModuleSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     ActorManager public actorManager;
     UserHandler[] public userHandlers;

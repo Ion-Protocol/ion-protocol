@@ -135,20 +135,16 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
     struct FlashCallbackData {
         address user;
-
         // This value is only used when leveraging
         uint256 initialDeposit;
-
         // This value will change its meaning depending on the direction of the
         // swap. For leveraging, it is the max resulting additional debt. For
         // deleveraging, it is the max collateral to remove.
         uint256 maxResultingAdditionalDebtOrCollateralToRemove;
-
         // How much weth was flashloaned from Uniswap. During leveraging this
         // weth will be used to swap for collateral, and during deleveraging
         // this weth will be used to repay IonPool debt.
         uint256 wethFlashloaned;
-        
         // This value indicates the amount of extra collateral that must be
         // borrowed. However, this value is only relevant for leveraging. If
         // this value is zero, then we are deleveraging.

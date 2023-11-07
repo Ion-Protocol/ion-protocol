@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { RoundedMath, WAD, RAY } from "./libraries/math/RoundedMath.sol";
+import { WadRayMath, WAD, RAY } from "./libraries/math/WadRayMath.sol";
 import { IonPool } from "src/IonPool.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { console2 } from "forge-std/console2.sol";
@@ -13,7 +13,7 @@ uint8 constant ILK_COUNT = 8;
 
 contract Liquidation {
     using SafeERC20 for IERC20;
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     error LiquidationThresholdCannotBeZero(uint256 liquidationThreshold);
     error ExchangeRateCannotBeZero(uint256 exchangeRate);
@@ -239,11 +239,8 @@ contract Liquidation {
             liquidateArgs.repay = normalizedDebt * rate; // bound repay to total debt
             liquidateArgs.dart = normalizedDebt; // pay off all debt including dust
             liquidateArgs.gemOut = normalizedDebt * rate / liquidateArgs.price; // round down in protocol favor
-        } else { // if (normalizedDebt * rate - liquidateArgs.repay >= dust) do partial liquidation
-            console2.log("partial liquidations"); 
-            console2.log("repay: ", liquidateArgs.repay); 
-            console2.log("normalizedDebt: ", normalizedDebt); 
-            console2.log("rate: ", rate); 
+        } else {
+            // if (normalizedDebt * rate - liquidateArgs.repay >= dust) do partial liquidation
             // repay stays unchanged
             liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad]
             liquidateArgs.dart =

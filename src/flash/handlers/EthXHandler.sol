@@ -6,7 +6,7 @@ import { GemJoin } from "src/join/GemJoin.sol";
 import { IonHandlerBase } from "src/flash/handlers/base/IonHandlerBase.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
-import { IStaderDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { UniswapFlashloanBalancerSwapHandler } from "src/flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
 import { BalancerFlashloanDirectMintHandler } from "src/flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
 
@@ -18,16 +18,16 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
  * will take a cheap flashloan from the wstETH/ETH uniswap pool.
  */
 contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDirectMintHandler {
-    using StaderLibrary for IStaderDeposit;
+    using StaderLibrary for IStaderStakePoolsManager;
 
     // Stader deposit contract is separate from the ETHx lst contract
-    IStaderDeposit immutable staderDeposit;
+    IStaderStakePoolsManager immutable staderDeposit;
 
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
         GemJoin _gemJoin,
-        IStaderDeposit _staderDeposit,
+        IStaderStakePoolsManager _staderDeposit,
         Whitelist _whitelist,
         IUniswapV3Pool _wstEthUniswapPool
     )

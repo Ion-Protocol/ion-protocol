@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { RewardModule } from "src/reward/RewardModule.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { TransparentUpgradeableProxy } from "src/admin/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "src/admin/ProxyAdmin.sol";
 
@@ -42,7 +42,7 @@ contract RewardModuleExposed is RewardModule {
 }
 
 abstract contract RewardModuleSharedSetup is BaseTestSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event BalanceTransfer(address indexed from, address indexed to, uint256 value, uint256 index);

@@ -10,6 +10,22 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
+contract MockUniswapPool {
+    address underlying;
+
+    function token0() external pure returns (address) {
+        return address(0);
+    }
+
+    function token1() external view returns (address) {
+        return underlying;
+    }
+
+    function setUnderlying(address _underlying) external {
+        underlying = _underlying;
+    }
+}
+
 contract WstEthHandler_Test is IonPoolSharedSetup {
     WstEthHandler wstEthHandler;
 
@@ -18,9 +34,12 @@ contract WstEthHandler_Test is IonPoolSharedSetup {
     function setUp() public override {
         super.setUp();
 
+        MockUniswapPool mockPool = new MockUniswapPool();
+        mockPool.setUnderlying(address(underlying));
+
         // Ignore Uniswap args since they will be tested through forks
         wstEthHandler =
-        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Factory(address(1)), IUniswapV3Pool(address(1)), 500);
+        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Factory(address(1)), IUniswapV3Pool(address(mockPool)), 500);
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
