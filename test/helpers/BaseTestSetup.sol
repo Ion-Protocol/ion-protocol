@@ -3,8 +3,26 @@ pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
 import { ERC20PresetMinterPauser } from "./ERC20PresetMinterPauser.sol";
+import { VmSafe as Vm } from "forge-std/Vm.sol";
+
+import { console } from "forge-std/console.sol";
 
 abstract contract BaseTestSetup is Test {
+    modifier prankAgnostic() {
+        (Vm.CallerMode mode, address msgSender,) = vm.readCallers();
+        if (mode == Vm.CallerMode.Prank || mode == Vm.CallerMode.RecurrentPrank) {
+            vm.stopPrank();
+        }
+
+        _;
+
+        if (mode == Vm.CallerMode.Prank) {
+            vm.prank(msgSender);
+        } else if (mode == Vm.CallerMode.RecurrentPrank) {
+            vm.startPrank(msgSender);
+        }
+    }
+
     ERC20PresetMinterPauser underlying;
     address internal TREASURY = vm.addr(2);
     uint8 internal constant DECIMALS = 18;

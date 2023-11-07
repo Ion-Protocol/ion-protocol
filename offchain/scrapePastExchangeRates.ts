@@ -21,7 +21,7 @@ const exchangeRateAddresses = {
     "5": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
   },
   stader: {
-    "1": "0xF64bAe65f6f2a5277571143A24FaaFDFC0C2a737",
+    "1": "0xcf5EA1b38380f6aF39068375516Daf40Ed70D299",
     "5": "0x22F8E700ff3912f3Caba5e039F6dfF1a24390E80",
   },
   swell: {
@@ -82,21 +82,10 @@ async function main() {
       abi: [
         {
           inputs: [],
-          name: "exchangeRate",
+          name: "getExchangeRate",
           outputs: [
             {
               internalType: "uint256",
-              name: "reportingBlockNumber",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "totalETHBalance",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "totalETHXSupply",
               type: "uint256",
             },
           ],
@@ -186,15 +175,7 @@ async function main() {
           blockNumber,
         });
 
-        let exchangeRate;
-        if (key == "stader") {
-          //@ts-ignore
-          const [, totalEthBalance, totalEthXSupply] = returnData;
-          exchangeRate =
-            (totalEthBalance * BigInt(10) ** BigInt(18)) / totalEthXSupply;
-        } else {
-          exchangeRate = returnData;
-        }
+        let exchangeRate = returnData;
 
         return exchangeRate;
       })

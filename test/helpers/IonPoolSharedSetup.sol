@@ -4,14 +4,14 @@ pragma solidity 0.8.21;
 import { IonPool } from "src/IonPool.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
-import { InterestRate, IlkData, SECONDS_IN_A_DAY } from "src/InterestRate.sol";
+import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { RAY } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
-
 import { BaseTestSetup } from "test/helpers/BaseTestSetup.sol";
+import { YieldOracleSharedSetup } from "test/helpers/YieldOracleSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -21,6 +21,8 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
+
+using WadRayMath for uint16;
 
 // struct IlkData {
 //                                                        _
@@ -54,26 +56,24 @@ contract InterestRateExposed is InterestRate {
 }
 
 contract IonPoolExposed is IonPool {
-    constructor(
-        address _underlying,
-        address _treasury,
-        uint8 _decimals,
-        string memory _name,
-        string memory _symbol,
-        address _defaultAdmin,
-        InterestRate _interestRateModule
-    ) 
-    // IonPool(_underlying, _treasury, _decimals, _name, _symbol, _defaultAdmin, _interestRateModule)
-    { }
-
     function setRate(uint8 ilkIndex, uint104 newRate) external {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
+        uint256 oldRate = $.ilks[ilkIndex].rate;
         $.ilks[ilkIndex].rate = newRate;
+
+        uint256 rateDiff = newRate - oldRate;
+        $.debt += rateDiff * $.ilks[ilkIndex].totalNormalizedDebt;
     }
 
     function setSupplyFactor(uint256 factor) external {
         _setSupplyFactor(factor);
+    }
+
+    function addLiquidity(uint256 amount) external {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+
+        $.weth += amount;
     }
 }
 
@@ -91,7 +91,14 @@ contract MockWhitelist {
 contract MockSpotOracle is SpotOracle {
     uint256 price;
 
-    constructor(uint8 ilkIndex, uint256 ltv, uint256 _price) SpotOracle(ilkIndex, ltv) {
+    constructor(
+        uint8 ilkIndex,
+        uint256 ltv,
+        address reserveOracle,
+        uint256 _price
+    )
+        SpotOracle(ilkIndex, ltv, reserveOracle)
+    {
         price = _price;
     }
 
@@ -104,8 +111,18 @@ contract MockSpotOracle is SpotOracle {
     }
 }
 
-abstract contract IonPoolSharedSetup is BaseTestSetup {
+// TODO: created just to build the contract, delete if unnecessary later
+contract MockReserveOracle {
+    uint256 public currentExchangeRate;
+
+    constructor(uint256 _currentExchangeRate) {
+        currentExchangeRate = _currentExchangeRate;
+    }
+}
+
+abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     IonPoolExposed ionPool;
+    IonPoolExposed ionPoolImpl;
     IonRegistry ionRegistry;
 
     InterestRateExposed interestRateModule;
@@ -124,7 +141,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
     // --- Configs ---
     uint256 internal constant SPOT = 1e27; // [ray]
-    uint80 internal constant minimumProfitMargin = 0.85e18 / SECONDS_IN_A_DAY;
+    uint256 internal constant EXCHANGE_RATE = 1e18; // [wad]
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
@@ -134,6 +151,18 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     ERC20PresetMinterPauser immutable swEth = new ERC20PresetMinterPauser("Swell Ether", "swETH");
 
     ERC20PresetMinterPauser[] internal mintableCollaterals = [wstEth, ethX, swEth];
+
+    uint96 internal constant wstEthMinimumProfitMargin = 70_677_685_926_057_170; // 7.0677685926057170E-11 in RAY
+    uint96 internal constant ethXMinimumProfitMargin = 91_263_663_293_261_740; // 9.1263663293261740E-11 in RAY
+    uint96 internal constant swEthMinimumProfitMargin = 81_452_622_424_649_230; // 8.145262242464923e-11 in RAY
+
+    uint96 internal constant wstEthAdjustedAboveKinkSlope = 25_017_682_370_176_442_000; // 2.5017682370176444e-08 in RAY
+    uint96 internal constant ethXAdjustedAboveKinkSlope = 39_693_222_042_558_280_000; // 3.9693222042558285e-08 in RAY
+    uint96 internal constant swEthAdjustedAboveKinkSlope = 21_397_408_289_658_417_000; // 2.1397408289658418e-08 in RAY
+
+    uint96 internal constant wstEthMinimumAboveKinkSlope = 26_390_655_175_013_278_000;
+    uint96 internal constant ethXMinimumAboveKinkSlope = 48_899_593_146_619_404_000;
+    uint96 internal constant swEthMinimumAboveKinkSlope = 21_366_508_315_720_827_000;
 
     uint16 internal constant wstEthAdjustedReserveFactor = 0.1e4;
     uint16 internal constant ethXAdjustedReserveFactor = 0.05e4;
@@ -153,6 +182,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
     IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
+    uint96[] internal minimumProfitMargins =
+        [wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin];
     uint16[] internal adjustedReserveFactors =
         [wstEthAdjustedReserveFactor, ethXAdjustedReserveFactor, swEthAdjustedReserveFactor];
     uint16[] internal optimalUtilizationRates =
@@ -161,9 +192,14 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
     uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
     MockSpotOracle[] internal spotOracles;
 
+    uint96[] internal adjustedAboveKinkSlopes =
+        [wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope];
+    uint96[] internal minimumAboveKinkSlopes =
+        [wstEthMinimumAboveKinkSlope, ethXMinimumAboveKinkSlope, swEthMinimumAboveKinkSlope];
+
     IlkData[] ilkConfigs;
 
-    function setUp() public virtual override {
+    function setUp() public virtual override(BaseTestSetup, YieldOracleSharedSetup) {
         collaterals = _getCollaterals();
         address[] memory depositContracts = _getDepositContracts();
 
@@ -173,7 +209,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
                 && optimalUtilizationRates.length == distributionFactors.length
                 && distributionFactors.length == debtCeilings.length
         );
-        super.setUp();
+        BaseTestSetup.setUp();
+        YieldOracleSharedSetup.setUp();
         apyOracle = new MockYieldOracle();
 
         uint256 distributionFactorSum;
@@ -181,16 +218,15 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         IlkData memory ilkConfig;
         for (uint256 i = 0; i < collaterals.length; i++) {
             ilkConfig = IlkData({
-                adjustedProfitMargin: minimumProfitMargin,
+                adjustedProfitMargin: minimumProfitMargins[i],
                 minimumKinkRate: 0,
-                adjustedAboveKinkSlope: 700e4,
-                minimumAboveKinkSlope: 700e4,
-                adjustedReserveFactor: adjustedReserveFactors[i],
-                minimumReserveFactor: adjustedReserveFactors[i],
-                minimumBaseRate: 0,
+                reserveFactor: adjustedReserveFactors[i],
                 adjustedBaseRate: 0,
+                minimumBaseRate: 0,
                 optimalUtilizationRate: optimalUtilizationRates[i],
-                distributionFactor: distributionFactors[i]
+                distributionFactor: distributionFactors[i],
+                adjustedAboveKinkSlope: adjustedAboveKinkSlopes[i],
+                minimumAboveKinkSlope: minimumAboveKinkSlopes[i]
             });
 
             ilkConfigs.push(ilkConfig);
@@ -208,31 +244,23 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
         // Instantiate upgradeable IonPool
-        IonPoolExposed ionPoolImpl =
-            new IonPoolExposed(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule);
+        ionPoolImpl = new IonPoolExposed();
 
         bytes memory initializeBytes = abi.encodeWithSelector(
-            IonPool.initialize.selector,
-            _getUnderlying(),
-            TREASURY,
-            DECIMALS,
-            NAME,
-            SYMBOL,
-            address(this),
-            interestRateModule,
-            whitelist
+            IonPool.initialize.selector, _getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), whitelist
         );
         ionPool = IonPoolExposed(
             address(new TransparentUpgradeableProxy(address(ionPoolImpl), address(ionProxyAdmin), initializeBytes))
         );
-        vm.label(address(ionPool), "IonPool");
+        // vm.label(address(ionPool), "IonPool");
 
         ionPool.grantRole(ionPool.ION(), address(this));
         ionPool.updateSupplyCap(type(uint256).max);
 
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
-            MockSpotOracle spotOracle = new MockSpotOracle(i, 1e18, SPOT / 1e9);
+            MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE);
+            MockSpotOracle spotOracle = new MockSpotOracle(i, 1e27, address(reserveOracle), SPOT / 1e9);
             spotOracles.push(spotOracle);
             ionPool.updateIlkSpot(i, spotOracle);
             ionPool.updateIlkDebtCeiling(i, debtCeilings[i]);
@@ -242,18 +270,19 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
             ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
             ilkIndexes[address(collaterals[i])] = i;
         }
+        ionPool.updateInterestRateModule(interestRateModule);
 
         ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
     }
 
-    function test_setUp() public virtual {
+    function test_SetUp() public virtual override {
+        super.test_SetUp();
         assertEq(address(ionPool.underlying()), _getUnderlying());
+        assertEq(ionPool.implementation(), address(ionPoolImpl));
 
         // attempt to initialize again
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        ionPool.initialize(
-            _getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), interestRateModule, Whitelist(whitelist)
-        );
+        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), Whitelist(whitelist));
 
         assertEq(ionPool.treasury(), TREASURY);
         assertEq(ionPool.decimals(), DECIMALS);
@@ -270,10 +299,11 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
         assertEq(addressesLength, collaterals.length);
         for (uint8 i = 0; i < addressesLength; i++) {
             address collateralAddress = address(collaterals[i]);
+            assertEq(ionPool.addressContains(collateralAddress), true);
             assertEq(ionPool.getIlkAddress(i), collateralAddress);
             assertEq(ionPool.getIlkIndex(collateralAddress), ilkIndexes[collateralAddress]);
 
-            assertEq(ionPool.totalNormalizedDebt(i), 0);
+            // assertEq(ionPool.totalNormalizedDebt(i), 0);
             // assertEq(ionPool.rate(i), 1e27);
             // assertEq(ionPool.spot(i).getSpot(), SPOT);
             assertEq(address(ionPool.spot(i)), address(spotOracles[i]));
@@ -282,19 +312,20 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
             // (uint256 borrowRate, uint256 reserveFactor) = ionPool.getCurrentBorrowRate(i);
             // assertEq(borrowRate, 1 * RAY);
-            // assertEq(reserveFactor, adjustedReserveFactors[i]);
+            // assertEq(reserveFactor, adjustedReserveFactors[i].scaleUpToRay(4));
 
-            // IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
-            // assertEq(ilkConfig.adjustedProfitMargin, minimumProfitMargin);
-            // assertEq(ilkConfig.minimumKinkRate, 0);
-            // assertEq(ilkConfig.adjustedAboveKinkSlope, 700e4);
-            // assertEq(ilkConfig.minimumAboveKinkSlope, 700e4);
-            // assertEq(ilkConfig.adjustedReserveFactor, adjustedReserveFactors[i]);
-            // assertEq(ilkConfig.minimumReserveFactor, adjustedReserveFactors[i]);
-            // assertEq(ilkConfig.minimumBaseRate, 0);
-            // assertEq(ilkConfig.adjustedBaseRate, 0);
-            // assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
-            // assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
+            IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
+            assertEq(ilkConfig.adjustedProfitMargin, minimumProfitMargins[i]);
+            assertEq(ilkConfig.minimumKinkRate, 0);
+
+            assertEq(ilkConfig.reserveFactor, adjustedReserveFactors[i]);
+            assertEq(ilkConfig.adjustedBaseRate, 0);
+            assertEq(ilkConfig.minimumBaseRate, 0);
+            assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i]);
+            assertEq(ilkConfig.distributionFactor, distributionFactors[i]);
+
+            assertEq(ilkConfig.adjustedAboveKinkSlope, adjustedAboveKinkSlopes[i]);
+            assertEq(ilkConfig.minimumAboveKinkSlope, minimumAboveKinkSlopes[i]);
         }
 
         assertEq(interestRateModule.collateralCount(), collaterals.length);
@@ -318,5 +349,47 @@ abstract contract IonPoolSharedSetup is BaseTestSetup {
 
     function _getDepositContracts() internal view virtual returns (address[] memory) {
         return new address[](3);
+    }
+
+    function _depositInterestGains(uint256 amount) public {
+        ionPool.addLiquidity(amount);
+        underlying.mint(address(ionPool), amount);
+    }
+
+    function _calculateRewardAndDebtDistribution()
+        internal
+        view
+        returns (
+            uint256 supplyFactorIncrease,
+            uint256 treasuryMintAmount,
+            uint104[] memory newRateIncreases,
+            uint256 newDebtIncrease,
+            uint48[] memory newTimestampIncreases
+        )
+    {
+        uint256 ilksLength = ionPool.ilkCount();
+        newRateIncreases = new uint104[](ilksLength);
+        newTimestampIncreases = new uint48[](ilksLength);
+        for (uint8 i = 0; i < ilksLength;) {
+            (
+                uint256 _supplyFactorIncrease,
+                uint256 _treasuryMintAmount,
+                uint104 _newRateIncrease,
+                uint256 _newDebtIncrease,
+                uint48 _timestampIncrease
+            ) = ionPool.calculateRewardAndDebtDistribution(i);
+
+            if (_timestampIncrease > 0) {
+                newRateIncreases[i] = _newRateIncrease;
+                newTimestampIncreases[i] = _timestampIncrease;
+                newDebtIncrease += _newDebtIncrease;
+
+                supplyFactorIncrease += _supplyFactorIncrease;
+                treasuryMintAmount += _treasuryMintAmount;
+            }
+
+            // forgefmt: disable-next-line
+            unchecked { ++i; }
+        }
     }
 }

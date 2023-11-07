@@ -22,7 +22,6 @@ import { console2 } from "forge-std/console2.sol";
  * wstETH/ETH uniswap pool and perform the Balancer swap. The rETH/ETH uniswap
  * pool could also be used since it has a 0.01% but it does have less liquidity.
  */
-
 abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback, IonHandlerBase {
     using SafeERC20 for IERC20;
 
@@ -31,11 +30,10 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     error ExternalUniswapFlashloanNotAllowed();
     error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
 
-    IUniswapV3Pool public immutable flashloanPool;
-
     IVault internal constant vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    bool wethIsToken0OnUniswap;
+    bool immutable wethIsToken0OnUniswap;
+    IUniswapV3Pool public immutable flashloanPool;
 
     constructor(IUniswapV3Pool _flashloanPool) {
         IERC20(address(weth)).approve(address(vault), type(uint256).max);
@@ -79,46 +77,29 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         }
 
         FlashCallbackData memory flashCallbackData;
-        uint256 wethIn;
-        // Avoid stack too deep error
-        {
-            IVault.FundManagement memory fundManagement = IVault.FundManagement({
-                sender: address(this),
-                fromInternalBalance: false,
-                recipient: payable(this),
-                toInternalBalance: false
-            });
 
-            uint256 assetInIndex = 0;
-            uint256 assetOutIndex = 1;
+        IVault.FundManagement memory fundManagement = IVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(this),
+            toInternalBalance: false
+        });
 
-            IVault.BatchSwapStep memory swapStep = IVault.BatchSwapStep({
-                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
-                assetInIndex: assetInIndex,
-                assetOutIndex: assetOutIndex,
-                amount: amountToLeverage,
-                userData: ""
-            });
+        // We need to know how much weth we will need to pay for our desired
+        // amount of collateral output. Once we know this value, we can request
+        // the value from the flashloan.
+        uint256 wethIn = _simulateGivenOutBalancerSwap({
+            fundManagement: fundManagement,
+            assetIn: address(weth),
+            assetOut: address(lstToken),
+            amountIn: amountToLeverage
+        });
 
-            IAsset[] memory assets = new IAsset[](2);
-            assets[assetInIndex] = IAsset(address(weth));
-            assets[assetOutIndex] = IAsset(address(lstToken));
-
-            IVault.BatchSwapStep[] memory swapSteps = new IVault.BatchSwapStep[](1);
-            swapSteps[0] = swapStep;
-
-            wethIn = uint256(
-                vault.queryBatchSwap(IVault.SwapKind.GIVEN_OUT, swapSteps, assets, fundManagement)[assetInIndex]
-            );
-
-            flashCallbackData.user = msg.sender;
-            flashCallbackData.initialDeposit = initialDeposit;
-            flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove = maxResultingAdditionalDebt;
-            flashCallbackData.wethFlashloaned = wethIn;
-            flashCallbackData.amountToLeverage = amountToLeverage;
-            flashCallbackData.leverage = true;
-            flashCallbackData.fundManagement = fundManagement;
-        }
+        flashCallbackData.user = msg.sender;
+        flashCallbackData.initialDeposit = initialDeposit;
+        flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove = maxResultingAdditionalDebt;
+        flashCallbackData.wethFlashloaned = wethIn;
+        flashCallbackData.amountToLeverage = amountToLeverage;
 
         uint256 amount0ToFlash;
         uint256 amount1ToFlash;
@@ -146,14 +127,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
                     initialDeposit: 0,
                     maxResultingAdditionalDebtOrCollateralToRemove: maxCollateralToRemove,
                     wethFlashloaned: debtToRemove,
-                    amountToLeverage: 0,
-                    leverage: false,
-                    fundManagement: IVault.FundManagement({
-                        sender: address(this),
-                        fromInternalBalance: false,
-                        recipient: payable(this),
-                        toInternalBalance: false
-                    })
+                    amountToLeverage: 0
                 })
             )
         );
@@ -161,12 +135,20 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
     struct FlashCallbackData {
         address user;
+        // This value is only used when leveraging
         uint256 initialDeposit;
+        // This value will change its meaning depending on the direction of the
+        // swap. For leveraging, it is the max resulting additional debt. For
+        // deleveraging, it is the max collateral to remove.
         uint256 maxResultingAdditionalDebtOrCollateralToRemove;
+        // How much weth was flashloaned from Uniswap. During leveraging this
+        // weth will be used to swap for collateral, and during deleveraging
+        // this weth will be used to repay IonPool debt.
         uint256 wethFlashloaned;
+        // This value indicates the amount of extra collateral that must be
+        // borrowed. However, this value is only relevant for leveraging. If
+        // this value is zero, then we are deleveraging.
         uint256 amountToLeverage;
-        bool leverage;
-        IVault.FundManagement fundManagement;
     }
 
     /**
@@ -182,17 +164,17 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
         FlashCallbackData memory flashCallbackData = abi.decode(data, (FlashCallbackData));
 
+        IVault.FundManagement memory fundManagement = IVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(this),
+            toInternalBalance: false
+        });
+
         uint256 fee = fee0 + fee1; // At least one of these should be zero, assuming only one token was flashloaned
-        if (flashCallbackData.leverage) {
+
+        if (flashCallbackData.amountToLeverage > 0) {
             uint256 amountToLeverage = flashCallbackData.amountToLeverage;
-            IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
-                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
-                kind: IVault.SwapKind.GIVEN_OUT,
-                assetIn: IAsset(address(weth)),
-                assetOut: IAsset(address(lstToken)),
-                amount: amountToLeverage,
-                userData: ""
-            });
 
             address user = flashCallbackData.user;
             uint256 maxResultingAdditionalDebt = flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove;
@@ -203,12 +185,20 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
                 revert FlashloanRepaymentTooExpensive(wethToRepay, maxResultingAdditionalDebt);
             }
 
+            IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
+                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+                kind: IVault.SwapKind.GIVEN_OUT,
+                assetIn: IAsset(address(weth)),
+                assetOut: IAsset(address(lstToken)),
+                amount: amountToLeverage,
+                userData: ""
+            });
+
             // We will skip slippage control for this step. This is OK since if
             // there was a frontrun attack or the slippage is too high, then the
             // `wethToRepay` value will go above the user's desired
             // `maxResultingAdditionalDebt`
-            uint256 wethSent =
-                vault.swap(balancerSwap, flashCallbackData.fundManagement, type(uint256).max, block.timestamp + 1);
+            uint256 wethSent = vault.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
 
             // Sanity check
             assert(wethSent == flashCallbackData.wethFlashloaned);
@@ -219,32 +209,14 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             weth.transfer(msg.sender, wethToRepay);
         } else {
             // When deleveraging
-
             uint256 totalRepayment = flashCallbackData.wethFlashloaned + fee;
 
-            uint256 collateralIn;
-
-            uint256 assetInIndex = 0;
-            uint256 assetOutIndex = 1;
-
-            IVault.BatchSwapStep memory swapStep = IVault.BatchSwapStep({
-                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
-                assetInIndex: assetInIndex,
-                assetOutIndex: assetOutIndex,
-                amount: totalRepayment,
-                userData: ""
+            uint256 collateralIn = _simulateGivenOutBalancerSwap({
+                fundManagement: fundManagement,
+                assetIn: address(lstToken),
+                assetOut: address(weth),
+                amountIn: totalRepayment
             });
-
-            IAsset[] memory assets = new IAsset[](2);
-            assets[assetInIndex] = IAsset(address(lstToken));
-            assets[assetOutIndex] = IAsset(address(weth));
-
-            IVault.BatchSwapStep[] memory swapSteps = new IVault.BatchSwapStep[](1);
-            swapSteps[0] = swapStep;
-
-            collateralIn = uint256(
-                vault.queryBatchSwap(IVault.SwapKind.GIVEN_OUT, swapSteps, assets, flashCallbackData.fundManagement)[assetInIndex]
-            );
 
             uint256 maxCollateralToRemove = flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove;
             if (collateralIn > maxCollateralToRemove) {
@@ -262,9 +234,39 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
                 userData: ""
             });
 
-            vault.swap(balancerSwap, flashCallbackData.fundManagement, type(uint256).max, block.timestamp + 1);
+            vault.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
 
             weth.transfer(msg.sender, totalRepayment);
         }
+    }
+
+    function _simulateGivenOutBalancerSwap(
+        IVault.FundManagement memory fundManagement,
+        address assetIn,
+        address assetOut,
+        uint256 amountIn
+    )
+        internal
+        returns (uint256)
+    {
+        uint256 assetInIndex = 0;
+        uint256 assetOutIndex = 1;
+
+        IVault.BatchSwapStep memory swapStep = IVault.BatchSwapStep({
+            poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+            assetInIndex: assetInIndex,
+            assetOutIndex: assetOutIndex,
+            amount: amountIn,
+            userData: ""
+        });
+
+        IAsset[] memory assets = new IAsset[](2);
+        assets[assetInIndex] = IAsset(address(assetIn));
+        assets[assetOutIndex] = IAsset(address(assetOut));
+
+        IVault.BatchSwapStep[] memory swapSteps = new IVault.BatchSwapStep[](1);
+        swapSteps[0] = swapStep;
+
+        return uint256(vault.queryBatchSwap(IVault.SwapKind.GIVEN_OUT, swapSteps, assets, fundManagement)[assetInIndex]);
     }
 }

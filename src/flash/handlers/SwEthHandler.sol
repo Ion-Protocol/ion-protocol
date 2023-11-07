@@ -6,17 +6,17 @@ import { GemJoin } from "src/join/GemJoin.sol";
 import { IonHandlerBase } from "./base/IonHandlerBase.sol";
 import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
 import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
-import { ISwellDeposit } from "src/interfaces/DepositInterfaces.sol";
+import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { SwellLibrary } from "src/libraries/SwellLibrary.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 import { Whitelist } from "src/Whitelist.sol";
 
 contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
-    using RoundedMath for uint256;
-    using SwellLibrary for ISwellDeposit;
+    using WadRayMath for uint256;
+    using SwellLibrary for ISwEth;
 
     constructor(
         uint8 _ilkIndex,
@@ -33,6 +33,6 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
 
     function _depositWethForLst(uint256 wethAmount) internal override returns (uint256) {
         weth.withdraw(wethAmount);
-        return ISwellDeposit(address(lstToken)).depositForLst(wethAmount);
+        return ISwEth(address(lstToken)).depositForLst(wethAmount);
     }
 }

@@ -5,7 +5,7 @@ pragma solidity ^0.8.21;
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import "forge-std/console.sol";
 
 contract MockReserveOracle {
@@ -15,16 +15,10 @@ contract MockReserveOracle {
         exchangeRate = _exchangeRate;
         console.log("set exchange rate: ", exchangeRate);
     }
-
-    // @dev called by Liquidation.sol
-    function getExchangeRate() public returns (uint72) {
-        console.log("return: ", exchangeRate);
-        return exchangeRate;
-    }
 }
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
 
     uint256 constant WAD = 1e18;
     uint256 constant RAY = 1e27;
@@ -102,7 +96,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
      * @dev Converts percentage to WAD. Used for instantiating liquidationThreshold arrays
      * @param percentages number out of 100 ex) 75 input will return
      */
-    function getPercentageInWad(uint8[ILK_COUNT] memory percentages) internal returns (uint64[] memory results) {
+    function getPercentageInWad(uint8[ILK_COUNT] memory percentages) internal pure returns (uint64[] memory results) {
         for (uint8 i = 0; i < ILK_COUNT; i++) {
             results[i] = uint64((uint256(percentages[i]) * WAD) / 100);
         }
@@ -169,7 +163,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         pure
         returns (uint256 resultingHealthRatio)
     {
-        exchangeRate = exchangeRate.scaleToRay(18);
+        exchangeRate = exchangeRate.scaleUpToRay(18);
         resultingHealthRatio = (collateral * exchangeRate).rayMulDown(liquidationThreshold);
         resultingHealthRatio = resultingHealthRatio.rayDivDown(normalizedDebt).rayDivDown(rate);
     }
@@ -193,7 +187,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         StateArgs memory sArgs;
         // copy to new memory
         // scale exchangeRate to ray
-        sArgs.exchangeRate = _sArgs.exchangeRate.scaleToRay(18);
+        sArgs.exchangeRate = _sArgs.exchangeRate.scaleUpToRay(18);
         sArgs.collateral = _sArgs.collateral;
         sArgs.normalizedDebt = _sArgs.normalizedDebt;
         sArgs.rate = _sArgs.rate;

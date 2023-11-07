@@ -47,7 +47,7 @@ contract IonPool_MathDiffTest is BaseTestSetup {
     /**
      * @dev Mul test
      */
-    function testDifferential_mul(uint256 x, int256 y) external {
+    function testDifferential_Mul(uint256 x, int256 y) external {
         // Bypass type-checking XD
         (bool success,) =
             address(this).call(abi.encodeWithSelector(this.diffTest.selector, this.mulDss, this.mulSol, x, y));
@@ -67,7 +67,7 @@ contract IonPool_MathDiffTest is BaseTestSetup {
     /**
      * @dev Sub test
      */
-    function testDifferential_sub(uint256 x, int256 y) external {
+    function testDifferential_Sub(uint256 x, int256 y) external {
         diffTest(this.subDss, ionPool.sub, x, y);
     }
 
@@ -79,7 +79,7 @@ contract IonPool_MathDiffTest is BaseTestSetup {
         require(y >= 0 || z >= x);
     }
 
-    function testDifferential_add(uint256 x, int256 y) external {
+    function testDifferential_Add(uint256 x, int256 y) external {
         diffTest(this.addDss, ionPool.add, x, y);
     }
 

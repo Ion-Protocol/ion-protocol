@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { YieldOracle, LOOK_BACK, ILK_COUNT } from "src/YieldOracle.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import {
     YieldOracleSharedSetup,

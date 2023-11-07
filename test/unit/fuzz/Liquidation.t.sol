@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "forge-std/console.sol";
@@ -11,7 +11,7 @@ import "forge-std/console.sol";
  * Fixes deployment configs and fuzzes potential states
  */
 contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeCast for *;
 
     DeploymentArgs internal deploymentArgs;
@@ -89,7 +89,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // [wad] * [ray] <= [wad] * [ray]
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                <= (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(
+                <= (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -97,7 +97,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // position needs to be unsafe after exchange rate change
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                > (stateArgs.collateral * stateArgs.exchangeRate.scaleToRay(18)).rayMulDown(
+                > (stateArgs.collateral * stateArgs.exchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -136,9 +136,12 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
             // dust
             // assert(false); // to see if it's ever reaching this branch
             // ffi to see when this branch gets hit
+            vm.writeLine("fuzz_out.txt", "DUST");
             assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
         } else if (results.category == 2) {
+            vm.writeLine("fuzz_out.txt", "PARTIAL");
             uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
+            console.log("actualCollateral: ", actualCollateral);
             uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
             if (actualNormalizedDebt != 0) {
                 // Could be full liquidation if there was only 1 normalizedDebt in the beginning
@@ -149,6 +152,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                     stateArgs.exchangeRate,
                     deploymentArgs.liquidationThreshold
                 );
+                console.log("health ratio: ", healthRatio);
                 assert(healthRatio >= deploymentArgs.targetHealth);
             }
         }
@@ -166,7 +170,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // [wad] * [ray] <= [wad] * [ray]
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                <= (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(
+                <= (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -174,7 +178,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         // position needs to be unsafe after exchange rate change
         vm.assume(
             stateArgs.normalizedDebt * stateArgs.rate
-                > (stateArgs.collateral * stateArgs.exchangeRate.scaleToRay(18)).rayMulDown(
+                > (stateArgs.collateral * stateArgs.exchangeRate.scaleUpToRay(18)).rayMulDown(
                     deploymentArgs.liquidationThreshold
                 )
         );
@@ -241,8 +245,9 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         stateArgs.normalizedDebt = bound(
             borrowAmt,
             1,
-            (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
-                / stateArgs.rate
+            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+                deploymentArgs.liquidationThreshold
+            ) / stateArgs.rate
         ); // [wad]
         // position must be unsafe after exchange rate change
         stateArgs.exchangeRate = bound(
@@ -252,7 +257,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                 / stateArgs.collateral - 1
         ); // [ray]
         // cast exchangeRate back to [wad]
-        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleToWad(27);
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
 
         vm.assume(stateArgs.exchangeRate > 0); // throw away output if exchangeRate is zero
 
@@ -308,8 +313,9 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         stateArgs.normalizedDebt = bound(
             borrowAmt,
             1,
-            (stateArgs.collateral * startingExchangeRate.scaleToRay(18)).rayMulDown(deploymentArgs.liquidationThreshold)
-                / stateArgs.rate
+            (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+                deploymentArgs.liquidationThreshold
+            ) / stateArgs.rate
         ); // [wad]
         // position must be unsafe after exchange rate change
         stateArgs.exchangeRate = bound(
@@ -319,7 +325,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                 / stateArgs.collateral - 1
         ); // [ray]
         // cast exchangeRate back to [wad]
-        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleToWad(27);
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
 
         vm.assume(stateArgs.exchangeRate > 0); // throw away output if exchangeRate is zero
 
@@ -350,10 +356,8 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         liquidate(keeper1, ilkIndex, borrower1);
 
         // dust liquidations should result in zero debt
-        uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
         uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
 
-        // assert(actualCollateral >= 0);
         assert(actualNormalizedDebt == 0);
     }
 
@@ -378,7 +382,7 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
 // }
 
 // contract LiquidationFuzzTest is LiquidationSharedSetup {
-//     using RoundedMath for uint256;
+//     using WadRayMath for uint256;
 
 //     address constant REVENUE_RECIPIENT = address(1);
 //     address constant BORROWER = address(2);

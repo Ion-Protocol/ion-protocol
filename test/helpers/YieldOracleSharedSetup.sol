@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { Test } from "forge-std/Test.sol";
+import { IonPool } from "src/IonPool.sol";
 import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
-import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
+import { YieldOracle, LOOK_BACK, ILK_COUNT } from "src/YieldOracle.sol";
+
+import { MockIonPool } from "test/helpers/MockIonPool.sol";
+
+import { Test } from "forge-std/Test.sol";
 
 // Mocks
 uint256 constant WST_ETH_EXCHANGE_RATE = 1.2e18;
 uint256 constant STADER_ETH_EXCHANGE_RATE = 1.1e18;
 uint256 constant SWELL_ETH_EXCHANGE_RATE = 1.15e18;
 
-contract MockLido is IWstEth {
+contract MockLido {
     uint256 _exchangeRate = WST_ETH_EXCHANGE_RATE;
 
     function stEthPerToken() external view returns (uint256) {
@@ -22,12 +26,11 @@ contract MockLido is IWstEth {
     }
 }
 
-contract MockStader is IStaderOracle {
+contract MockStader {
     uint256 _exchangeRate = STADER_ETH_EXCHANGE_RATE;
 
-    function exchangeRate() external view returns (uint256, uint256, uint256) {
-        uint256 totalEthXSupply = 1.2e18;
-        return (0, totalEthXSupply * _exchangeRate / 1e18, totalEthXSupply);
+    function getExchangeRate() external view returns (uint256) {
+        return _exchangeRate;
     }
 
     function setNewRate(uint256 newRate) external {
@@ -35,7 +38,7 @@ contract MockStader is IStaderOracle {
     }
 }
 
-contract MockSwell is ISwEth {
+contract MockSwell {
     uint256 _exchangeRate = SWELL_ETH_EXCHANGE_RATE;
 
     function getRate() external view returns (uint256) {
@@ -64,7 +67,7 @@ abstract contract YieldOracleSharedSetup is Test {
 
     uint64[ILK_COUNT][LOOK_BACK] historicalExchangeRatesInitial;
 
-    function setUp() public {
+    function setUp() public virtual {
         // Warp to reasonable timestamp
         vm.warp(1_696_181_435);
 
@@ -82,15 +85,20 @@ abstract contract YieldOracleSharedSetup is Test {
             historicalExchangeRatesInitial[i] = baseRates;
         }
 
+        IonPool mockIonPool = IonPool(address(new MockIonPool()));
+
         oracle = new YieldOracle(
             historicalExchangeRatesInitial, 
             address(lidoOracle),
             address(staderOracle),
-            address(swellOracle)
+            address(swellOracle),
+            address(this)
         );
+
+        oracle.updateIonPool(mockIonPool);
     }
 
-    function test_setUp() external {
+    function test_SetUp() public virtual {
         for (uint256 i = 0; i < historicalExchangeRatesInitial.length; i++) {
             for (uint256 j = 0; j < historicalExchangeRatesInitial[i].length; j++) {
                 if (i == 0) {

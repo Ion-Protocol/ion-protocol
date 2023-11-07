@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RoundedMath } from "src/libraries/math/RoundedMath.sol";
+import { IonPool } from "src/IonPool.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { YieldOracle, ILK_COUNT, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION } from "src/YieldOracle.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+
+import { MockIonPool } from "test/helpers/MockIonPool.sol";
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
@@ -17,9 +20,10 @@ contract YieldOracleExposed is YieldOracle {
         uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
         address _lido,
         address _stader,
-        address _swell
+        address _swell,
+        address owner
     )
-        YieldOracle(_historicalExchangeRates, _lido, _stader, _swell)
+        YieldOracle(_historicalExchangeRates, _lido, _stader, _swell, owner)
     { }
 
     function getFullApysArray() external view returns (uint32[ILK_COUNT] memory) {
@@ -36,7 +40,7 @@ contract YieldOracleExposed is YieldOracle {
 }
 
 contract YieldOracle_ForkTest is Test {
-    using RoundedMath for uint256;
+    using WadRayMath for uint256;
     using SafeCast for uint256;
     using Strings for *;
 
@@ -50,20 +54,6 @@ contract YieldOracle_ForkTest is Test {
 
     uint64[ILK_COUNT][] apysHistory;
     uint64[ILK_COUNT][LOOK_BACK][] historicalExchangeRatesHistory;
-
-    function _computeStaderExchangeRate(
-        uint256 totalETHBalance,
-        uint256 totalETHXSupply
-    )
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 decimals = 10 ** 18;
-        uint256 newExchangeRate =
-            (totalETHBalance == 0 || totalETHXSupply == 0) ? decimals : totalETHBalance * decimals / totalETHXSupply;
-        return newExchangeRate;
-    }
 
     // We go back a certain amount of days and pretend the oracle was being
     // launched that many days ago. Then move the days forward until the current
@@ -107,15 +97,21 @@ contract YieldOracle_ForkTest is Test {
         uint256 mainnetFork = vm.createFork(vm.envString("MAINNET_RPC_URL"), blockNumberAtLastUpdate + 1);
         vm.selectFork(mainnetFork);
 
+        IonPool mockIonPool = IonPool(address(new MockIonPool()));
+
+        console2.log(staderExchangeRateAddress);
+
         apyOracle =
-        new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress);
+        new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));
+        apyOracle.updateIonPool(mockIonPool);
         vm.makePersistent(address(apyOracle));
+        vm.makePersistent(address(mockIonPool));
 
         apysHistory.push(apyOracle.getFullApysArray());
         historicalExchangeRatesHistory.push(apyOracle.getFullHistoricalExchangesRatesArray());
     }
 
-    function testFork_apyOracleUpdatesWithRealData() public {
+    function testFork_YieldOracleUpdatesWithRealData() public {
         for (uint256 i = 0; i < blockNumbersToRollTo.length; i++) {
             vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), blockNumbersToRollTo[i]);
             uint64 currentIndex = apyOracle.currentIndex();

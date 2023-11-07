@@ -52,8 +52,7 @@ contract ERC20PresetMinterPauser is Context, AccessControlEnumerable, ERC20Burna
      *
      * - the caller must have the `MINTER_ROLE`.
      */
-    function mint(address to, uint256 amount) public virtual {
-        require(hasRole(MINTER_ROLE, _msgSender()), "ERC20PresetMinterPauser: must have minter role to mint");
+    function mint(address to, uint256 amount) public virtual onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }
 

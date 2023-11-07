@@ -2,13 +2,13 @@
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
-import { RoundedMath } from "../../../libraries/math/RoundedMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { CallbackValidation } from "../../uniswap/CallbackValidation.sol";
+import { CallbackValidation } from "src/libraries/uniswap/CallbackValidation.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3SwapCallback } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
@@ -25,7 +25,7 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
  * Uniswap enforces that callback is only called on `msg.sender`.
  */
 abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
-    using RoundedMath for *;
+    using WadRayMath for *;
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
@@ -53,7 +53,10 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         if (address(_factory) == address(0)) revert InvalidFactoryAddress();
         if (address(_pool) == address(0)) revert InvalidUniswapPool();
 
-        // TODO: check that pool has weth as pair
+        address token0 = _pool.token0();
+        address token1 = _pool.token1();
+
+        if (token0 != address(weth) && token1 != address(weth)) revert InvalidUniswapPool();
 
         factory = _factory;
         pool = _pool;
@@ -118,7 +121,6 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         }
     }
 
-    // TODO: Reentrancy possibility with leverage and deleverage?
     /**
      * @dev The two function parameters must be chosen carefully. If `maxCollateralToRemove` were higher then
      * `debtToRemove`, it would theoretically be possible
@@ -141,15 +143,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         FlashSwapData memory flashswapData =
             FlashSwapData({ user: msg.sender, changeInCollateralOrDebt: debtToRemove, zeroForOne: zeroForOne });
 
-        // TODO: Cheaper with mulMod?
-        // This recalculation is necessary because IonPool rounds up repayment
-        // calculations... so the amount of weth required to pay off the debt
-        // may be slightly higher
-        uint256 currentIlkRate = ionPool.rate(ilkIndex);
-        uint256 normalizedDebtToRemove = debtToRemove.rayDivDown(currentIlkRate); // [WAD] * [RAY] / [RAY] = [WAD]
-        uint256 wethRequired = currentIlkRate.rayMulUp(normalizedDebtToRemove); // [WAD] * [RAY] / [RAY] = [WAD]
-
-        uint256 amountIn = _initiateFlashSwap(zeroForOne, wethRequired, address(this), sqrtPriceLimitX96, flashswapData);
+        uint256 amountIn = _initiateFlashSwap(zeroForOne, debtToRemove, address(this), sqrtPriceLimitX96, flashswapData);
 
         if (amountIn > maxCollateralToRemove) revert FlashswapRepaymentTooExpensive(amountIn, maxCollateralToRemove);
     }
