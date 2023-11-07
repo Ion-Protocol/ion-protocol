@@ -18,7 +18,7 @@ contract MockFeed {
         exchangeRates[_ilkIndex] = _exchangeRate;
     }
 
-    function getExchangeRate(uint8 _ilkIndex) public returns (uint256) {
+    function getExchangeRate(uint8 _ilkIndex) public view returns (uint256) {
         return exchangeRates[_ilkIndex];
     }
 }

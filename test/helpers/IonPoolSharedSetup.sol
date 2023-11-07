@@ -114,7 +114,7 @@ contract MockSpotOracle is SpotOracle {
 contract MockReserveOracle {
     uint256 public currentExchangeRate;
 
-    constructor(uint256 _exchangeRate) public {
+    constructor(uint256 _exchangeRate) {
         currentExchangeRate = _exchangeRate; 
     }
 
@@ -311,7 +311,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
             // assertEq(ionPool.totalNormalizedDebt(i), 0);
             // assertEq(ionPool.rate(i), 1e27);
-            assertEq(ionPool.spot(i).getSpot(), _getSpot(i), "spot value"); // [wad] * [ray] / WAD = [ray] 
+            assertEq(ionPool.spot(i).getSpot(), _getSpot(), "spot value"); // [wad] * [ray] / WAD = [ray] 
             assertEq(address(ionPool.spot(i)), address(spotOracles[i]), "spot oracle");
             
             assertEq(ionPool.debtCeiling(i), _getDebtCeiling(i), "debt ceiling");
@@ -350,7 +350,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         _collaterals[2] = IERC20(address(swEth));
     }
 
-    function _getSpot(uint8 ilkIndex) internal view virtual returns (uint256) {
+    function _getSpot() internal view virtual returns (uint256) {
         return PRICE * LTV / WAD; 
     }
 

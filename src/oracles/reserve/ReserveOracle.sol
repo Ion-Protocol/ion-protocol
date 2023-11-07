@@ -12,6 +12,7 @@ import { console2 } from "forge-std/console2.sol";
 // should equal to the number of feeds available in the contract
 uint8 constant MAX_FEED_COUNT = 3;
 
+// TODO: does not need to be ownable anymore 
 abstract contract ReserveOracle is Ownable {
     using SafeCast for *;
     using WadRayMath for uint256;

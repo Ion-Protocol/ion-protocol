@@ -138,8 +138,8 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         vm.stopPrank();
     }
 
-    function liquidate(address keeper, uint8 ilkIndex, address vault) internal {
-        uint256 totalDebt = ionPool.normalizedDebt(ilkIndex, vault).rayMulUp(ionPool.rate(ilkIndex)); // [wad]
+    function liquidate(address keeper, uint8 ilkIndex, address vault) internal returns (uint256 totalDebt) {
+        totalDebt = ionPool.normalizedDebt(ilkIndex, vault).rayMulUp(ionPool.rate(ilkIndex)); // [wad]
         underlying.mint(keeper, totalDebt); // mint enough to fully liquidate just in case
         vm.startPrank(keeper);
         underlying.approve(address(liquidation), totalDebt);
@@ -187,7 +187,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         StateArgs memory _sArgs
     )
         internal
-        view
+        pure
         returns (Results memory results)
     {
         console2.log("--- calculate expected results --- ");
@@ -284,6 +284,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             console2.log("results.gemOut: ", results.gemOut);
             results.collateral = sArgs.collateral - results.gemOut;
             results.normalizedDebt = sArgs.normalizedDebt - results.dart;
+            results.repay = results.dart * sArgs.rate; 
 
             if (results.normalizedDebt != 0) {
                 uint256 resultingHealthRatio = getHealthRatio(
