@@ -5,7 +5,7 @@ pragma solidity ^0.8.21;
 import { IonPoolSharedSetup, MockReserveOracle } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { WadRayMath } from "src/libraries/math/RoundedMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
@@ -21,6 +21,9 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     uint256 constant RAY = 1e27;
 
     uint32 constant ILK_COUNT = 8;
+    uint8 constant ILK_INDEX = 0; 
+
+    uint256 constant DEBT_CEILING = uint256(int256(-1)); 
 
     Liquidation public liquidation;
     GemJoin public gemJoin;
@@ -30,8 +33,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     MockReserveOracle public reserveOracle3;
 
     address[] public exchangeRateOracles;
-
-    uint8 public ilkIndex;
 
     address immutable keeper1 = vm.addr(99);
     address immutable revenueRecipient = vm.addr(100);
@@ -67,15 +68,10 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     function setUp() public virtual override {
         super.setUp();
 
-        ilkIndex = 0;
+        ionPool.updateIlkDebtCeiling(ILK_INDEX, DEBT_CEILING);
 
-        // set debt ceiling
-        ionPool.updateIlkDebtCeiling(ilkIndex, uint256(int256(-1)));
-
-        // create supply position
         supply(lender1, 100 ether);
 
-        // TODO: Make ReserveOracleSharedSetUp
         reserveOracle1 = new MockReserveOracle(0);
         reserveOracle2 = new MockReserveOracle(0);
         reserveOracle3 = new MockReserveOracle(0);
@@ -90,6 +86,17 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             address(0),
             address(0)
         ];
+    }
+
+    /**
+     * @dev override for test set up 
+     */
+    function _getDebtCeiling(uint8 ilkIndex) internal view override returns (uint256) {
+        if (ilkIndex == ILK_INDEX) {
+            return DEBT_CEILING; 
+        } else {
+            return debtCeilings[ilkIndex];
+        }
     }
 
     /**
@@ -300,100 +307,4 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
 
         console2.log("---");
     }
-
-    // solves for the positive x-intercept for the quadratic equation of the form 
-    // ax^2 + bx + c = 0 
-    // @params a [ray] 
-    // @params b [ray] 
-    // @params b [ray] 
-    function calculateQuadraticEquation(int256 a, int256 b, int256 c, uint256 scale) internal returns (uint256 root) {
-        string[] memory inputs = new string[](7); 
-        inputs[0] = "bun";
-        inputs[1] = "run";
-        inputs[2] = "offchain/quadraticSolver.ts";
-        inputs[3] = uint256(a).toString(); 
-        inputs[4] = uint256(b).toString(); 
-        inputs[5] = uint256(c).toString(); 
-        inputs[6] = uint256(scale).toString(); // SCALE
-        console2.log("inputs[3]: ", inputs[3]);
-        console2.log("inputs[4]: ", inputs[4]);
-        console2.log("inputs[5]: ", inputs[5]);
-        console2.log("inputs[6]: ", inputs[6]);
-
-        string memory output = string(vm.ffi(inputs));
-        console2.log("output: ", output); 
-        root = vm.parseJsonUint(output, ".root"); 
-        console2.log("root: ", root);
-    }
-
-    function test_CalculateQuadraticEquation() public {
-
-        // x^2 -2x + 1 = 0 
-        int256 a = 1e27; 
-        int256 b = -2e27; 
-        int256 c = 1e27; 
-        assertEq(calculateQuadraticEquation(a, b, c, 27), 1e27); 
-
-        // x^2 - 1 = 0 
-        // (0 + sqrt(0-4(1)(-1)) 
-        a = 1e27; 
-        b = 0e27; 
-        c = -1e27; 
-        assertEq(calculateQuadraticEquation(a, b, c, 27), 1e27); 
-        // x^2 - 2x + 1 = 0
-        a = 1e27; 
-        b = -2e27; 
-        c = 1e27; 
-        assertEq(calculateQuadraticEquation(a, b, c, 27), 1e27);
-        // x^2 -5x + 6 = 0
-        // [ -(-5) + sqrt(25 - 4(1)(6)) ] / (2) = (5 + 1) / 2 = 3 
-        // (2, 0), (3, 0), should return 3 the higher root 
-        a = 1e27; 
-        b = -5e27; 
-        c = 6e27; 
-        assertEq(calculateQuadraticEquation(a, b, c, 27), 3e27);
-        // // 2x^2 - 8 = 0 
-        // a = 1e27; 
-        // b = 0e27; 
-        // c = -8e27; 
-        // assertEq(calculateQuadraticEquation(a, b, c, 27), 2);
-        // // 10000x^2 + 5000x - 25000 = 0
-        // // 1.35
-        // a = 10_000e27; 
-        // b = 5_000e27; 
-        // c = 25000e27; 
-        // assertEq(calculateQuadraticEquation(a, b, c, 27), 1);
-
-    }
-
-    // tests the helper function for calculating expected liquidation results
-    /**
-     * 100 ether deposit 50 ether borrow
-     * mat is 0.5
-     * exchangeRate is now 0.95
-     * collateralValue = 0.5 * 0.95 * 100 = 47.5
-     * healthRatio = collateral / debt = 47.5 / 50 = 0.95
-     * discount = 0.02 + (1 - 0.5) = 0.07
-     * repayNum = (1.25 * 50) - 47.5 = 15
-     * repayDen = 1.25 - (0.5 / (1-0.07)) = 0.7123
-     * repay = 21.05660377
-     * gemOut = repay / (exchangeRate * (1 - discount)) =
-     */
-    // function test_CalculateExpectedLiquidationResults() public {
-
-    //     args.collateral = 100e18; // [wad]
-    //     args.liquidationThreshold = 0.5e27; // [wad]
-    //     args.exchangeRate = 0.95e18;
-    //     args.normalizedDebt = 50e18; // [wad]
-    //     args.rate = 1e27; // [ray]
-    //     args.targetHealth = 1.25e27; // [wad]
-    //     args.reserveFactor = 0.02e27; // [wad]
-    //     args.maxDiscount = 0.2e27; // [wad]
-
-    //     Results memory results = calculateExpectedLiquidationResults(args);
-    //     console2.log("resultingCollateral: ", results.collateral);
-    //     console2.log("resultingNormalizedDebt: ", results.normalizedDebt);
-    //     assertEq(results.collateral, 76166832174776564052, "collateral"); // [ray]
-    //     assertEq(results.normalizedDebt, 28943396226415094339, "normalizedDebt"); // [ray]
-    // }
 }

@@ -19,7 +19,7 @@ gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonP
 
 [profile.default.fuzz]
 runs = 10000
-max_test_rejects = 10000
+max_test_rejects = 65000
 seed = "0x1"
 
 [profile.default.invariant]

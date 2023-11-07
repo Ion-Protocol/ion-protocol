@@ -43,12 +43,12 @@ contract LiquidationTest is LiquidationSharedSetup {
         reserveOracle1.setExchangeRate(0);
 
         // create borrow position
-        borrow(borrower1, ilkIndex, 10 ether, 5 ether);
+        borrow(borrower1, ILK_INDEX, 10 ether, 5 ether);
 
         // liquidate call
         vm.startPrank(keeper1);
         vm.expectRevert(abi.encodeWithSelector(Liquidation.ExchangeRateCannotBeZero.selector, 0));
-        liquidation.liquidate(ilkIndex, borrower1, keeper1);
+        liquidation.liquidate(ILK_INDEX, borrower1, keeper1);
         vm.stopPrank();
     }
 
@@ -72,12 +72,12 @@ contract LiquidationTest is LiquidationSharedSetup {
         reserveOracle1.setExchangeRate(1e18);
 
         // create borrow position
-        borrow(borrower1, ilkIndex, 10e18, 5e18);
+        borrow(borrower1, ILK_INDEX, 10e18, 5e18);
 
         // liquidate call
         vm.startPrank(keeper1);
         vm.expectRevert(abi.encodeWithSelector(Liquidation.VaultIsNotUnsafe.selector, 1.5e27));
-        liquidation.liquidate(ilkIndex, borrower1, keeper1);
+        liquidation.liquidate(ILK_INDEX, borrower1, keeper1);
         vm.stopPrank();
     }
 
@@ -101,12 +101,12 @@ contract LiquidationTest is LiquidationSharedSetup {
         reserveOracle1.setExchangeRate(exchangeRate);
 
         // create borrow position
-        borrow(borrower1, ilkIndex, 10e18, 5e18);
+        borrow(borrower1, ILK_INDEX, 10e18, 5e18);
 
         // liquidate call
         vm.startPrank(keeper1);
         vm.expectRevert(abi.encodeWithSelector(Liquidation.VaultIsNotUnsafe.selector, 1e27));
-        liquidation.liquidate(ilkIndex, borrower1, keeper1);
+        liquidation.liquidate(ILK_INDEX, borrower1, keeper1);
         vm.stopPrank();
     }
 
@@ -154,7 +154,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
-        borrow(borrower1, ilkIndex, 100 ether, 50 ether);
+        borrow(borrower1, ILK_INDEX, 100 ether, 50 ether);
 
         // exchangeRate drops
         reserveOracle1.setExchangeRate(uint72(sArgs.exchangeRate));
@@ -163,13 +163,13 @@ contract LiquidationTest is LiquidationSharedSetup {
         underlying.mint(keeper1, 100 ether);
         vm.startPrank(keeper1);
         underlying.approve(address(liquidation), 100 ether);
-        liquidation.liquidate(ilkIndex, borrower1, keeper1);
+        liquidation.liquidate(ILK_INDEX, borrower1, keeper1);
         vm.stopPrank();
 
         // results
-        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
-        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
-        uint256 rate = ionPool.rate(ilkIndex);
+        uint256 actualResultingCollateral = ionPool.collateral(ILK_INDEX, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
+        uint256 rate = ionPool.rate(ILK_INDEX);
 
         // resulting vault collateral and debt
         assertEq(actualResultingCollateral, results.collateral, "resulting collateral");
@@ -212,18 +212,18 @@ contract LiquidationTest is LiquidationSharedSetup {
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
-        borrow(borrower1, ilkIndex, sArgs.collateral, sArgs.normalizedDebt);
+        borrow(borrower1, ILK_INDEX, sArgs.collateral, sArgs.normalizedDebt);
 
         // exchangeRate drops
         reserveOracle1.setExchangeRate(uint72(sArgs.exchangeRate));
 
         // liquidate
-        liquidate(keeper1, ilkIndex, borrower1);
+        liquidate(keeper1, ILK_INDEX, borrower1);
 
         // results
-        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
-        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
-        uint256 rate = ionPool.rate(ilkIndex);
+        uint256 actualResultingCollateral = ionPool.collateral(ILK_INDEX, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
+        uint256 rate = ionPool.rate(ILK_INDEX);
 
         // resulting vault collateral and debt
         assertEq(actualResultingCollateral, results.collateral, "resulting collateral");
@@ -266,10 +266,10 @@ contract LiquidationTest is LiquidationSharedSetup {
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
-        borrow(borrower1, ilkIndex, 100e18, 50e18);
+        borrow(borrower1, ILK_INDEX, 100e18, 50e18);
 
         // rate updates 
-        ionPool.setRate(ilkIndex, uint104(sArgs.rate)); 
+        ionPool.setRate(ILK_INDEX, uint104(sArgs.rate)); 
 
         // exchangeRate drops
         reserveOracle1.setExchangeRate(uint72(sArgs.exchangeRate));
@@ -278,13 +278,13 @@ contract LiquidationTest is LiquidationSharedSetup {
         underlying.mint(keeper1, 100e18);
         vm.startPrank(keeper1);
         underlying.approve(address(liquidation), 100e18);
-        liquidation.liquidate(ilkIndex, borrower1, keeper1);
+        liquidation.liquidate(ILK_INDEX, borrower1, keeper1);
         vm.stopPrank();
 
         // results
-        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
-        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
-        uint256 rate = ionPool.rate(ilkIndex);
+        uint256 actualResultingCollateral = ionPool.collateral(ILK_INDEX, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
+        uint256 rate = ionPool.rate(ILK_INDEX);
 
         // resulting vault collateral and debt
         // assertEq(actualResultingCollateral, expectedResultingCollateral, "resulting collateral");
@@ -337,17 +337,17 @@ contract LiquidationTest is LiquidationSharedSetup {
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
-        borrow(borrower1, ilkIndex, sArgs.collateral, sArgs.normalizedDebt);
+        borrow(borrower1, ILK_INDEX, sArgs.collateral, sArgs.normalizedDebt);
 
         // exchangeRate drops
         reserveOracle1.setExchangeRate(uint72(sArgs.exchangeRate));
 
         // liquidate
-        liquidate(keeper1, ilkIndex, borrower1);
+        liquidate(keeper1, ILK_INDEX, borrower1);
 
         // results
-        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
-        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+        uint256 actualResultingCollateral = ionPool.collateral(ILK_INDEX, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
 
         assertEq(actualResultingCollateral, 0, "resulting collateral");
         assertEq(actualResultingNormalizedDebt, 0, "resulting normalized debt");
@@ -362,7 +362,7 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256 dust = uint256(0.5 ether).scaleUpToRad(18);  
         // set dust
-        ionPool.updateIlkDust(ilkIndex, dust); // [rad]
+        ionPool.updateIlkDust(ILK_INDEX, dust); // [rad]
 
         // calculating resulting state after liquidations
         DeploymentArgs memory dArgs;
@@ -387,17 +387,17 @@ contract LiquidationTest is LiquidationSharedSetup {
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
-        borrow(borrower1, ilkIndex, sArgs.collateral, sArgs.normalizedDebt);
+        borrow(borrower1, ILK_INDEX, sArgs.collateral, sArgs.normalizedDebt);
 
         // exchangeRate drops
         reserveOracle1.setExchangeRate(uint72(sArgs.exchangeRate));
 
         // liquidate
-        liquidate(keeper1, ilkIndex, borrower1);
+        liquidate(keeper1, ILK_INDEX, borrower1);
 
         // results
-        uint256 actualResultingCollateral = ionPool.collateral(ilkIndex, borrower1);
-        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+        uint256 actualResultingCollateral = ionPool.collateral(ILK_INDEX, borrower1);
+        uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
 
         // health ratio is collateral / debt
         // resulting debt is zero, so health ratio will give divide by zero

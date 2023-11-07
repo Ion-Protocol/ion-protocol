@@ -10,7 +10,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  * Fixes deployment configs and fuzzes potential states
  */
 contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
-    using RoundedMath for uint256;
     using WadRayMath for uint256;
     using SafeCast for *;
 
@@ -27,6 +26,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
     uint256 internal startingExchangeRate;
 
     uint256 constant NO_RATE = 1e27;
+    uint256 constant DUST_PERCENTAGE = 10; // percentage of total debt to be configured as dust
 
     function setUp() public override {
         super.setUp();
@@ -36,10 +36,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         deploymentArgs.reserveFactor = 0.02e27; // [ray]
         deploymentArgs.maxDiscount = 0.2e27; // [ray]
         deploymentArgs.liquidationThreshold = 0.9e27; // [ray]
-
-        deploymentArgs.dust = 10e18;
-        ionPool.updateIlkDust(ilkIndex, deploymentArgs.dust);
-
+        
         // fuzz configs
         minDepositAmt = 1e18;
         maxDepositAmt = 10_000e18;
@@ -49,15 +46,17 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         startingExchangeRate = 1e18;
     }
 
+    
+
     // runs 10,000 allowed misses 10,000 
     function testFuzz_AllLiquidationCategoriesWithRate(uint104 depositAmt, uint104 borrowAmt, uint256 exchangeRate, uint104 rate) public {
         // state args
         StateArgs memory stateArgs;
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
         
-        stateArgs.rate = bound(rate, 1, type(uint104).max); 
+        stateArgs.rate = bound(rate, NO_RATE, type(uint104).max); 
         // bound rate somehow? 
-        ionPool.setRate(ilkIndex, uint104(stateArgs.rate)); 
+        ionPool.setRate(ILK_INDEX, uint104(stateArgs.rate)); 
         
         // starting position must be safe
         uint256 maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
@@ -89,10 +88,9 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
         vm.assume(stateArgs.exchangeRate > 0); 
 
-        // dust is set to 10% of total debt 
-        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / 10; // [rad] 
-
-        ionPool.updateIlkDust(ilkIndex, deploymentArgs.dust);
+        // dust is set to a % of total debt 
+        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad] 
+        ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
       
         // liquidations contract
         uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
@@ -111,31 +109,30 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         Results memory results = calculateExpectedLiquidationResults(deploymentArgs, stateArgs);
         
         // lender
-
         uint256 supplyAmt = stateArgs.normalizedDebt * stateArgs.rate / RAY + 1; 
         supply(lender1, supplyAmt);
         // borrower makes a SAFE position
-        borrow(borrower1, ilkIndex, stateArgs.collateral, stateArgs.normalizedDebt);
+        borrow(borrower1, ILK_INDEX, stateArgs.collateral, stateArgs.normalizedDebt);
         // exchange rate changes based on fuzz
         reserveOracle1.setExchangeRate(stateArgs.exchangeRate.toUint72());
         // keeper
-        liquidate(keeper1, ilkIndex, borrower1);
+        liquidate(keeper1, ILK_INDEX, borrower1);
 
         if (results.category == 0) {
             // protocol
             vm.writeLine("fuzz_out.txt", "PROTOCOL");
-            assert(ionPool.collateral(ilkIndex, borrower1) == 0);
-            assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
+            assert(ionPool.collateral(ILK_INDEX, borrower1) == 0);
+            assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
         } else if (results.category == 1) {
             // dust
             // assert(false); // to see if it's ever reaching this branch
             // ffi to see when this branch gets hit
             vm.writeLine("fuzz_out.txt", "DUST");
-            assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
+            assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
         } else if (results.category == 2) {
             vm.writeLine("fuzz_out.txt", "PARTIAL");
-            uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
-            uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+            uint256 actualCollateral = ionPool.collateral(ILK_INDEX, borrower1);
+            uint256 actualNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
             if (actualNormalizedDebt != 0) {
                 // Could be full liquidation if there was only 1 normalizedDebt in the beginning
                 uint256 healthRatio = getHealthRatio(
@@ -188,8 +185,8 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         vm.assume(stateArgs.exchangeRate > 0); 
 
         // dust is set to 10% of total debt 
-        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / 10; // [rad] 
-        ionPool.updateIlkDust(ilkIndex, deploymentArgs.dust);
+        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad] 
+        ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
       
         // liquidations contract
         uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
@@ -210,27 +207,27 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         // lender
         supply(lender1, stateArgs.normalizedDebt);
         // borrower makes a SAFE position
-        borrow(borrower1, ilkIndex, stateArgs.collateral, stateArgs.normalizedDebt);
+        borrow(borrower1, ILK_INDEX, stateArgs.collateral, stateArgs.normalizedDebt);
         // exchange rate changes based on fuzz
         reserveOracle1.setExchangeRate(stateArgs.exchangeRate.toUint72());
         // keeper
-        liquidate(keeper1, ilkIndex, borrower1);
+        liquidate(keeper1, ILK_INDEX, borrower1);
 
         if (results.category == 0) {
             // protocol
             vm.writeLine("fuzz_out.txt", "PROTOCOL");
-            assert(ionPool.collateral(ilkIndex, borrower1) == 0);
-            assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
+            assert(ionPool.collateral(ILK_INDEX, borrower1) == 0);
+            assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
         } else if (results.category == 1) {
             // dust
             // assert(false); // to see if it's ever reaching this branch
             // ffi to see when this branch gets hit
             vm.writeLine("fuzz_out.txt", "DUST");
-            assert(ionPool.normalizedDebt(ilkIndex, borrower1) == 0);
+            assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
         } else if (results.category == 2) {
             vm.writeLine("fuzz_out.txt", "PARTIAL");
-            uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
-            uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
+            uint256 actualCollateral = ionPool.collateral(ILK_INDEX, borrower1);
+            uint256 actualNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
             if (actualNormalizedDebt != 0) {
                 // Could be full liquidation if there was only 1 normalizedDebt in the beginning
                 uint256 healthRatio = getHealthRatio(
