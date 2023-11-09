@@ -10,6 +10,9 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import { console2 } from "forge-std/console2.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 // historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
 // storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
 //
@@ -107,9 +110,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
             emit ApyUpdate(i, newApy);
 
             // forgefmt: disable-next-line
-            unchecked {
-                ++i;
-            }
+            unchecked { ++i; }
         }
 
         // update Apy, history with new exchangeRates, and currentIndex

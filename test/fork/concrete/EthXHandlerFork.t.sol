@@ -65,8 +65,12 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt);
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
+        assertLe(weth.balanceOf(address(ethXHandler)), roundingError);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
@@ -83,12 +87,16 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
             1e27 / RAY
         );
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
+        assertLe(weth.balanceOf(address(ethXHandler)), roundingError);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
@@ -105,8 +113,12 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
+        assertLe(weth.balanceOf(address(ethXHandler)), roundingError);
         assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
@@ -149,8 +161,13 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
+        assertLe(weth.balanceOf(address(ethXHandler)), roundingError);
     }
 
     function testFork_RevertWhen_BalancerFlashloanNotInitiatedByHandler() external {

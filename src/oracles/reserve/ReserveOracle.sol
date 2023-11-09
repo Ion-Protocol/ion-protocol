@@ -7,8 +7,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 // should equal to the number of feeds available in the contract
 uint8 constant MAX_FEED_COUNT = 3;
 

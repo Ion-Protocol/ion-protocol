@@ -35,8 +35,12 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         wstEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
@@ -58,12 +62,16 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         wstEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
             ilkRate / RAY
         );
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
@@ -78,8 +86,12 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
         assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
@@ -120,8 +132,13 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
     }
 }
 

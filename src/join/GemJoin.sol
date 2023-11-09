@@ -10,6 +10,7 @@ import { IonPool } from "../IonPool.sol";
 
 contract GemJoin is Ownable2Step, Pausable {
     error Int256Overflow();
+    error WrongIlkAddress(uint8 ilkIndex, IERC20 gem);
 
     using SafeERC20 for IERC20;
 
@@ -23,6 +24,8 @@ contract GemJoin is Ownable2Step, Pausable {
         gem = _gem;
         pool = _pool;
         ilkIndex = _ilkIndex;
+
+        if (_pool.getIlkAddress(_ilkIndex) != address(_gem)) revert WrongIlkAddress(_ilkIndex, _gem);
     }
 
     function pause() external onlyOwner {
