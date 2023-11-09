@@ -74,6 +74,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     bytes32 public constant ION = keccak256("ION");
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.RewardModule")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line
     bytes32 private constant RewardModuleStorageLocation =
         0xdb3a0d63a7808d7d0422c40bb62354f42bff7602a547c329c1453dbcbeef4900;
 

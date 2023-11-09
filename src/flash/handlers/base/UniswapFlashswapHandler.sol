@@ -2,19 +2,15 @@
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { CallbackValidation } from "src/libraries/uniswap/CallbackValidation.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3SwapCallback } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-
-import { console2 } from "forge-std/console2.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 /**
  * @dev When using the `UniswapFlashSwapHandler`, the `IUniswapV3Pool pool` fed to the
@@ -201,8 +197,6 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
 
         (address tokenIn, address tokenOut) =
             data.zeroForOne ? (address(weth), address(lstToken)) : (address(lstToken), address(weth));
-
-        CallbackValidation.verifyCallback(address(factory), address(weth), address(lstToken), poolFee);
 
         // Code below this if statement will always assume token0 is WETH. If it
         // is not actually the case, we will flip the vars

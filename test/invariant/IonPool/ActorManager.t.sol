@@ -6,14 +6,12 @@ import { IonPool } from "src/IonPool.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import { HEVM } from "test/helpers/echidna/IHevm.sol";
 import { InvariantHelpers } from "test/helpers/InvariantHelpers.sol";
 
 import { LenderHandler, BorrowerHandler, LiquidatorHandler } from "./Handlers.t.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";

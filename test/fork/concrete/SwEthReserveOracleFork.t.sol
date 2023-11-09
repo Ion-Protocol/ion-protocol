@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
 import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
-import { WAD, RAY } from "src/libraries/math/WadRayMath.sol";
+import { RAY } from "src/libraries/math/WadRayMath.sol";
 import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
 
 contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {

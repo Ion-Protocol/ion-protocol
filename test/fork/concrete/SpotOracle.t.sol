@@ -12,8 +12,6 @@ import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
 import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { EthXReserveOracle } from "src/oracles/reserve/EthxReserveOracle.sol";
 
-import { IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
-
 import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 

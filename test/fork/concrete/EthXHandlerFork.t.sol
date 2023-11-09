@@ -3,7 +3,6 @@ pragma solidity 0.8.21;
 
 import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { EthXHandler } from "src/flash/handlers/EthXHandler.sol";
-import { IonPool } from "src/IonPool.sol";
 import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import {
     BalancerFlashloanDirectMintHandler, VAULT
@@ -17,13 +16,9 @@ import { IonHandler_ForkBase } from "test/helpers/IonHandlerForkBase.sol";
 import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
 import { IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import { Vm } from "forge-std/Vm.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint256;

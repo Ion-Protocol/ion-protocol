@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
 import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
-import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
 
 contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {

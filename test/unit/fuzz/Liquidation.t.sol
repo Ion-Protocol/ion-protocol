@@ -5,7 +5,6 @@ import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol"
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "forge-std/console.sol";
 
 /**
  * Fixes deployment configs and fuzzes potential states
@@ -141,7 +140,6 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
         } else if (results.category == 2) {
             vm.writeLine("fuzz_out.txt", "PARTIAL");
             uint256 actualCollateral = ionPool.collateral(ilkIndex, borrower1);
-            console.log("actualCollateral: ", actualCollateral);
             uint256 actualNormalizedDebt = ionPool.normalizedDebt(ilkIndex, borrower1);
             if (actualNormalizedDebt != 0) {
                 // Could be full liquidation if there was only 1 normalizedDebt in the beginning
@@ -152,7 +150,6 @@ contract LiquidationFuzzFixedConfigsFixedRate is LiquidationSharedSetup {
                     stateArgs.exchangeRate,
                     deploymentArgs.liquidationThreshold
                 );
-                console.log("health ratio: ", healthRatio);
                 assert(healthRatio >= deploymentArgs.targetHealth);
             }
         }

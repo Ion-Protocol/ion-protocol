@@ -181,8 +181,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         view
         returns (Results memory results)
     {
-        console.log("--- calculate expected results --- ");
-
         DeploymentArgs memory dArgs;
         StateArgs memory sArgs;
         // copy to new memory
@@ -197,17 +195,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         dArgs.reserveFactor = _dArgs.reserveFactor;
         dArgs.maxDiscount = _dArgs.maxDiscount;
         dArgs.dust = _dArgs.dust;
-
-        console.log("collateral: ", sArgs.collateral);
-        console.log("normalizedDebt: ", sArgs.normalizedDebt);
-        console.log("rate: ", sArgs.rate);
-        console.log("exchangeRate: ", sArgs.exchangeRate);
-
-        console.log("liquidationThreshold: ", dArgs.liquidationThreshold);
-        console.log("targetHealth: ", dArgs.targetHealth);
-        console.log("reserveFactor: ", dArgs.reserveFactor);
-        console.log("maxDiscount: ", dArgs.maxDiscount);
-        console.log("dust: ", dArgs.dust);
 
         uint256 collateralValue = (sArgs.collateral * dArgs.liquidationThreshold).rayMulUp(sArgs.exchangeRate); // [rad]
         console.log("collateralValue: [rad] ", collateralValue);
@@ -280,12 +267,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         } else {
             require(false, "panic"); // shouldn't occur
         }
-
-        console.log("expectedFinalRepay: [rad] ", results.repay);
-        console.log("expectedResultingCollateral: [ray] ", results.collateral);
-        console.log("expectedResultingDebt: [ray]", results.normalizedDebt);
-
-        console.log("---");
     }
 
     // tests the helper function for calculating expected liquidation results

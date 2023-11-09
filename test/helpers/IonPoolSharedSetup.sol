@@ -4,10 +4,10 @@ pragma solidity 0.8.21;
 import { IonPool } from "src/IonPool.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
-import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
+import { InterestRate, IlkData } from "src/InterestRate.sol";
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { BaseTestSetup } from "test/helpers/BaseTestSetup.sol";
@@ -18,9 +18,6 @@ import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/trans
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint16;
 

@@ -12,9 +12,6 @@ import { IAsset } from "@balancer-labs/v2-interfaces/contracts/vault/IAsset.sol"
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
-
 /**
  * @dev Some tokens only have liquidity on Balancer. Due to the reentrancy lock
  * on the Balancer vault, utilizing their free flashloan followed by a pool swap

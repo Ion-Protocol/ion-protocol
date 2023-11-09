@@ -4,10 +4,9 @@ pragma solidity ^0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { WadRayMath, WAD, RAY } from "./libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
 import { IonPool } from "src/IonPool.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
-import "forge-std/console.sol";
 
 uint8 constant ILK_COUNT = 8;
 
@@ -38,8 +37,8 @@ contract Liquidation {
     address public immutable REVENUE_RECIPIENT; // receives fees
     address public immutable PROTOCOL; // receives confiscated vault debt and collateral
 
-    IonPool public immutable ionPool;
-    IERC20 public immutable underlying;
+    IonPool public immutable POOL;
+    IERC20 public immutable UNDERLYING;
 
     // --- Events ---
     event Liquidate(address kpr, uint256 indexed repay, uint256 indexed gemOutLessFee, uint256 fee);
@@ -54,7 +53,8 @@ contract Liquidation {
         uint256 _reserveFactor,
         uint256 _maxDiscount
     ) {
-        ionPool = IonPool(_ionPool);
+        IonPool ionPool_ = IonPool(_ionPool);
+        POOL = ionPool_;
         REVENUE_RECIPIENT = _revenueRecipient;
         PROTOCOL = _protocol;
 
@@ -62,8 +62,9 @@ contract Liquidation {
         RESERVE_FACTOR = _reserveFactor;
         MAX_DISCOUNT = _maxDiscount;
 
-        underlying = ionPool.underlying();
-        underlying.approve(address(ionPool), type(uint256).max); // approve ionPool to transfer the underlying asset
+        IERC20 underlying = ionPool_.underlying();
+        underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
+        UNDERLYING = underlying;
 
         LIQUIDATION_THRESHOLD_0 = _liquidationThresholds[0];
         LIQUIDATION_THRESHOLD_1 = _liquidationThresholds[1];
@@ -153,10 +154,10 @@ contract Liquidation {
 
         // needs ink art rate dust
         // TODO: multiple external calls vs. calling one getter that returns all
-        uint256 collateral = ionPool.collateral(ilkIndex, vault);
-        uint256 normalizedDebt = ionPool.normalizedDebt(ilkIndex, vault);
-        uint256 rate = ionPool.rate(ilkIndex);
-        uint256 dust = ionPool.dust(ilkIndex);
+        uint256 collateral = POOL.collateral(ilkIndex, vault);
+        uint256 normalizedDebt = POOL.normalizedDebt(ilkIndex, vault);
+        uint256 rate = POOL.rate(ilkIndex);
+        uint256 dust = POOL.dust(ilkIndex);
 
         (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex);
 
@@ -217,7 +218,7 @@ contract Liquidation {
             // [rad] > [rad]
             liquidateArgs.dart = normalizedDebt; // [wad]
             liquidateArgs.gemOut = collateral; // [wad]
-            ionPool.confiscateVault(
+            POOL.confiscateVault(
                 ilkIndex,
                 vault,
                 PROTOCOL, // TODO: this should go to PROTOCOL multisig
@@ -254,18 +255,18 @@ contract Liquidation {
         // calculate fee
         liquidateArgs.fee = liquidateArgs.gemOut.rayMulUp(RESERVE_FACTOR); // [wad] * [ray] / [ray] = [wad]
         // transfer WETH from keeper to this contract
-        underlying.safeTransferFrom(msg.sender, address(this), transferAmt);
+        UNDERLYING.safeTransferFrom(msg.sender, address(this), transferAmt);
         // take the debt to pay off and the collateral to sell from the vault
         // TODO: check for integer overflows
-        ionPool.confiscateVault(
+        POOL.confiscateVault(
             ilkIndex, vault, address(this), address(this), -int256(liquidateArgs.gemOut), -int256(liquidateArgs.dart)
         );
         // pay off this contract's debt
-        ionPool.repayBadDebt(address(this), liquidateArgs.repay);
+        POOL.repayBadDebt(address(this), liquidateArgs.repay);
         // send fee to the REVENUE_RECIPIENT
-        ionPool.transferGem(ilkIndex, address(this), REVENUE_RECIPIENT, liquidateArgs.fee);
+        POOL.transferGem(ilkIndex, address(this), REVENUE_RECIPIENT, liquidateArgs.fee);
         // send the collateral sold to the keeper
-        ionPool.transferGem(ilkIndex, address(this), kpr, liquidateArgs.gemOut - liquidateArgs.fee);
+        POOL.transferGem(ilkIndex, address(this), kpr, liquidateArgs.gemOut - liquidateArgs.fee);
 
         emit Liquidate(kpr, liquidateArgs.repay, liquidateArgs.gemOut - liquidateArgs.fee, liquidateArgs.fee);
     }
