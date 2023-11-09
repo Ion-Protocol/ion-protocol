@@ -71,8 +71,12 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertGe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt);
         assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertLe(weth.balanceOf(address(swEthHandler)), roundingError);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
@@ -89,12 +93,16 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
             1e27 / RAY
         );
         assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertLe(weth.balanceOf(address(swEthHandler)), roundingError);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
     }
 
@@ -111,8 +119,12 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
         assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertLe(weth.balanceOf(address(swEthHandler)), roundingError);
         assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
@@ -152,8 +164,13 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
 
         swEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
 
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
         assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertLe(weth.balanceOf(address(swEthHandler)), roundingError);
     }
 
     function testFork_RevertWhen_FlashloanNotInitiatedByHandler() external {

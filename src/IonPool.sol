@@ -493,9 +493,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         whenNotPaused(Pauses.UNSAFE)
         onlyWhitelistedBorrowers(ilkIndex, proof)
     {
-        console.log("accurding");
         _accrueInterestForIlk(ilkIndex);
-        console.log("1accurding");
         (uint104 ilkRate, uint256 newDebt) =
             _modifyPosition(ilkIndex, user, address(0), recipient, 0, amountOfNormalizedDebt.toInt256());
 
