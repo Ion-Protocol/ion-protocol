@@ -109,13 +109,13 @@ contract InterestRate {
     uint256 internal immutable ILKCONFIG_7C;
 
     uint256 public immutable collateralCount;
-    IYieldOracle immutable apyOracle;
+    IYieldOracle public immutable yieldOracle;
 
-    constructor(IlkData[] memory ilkDataList, IYieldOracle _apyOracle) {
-        if (address(_apyOracle) == address(0)) revert InvalidYieldOracleAddress();
+    constructor(IlkData[] memory ilkDataList, IYieldOracle _yieldOracle) {
+        if (address(_yieldOracle) == address(0)) revert InvalidYieldOracleAddress();
 
         collateralCount = ilkDataList.length;
-        apyOracle = _apyOracle;
+        yieldOracle = _yieldOracle;
 
         uint256 distributionFactorSum = 0;
         for (uint256 i = 0; i < collateralCount;) {
@@ -252,9 +252,8 @@ contract InterestRate {
         returns (uint256, uint256)
     {
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
-
         uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
-        uint256 collateralApyRayInSeconds = apyOracle.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
+        uint256 collateralApyRayInSeconds = yieldOracle.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
 
         // [RAD] / [WAD] = [RAY]
         uint256 utilizationRate =

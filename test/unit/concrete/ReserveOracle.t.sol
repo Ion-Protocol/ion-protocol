@@ -3,7 +3,7 @@
 
 // import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 // import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
-// import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
+// import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 // import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
 
 // import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
@@ -59,18 +59,18 @@
 
 //     // --- stETH Reserve Oracle Test ---
 
-//     function test_StEthReserveOracleGetProtocolExchangeRate() public {
+//     function test_WstEthReserveOracleGetProtocolExchangeRate() public {
 //         uint8 ilkIndex = 0;
 //         address[] memory feeds = new address[](3);
 //         uint8 quorum = 0;
-//         StEthReserveOracle stEthReserveOracle =
-//             new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, MAX_CHANGE);
+//         WstEthReserveOracle stEthReserveOracle =
+//             new WstEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, MAX_CHANGE);
 
 //         uint256 protocolExchangeRate = stEthReserveOracle.getProtocolExchangeRate();
 //         assertEq(protocolExchangeRate, 1_140_172_374_139_257_947, "protocol exchange rate");
 //     }
 
-//     function test_StEthReserveOracleAggregation() public {
+//     function test_WstEthReserveOracleAggregation() public {
 //         uint8 ilkIndex = 0;
 
 //         MockFeed mockFeed1 = new MockFeed();
@@ -92,8 +92,8 @@
 //         feeds[2] = address(mockFeed3);
 
 //         uint8 quorum = 3;
-//         StEthReserveOracle stEthReserveOracle =
-//             new StEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, MAX_CHANGE);
+//         WstEthReserveOracle stEthReserveOracle =
+//             new WstEthReserveOracle(LIDO, WSTETH, ilkIndex, feeds, quorum, MAX_CHANGE);
 
 //         uint256 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) /
 // 3;

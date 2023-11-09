@@ -5,7 +5,7 @@ pragma solidity ^0.8.13;
 import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
-contract StEthReserveOracle is ReserveOracle {
+contract WstEthReserveOracle is ReserveOracle {
     address public immutable wstEth;
 
     constructor(

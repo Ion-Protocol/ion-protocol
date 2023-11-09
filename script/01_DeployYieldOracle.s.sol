@@ -14,10 +14,10 @@ contract DeployYieldOracleScript is BaseScript {
     using SafeCast for uint256;
     using StdJson for string;
 
-    string configPath = "./deployment-config/YieldOracle.json";
+    string configPath = "./deployment-config/01_YieldOracle.json";
     string config = vm.readFile(configPath);
 
-    uint256 internal constant SCALE = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
+    uint256 internal consta = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
 
     function run() public broadcast returns (YieldOracle yieldOracle) {
         string[] memory configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
@@ -34,9 +34,9 @@ contract DeployYieldOracleScript is BaseScript {
         uint64[ILK_COUNT][LOOK_BACK] memory historicalExchangeRates;
 
         for (uint256 i = 0; i < LOOK_BACK; i++) {
-            uint64 lidoEr = (lidoRates[i] / SCALE).toUint32();
-            uint64 staderEr = (staderRates[i] / SCALE).toUint32();
-            uint64 swellEr = (swellRates[i] / SCALE).toUint32();
+            uint64 lidoEr = (lidoRates[i]).toUint64();
+            uint64 staderEr = (staderRates[i]).toUint64();
+            uint64 swellEr = (swellRates[i]).toUint64();
 
             uint64[ILK_COUNT] memory exchangesRates = [lidoEr, staderEr, swellEr];
 

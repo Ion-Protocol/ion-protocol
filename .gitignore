@@ -20,9 +20,11 @@ node_modules/
 .env.production.local
 .env.local
 
-# echidna 
+# echidna
 echidna-corpus
 crytic-export/
 
 # logs
 /.txt
+
+diagrams/

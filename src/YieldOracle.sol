@@ -10,6 +10,9 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import { console2 } from "forge-std/console2.sol";
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 // historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
 // storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
 //
@@ -50,6 +53,8 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     address public immutable ADDRESS0;
     address public immutable ADDRESS1;
     address public immutable ADDRESS2;
+
+    event H(uint256 prev, uint256 next);
 
     IonPool public ionPool;
 
@@ -92,10 +97,13 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
         for (uint8 i = 0; i < ILK_COUNT;) {
             uint64 newExchangeRate = _getExchangeRate(i);
             uint64 previousExchangeRate = previousExchangeRates[i];
+            console.log(newExchangeRate, previousExchangeRate);
 
             if (newExchangeRate == 0 || newExchangeRate < previousExchangeRate) revert InvalidExchangeRate(i);
 
             uint256 exchangeRateIncrease = newExchangeRate - previousExchangeRate;
+
+            emit H(previousExchangeRate, newExchangeRate);
 
             // [WAD] * [APY_PRECISION] / [WAD] = [APY_PRECISION]
             uint32 newApy = exchangeRateIncrease.mulDiv(PERIODS, previousExchangeRate).toUint32();

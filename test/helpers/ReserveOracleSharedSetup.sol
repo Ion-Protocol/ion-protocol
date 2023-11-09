@@ -2,7 +2,7 @@
 pragma solidity ^0.8.21;
 
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
+import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { IWstEth, IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
@@ -89,7 +89,7 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
         newExchangeRate = IWstEth(WSTETH).stEthPerToken();
     }
 
-    function changeSwEthExchangeRate(uint256 exchangeRate) internal returns (uint256 newExchangeRate) {
+    function changeSwEthExchangeRate(uint256 exchangeRate) internal {
         // set swETH exchange rate to be lower
         vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(exchangeRate));
     }

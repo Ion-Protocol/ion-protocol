@@ -35,4 +35,15 @@ library StaderLibrary {
     function depositForLst(IStaderStakePoolsManager staderDeposit, uint256 ethAmount) internal returns (uint256) {
         return staderDeposit.deposit{ value: ethAmount }(address(this));
     }
+
+    function depositForLst(
+        IStaderStakePoolsManager staderDeposit,
+        uint256 ethAmount,
+        address receiver
+    )
+        internal
+        returns (uint256)
+    {
+        return staderDeposit.deposit{ value: ethAmount }(receiver);
+    }
 }

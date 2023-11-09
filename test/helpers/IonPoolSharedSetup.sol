@@ -247,12 +247,19 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         ionPoolImpl = new IonPoolExposed();
 
         bytes memory initializeBytes = abi.encodeWithSelector(
-            IonPool.initialize.selector, _getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), whitelist
+            IonPool.initialize.selector,
+            _getUnderlying(),
+            TREASURY,
+            DECIMALS,
+            NAME,
+            SYMBOL,
+            address(this),
+            interestRateModule,
+            whitelist
         );
         ionPool = IonPoolExposed(
             address(new TransparentUpgradeableProxy(address(ionPoolImpl), address(ionProxyAdmin), initializeBytes))
         );
-        // vm.label(address(ionPool), "IonPool");
 
         ionPool.grantRole(ionPool.ION(), address(this));
         ionPool.updateSupplyCap(type(uint256).max);
@@ -270,7 +277,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
             ilkIndexes[address(collaterals[i])] = i;
         }
-        ionPool.updateInterestRateModule(interestRateModule);
 
         ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
     }
@@ -282,7 +288,16 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         // attempt to initialize again
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        ionPool.initialize(_getUnderlying(), TREASURY, DECIMALS, NAME, SYMBOL, address(this), Whitelist(whitelist));
+        ionPool.initialize(
+            _getUnderlying(),
+            TREASURY,
+            DECIMALS,
+            NAME,
+            SYMBOL,
+            address(this),
+            InterestRate(address(0)),
+            Whitelist(whitelist)
+        );
 
         assertEq(ionPool.treasury(), TREASURY);
         assertEq(ionPool.decimals(), DECIMALS);

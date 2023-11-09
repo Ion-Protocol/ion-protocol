@@ -3,28 +3,28 @@ pragma solidity ^0.8.21;
 
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
-import { StEthReserveOracle } from "src/oracles/reserve/StEthReserveOracle.sol";
+import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { IStEth, IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 
 import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
 
 // fork tests for integrating with external contracts
-contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
+contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- stETH Reserve Oracle Test ---
 
-    function test_StEthReserveOracleGetProtocolExchangeRate() public {
+    function test_WstEthReserveOracleGetProtocolExchangeRate() public {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
-        StEthReserveOracle stEthReserveOracle =
-            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        WstEthReserveOracle stEthReserveOracle =
+            new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 protocolExchangeRate = stEthReserveOracle.getProtocolExchangeRate();
         assertEq(protocolExchangeRate, 1_143_213_397_000_524_230, "protocol exchange rate");
     }
 
-    function test_StEthReserveOracleAggregation() public {
+    function test_WstEthReserveOracleAggregation() public {
         uint256 maxChange = 3e25; // 0.03 3%
 
         MockFeed mockFeed1 = new MockFeed();
@@ -46,8 +46,8 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[2] = address(mockFeed3);
 
         uint8 quorum = 3;
-        StEthReserveOracle stEthReserveOracle =
-            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        WstEthReserveOracle stEthReserveOracle =
+            new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint72 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
 
@@ -72,7 +72,7 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 3;
 
         vm.expectRevert(abi.encodeWithSelector(ReserveOracle.InvalidInitialization.selector, 0));
-        new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
     }
 
     // --- Slashing Scenario ---
@@ -124,7 +124,7 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
     // --- Bounding Scenario ---
 
-    function test_StEthReserveOracleOutputsMin() public {
+    function test_WstEthReserveOracleOutputsMin() public {
         uint256 maxChange = 3e25; // 0.03 3%
         uint256 newClBalance = 0.5 ether;
 
@@ -132,8 +132,8 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets prevExchangeRate to be the current exchangeRate in constructor
-        StEthReserveOracle stEthReserveOracle =
-            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        WstEthReserveOracle stEthReserveOracle =
+            new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 exchangeRate = stEthReserveOracle.currentExchangeRate();
         // set Lido exchange rate to be lower
@@ -147,7 +147,7 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         assertEq(newExchangeRate, minExchangeRate, "minimum exchange rate bound");
     }
 
-    function test_StEthReserveOracleOutputsMax() public {
+    function test_WstEthReserveOracleOutputsMax() public {
         uint256 maxChange = 25e25; // 0.25 25%
         uint256 newClBalance = 100 * WAD * RAY;
 
@@ -155,8 +155,8 @@ contract StEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets currentExchange rate to be the current exchangeRate in constructor
-        StEthReserveOracle stEthReserveOracle =
-            new StEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+        WstEthReserveOracle stEthReserveOracle =
+            new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 exchangeRate = stEthReserveOracle.currentExchangeRate();
 
