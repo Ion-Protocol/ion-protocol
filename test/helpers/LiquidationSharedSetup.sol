@@ -9,7 +9,6 @@ import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-import { console2 } from "forge-std/console2.sol";
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {
     using WadRayMath for uint256;
@@ -190,7 +189,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         pure
         returns (Results memory results)
     {
-        console2.log("--- calculate expected results --- ");
 
         DeploymentArgs memory dArgs;
         StateArgs memory sArgs;
@@ -207,47 +205,27 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         dArgs.maxDiscount = _dArgs.maxDiscount;
         dArgs.dust = _dArgs.dust;
 
-        console2.log("collateral: ", sArgs.collateral);
-        console2.log("normalizedDebt: ", sArgs.normalizedDebt);
-        console2.log("rate: ", sArgs.rate);
-        console2.log("exchangeRate: ", sArgs.exchangeRate);
 
-        console2.log("liquidationThreshold: ", dArgs.liquidationThreshold);
-        console2.log("targetHealth: ", dArgs.targetHealth);
-        console2.log("reserveFactor: ", dArgs.reserveFactor);
-        console2.log("maxDiscount: ", dArgs.maxDiscount);
-        console2.log("dust: ", dArgs.dust);
 
         uint256 collateralValue = (sArgs.collateral * dArgs.liquidationThreshold).rayMulUp(sArgs.exchangeRate); // [rad]
-        console2.log("collateralValue: [rad] ", collateralValue);
 
         uint256 liabilityValue = (sArgs.rate * sArgs.normalizedDebt); // [rad]
-        console2.log("liabilityValue: [rad] ", liabilityValue);
 
         uint256 healthRatio = collateralValue.rayDivDown(liabilityValue); // [ray]
-        console2.log("healthRatio: ", healthRatio);
 
         uint256 discount = dArgs.reserveFactor + (RAY - healthRatio); // [ray]
         discount = discount <= dArgs.maxDiscount ? discount : dArgs.maxDiscount; // [ray]
-        console2.log("discount: ", discount);
 
         uint256 repayNum = liabilityValue.rayMulUp(dArgs.targetHealth) - collateralValue; // [rad] - [rad]
-        console2.log("repayNum: ", repayNum);
 
         uint256 repayDen = dArgs.targetHealth - dArgs.liquidationThreshold.rayDivUp(RAY - discount);
-        console2.log("repayDen: ", repayDen);
 
         results.repay = repayNum.rayDivUp(repayDen);
-        console2.log("repay: ", results.repay);
 
         uint256 collateralSalePrice = sArgs.exchangeRate.rayMulUp(RAY - discount);
-        console2.log("collateralSalePrice: ", collateralSalePrice);
 
         if (results.repay > liabilityValue) {
-            console2.log("protocol liquidation");
             // if repay > liabilityValue, then liabilityValue / collateralSalePrice > collateral
-            console2.log("liabilityValue / collateralSalePrice: ", liabilityValue / collateralSalePrice);
-            console2.log("sArgs.collateral: ", sArgs.collateral);
             assert(liabilityValue / collateralSalePrice >= sArgs.collateral);
             results.dart = sArgs.normalizedDebt;
             results.gemOut = sArgs.collateral;
@@ -257,8 +235,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
 
             results.category = 0;
         } else if (liabilityValue - results.repay < dArgs.dust) {
-            console2.log("dust liquidation");
-            console2.log("dust: ", dArgs.dust);
             results.repay = liabilityValue;
 
             results.dart = sArgs.normalizedDebt;
@@ -269,19 +245,10 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
 
             results.category = 1;
         } else if (liabilityValue - results.repay >= dArgs.dust) {
-            console2.log("PARTIAL LIQUIDATION");
-            console2.log("liabilityValue: ", liabilityValue);
-            console2.log("results.repay: ", results.repay);
-            console2.log("dArgs.dust: ", dArgs.dust);
-            console2.log("liabilityValue - results.repay: ", liabilityValue - results.repay);
-            console2.log("liabilityValue - results.repay < dArgs.dust", liabilityValue - results.repay < dArgs.dust);
             // results.repay unchanged
             results.dart = results.repay / sArgs.rate;
-            console2.log("results.dart: ", results.dart);
             results.dart = sArgs.rate * results.dart < results.repay ? results.dart + 1 : results.dart; // round up
-            console2.log("results.dart rounded: ", results.dart);
             results.gemOut = results.repay / collateralSalePrice;
-            console2.log("results.gemOut: ", results.gemOut);
             results.collateral = sArgs.collateral - results.gemOut;
             results.normalizedDebt = sArgs.normalizedDebt - results.dart;
             results.repay = results.dart * sArgs.rate;
@@ -294,7 +261,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
                     _sArgs.exchangeRate, // [wad] but converted to ray during calculation
                     dArgs.liquidationThreshold // [ray]
                 );
-                console2.log("resultingHealthRatio: ", resultingHealthRatio);
             }
 
             results.category = 2;
@@ -302,10 +268,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             require(false, "panic"); // shouldn't occur
         }
 
-        console2.log("expectedFinalRepay: [rad] ", results.repay);
-        console2.log("expectedResultingCollateral: [ray] ", results.collateral);
-        console2.log("expectedResultingDebt: [ray]", results.normalizedDebt);
 
-        console2.log("---");
     }
 }

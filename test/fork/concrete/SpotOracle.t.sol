@@ -127,7 +127,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         );
 
         uint256 price = stEthSpotOracle.getPrice();
-        console2.log("price in test", price);
 
         // update reserve oracle price
         // uint256 clBalance = uint256(vm.load(LIDO, LIDO_CL_BALANCE_SLOT));

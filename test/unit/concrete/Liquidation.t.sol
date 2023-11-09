@@ -204,7 +204,6 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        console.log("results.gemOut: ", results.gemOut);
         assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut - expectedGemFee, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
 
@@ -470,10 +469,8 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 actualResultingCollateral = ionPool.collateral(ILK_INDEX, borrower1);
         uint256 actualResultingNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
 
-        console.log("test: results.repay: ", results.repay);
         uint256 expectedWethPaid = results.repay / RAY;
         expectedWethPaid = expectedWethPaid * RAY < results.repay ? expectedWethPaid + 1 : expectedWethPaid;
-        console.log("test: expectedWethPaid: ", expectedWethPaid);
 
         uint256 expectedGemFee = results.gemOut.rayMulUp(dArgs.reserveFactor);
 
@@ -495,10 +492,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        console.log("keeper collateral");
         assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut - expectedGemFee, "keeper gem");
-        console.log("keeper underlying");
-        console.log("keeperInitialUnderlying: ", keeperInitialUnderlying);
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
 
         // revenue recipient gets the fees
