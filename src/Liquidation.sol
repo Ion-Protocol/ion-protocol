@@ -146,8 +146,7 @@ contract Liquidation {
         address kpr // receiver of collateral
     )
         external
-    {
-        console2.log("--- liquidate ---"); 
+    { 
         // --- Calculations ---
 
         LiquidateArgs memory liquidateArgs;
@@ -160,8 +159,6 @@ contract Liquidation {
         uint256 dust = ionPool.dust(ilkIndex);
 
         (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex);
-        console2.log("liquidationThreshold: ", liquidationThreshold);
-        console2.log("exchangeRate: ", exchangeRate);
 
         if (exchangeRate == 0) {
             revert ExchangeRateCannotBeZero(exchangeRate);
@@ -178,23 +175,16 @@ contract Liquidation {
         // healthRatio = [rad] * RAY / [rad] = [ray]
 
         uint256 collateralValue = (collateral * exchangeRate).rayMulUp(liquidationThreshold); // round down in protocol
-            // favor
-        // uint256 debtValue = normalizedDebt * rate; stack overflow without
-        console2.log("collateralValue: ", collateralValue);
-        console2.log("liabiiltyValue: ", normalizedDebt * rate); 
-        console2.log("normalizedDebt: ", normalizedDebt);
-        console2.log("rate: ", rate);
+            // favor ", normalizedDebt);
         {
             // [rad] * RAY / [rad] = [ray]
             uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
             if (healthRatio >= RAY) {
                 revert VaultIsNotUnsafe(healthRatio);
             }
-            console2.log("healthRatio: ", healthRatio); 
 
             uint256 discount = RESERVE_FACTOR + (RAY - healthRatio); // [ray] + ([ray] - [ray])
             discount = discount <= MAX_DISCOUNT ? discount : MAX_DISCOUNT; // cap discount to maxDiscount
-            console2.log("discount: ", discount); 
             liquidateArgs.price = exchangeRate.rayMulUp(RAY - discount); // [ray] * (RAY - [ray]) / [ray] = [ray], ETH
                 // price per LST, round up in protocol favor
             liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, collateralValue, liquidationThreshold, discount);
@@ -225,12 +215,7 @@ contract Liquidation {
             liquidateArgs.dart = normalizedDebt; // [wad]
             liquidateArgs.gemOut = collateral; // [wad]
             ionPool.confiscateVault(
-                ilkIndex,
-                vault,
-                PROTOCOL, 
-                PROTOCOL, 
-                -int256(liquidateArgs.gemOut),
-                -int256(liquidateArgs.dart)
+                ilkIndex, vault, PROTOCOL, PROTOCOL, -int256(liquidateArgs.gemOut), -int256(liquidateArgs.dart)
             );
             // TODO: emit protocol liquidation event
             return;
@@ -242,8 +227,6 @@ contract Liquidation {
         } else {
             // if (normalizedDebt * rate - liquidateArgs.repay >= dust) do partial liquidation
             // repay stays unchanged
-            console2.log("liquidateArgs.repay: ", liquidateArgs.repay);
-            console2.log("rate: ", rate); 
             liquidateArgs.dart = liquidateArgs.repay / rate; // [rad] / [ray] = [wad]
             liquidateArgs.dart =
                 liquidateArgs.dart * rate < liquidateArgs.repay ? liquidateArgs.dart + 1 : liquidateArgs.dart; // round up
@@ -257,33 +240,25 @@ contract Liquidation {
 
         // TODO: simplify with mulmod
         // exact amount to be transferred in `_transferWeth`
-        console2.log("liquidateArgs.repay: ", liquidateArgs.repay);
         uint256 transferAmt = (liquidateArgs.repay / RAY);
-        console2.log("liquidateArgs.reapy / RAY: ", liquidateArgs.repay / RAY);
         transferAmt = transferAmt * RAY < liquidateArgs.repay ? transferAmt + 1 : transferAmt;
-        console2.log("transferAmt: ", transferAmt);
         // calculate fee
         liquidateArgs.fee = liquidateArgs.gemOut.rayMulUp(RESERVE_FACTOR); // [wad] * [ray] / [ray] = [wad]
-        
+
         // transfer WETH from keeper to this contract
         underlying.safeTransferFrom(msg.sender, address(this), transferAmt);
-        
+
         // take the debt to pay off and the collateral to sell from the vault
         // TODO: check for integer overflows
         ionPool.confiscateVault(
             ilkIndex, vault, address(this), address(this), -int256(liquidateArgs.gemOut), -int256(liquidateArgs.dart)
         );
-        
-        console2.log("unbackedDebt before repayBadDebt: ", ionPool.unbackedDebt(address(this)));
-        console2.log("liquidateArgs.dart * rate: ", liquidateArgs.dart * rate);
+
         // pay off the unbacked debt
         ionPool.repayBadDebt(address(this), liquidateArgs.repay);
-        console2.log("unbackedDebt after repayBadDebt: ", ionPool.unbackedDebt(address(this)));
         // send fee to the REVENUE_RECIPIENT
         ionPool.transferGem(ilkIndex, address(this), REVENUE_RECIPIENT, liquidateArgs.fee);
         // send the collateral sold to the keeper
-        console2.log("liquidateArgs.gemOut: ", liquidateArgs.gemOut);
-        console2.log("liquidateArgs.fee: ", liquidateArgs.fee);
         ionPool.transferGem(ilkIndex, address(this), kpr, liquidateArgs.gemOut - liquidateArgs.fee);
 
         emit Liquidate(kpr, liquidateArgs.repay, liquidateArgs.gemOut - liquidateArgs.fee, liquidateArgs.fee);

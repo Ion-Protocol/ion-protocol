@@ -115,12 +115,12 @@ contract MockReserveOracle {
     uint256 public currentExchangeRate;
 
     constructor(uint256 _exchangeRate) {
-        currentExchangeRate = _exchangeRate; 
+        currentExchangeRate = _exchangeRate;
     }
 
     function setExchangeRate(uint256 _exchangeRate) public {
         currentExchangeRate = _exchangeRate;
-    }    
+    }
 }
 
 abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
@@ -143,11 +143,11 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     bytes32[] internal emptyProof;
 
     // --- Configs ---
-    uint256 internal constant PRICE = 1e18; // [wad] market price 
-    uint256 internal constant LTV = 1e27; // [ray] max LTV for a position 
-    uint256 internal constant EXCHANGE_RATE = 1e18; // [wad] 
+    uint256 internal constant PRICE = 1e18; // [wad] market price
+    uint256 internal constant LTV = 1e27; // [ray] max LTV for a position
+    uint256 internal constant EXCHANGE_RATE = 1e18; // [wad]
     uint80 internal constant minimumProfitMargin = 0.85e18 / SECONDS_IN_A_YEAR;
-    uint256 internal constant DUST = 0; // [rad] 
+    uint256 internal constant DUST = 0; // [rad]
 
     uint256 internal constant INITIAL_LENDER_UNDERLYING_BALANCE = 100e18;
     uint256 internal constant INITIAL_BORROWER_COLLATERAL_BALANCE = 100e18;
@@ -265,8 +265,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
-            MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE); 
-            MockSpotOracle spotOracle = new MockSpotOracle(i, LTV, address(reserveOracle), PRICE); 
+            MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE);
+            MockSpotOracle spotOracle = new MockSpotOracle(i, LTV, address(reserveOracle), PRICE);
             spotOracles.push(spotOracle);
             ionPool.updateIlkSpot(i, spotOracle);
             ionPool.updateIlkDebtCeiling(i, debtCeilings[i]);
@@ -311,14 +311,14 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
             // assertEq(ionPool.totalNormalizedDebt(i), 0);
             // assertEq(ionPool.rate(i), 1e27);
-            assertEq(ionPool.spot(i).getSpot(), _getSpot(), "spot value"); // [wad] * [ray] / WAD = [ray] 
+            assertEq(ionPool.spot(i).getSpot(), _getSpot(), "spot value"); // [wad] * [ray] / WAD = [ray]
             assertEq(address(ionPool.spot(i)), address(spotOracles[i]), "spot oracle");
-            
+
             assertEq(ionPool.debtCeiling(i), _getDebtCeiling(i), "debt ceiling");
             assertEq(ionPool.dust(i), DUST, "dust");
 
             // (uint256 borrowRate, uint256 reserveFactor) = ionPool.getCurrentBorrowRate(i);
-            // assertEq(borrowRate, 1 * RAY);  
+            // assertEq(borrowRate, 1 * RAY);
             // assertEq(reserveFactor, adjustedReserveFactors[i].scaleUpToRay(4));
 
             IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
@@ -351,7 +351,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     }
 
     function _getSpot() internal view virtual returns (uint256) {
-        return PRICE * LTV / WAD; 
+        return PRICE * LTV / WAD;
     }
 
     function _getDebtCeiling(uint8 ilkIndex) internal view virtual returns (uint256) {

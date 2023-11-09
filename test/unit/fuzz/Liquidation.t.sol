@@ -36,7 +36,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         deploymentArgs.reserveFactor = 0.02e27; // [ray]
         deploymentArgs.maxDiscount = 0.2e27; // [ray]
         deploymentArgs.liquidationThreshold = 0.9e27; // [ray]
-        
+
         // fuzz configs
         minDepositAmt = 1e18;
         maxDepositAmt = 10_000e18;
@@ -46,52 +46,54 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         startingExchangeRate = 1e18;
     }
 
-    
-
-    // runs 10,000 allowed misses 10,000 
-    function testFuzz_AllLiquidationCategoriesWithRate(uint104 depositAmt, uint104 borrowAmt, uint256 exchangeRate, uint104 rate) public {
+    // runs 10,000 allowed misses 10,000
+    function testFuzz_AllLiquidationCategoriesWithRate(
+        uint104 depositAmt,
+        uint104 borrowAmt,
+        uint256 exchangeRate,
+        uint104 rate
+    )
+        public
+    {
         // state args
         StateArgs memory stateArgs;
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
-        
-        stateArgs.rate = bound(rate, NO_RATE, type(uint104).max); 
-        // bound rate somehow? 
-        ionPool.setRate(ILK_INDEX, uint104(stateArgs.rate)); 
-        
+
+        stateArgs.rate = bound(rate, NO_RATE, type(uint104).max);
+        // bound rate somehow?
+        ionPool.setRate(ILK_INDEX, uint104(stateArgs.rate));
+
         // starting position must be safe
         uint256 maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
-                deploymentArgs.liquidationThreshold
-            ) / stateArgs.rate; 
-        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;   
+            deploymentArgs.liquidationThreshold
+        ) / stateArgs.rate;
+        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;
 
-        stateArgs.normalizedDebt = bound(
-            borrowAmt,
-            minBorrowAmt, 
-            maxBorrowAmt 
-        ); // [wad]
+        stateArgs.normalizedDebt = bound(borrowAmt, minBorrowAmt, maxBorrowAmt); // [wad]
 
         vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
-        
+
         // position must be unsafe after exchange rate change
-        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
-                / stateArgs.collateral;
-        vm.assume(maxExchangeRate != 0); 
-        maxExchangeRate = maxExchangeRate - 1; 
-        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate; 
+        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
+            deploymentArgs.liquidationThreshold
+        ) / stateArgs.collateral;
+        vm.assume(maxExchangeRate != 0);
+        maxExchangeRate = maxExchangeRate - 1;
+        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
 
         stateArgs.exchangeRate = bound(
             exchangeRate,
-            minExchangeRate, // if 1, max can be lower than min and it will fail 
-            maxExchangeRate 
-        ); // [ray] if the debt is zero, then there is no 
-        
-        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
-        vm.assume(stateArgs.exchangeRate > 0); 
+            minExchangeRate, // if 1, max can be lower than min and it will fail
+            maxExchangeRate
+        ); // [ray] if the debt is zero, then there is no
 
-        // dust is set to a % of total debt 
-        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad] 
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
+        vm.assume(stateArgs.exchangeRate > 0);
+
+        // dust is set to a % of total debt
+        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad]
         ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
-      
+
         // liquidations contract
         uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation = new Liquidation(
@@ -107,9 +109,9 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         Results memory results = calculateExpectedLiquidationResults(deploymentArgs, stateArgs);
-        
+
         // lender
-        uint256 supplyAmt = stateArgs.normalizedDebt * stateArgs.rate / RAY + 1; 
+        uint256 supplyAmt = stateArgs.normalizedDebt * stateArgs.rate / RAY + 1;
         supply(lender1, supplyAmt);
         // borrower makes a SAFE position
         borrow(borrower1, ILK_INDEX, stateArgs.collateral, stateArgs.normalizedDebt);
@@ -148,46 +150,49 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
     }
 
     /**
-     * Checks all possible liquidation outcomes. 
-     * NOTE: runs = 100,000 max_test_rejects = 100,000 
+     * Checks all possible liquidation outcomes.
+     * NOTE: runs = 100,000 max_test_rejects = 100,000
      */
-    function testFuzz_AllLiquidationCategoriesNoRate(uint256 depositAmt, uint256 borrowAmt, uint256 exchangeRate) public {
+    function testFuzz_AllLiquidationCategoriesNoRate(
+        uint256 depositAmt,
+        uint256 borrowAmt,
+        uint256 exchangeRate
+    )
+        public
+    {
         // state args
         StateArgs memory stateArgs;
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
         stateArgs.rate = NO_RATE;
-        
+
         // starting position must be safe
         uint256 maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
-                deploymentArgs.liquidationThreshold
-            ) / stateArgs.rate; 
-        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;   
+            deploymentArgs.liquidationThreshold
+        ) / stateArgs.rate;
+        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;
 
-        stateArgs.normalizedDebt = bound(
-            borrowAmt,
-            minBorrowAmt, 
-            maxBorrowAmt 
-        ); // [wad]
+        stateArgs.normalizedDebt = bound(borrowAmt, minBorrowAmt, maxBorrowAmt); // [wad]
         vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
-        
+
         // position must be unsafe after exchange rate change
-        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
-                / stateArgs.collateral - 1; 
-        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate; 
+        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
+            deploymentArgs.liquidationThreshold
+        ) / stateArgs.collateral - 1;
+        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
 
         stateArgs.exchangeRate = bound(
             exchangeRate,
-            minExchangeRate, // if 1, max can be lower than min and it will fail 
-            maxExchangeRate 
-        ); // [ray] if the debt is zero, then there is no 
-        
-        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
-        vm.assume(stateArgs.exchangeRate > 0); 
+            minExchangeRate, // if 1, max can be lower than min and it will fail
+            maxExchangeRate
+        ); // [ray] if the debt is zero, then there is no
 
-        // dust is set to 10% of total debt 
-        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad] 
+        stateArgs.exchangeRate = stateArgs.exchangeRate.scaleDownToWad(27);
+        vm.assume(stateArgs.exchangeRate > 0);
+
+        // dust is set to 10% of total debt
+        deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad]
         ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
-      
+
         // liquidations contract
         uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation = new Liquidation(
@@ -203,7 +208,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         Results memory results = calculateExpectedLiquidationResults(deploymentArgs, stateArgs);
-        
+
         // lender
         supply(lender1, stateArgs.normalizedDebt);
         // borrower makes a SAFE position

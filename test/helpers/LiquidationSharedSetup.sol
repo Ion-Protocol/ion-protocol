@@ -13,17 +13,17 @@ import { console2 } from "forge-std/console2.sol";
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {
     using WadRayMath for uint256;
-    using Math for uint256; 
+    using Math for uint256;
     using Strings for uint256;
-    using SafeCast for *; 
+    using SafeCast for *;
 
     uint256 constant WAD = 1e18;
     uint256 constant RAY = 1e27;
 
     uint32 constant ILK_COUNT = 8;
-    uint8 constant ILK_INDEX = 0; 
+    uint8 constant ILK_INDEX = 0;
 
-    uint256 constant DEBT_CEILING = uint256(int256(-1)); 
+    uint256 constant DEBT_CEILING = uint256(int256(-1));
 
     Liquidation public liquidation;
     GemJoin public gemJoin;
@@ -62,8 +62,8 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         uint256 category;
     }
 
-    error NegativeDiscriminant(int256 discriminant); 
-    error NegativeIntercept(int256 intercept); 
+    error NegativeDiscriminant(int256 discriminant);
+    error NegativeIntercept(int256 intercept);
 
     function setUp() public virtual override {
         super.setUp();
@@ -89,11 +89,11 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     }
 
     /**
-     * @dev override for test set up 
+     * @dev override for test set up
      */
     function _getDebtCeiling(uint8 ilkIndex) internal view override returns (uint256) {
         if (ilkIndex == ILK_INDEX) {
-            return DEBT_CEILING; 
+            return DEBT_CEILING;
         } else {
             return debtCeilings[ilkIndex];
         }
@@ -171,10 +171,10 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         returns (uint256 resultingHealthRatio)
     {
         exchangeRate = exchangeRate.scaleUpToRay(18);
-        // [wad] * [ray] * [ray] / RAY = [rad] 
+        // [wad] * [ray] * [ray] / RAY = [rad]
         resultingHealthRatio = (collateral * exchangeRate).rayMulDown(liquidationThreshold);
-        // [rad] * RAY / [rad] = [ray] 
-        resultingHealthRatio = resultingHealthRatio.rayDivDown(normalizedDebt * rate); 
+        // [rad] * RAY / [rad] = [ray]
+        resultingHealthRatio = resultingHealthRatio.rayDivDown(normalizedDebt * rate);
     }
 
     /**
@@ -284,7 +284,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             console2.log("results.gemOut: ", results.gemOut);
             results.collateral = sArgs.collateral - results.gemOut;
             results.normalizedDebt = sArgs.normalizedDebt - results.dart;
-            results.repay = results.dart * sArgs.rate; 
+            results.repay = results.dart * sArgs.rate;
 
             if (results.normalizedDebt != 0) {
                 uint256 resultingHealthRatio = getHealthRatio(
@@ -295,7 +295,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
                     dArgs.liquidationThreshold // [ray]
                 );
                 console2.log("resultingHealthRatio: ", resultingHealthRatio);
-            } 
+            }
 
             results.category = 2;
         } else {

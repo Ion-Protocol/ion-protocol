@@ -97,5 +97,5 @@ contract SwEthHandler_Test is IonPoolSharedSetup {
 
     function _getDebtCeiling(uint8) internal pure override returns (uint256) {
         return type(uint256).max;
-    } 
+    }
 }
