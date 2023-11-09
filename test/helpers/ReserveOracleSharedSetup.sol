@@ -89,7 +89,7 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
         newExchangeRate = IWstEth(WSTETH).stEthPerToken();
     }
 
-    function changeSwEthExchangeRate(uint256 exchangeRate) internal returns (uint256 newExchangeRate) {
+    function changeSwEthExchangeRate(uint256 exchangeRate) internal {
         // set swETH exchange rate to be lower
         vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(exchangeRate));
     }

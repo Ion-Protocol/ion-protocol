@@ -8,9 +8,9 @@
     "slither": "slither src",
     "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPool_Echidna",
     "simulate": "rm -f report.csv; REPORT=1 forge test --mt 'invariantFoundry_report'",
-    "YieldOracle:deployment:configure": "forge script script/DeployYieldOracle.s.sol -s 'configureDeployment()' --ffi",
-    "YieldOracle:deployment:deploy:testnet": "forge script script/DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify",
-    "YieldOracle:deployment:deploy:mainnet": "forge script script/DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --verify"
+    "YieldOracle:deployment:configure": "forge script script/01_DeployYieldOracle.s.sol -s 'configureDeployment()' --ffi",
+    "YieldOracle:deployment:deploy:testnet": "forge script script/01_DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --slow",
+    "YieldOracle:deployment:deploy:mainnet": "forge script script/01_DeployYieldOracle.s.sol --rpc-url $GOERLI_RPC_URL --broadcast --slow --verify"
   },
   "dependencies": {
     "date-fns": "^2.30.0",

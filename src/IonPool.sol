@@ -8,6 +8,8 @@ import { InterestRate } from "src/InterestRate.sol";
 import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -168,6 +170,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         string memory name_,
         string memory symbol_,
         address initialDefaultAdmin,
+        InterestRate _interestRateModule,
         Whitelist _whitelist
     )
         external
@@ -176,9 +179,14 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
         RewardModule.initialize(_underlying, _treasury, decimals_, name_, symbol_);
 
+        require(_grantRole(ION, initialDefaultAdmin));
+
         IonPoolStorage storage $ = _getIonPoolStorage();
 
+        $.interestRateModule = _interestRateModule;
         $.whitelist = _whitelist;
+
+        emit InterestRateModuleUpdated(address(_interestRateModule));
         emit WhitelistUpdated(address(_whitelist));
     }
 
@@ -387,6 +395,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         }
     }
 
+    // TODO: Calculate timestamp increase first, then run this function. That way, unecessary computation is avoided
     function _calculateRewardAndDebtDistribution(
         uint8 ilkIndex,
         uint256 totalEthSupply
@@ -484,7 +493,9 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         whenNotPaused(Pauses.UNSAFE)
         onlyWhitelistedBorrowers(ilkIndex, proof)
     {
+        console.log("accurding");
         _accrueInterestForIlk(ilkIndex);
+        console.log("1accurding");
         (uint104 ilkRate, uint256 newDebt) =
             _modifyPosition(ilkIndex, user, address(0), recipient, 0, amountOfNormalizedDebt.toInt256());
 
