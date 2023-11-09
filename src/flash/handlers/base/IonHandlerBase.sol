@@ -104,12 +104,14 @@ abstract contract IonHandlerBase {
         ionPool.depositCollateral(ilkIndex, vaultHolder, address(this), amountCollateral, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
+        (,, uint256 newRateIncrease,,) = ionPool.calculateRewardAndDebtDistribution(ilkIndex);
+        uint256 rateAfterAccrual = currentRate + newRateIncrease;
 
         uint256 normalizedAmountToBorrow;
         if (amountToBorrowType == AmountToBorrow.IS_MIN) {
-            normalizedAmountToBorrow = amountToBorrow.rayDivUp(currentRate);
+            normalizedAmountToBorrow = amountToBorrow.rayDivUp(rateAfterAccrual);
         } else {
-            normalizedAmountToBorrow = amountToBorrow.rayDivDown(currentRate);
+            normalizedAmountToBorrow = amountToBorrow.rayDivDown(rateAfterAccrual);
         }
 
         if (amountToBorrow != 0) {
@@ -135,7 +137,10 @@ abstract contract IonHandlerBase {
         internal
     {
         uint256 currentRate = ionPool.rate(ilkIndex);
-        uint256 normalizedDebtToRepay = debtToRepay.rayDivDown(currentRate);
+        (,, uint256 newRateIncrease,,) = ionPool.calculateRewardAndDebtDistribution(ilkIndex);
+        uint256 rateAfterAccrual = currentRate + newRateIncrease;
+
+        uint256 normalizedDebtToRepay = debtToRepay.rayDivDown(rateAfterAccrual);
 
         ionPool.repay(ilkIndex, vaultHolder, address(this), normalizedDebtToRepay);
 
