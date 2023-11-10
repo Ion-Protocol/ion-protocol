@@ -38,10 +38,12 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     uint256 private flashloanInitiated = 1;
 
     /**
-     * @notice Code assumes Balancer flashloans remain free
-     * @param initialDeposit in collateral terms
-     * @param resultingCollateral in collateral terms
-     * @param resultingDebt in WETH terms. This is not a bound since lst mints
+     * @notice Entry point for strategies that flashloans collateral to leverage. 
+     * @dev Code assumes Balancer flashloans remain free
+     * @param initialDeposit [wad] the initial collateral brought by the caller
+     * @param resultingCollateral [wad] the total collateral amount in the resulting vault 
+     * @param resultingDebt [?] in WETH terms. This is not a bound since lst mints
+        TODO: this seems like it's in [wad]? make clear
      * do not incur slippage.
      */
     function flashLeverageCollateral(
@@ -160,7 +162,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             weth.transfer(address(VAULT), amounts[0]);
         } else {
             if (address(lstToken) != address(token)) revert FlashloanedInvalidToken(address(token));
-
+ 
             // Sanity check
             assert(amounts[0] + initialDeposit == resultingCollateral);
 

@@ -2,26 +2,11 @@
 pragma solidity ^0.8.21;
 
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { IWstEth, IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
+import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";
 
 import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
-
-contract MockFeed {
-    mapping(uint8 ilkIndex => uint256 exchangeRate) public exchangeRates;
-
-    constructor() { }
-
-    function setExchangeRate(uint8 _ilkIndex, uint256 _exchangeRate) public {
-        exchangeRates[_ilkIndex] = _exchangeRate;
-    }
-
-    function getExchangeRate(uint8 _ilkIndex) public view returns (uint256) {
-        return exchangeRates[_ilkIndex];
-    }
-}
 
 // fork tests for integrating with external contracts
 contract ReserveOracleSharedSetup is IonPoolSharedSetup {
