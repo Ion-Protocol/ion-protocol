@@ -34,7 +34,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     address[] public exchangeRateOracles;
 
     address immutable keeper1 = vm.addr(99);
-    address immutable revenueRecipient = vm.addr(100);
     address immutable protocol = vm.addr(101);
 
     struct StateArgs {

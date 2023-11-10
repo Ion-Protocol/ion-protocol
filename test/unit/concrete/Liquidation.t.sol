@@ -37,7 +37,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 _maxDiscount = 0.2 ether;
 
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
         // set exchange rate to zero
         reserveOracle1.setExchangeRate(0);
@@ -66,7 +66,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 _maxDiscount = 0.2e27;
 
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
         // set exchange rate
         reserveOracle1.setExchangeRate(1e18);
@@ -94,7 +94,7 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256[ILK_COUNT] memory liquidationThresholds = [liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
         // set exchange rate
         uint72 exchangeRate = 0.5e18;
@@ -152,7 +152,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
 
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -183,8 +183,6 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 expectedWethPaid = results.repay / RAY;
         expectedWethPaid = expectedWethPaid * RAY < results.repay ? expectedWethPaid + 1 : expectedWethPaid;
 
-        uint256 expectedGemFee = results.gemOut.rayMulUp(dArgs.reserveFactor);
-
         // resulting vault collateral and debt
         assertEq(actualResultingCollateral, results.collateral, "resulting collateral");
         assertEq(actualResultingNormalizedDebt, results.normalizedDebt, "resulting normalizedDebt");
@@ -204,11 +202,8 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut - expectedGemFee, "keeper gem");
+        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
-
-        // revenue recipient gets the fees
-        assertEq(ionPool.gem(ILK_INDEX, revenueRecipient), expectedGemFee, "revenue recipient gem");
     }
 
     function test_PartialLiquidationSuccessWithDecimals() public {
@@ -231,7 +226,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256[ILK_COUNT] memory liquidationThresholds = [uint256(dArgs.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
 
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -258,8 +253,6 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 expectedWethPaid = results.repay / RAY;
         expectedWethPaid = expectedWethPaid * RAY < results.repay ? expectedWethPaid + 1 : expectedWethPaid;
 
-        uint256 expectedGemFee = results.gemOut.rayMulUp(dArgs.reserveFactor);
-
         // resulting vault collateral and debt
         assertEq(actualResultingCollateral, results.collateral, "resulting collateral");
         assertEq(actualResultingNormalizedDebt, results.normalizedDebt, "resulting normalizedDebt");
@@ -280,11 +273,8 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut - expectedGemFee, "keeper gem");
+        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
-
-        // revenue recipient gets the fees
-        assertEq(ionPool.gem(ILK_INDEX, revenueRecipient), expectedGemFee, "revenue recipient gem");
     }
 
     function test_PartialLiquidationSuccessWithRate() public {
@@ -306,7 +296,7 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -328,8 +318,6 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256 expectedWethPaid = results.repay / RAY;
         expectedWethPaid = expectedWethPaid * RAY < results.repay ? expectedWethPaid + 1 : expectedWethPaid;
-
-        uint256 expectedGemFee = results.gemOut.rayMulUp(dArgs.reserveFactor);
 
         uint256 healthRatio = getHealthRatio(
             actualResultingCollateral,
@@ -357,11 +345,8 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut - expectedGemFee, "keeper gem");
+        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
-
-        // revenue recipient gets the fees
-        assertEq(ionPool.gem(ILK_INDEX, revenueRecipient), expectedGemFee, "revenue recipient gem");
     }
 
     /**
@@ -395,7 +380,7 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -453,7 +438,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256[ILK_COUNT] memory liquidationThresholds = [uint256(dArgs.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
 
         liquidation =
-        new Liquidation(address(ionPool), revenueRecipient, protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -471,8 +456,6 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256 expectedWethPaid = results.repay / RAY;
         expectedWethPaid = expectedWethPaid * RAY < results.repay ? expectedWethPaid + 1 : expectedWethPaid;
-
-        uint256 expectedGemFee = results.gemOut.rayMulUp(dArgs.reserveFactor);
 
         // health ratio is collateral / debt
         // resulting debt is zero, so health ratio will give divide by zero
@@ -492,10 +475,7 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut - expectedGemFee, "keeper gem");
+        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
-
-        // revenue recipient gets the fees
-        assertEq(ionPool.gem(ILK_INDEX, revenueRecipient), expectedGemFee, "revenue recipient gem");
     }
 }
