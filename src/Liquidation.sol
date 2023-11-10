@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { WadRayMath, WAD, RAY } from "./libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
 import { IonPool } from "src/IonPool.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -22,9 +22,9 @@ contract Liquidation {
 
     // --- parameters ---
 
-    uint256 immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
-    uint256 immutable RESERVE_FACTOR; // [ray] ex) 0.02e27 is 2%
-    uint256 immutable MAX_DISCOUNT; // [ray] ex) 0.2e27 is 20%
+    uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
+    uint256 public immutable RESERVE_FACTOR; // [ray] ex) 0.02e27 is 2%
+    uint256 public immutable MAX_DISCOUNT; // [ray] ex) 0.2e27 is 20%
 
     // liquidation thresholds
     uint256 public immutable LIQUIDATION_THRESHOLD_0; // [ray] liquidation threshold for ilkIndex 0

@@ -55,31 +55,29 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
     )
         public
     {
-        // state args
-        StateArgs memory stateArgs;
+        // state args 
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
-
         stateArgs.rate = bound(rate, NO_RATE, type(uint104).max);
-        // bound rate somehow?
+        
         ionPool.setRate(ILK_INDEX, uint104(stateArgs.rate));
 
         // starting position must be safe
-        uint256 maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+        maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
             deploymentArgs.liquidationThreshold
         ) / stateArgs.rate;
-        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;
+        minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;
 
         stateArgs.normalizedDebt = bound(borrowAmt, minBorrowAmt, maxBorrowAmt); // [wad]
 
         vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
 
         // position must be unsafe after exchange rate change
-        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
+        maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
             deploymentArgs.liquidationThreshold
         ) / stateArgs.collateral;
         vm.assume(maxExchangeRate != 0);
         maxExchangeRate = maxExchangeRate - 1;
-        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
+        minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
 
         stateArgs.exchangeRate = bound(
             exchangeRate,
@@ -162,24 +160,23 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         public
     {
         // state args
-        StateArgs memory stateArgs;
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
         stateArgs.rate = NO_RATE;
 
         // starting position must be safe
-        uint256 maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
+        maxBorrowAmt = (stateArgs.collateral * startingExchangeRate.scaleUpToRay(18)).rayMulDown(
             deploymentArgs.liquidationThreshold
         ) / stateArgs.rate;
-        uint256 minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;
+        minBorrowAmt = maxBorrowAmt < minBorrowAmt ? maxBorrowAmt : minBorrowAmt;
 
         stateArgs.normalizedDebt = bound(borrowAmt, minBorrowAmt, maxBorrowAmt); // [wad]
         vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
 
         // position must be unsafe after exchange rate change
-        uint256 maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
+        maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
             deploymentArgs.liquidationThreshold
         ) / stateArgs.collateral - 1;
-        uint256 minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
+        minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
 
         stateArgs.exchangeRate = bound(
             exchangeRate,

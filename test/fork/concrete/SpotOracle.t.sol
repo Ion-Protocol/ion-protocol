@@ -169,8 +169,8 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
         swEthSpotOracle =
         new SwEthSpotOracle(SWETH_ILK_INDEX, ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
-
-        uint256 expectedPrice = swEthSpotOracle.getPrice();
+        
+        uint256 expectedPrice = swEthSpotOracle.getPrice(); 
         uint256 expectedSpot = ltv.wadMulDown(expectedPrice);
 
         assertEq(swEthSpotOracle.getSpot(), expectedSpot, "spot");
@@ -188,7 +188,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         changeSwEthExchangeRate(newExchangeRate);
         swEthReserveOracle.updateExchangeRate();
 
-        uint256 expectedPrice = swEthSpotOracle.getPrice();
         uint256 expectedSpot = ltv.wadMulDown(newExchangeRate);
 
         assertEq(swEthSpotOracle.getSpot(), expectedSpot, "spot");
@@ -255,7 +254,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
         ethXReserveOracle.updateExchangeRate();
 
-        uint256 expectedPrice = ethXSpotOracle.getPrice();
         uint256 expectedSpot = ltv.wadMulDown(newExchangeRate);
 
         assertEq(ethXSpotOracle.getSpot(), expectedSpot, "spot");
