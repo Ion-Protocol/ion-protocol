@@ -6,9 +6,9 @@ import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { Whitelist } from "src/Whitelist.sol";
 
 contract IonZapper {
-    IonPool immutable ionPool;
-    IWETH9 immutable weth;
-    Whitelist immutable whitelist;
+    IonPool public immutable ionPool;
+    IWETH9 public immutable weth;
+    Whitelist public immutable whitelist;
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
         whitelist.isWhitelistedLender(msg.sender, proof);

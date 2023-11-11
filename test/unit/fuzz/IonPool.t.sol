@@ -529,7 +529,8 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             // This 1:1 ratio is OK since ltv is set at 100%
             uint256 collateralDepositAmount = bound(collateralDepositAmounts[i], 0, debtCeilings[i].scaleDownToWad(45));
-            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount * SPOT / rate);
+            normalizedBorrowAmount =
+                bound(normalizedBorrowAmount, 0, collateralDepositAmount * ionPool.spot(i).getSpot() / rate);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -576,7 +577,8 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             // This 1:1 ratio is OK since ltv is set at 100%
             uint256 collateralDepositAmount = bound(collateralDepositAmounts[i], 0, debtCeilings[i].scaleDownToWad(45));
-            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount * SPOT / rate);
+            normalizedBorrowAmount =
+                bound(normalizedBorrowAmount, 0, collateralDepositAmount * ionPool.spot(i).getSpot() / rate);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);
@@ -667,7 +669,8 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             // This 1:1 ratio is OK since ltv is set at 100%
             uint256 collateralDepositAmount = bound(collateralDepositAmounts[i], 0, debtCeilings[i].scaleDownToWad(45));
-            normalizedBorrowAmount = bound(normalizedBorrowAmount, 0, collateralDepositAmount * SPOT / rate);
+            normalizedBorrowAmount =
+                bound(normalizedBorrowAmount, 0, collateralDepositAmount * ionPool.spot(i).getSpot() / rate);
 
             ERC20PresetMinterPauser collateral = ERC20PresetMinterPauser(address(collaterals[i]));
             collateral.mint(borrower1, collateralDepositAmount);

@@ -2,28 +2,27 @@
 
 pragma solidity ^0.8.21;
 
-import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
+import { IonPoolSharedSetup, MockReserveOracle } from "../helpers/IonPoolSharedSetup.sol";
 import { Liquidation } from "src/Liquidation.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import "forge-std/console.sol";
-
-contract MockReserveOracle {
-    uint72 public exchangeRate;
-
-    function setExchangeRate(uint72 _exchangeRate) public {
-        exchangeRate = _exchangeRate;
-        console.log("set exchange rate: ", exchangeRate);
-    }
-}
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract LiquidationSharedSetup is IonPoolSharedSetup {
     using WadRayMath for uint256;
+    using Math for uint256;
+    using Strings for uint256;
+    using SafeCast for *;
 
     uint256 constant WAD = 1e18;
     uint256 constant RAY = 1e27;
 
     uint32 constant ILK_COUNT = 8;
+    uint8 constant ILK_INDEX = 0;
+
+    uint256 constant DEBT_CEILING = uint256(int256(-1));
 
     Liquidation public liquidation;
     GemJoin public gemJoin;
@@ -34,10 +33,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
 
     address[] public exchangeRateOracles;
 
-    uint8 public ilkIndex;
-
     address immutable keeper1 = vm.addr(99);
-    address immutable revenueRecipient = vm.addr(100);
     address immutable protocol = vm.addr(101);
 
     struct StateArgs {
@@ -64,21 +60,19 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         uint256 category;
     }
 
+    error NegativeDiscriminant(int256 discriminant);
+    error NegativeIntercept(int256 intercept);
+
     function setUp() public virtual override {
         super.setUp();
 
-        ilkIndex = 0;
+        ionPool.updateIlkDebtCeiling(ILK_INDEX, DEBT_CEILING);
 
-        // set debt ceiling
-        ionPool.updateIlkDebtCeiling(ilkIndex, uint256(int256(-1)));
-
-        // create supply position
         supply(lender1, 100 ether);
 
-        // TODO: Make ReserveOracleSharedSetUp
-        reserveOracle1 = new MockReserveOracle();
-        reserveOracle2 = new MockReserveOracle();
-        reserveOracle3 = new MockReserveOracle();
+        reserveOracle1 = new MockReserveOracle(0);
+        reserveOracle2 = new MockReserveOracle(0);
+        reserveOracle3 = new MockReserveOracle(0);
 
         exchangeRateOracles = [
             address(reserveOracle1),
@@ -90,6 +84,17 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             address(0),
             address(0)
         ];
+    }
+
+    /**
+     * @dev override for test set up
+     */
+    function _getDebtCeiling(uint8 ilkIndex) internal view override returns (uint256) {
+        if (ilkIndex == ILK_INDEX) {
+            return DEBT_CEILING;
+        } else {
+            return debtCeilings[ilkIndex];
+        }
     }
 
     /**
@@ -131,8 +136,8 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         vm.stopPrank();
     }
 
-    function liquidate(address keeper, uint8 ilkIndex, address vault) internal {
-        uint256 totalDebt = ionPool.normalizedDebt(ilkIndex, vault).rayMulUp(ionPool.rate(ilkIndex)); // [wad]
+    function liquidate(address keeper, uint8 ilkIndex, address vault) internal returns (uint256 totalDebt) {
+        totalDebt = ionPool.normalizedDebt(ilkIndex, vault).rayMulUp(ionPool.rate(ilkIndex)); // [wad]
         underlying.mint(keeper, totalDebt); // mint enough to fully liquidate just in case
         vm.startPrank(keeper);
         underlying.approve(address(liquidation), totalDebt);
@@ -155,8 +160,8 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
     function getHealthRatio(
         uint256 collateral, // [wad]
         uint256 normalizedDebt, // [wad]
-        uint256 rate, // [wad]
-        uint256 exchangeRate, // [wad]
+        uint256 rate, // [ray]
+        uint256 exchangeRate, // [wad] but converted to ray during calculation
         uint256 liquidationThreshold // [ray]
     )
         internal
@@ -164,8 +169,10 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         returns (uint256 resultingHealthRatio)
     {
         exchangeRate = exchangeRate.scaleUpToRay(18);
+        // [wad] * [ray] * [ray] / RAY = [rad]
         resultingHealthRatio = (collateral * exchangeRate).rayMulDown(liquidationThreshold);
-        resultingHealthRatio = resultingHealthRatio.rayDivDown(normalizedDebt).rayDivDown(rate);
+        // [rad] * RAY / [rad] = [ray]
+        resultingHealthRatio = resultingHealthRatio.rayDivDown(normalizedDebt * rate);
     }
 
     /**
@@ -178,10 +185,9 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         StateArgs memory _sArgs
     )
         internal
-        view
+        pure
         returns (Results memory results)
     {
-        console.log("--- calculate expected results --- ");
 
         DeploymentArgs memory dArgs;
         StateArgs memory sArgs;
@@ -198,47 +204,27 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         dArgs.maxDiscount = _dArgs.maxDiscount;
         dArgs.dust = _dArgs.dust;
 
-        console.log("collateral: ", sArgs.collateral);
-        console.log("normalizedDebt: ", sArgs.normalizedDebt);
-        console.log("rate: ", sArgs.rate);
-        console.log("exchangeRate: ", sArgs.exchangeRate);
 
-        console.log("liquidationThreshold: ", dArgs.liquidationThreshold);
-        console.log("targetHealth: ", dArgs.targetHealth);
-        console.log("reserveFactor: ", dArgs.reserveFactor);
-        console.log("maxDiscount: ", dArgs.maxDiscount);
-        console.log("dust: ", dArgs.dust);
 
         uint256 collateralValue = (sArgs.collateral * dArgs.liquidationThreshold).rayMulUp(sArgs.exchangeRate); // [rad]
-        console.log("collateralValue: [rad] ", collateralValue);
 
         uint256 liabilityValue = (sArgs.rate * sArgs.normalizedDebt); // [rad]
-        console.log("liabilityValue: [rad] ", liabilityValue);
 
         uint256 healthRatio = collateralValue.rayDivDown(liabilityValue); // [ray]
-        console.log("healthRatio: ", healthRatio);
 
         uint256 discount = dArgs.reserveFactor + (RAY - healthRatio); // [ray]
         discount = discount <= dArgs.maxDiscount ? discount : dArgs.maxDiscount; // [ray]
-        console.log("discount: ", discount);
 
         uint256 repayNum = liabilityValue.rayMulUp(dArgs.targetHealth) - collateralValue; // [rad] - [rad]
-        console.log("repayNum: ", repayNum);
 
         uint256 repayDen = dArgs.targetHealth - dArgs.liquidationThreshold.rayDivUp(RAY - discount);
-        console.log("repayDen: ", repayDen);
 
         results.repay = repayNum.rayDivUp(repayDen);
-        console.log("repay: ", results.repay);
 
         uint256 collateralSalePrice = sArgs.exchangeRate.rayMulUp(RAY - discount);
-        console.log("collateralSalePrice: ", collateralSalePrice);
 
         if (results.repay > liabilityValue) {
-            console.log("protocol liquidation");
             // if repay > liabilityValue, then liabilityValue / collateralSalePrice > collateral
-            console.log("liabilityValue / collateralSalePrice: ", liabilityValue / collateralSalePrice);
-            console.log("sArgs.collateral: ", sArgs.collateral);
             assert(liabilityValue / collateralSalePrice >= sArgs.collateral);
             results.dart = sArgs.normalizedDebt;
             results.gemOut = sArgs.collateral;
@@ -248,8 +234,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
 
             results.category = 0;
         } else if (liabilityValue - results.repay < dArgs.dust) {
-            console.log("dust liquidation");
-            console.log("dust: ", dArgs.dust);
             results.repay = liabilityValue;
 
             results.dart = sArgs.normalizedDebt;
@@ -260,62 +244,29 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
 
             results.category = 1;
         } else if (liabilityValue - results.repay >= dArgs.dust) {
-            console.log("PARTIAL LIQUIDATION");
-            console.log("liabilityValue: ", liabilityValue);
-            console.log("results.repay: ", results.repay);
-            console.log("dArgs.dust: ", dArgs.dust);
-            console.log("liabilityValue - results.repay: ", liabilityValue - results.repay);
-            console.log("liabilityValue - results.repay < dArgs.dust", liabilityValue - results.repay < dArgs.dust);
             // results.repay unchanged
             results.dart = results.repay / sArgs.rate;
-            console.log("results.dart: ", results.dart);
             results.dart = sArgs.rate * results.dart < results.repay ? results.dart + 1 : results.dart; // round up
-            console.log("results.dart rounded: ", results.dart);
             results.gemOut = results.repay / collateralSalePrice;
-            console.log("results.gemOut: ", results.gemOut);
             results.collateral = sArgs.collateral - results.gemOut;
             results.normalizedDebt = sArgs.normalizedDebt - results.dart;
+            results.repay = results.dart * sArgs.rate;
+
+            if (results.normalizedDebt != 0) {
+                uint256 resultingHealthRatio = getHealthRatio(
+                    results.collateral, // [wad]
+                    results.normalizedDebt, // [wad]
+                    sArgs.rate, // [ray]
+                    _sArgs.exchangeRate, // [wad] but converted to ray during calculation
+                    dArgs.liquidationThreshold // [ray]
+                );
+            }
 
             results.category = 2;
         } else {
             require(false, "panic"); // shouldn't occur
         }
 
-        console.log("expectedFinalRepay: [rad] ", results.repay);
-        console.log("expectedResultingCollateral: [ray] ", results.collateral);
-        console.log("expectedResultingDebt: [ray]", results.normalizedDebt);
 
-        console.log("---");
     }
-
-    // tests the helper function for calculating expected liquidation results
-    /**
-     * 100 ether deposit 50 ether borrow
-     * mat is 0.5
-     * exchangeRate is now 0.95
-     * collateralValue = 0.5 * 0.95 * 100 = 47.5
-     * healthRatio = collateral / debt = 47.5 / 50 = 0.95
-     * discount = 0.02 + (1 - 0.5) = 0.07
-     * repayNum = (1.25 * 50) - 47.5 = 15
-     * repayDen = 1.25 - (0.5 / (1-0.07)) = 0.7123
-     * repay = 21.05660377
-     * gemOut = repay / (exchangeRate * (1 - discount)) =
-     */
-    // function test_CalculateExpectedLiquidationResults() public {
-
-    //     args.collateral = 100e18; // [wad]
-    //     args.liquidationThreshold = 0.5e27; // [wad]
-    //     args.exchangeRate = 0.95e18;
-    //     args.normalizedDebt = 50e18; // [wad]
-    //     args.rate = 1e27; // [ray]
-    //     args.targetHealth = 1.25e27; // [wad]
-    //     args.reserveFactor = 0.02e27; // [wad]
-    //     args.maxDiscount = 0.2e27; // [wad]
-
-    //     Results memory results = calculateExpectedLiquidationResults(args);
-    //     console.log("resultingCollateral: ", results.collateral);
-    //     console.log("resultingNormalizedDebt: ", results.normalizedDebt);
-    //     assertEq(results.collateral, 76166832174776564052, "collateral"); // [ray]
-    //     assertEq(results.normalizedDebt, 28943396226415094339, "normalizedDebt"); // [ray]
-    // }
 }

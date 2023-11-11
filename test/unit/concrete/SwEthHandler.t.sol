@@ -48,8 +48,8 @@ contract SwEthHandler_Test is IonPoolSharedSetup {
 
         ERC20PresetMinterPauser(_getUnderlying()).mint(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
 
-        uint256 riskAdjustedSpot = 0.9e18;
-        spotOracles[1].setPrice(riskAdjustedSpot);
+        // uint256 riskAdjustedSpot = 0.9e18;
+        // spotOracles[1].setPrice(riskAdjustedSpot);
 
         vm.startPrank(lender1);
         underlying.approve(address(ionPool), type(uint256).max);

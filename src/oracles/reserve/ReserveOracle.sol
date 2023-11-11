@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -10,7 +9,7 @@ import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 // should equal to the number of feeds available in the contract
 uint8 constant MAX_FEED_COUNT = 3;
 
-abstract contract ReserveOracle is Ownable {
+abstract contract ReserveOracle {
     using SafeCast for *;
     using WadRayMath for uint256;
 
@@ -20,7 +19,7 @@ abstract contract ReserveOracle is Ownable {
 
     uint256 public immutable maxChange; // maximum change allowed in percentage [ray] i.e. 3e25 [ray] would be 3%
 
-    uint256 public currentExchangeRate; // the bounded queried last time
+    uint256 public currentExchangeRate; // [wad] the bounded queried last time
 
     IReserveFeed public immutable feed0; // different reserve oracle feeds excluding the protocol exchange rate
     IReserveFeed public immutable feed1;
@@ -41,7 +40,7 @@ abstract contract ReserveOracle is Ownable {
         return _getProtocolExchangeRate();
     }
 
-    constructor(uint8 _ilkIndex, address[] memory _feeds, uint8 _quorum, uint256 _maxChange) Ownable(msg.sender) {
+    constructor(uint8 _ilkIndex, address[] memory _feeds, uint8 _quorum, uint256 _maxChange) {
         if (_feeds.length > MAX_FEED_COUNT) {
             revert InvalidFeedLength(_feeds.length);
         }
@@ -76,7 +75,6 @@ abstract contract ReserveOracle is Ownable {
             uint256 feed0ExchangeRate = IReserveFeed(feed0).getExchangeRate(_ilkIndex);
             uint256 feed1ExchangeRate = IReserveFeed(feed1).getExchangeRate(_ilkIndex);
             uint256 feed2ExchangeRate = IReserveFeed(feed2).getExchangeRate(_ilkIndex);
-
             val = ((feed0ExchangeRate + feed1ExchangeRate + feed2ExchangeRate) / uint256(quorum));
         }
     }
@@ -86,8 +84,7 @@ abstract contract ReserveOracle is Ownable {
         return Math.max(min, Math.min(max, value));
     }
 
-    // TODO: Why public?
-    function initializeExchangeRate() public {
+    function _initializeExchangeRate() internal {
         currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
         if (currentExchangeRate == 0) {
             revert InvalidInitialization(currentExchangeRate);

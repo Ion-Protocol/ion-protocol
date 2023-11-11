@@ -5,8 +5,6 @@ import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-import "forge-std/console2.sol";
-
 contract Whitelist is Ownable2Step {
     mapping(address => bool) public protocolWhitelist; // peripheral addresses that can bypass the merkle proof check
 

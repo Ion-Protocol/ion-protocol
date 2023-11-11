@@ -43,25 +43,6 @@ contract MockModifiers {
     }
 }
 
-// contract MockProxyModifiers() public {
-//     Whitelist whitelist;
-//     constructor (address _whitelist) {
-//         whitelist = Whitelist(_whitelist);
-//     }
-//     modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
-//         whitelist.isWhitelistedBorrower(proof, msg.s);
-//     }
-//     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
-//         whitelist.isWhitelistedLender(proof, msg.sender);
-//     }
-//     function onlyBorrowersFunction() onlyWhitelistedBorrowers {
-
-//     }
-//     function onlyLendersFunction() onlyWhitelistedLenders {
-
-//     }
-// }
-
 contract WhitelistMockTest is Test {
     Whitelist whitelist;
 
@@ -334,7 +315,7 @@ contract WhitelistMockTest is Test {
         borrowersRoots[1] = 0;
         borrowersRoots[2] = 0;
 
-        Whitelist whitelist = new Whitelist(borrowersRoots, 0);
+        whitelist = new Whitelist(borrowersRoots, 0);
 
         assertEq(whitelist.owner(), address(this));
 
