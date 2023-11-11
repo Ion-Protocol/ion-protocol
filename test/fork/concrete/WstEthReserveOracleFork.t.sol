@@ -49,7 +49,8 @@ contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
         WstEthReserveOracle stEthReserveOracle =
             new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
-        uint72 expectedMinExchangeRate = (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
+        uint72 expectedMinExchangeRate =
+            (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
 
         stEthReserveOracle.updateExchangeRate();
         uint256 protocolExchangeRate = stEthReserveOracle.currentExchangeRate();

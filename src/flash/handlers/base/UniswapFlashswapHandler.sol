@@ -119,7 +119,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
 
     /**
      * @dev The two function parameters must be chosen carefully. If `maxCollateralToRemove` were higher then
-     * `debtToRemove`, it would theoretically be possible TODO: to do what? 
+     * `debtToRemove`, it would theoretically be possible TODO: to do what?
      * @param maxCollateralToRemove in terms of swEth
      * @param debtToRemove in terms of WETH [wad]
      * @param sqrtPriceLimitX96 for the swap

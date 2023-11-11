@@ -56,7 +56,8 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
             maxChange
         );
 
-        uint256 expectedExchangeRate = (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
+        uint256 expectedExchangeRate =
+            (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
         uint256 protocolExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         assertEq(protocolExchangeRate, expectedExchangeRate, "min exchange rate");
