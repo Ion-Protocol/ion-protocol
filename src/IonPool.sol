@@ -827,6 +827,11 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         return $.vaults[ilkIndex][user].normalizedDebt;
     }
 
+    function vault(uint8 ilkIndex, address user) external view returns (uint256, uint256) { 
+        IonPoolStorage storage $ = _getIonPoolStorage(); 
+        return ($.vaults[ilkIndex][user].collateral, $.vaults[ilkIndex][user].normalizedDebt);    
+    }
+
     function gem(uint8 ilkIndex, address user) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
         return $.gem[ilkIndex][user];

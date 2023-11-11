@@ -1,21 +1,16 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity 0.8.21;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.21;
 
-// contract ReserveFeed is ReserveOracle {
-//     address public protocolFeed;
+contract ReserveFeed {
+    mapping(uint8 ilkIndex => uint256 exchangeRate) public exchangeRates;
 
-//     address public immutable ilk0;
-//     address public immutable ilk1;
-//     address public immutable ilk2;
+    constructor() { }
 
-//     constructor(address _token, address[] memory _ilks) ReserveOracle(_token) {
-//         protocolFeed = _protocolFeed;
-//         exchangeRate = _getProtocolExchangeRate();
-//         nextExchangeRate = exchangeRate;
-//     }
+    function setExchangeRate(uint8 _ilkIndex, uint256 _exchangeRate) external {
+        exchangeRates[_ilkIndex] = _exchangeRate;
+    }
 
-//     function _getProtocolExchangeRate() internal view override returns (uint256) {
-//         return wstEth(protocolFeed).exchangeRate();
-//     }
-
-// }
+    function getExchangeRate(uint8 _ilkIndex) external view returns (uint256) {
+        return exchangeRates[_ilkIndex];
+    }
+}

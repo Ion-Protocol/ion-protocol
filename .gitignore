@@ -11,6 +11,7 @@ coverage/
 # Dependency directories
 
 node_modules/
+package-lock.json
 
 # dotenv environment variable files
 

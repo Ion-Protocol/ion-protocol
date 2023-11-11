@@ -2,9 +2,10 @@
 pragma solidity ^0.8.21;
 
 import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
+import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";
 import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
-import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
+import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
 
 contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
     using WadRayMath for *;
@@ -31,22 +32,22 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 1e27; // 1 100%
         uint8 quorum = 3;
 
-        MockFeed mockFeed1 = new MockFeed();
-        MockFeed mockFeed2 = new MockFeed();
-        MockFeed mockFeed3 = new MockFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed();
+        ReserveFeed reserveFeed2 = new ReserveFeed();
+        ReserveFeed reserveFeed3 = new ReserveFeed();
 
-        uint256 mockFeed1ExchangeRate = 0.9 ether;
-        uint256 mockFeed2ExchangeRate = 0.95 ether;
-        uint256 mockFeed3ExchangeRate = 1 ether;
+        uint256 reserveFeed1ExchangeRate = 0.9 ether;
+        uint256 reserveFeed2ExchangeRate = 0.95 ether;
+        uint256 reserveFeed3ExchangeRate = 1 ether;
 
-        mockFeed1.setExchangeRate(ETHX_ILK_INDEX, mockFeed1ExchangeRate);
-        mockFeed2.setExchangeRate(ETHX_ILK_INDEX, mockFeed2ExchangeRate);
-        mockFeed3.setExchangeRate(ETHX_ILK_INDEX, mockFeed3ExchangeRate);
+        reserveFeed1.setExchangeRate(ETHX_ILK_INDEX, reserveFeed1ExchangeRate);
+        reserveFeed2.setExchangeRate(ETHX_ILK_INDEX, reserveFeed2ExchangeRate);
+        reserveFeed3.setExchangeRate(ETHX_ILK_INDEX, reserveFeed3ExchangeRate);
 
         address[] memory feeds = new address[](3);
-        feeds[0] = address(mockFeed1);
-        feeds[1] = address(mockFeed2);
-        feeds[2] = address(mockFeed3);
+        feeds[0] = address(reserveFeed1);
+        feeds[1] = address(reserveFeed2);
+        feeds[2] = address(reserveFeed3);
         EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
             STADER_STAKE_POOLS_MANAGER,
             ETHX_ILK_INDEX,
@@ -55,7 +56,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
             maxChange
         );
 
-        uint256 expectedExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
+        uint256 expectedExchangeRate = (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
         uint256 protocolExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         assertEq(protocolExchangeRate, expectedExchangeRate, "min exchange rate");

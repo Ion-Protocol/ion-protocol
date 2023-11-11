@@ -2,9 +2,10 @@
 pragma solidity ^0.8.21;
 
 import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
+import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";
 import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { RAY } from "src/libraries/math/WadRayMath.sol";
-import { ReserveOracleSharedSetup, MockFeed } from "test/helpers/ReserveOracleSharedSetup.sol";
+import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
 
 contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- swETH Reserve Oracle Test ---
@@ -27,29 +28,29 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleAggregation() public {
-        MockFeed mockFeed1 = new MockFeed();
-        MockFeed mockFeed2 = new MockFeed();
-        MockFeed mockFeed3 = new MockFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed();
+        ReserveFeed reserveFeed2 = new ReserveFeed();
+        ReserveFeed reserveFeed3 = new ReserveFeed();
 
-        uint256 mockFeed1ExchangeRate = 0.9 ether;
-        uint256 mockFeed2ExchangeRate = 0.95 ether;
-        uint256 mockFeed3ExchangeRate = 1 ether;
+        uint256 reserveFeed1ExchangeRate = 0.9 ether;
+        uint256 reserveFeed2ExchangeRate = 0.95 ether;
+        uint256 reserveFeed3ExchangeRate = 1 ether;
 
-        mockFeed1.setExchangeRate(SWETH_ILK_INDEX, mockFeed1ExchangeRate);
-        mockFeed2.setExchangeRate(SWETH_ILK_INDEX, mockFeed2ExchangeRate);
-        mockFeed3.setExchangeRate(SWETH_ILK_INDEX, mockFeed3ExchangeRate);
+        reserveFeed1.setExchangeRate(SWETH_ILK_INDEX, reserveFeed1ExchangeRate);
+        reserveFeed2.setExchangeRate(SWETH_ILK_INDEX, reserveFeed2ExchangeRate);
+        reserveFeed3.setExchangeRate(SWETH_ILK_INDEX, reserveFeed3ExchangeRate);
 
         address[] memory feeds = new address[](3);
 
-        feeds[0] = address(mockFeed1);
-        feeds[1] = address(mockFeed2);
-        feeds[2] = address(mockFeed3);
+        feeds[0] = address(reserveFeed1);
+        feeds[1] = address(reserveFeed2);
+        feeds[2] = address(reserveFeed3);
 
         uint8 quorum = 3;
         uint256 maxChange = 1e27; // 100%
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, maxChange);
 
-        uint256 expectedExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
+        uint256 expectedExchangeRate = (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
 
         swEthReserveOracle.updateExchangeRate();
         uint256 actualExchangeRate = swEthReserveOracle.currentExchangeRate();
@@ -144,12 +145,12 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- Reserve Oracle Aggregation Test ---
 
     function test_SwEthReserveOracleGetAggregateExchangeRateMin() public {
-        MockFeed mockFeed = new MockFeed();
-        mockFeed.setExchangeRate(SWETH_ILK_INDEX, 1.01 ether);
+        ReserveFeed reserveFeed = new ReserveFeed();
+        reserveFeed.setExchangeRate(SWETH_ILK_INDEX, 1.01 ether);
 
         // reserve oracle
         address[] memory feeds = new address[](3);
-        feeds[0] = address(mockFeed);
+        feeds[0] = address(reserveFeed);
         uint8 quorum = 1;
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
             SWETH,
@@ -169,14 +170,14 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleTwoFeeds() public {
-        MockFeed mockFeed1 = new MockFeed();
-        MockFeed mockFeed2 = new MockFeed();
-        mockFeed1.setExchangeRate(SWETH_ILK_INDEX, 0.9 ether);
-        mockFeed2.setExchangeRate(SWETH_ILK_INDEX, 0.8 ether);
+        ReserveFeed reserveFeed1 = new ReserveFeed();
+        ReserveFeed reserveFeed2 = new ReserveFeed();
+        reserveFeed1.setExchangeRate(SWETH_ILK_INDEX, 0.9 ether);
+        reserveFeed2.setExchangeRate(SWETH_ILK_INDEX, 0.8 ether);
 
         address[] memory feeds = new address[](3);
-        feeds[0] = address(mockFeed1);
-        feeds[1] = address(mockFeed2);
+        feeds[0] = address(reserveFeed1);
+        feeds[1] = address(reserveFeed2);
         uint8 quorum = 2;
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
             SWETH,
@@ -194,21 +195,21 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleThreeFeeds() public {
-        MockFeed mockFeed1 = new MockFeed();
-        MockFeed mockFeed2 = new MockFeed();
-        MockFeed mockFeed3 = new MockFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed();
+        ReserveFeed reserveFeed2 = new ReserveFeed();
+        ReserveFeed reserveFeed3 = new ReserveFeed();
 
-        uint256 mockFeed1ExchangeRate = 1 ether;
-        uint256 mockFeed2ExchangeRate = 1.4 ether;
-        uint256 mockFeed3ExchangeRate = 1.8 ether;
+        uint256 reserveFeed1ExchangeRate = 1 ether;
+        uint256 reserveFeed2ExchangeRate = 1.4 ether;
+        uint256 reserveFeed3ExchangeRate = 1.8 ether;
 
-        mockFeed1.setExchangeRate(SWETH_ILK_INDEX, mockFeed1ExchangeRate);
-        mockFeed2.setExchangeRate(SWETH_ILK_INDEX, mockFeed2ExchangeRate);
-        mockFeed3.setExchangeRate(SWETH_ILK_INDEX, mockFeed3ExchangeRate);
+        reserveFeed1.setExchangeRate(SWETH_ILK_INDEX, reserveFeed1ExchangeRate);
+        reserveFeed2.setExchangeRate(SWETH_ILK_INDEX, reserveFeed2ExchangeRate);
+        reserveFeed3.setExchangeRate(SWETH_ILK_INDEX, reserveFeed3ExchangeRate);
 
         address[] memory feeds = new address[](3);
-        feeds[0] = address(mockFeed1);
-        feeds[1] = address(mockFeed2);
+        feeds[0] = address(reserveFeed1);
+        feeds[1] = address(reserveFeed2);
         uint8 quorum = 2;
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
             SWETH,
@@ -220,9 +221,9 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         swEthReserveOracle.updateExchangeRate();
 
-        uint256 expectedMinExchangeRate = (mockFeed1ExchangeRate + mockFeed2ExchangeRate + mockFeed3ExchangeRate) / 3;
+        uint256 expectedMinExchangeRate = ISwEth(SWETH).getRate(); 
         assertEq(
-            swEthReserveOracle.currentExchangeRate(), swEthReserveOracle.currentExchangeRate(), "min exchange rate"
+            swEthReserveOracle.currentExchangeRate(), expectedMinExchangeRate, "min exchange rate"
         );
     }
 }
