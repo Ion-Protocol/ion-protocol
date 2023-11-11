@@ -41,4 +41,8 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
         weth.withdraw(amountWeth);
         return STADER_DEPOSIT.depositForLst(amountWeth);
     }
+
+    function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {
+        return STADER_DEPOSIT.getEthAmountInForLstAmountOut(amountLst);
+    }
 }

@@ -30,6 +30,7 @@ abstract contract IonHandlerBase {
     using WadRayMath for uint256;
 
     error CannotSendEthToContract();
+    error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
 
     enum AmountToBorrow {
         IS_MIN,

@@ -8,11 +8,10 @@ import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
 import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
 import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
+import { Whitelist } from "src/Whitelist.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-
-import { Whitelist } from "src/Whitelist.sol";
 
 contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using LidoLibrary for IWstEth;
@@ -34,5 +33,9 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
         weth.withdraw(amountWeth);
         return IWstEth(address(lstToken)).depositForLst(amountWeth);
+    }
+
+    function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {
+        return IWstEth(address(lstToken)).getEthAmountInForLstAmountOut(amountLst);
     }
 }

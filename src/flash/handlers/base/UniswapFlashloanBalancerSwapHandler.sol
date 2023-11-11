@@ -25,7 +25,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     error WethNotInPoolPair(IUniswapV3Pool pool);
     error ReceiveCallerNotPool(address unauthorizedCaller);
     error ExternalUniswapFlashloanNotAllowed();
-    error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
 
     IVault internal constant vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 

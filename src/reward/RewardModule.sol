@@ -59,6 +59,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
 
     event MintToTreasury(address indexed treasury, uint256 amount, uint256 supplyFactor);
 
+    event TreasuryUpdate(address treasury);
+
     struct RewardModuleStorage {
         IERC20 underlying;
         uint8 decimals;
@@ -105,6 +107,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         $.name = name_;
         $.symbol = symbol_;
         $.supplyFactor = RAY;
+
+        emit TreasuryUpdate(_treasury);
     }
 
     /**
@@ -215,6 +219,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     function updateTreasury(address newTreasury) external onlyRole(ION) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         $.treasury = newTreasury;
+
+        emit TreasuryUpdate(newTreasury);
     }
 
     // --- Getters ---

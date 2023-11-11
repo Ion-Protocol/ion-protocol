@@ -1084,6 +1084,8 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
     event Paused(IonPausableUpgradeable.Pauses indexed pauseIndex, address account);
     event Unpaused(IonPausableUpgradeable.Pauses indexed pauseIndex, address account);
 
+    event TreasuryUpdate(address treasury);
+
     // Random non admin address
     address internal immutable NON_ADMIN = vm.addr(33);
 
@@ -1315,6 +1317,20 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         emit Unpaused(IonPausableUpgradeable.Pauses.SAFE, address(this));
         ionPool.unpauseSafeActions();
         assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), false);
+    }
+
+    function test_UpdateTreasury() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
+        );
+        vm.prank(NON_ADMIN);
+        ionPool.updateTreasury(address(0));
+
+        vm.expectEmit(true, true, true, true);
+        emit TreasuryUpdate(address(0));
+        ionPool.updateTreasury(address(0));
+
+        assertEq(ionPool.treasury(), address(0));
     }
 }
 

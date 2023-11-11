@@ -705,13 +705,13 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         Vault storage vault = $.vaults[ilkIndex][u];
         Ilk storage ilk = $.ilks[ilkIndex];
-        uint128 ilkRate = ilk.rate;
+        uint104 ilkRate = ilk.rate;
 
         vault.collateral = _add(vault.collateral, changeInCollateral);
         vault.normalizedDebt = _add(vault.normalizedDebt, changeInNormalizedDebt);
         ilk.totalNormalizedDebt = _add(uint256(ilk.totalNormalizedDebt), changeInNormalizedDebt).toUint104();
 
-        // Unsafe cast OK since we know that ilkRate is less than 2^128
+        // Unsafe cast OK since we know that ilkRate is less than 2^104
         int256 changeInDebt = int256(uint256(ilkRate)) * changeInNormalizedDebt;
 
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
