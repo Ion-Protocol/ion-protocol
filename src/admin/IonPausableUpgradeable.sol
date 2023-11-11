@@ -27,6 +27,7 @@ abstract contract IonPausableUpgradeable is ContextUpgradeable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPausable")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line
     bytes32 private constant IonPausableStorageLocation =
         0x48c3e72c7d0b1210a7962d468cc626eef9908fe8b8be51a049f423a1848bb700;
 

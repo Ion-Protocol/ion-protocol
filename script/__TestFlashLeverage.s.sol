@@ -53,59 +53,59 @@ contract FlashLeverageScript is BaseScript {
         POOL.addOperator(address(SWETH_HANDLER));
 
         uint256 initialDeposit = 1 ether; // in collateral terms
-        uint256 resultingCollateral = 3 ether; // in colllateral terms
-        uint256 resultingDebt = WST_ETH.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
+        uint256 resultingAdditionalCollateral = 3 ether; // in colllateral terms
+        uint256 maxResultingDebt = WST_ETH.getEthAmountInForLstAmountOut(resultingAdditionalCollateral - initialDeposit);
 
         WSTETH_HANDLER.flashLeverageCollateral({
             initialDeposit: initialDeposit,
-            resultingCollateral: resultingCollateral,
-            resultingDebt: resultingDebt
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
+            maxResultingDebt: maxResultingDebt
         });
         WSTETH_HANDLER.flashLeverageWeth({
             initialDeposit: initialDeposit,
-            resultingCollateral: resultingCollateral,
-            resultingDebt: resultingDebt
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
+            maxResultingDebt: maxResultingDebt
         });
         WSTETH_HANDLER.flashswapLeverage({
             initialDeposit: initialDeposit,
-            resultingAdditionalCollateral: resultingCollateral,
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
             maxResultingAdditionalDebt: type(uint256).max,
             sqrtPriceLimitX96: 0
         });
 
-        resultingDebt = MAINNET_STADER.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
+        maxResultingDebt = MAINNET_STADER.getEthAmountInForLstAmountOut(resultingAdditionalCollateral - initialDeposit);
 
         ETHX_HANDLER.flashLeverageCollateral({
             initialDeposit: initialDeposit,
-            resultingCollateral: resultingCollateral,
-            resultingDebt: resultingDebt
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
+            maxResultingDebt: maxResultingDebt
         });
         ETHX_HANDLER.flashLeverageWeth({
             initialDeposit: initialDeposit,
-            resultingCollateral: resultingCollateral,
-            resultingDebt: resultingDebt
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
+            maxResultingDebt: maxResultingDebt
         });
         ETHX_HANDLER.flashLeverageWethAndSwap({
             initialDeposit: initialDeposit,
-            resultingAdditionalCollateral: resultingCollateral,
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
             maxResultingAdditionalDebt: type(uint256).max
         });
 
-        resultingDebt = MAINNET_SWELL.getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
+        maxResultingDebt = MAINNET_SWELL.getEthAmountInForLstAmountOut(resultingAdditionalCollateral - initialDeposit);
 
         SWETH_HANDLER.flashLeverageCollateral({
             initialDeposit: initialDeposit,
-            resultingCollateral: resultingCollateral,
-            resultingDebt: resultingDebt
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
+            maxResultingDebt: maxResultingDebt
         });
         SWETH_HANDLER.flashLeverageWeth({
             initialDeposit: initialDeposit,
-            resultingCollateral: resultingCollateral,
-            resultingDebt: resultingDebt
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
+            maxResultingDebt: maxResultingDebt
         });
         SWETH_HANDLER.flashswapLeverage({
             initialDeposit: initialDeposit,
-            resultingAdditionalCollateral: resultingCollateral,
+            resultingAdditionalCollateral: resultingAdditionalCollateral,
             maxResultingAdditionalDebt: type(uint256).max,
             sqrtPriceLimitX96: 0
         });

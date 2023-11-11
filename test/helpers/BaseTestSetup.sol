@@ -5,8 +5,6 @@ import { Test } from "forge-std/Test.sol";
 import { ERC20PresetMinterPauser } from "./ERC20PresetMinterPauser.sol";
 import { VmSafe as Vm } from "forge-std/Vm.sol";
 
-import { console } from "forge-std/console.sol";
-
 abstract contract BaseTestSetup is Test {
     modifier prankAgnostic() {
         (Vm.CallerMode mode, address msgSender,) = vm.readCallers();

@@ -50,7 +50,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 1e27; // 100%
         SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, maxChange);
 
-        uint256 expectedExchangeRate = (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
+        uint256 expectedExchangeRate =
+            (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
 
         swEthReserveOracle.updateExchangeRate();
         uint256 actualExchangeRate = swEthReserveOracle.currentExchangeRate();
@@ -221,9 +222,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         swEthReserveOracle.updateExchangeRate();
 
-        uint256 expectedMinExchangeRate = ISwEth(SWETH).getRate(); 
-        assertEq(
-            swEthReserveOracle.currentExchangeRate(), expectedMinExchangeRate, "min exchange rate"
-        );
+        uint256 expectedMinExchangeRate = ISwEth(SWETH).getRate();
+        assertEq(swEthReserveOracle.currentExchangeRate(), expectedMinExchangeRate, "min exchange rate");
     }
 }

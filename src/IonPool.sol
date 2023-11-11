@@ -8,8 +8,6 @@ import { InterestRate } from "src/InterestRate.sol";
 import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -104,7 +102,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
-    address private immutable addressThis = address(this);
+    address private immutable ADDRESS_THIS = address(this);
 
     // --- Modifiers ---
     modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
@@ -151,6 +149,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     }
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line
     bytes32 private constant IonPoolStorageLocation = 0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e00;
 
     function _getIonPoolStorage() internal pure returns (IonPoolStorage storage $) {
@@ -179,7 +178,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
         RewardModule.initialize(_underlying, _treasury, decimals_, name_, symbol_);
 
-        require(_grantRole(ION, initialDefaultAdmin));
+        _grantRole(ION, initialDefaultAdmin);
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
@@ -706,13 +705,13 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         Vault storage vault = $.vaults[ilkIndex][u];
         Ilk storage ilk = $.ilks[ilkIndex];
-        uint128 ilkRate = ilk.rate;
+        uint104 ilkRate = ilk.rate;
 
         vault.collateral = _add(vault.collateral, changeInCollateral);
         vault.normalizedDebt = _add(vault.normalizedDebt, changeInNormalizedDebt);
         ilk.totalNormalizedDebt = _add(uint256(ilk.totalNormalizedDebt), changeInNormalizedDebt).toUint104();
 
-        // Unsafe cast OK since we know that ilkRate is less than 2^128
+        // Unsafe cast OK since we know that ilkRate is less than 2^104
         int256 changeInDebt = int256(uint256(ilkRate)) * changeInNormalizedDebt;
 
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
@@ -828,9 +827,9 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         return $.vaults[ilkIndex][user].normalizedDebt;
     }
 
-    function vault(uint8 ilkIndex, address user) external view returns (uint256, uint256) { 
-        IonPoolStorage storage $ = _getIonPoolStorage(); 
-        return ($.vaults[ilkIndex][user].collateral, $.vaults[ilkIndex][user].normalizedDebt);    
+    function vault(uint8 ilkIndex, address user) external view returns (uint256, uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return ($.vaults[ilkIndex][user].collateral, $.vaults[ilkIndex][user].normalizedDebt);
     }
 
     function gem(uint8 ilkIndex, address user) external view returns (uint256) {
@@ -907,7 +906,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     }
 
     function implementation() external view returns (address) {
-        return addressThis;
+        return ADDRESS_THIS;
     }
 
     // --- Auth ---

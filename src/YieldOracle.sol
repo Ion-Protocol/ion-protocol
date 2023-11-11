@@ -10,20 +10,21 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { console2 } from "forge-std/console2.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
-// historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
-// storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
+// historicalExchangeRates can be thought of as a matrix of past exchange rates by collateral types. With a uint64 type
+// storing exchange rates, 4 can be stored in one storage slot. So each day will consume ceil(ILK_COUNT / 4) storage
+// slots.
 //
 //  look back days  | storage slot  ||                             data
 //
-//                  |                  256                             128      64     32       0
-//                  |               ||  |       |       |       | ilk_n | ilk_3 | ilk_2 | ilk_1 |
-//        1         |     n + 0     ||  |       |       |       |       |       |       |       |
-//        2         |     n + 1     ||  |       |       |       |       |       |       |       |
-//       ...        |    n + ...    ||  |       |       |       |       |       |       |       |
-//        n         |     n + n     ||  |       |       |       |       |       |       |       |
+//                  |                  256             172             128              64              0
+//                  |               ||  |     ilk_4     |     ilk_3     |     ilk_2     |     ilk_1     |
+//        1         |     n + 0     ||  |               |               |               |               |
+//        2         |     n + 1     ||  |               |               |               |               |
+//       ...        |    n + ...    ||  |               |               |               |               |
+//        n         |     n + n     ||  |               |               |               |               |
+//
+// A uint64 has the capacity to store up to around ~18e18 which is more than enough to fit an exchange rate that only
+// ever hovers around 1e18.
 
 uint8 constant APY_PRECISION = 8;
 uint8 constant PROVIDER_PRECISION = 18;
@@ -34,6 +35,15 @@ uint32 constant ILK_COUNT = 3;
 // Seconds in 23.5 hours. This will allow for updates around the same time of day
 uint256 constant UPDATE_LOCK_LENGTH = 84_600;
 
+/**
+ * @dev This contract stores a history of the exchange rates of each collateral
+ * for the pat `LOOK_BACK` days. Every time, that `updateAll()` is called, it
+ * will update the most recent value in the history with the current exchange
+ * rate and it will also calculate the APY for each collateral type baesd on the
+ * data currently in the buffer. The APY is calculated by taking the difference
+ * between the first and last element (before the update) and averaging it out
+ * over the year
+ */
 contract YieldOracle is IYieldOracle, Ownable2Step {
     using Math for uint256;
     using SafeCast for uint256;

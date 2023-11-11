@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
@@ -31,6 +30,7 @@ abstract contract IonHandlerBase {
     using WadRayMath for uint256;
 
     error CannotSendEthToContract();
+    error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
 
     enum AmountToBorrow {
         IS_MIN,

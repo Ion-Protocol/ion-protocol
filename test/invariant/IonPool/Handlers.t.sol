@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WadRayMath, WAD, RAY, RAD } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
@@ -12,7 +12,6 @@ import { HEVM } from "test/helpers/echidna/IHevm.sol";
 import { InvariantHelpers } from "test/helpers/InvariantHelpers.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { LibString } from "solady/src/utils/LibString.sol";

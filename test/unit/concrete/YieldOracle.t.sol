@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { YieldOracle, LOOK_BACK, ILK_COUNT } from "src/YieldOracle.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import {
     YieldOracleSharedSetup,
@@ -11,9 +10,6 @@ import {
     SWELL_ETH_EXCHANGE_RATE
 } from "test/helpers/YieldOracleSharedSetup.sol";
 
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
-import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract YieldOracle_UnitTest is YieldOracleSharedSetup {

@@ -2,15 +2,9 @@
 pragma solidity 0.8.21;
 
 import { RewardModule } from "src/reward/RewardModule.sol";
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { RewardModuleSharedSetup } from "test/helpers/RewardModuleSharedSetup.sol";
-
-import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
-import { Test } from "forge-std/Test.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
     using WadRayMath for uint256;

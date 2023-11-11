@@ -55,10 +55,10 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
     )
         public
     {
-        // state args 
+        // state args
         stateArgs.collateral = bound(depositAmt, minDepositAmt, maxDepositAmt);
         stateArgs.rate = bound(rate, NO_RATE, type(uint104).max);
-        
+
         ionPool.setRate(ILK_INDEX, uint104(stateArgs.rate));
 
         // starting position must be safe
@@ -72,9 +72,8 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
 
         // position must be unsafe after exchange rate change
-        maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
-            deploymentArgs.liquidationThreshold
-        ) / stateArgs.collateral;
+        maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
+            / stateArgs.collateral;
         vm.assume(maxExchangeRate != 0);
         maxExchangeRate = maxExchangeRate - 1;
         minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
@@ -173,9 +172,8 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         vm.assume(stateArgs.normalizedDebt != 0); // if normalizedDebt is zero, position cannot become unsafe afterwards
 
         // position must be unsafe after exchange rate change
-        maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(
-            deploymentArgs.liquidationThreshold
-        ) / stateArgs.collateral - 1;
+        maxExchangeRate = (stateArgs.normalizedDebt * stateArgs.rate).rayDivDown(deploymentArgs.liquidationThreshold)
+            / stateArgs.collateral - 1;
         minExchangeRate = maxExchangeRate < minExchangeRate ? maxExchangeRate : minExchangeRate;
 
         stateArgs.exchangeRate = bound(

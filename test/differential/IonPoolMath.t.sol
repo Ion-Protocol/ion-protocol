@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { Test } from "forge-std/Test.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { InterestRate } from "../../src/InterestRate.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
-import { IYieldOracle } from "../.././src/interfaces/IYieldOracle.sol";
 
 contract IonPoolExposed is IonPool {
     constructor(

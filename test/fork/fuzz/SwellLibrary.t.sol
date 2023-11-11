@@ -7,7 +7,6 @@ import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { Test } from "forge-std/Test.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract SwellLibrary_FuzzTest is Test {
     using SwellLibrary for ISwEth;

@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { IWstEth, IStaderOracle, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
 import { YieldOracle, LOOK_BACK, ILK_COUNT } from "src/YieldOracle.sol";
 
 import { MockIonPool } from "test/helpers/MockIonPool.sol";

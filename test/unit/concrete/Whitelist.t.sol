@@ -2,9 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Whitelist } from "src/Whitelist.sol";
-import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import "forge-std/console.sol";
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
 contract MockModifiers {
     Whitelist whitelist;

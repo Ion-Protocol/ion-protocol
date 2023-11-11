@@ -10,8 +10,6 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 uint256 constant COLLATERAL_COUNT = 3;
 
 using WadRayMath for uint256;

@@ -7,7 +7,6 @@ import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC1967 } from "@openzeppelin/contracts/interfaces/IERC1967.sol";
 import { ProxyAdmin } from "./ProxyAdmin.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 /**
  * @notice Copy of OpenZeppelin's `TransparentUpgradeableProxy` that uses alternative `ProxyAdmin`
