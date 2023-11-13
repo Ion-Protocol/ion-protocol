@@ -14,7 +14,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 /**
  * @dev Some tokens only have liquidity on Balancer. Due to the reentrancy lock
- * on the Balancer vault, utilizing their free flashloan followed by a pool swap
+ * on the Balancer VAULT, utilizing their free flashloan followed by a pool swap
  * is not possible. Instead, we will take a cheap (0.01%) flashloan from the
  * wstETH/ETH uniswap pool and perform the Balancer swap. The rETH/ETH uniswap
  * pool could also be used since it has a 0.01% but it does have less liquidity.
@@ -26,14 +26,14 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     error ReceiveCallerNotPool(address unauthorizedCaller);
     error ExternalUniswapFlashloanNotAllowed();
 
-    IVault internal constant vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+    IVault internal constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     bool immutable wethIsToken0OnUniswap;
     IUniswapV3Pool public immutable flashloanPool;
 
     constructor(IUniswapV3Pool _flashloanPool) {
-        IERC20(address(weth)).approve(address(vault), type(uint256).max);
-        IERC20(address(lstToken)).approve(address(vault), type(uint256).max);
+        IERC20(address(weth)).approve(address(VAULT), type(uint256).max);
+        IERC20(address(lstToken)).approve(address(VAULT), type(uint256).max);
 
         flashloanPool = _flashloanPool;
         address token0 = IUniswapV3Pool(flashloanPool).token0();
@@ -200,7 +200,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             // there was a frontrun attack or the slippage is too high, then the
             // `wethToRepay` value will go above the user's desired
             // `maxResultingAdditionalDebt`
-            uint256 wethSent = vault.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
+            uint256 wethSent = VAULT.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
 
             // Sanity check
             assert(wethSent == flashCallbackData.wethFlashloaned);
@@ -236,7 +236,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
                 userData: ""
             });
 
-            vault.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
+            VAULT.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
 
             weth.transfer(msg.sender, totalRepayment);
         }
@@ -269,6 +269,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         IVault.BatchSwapStep[] memory swapSteps = new IVault.BatchSwapStep[](1);
         swapSteps[0] = swapStep;
 
-        return uint256(vault.queryBatchSwap(IVault.SwapKind.GIVEN_OUT, swapSteps, assets, fundManagement)[assetInIndex]);
+        return uint256(VAULT.queryBatchSwap(IVault.SwapKind.GIVEN_OUT, swapSteps, assets, fundManagement)[assetInIndex]);
     }
 }

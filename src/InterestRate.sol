@@ -292,7 +292,6 @@ contract InterestRate {
         }
         // Above kink
         else {
-
             // For the above kink calculation, we will use the below kink slope
             // for all utilization up until the kink. From that point on we will
             // use the above kink slope.

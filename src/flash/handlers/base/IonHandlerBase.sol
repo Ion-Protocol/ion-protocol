@@ -68,7 +68,7 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     * 
+     *
      * @param amountCollateral amount of collateral to deposit.
      * @param amountToBorrow amount of WETH to borrow. Due to rounding, true borrow amount might be slightly less.
      * @param proof merkle proof that the user is whitelisted.
