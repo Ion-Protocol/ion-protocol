@@ -471,10 +471,12 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         uint256 newTotalDebt = _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        uint256 _supplyCap = $.wethSupplyCap;
-        if (($.weth += amount) > _supplyCap) revert DepositSurpassesSupplyCap(amount, _supplyCap);
+        $.weth += amount;
 
         uint256 _supplyFactor = _mint({ user: user, senderOfUnderlying: _msgSender(), amount: amount });
+
+        uint256 _supplyCap = $.wethSupplyCap;
+        if (totalSupply() > _supplyCap) revert DepositSurpassesSupplyCap(amount, _supplyCap);
 
         emit Supply(user, _msgSender(), amount, _supplyFactor, newTotalDebt);
     }
