@@ -96,6 +96,12 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
             liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
         }
+
+        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount()); 
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            maxDiscounts[i] = deploymentArgs.maxDiscount; 
+        }
+
         liquidation = new Liquidation(
             address(ionPool),  
             protocol,
@@ -103,7 +109,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             liquidationThresholds, 
             deploymentArgs.targetHealth, 
             deploymentArgs.reserveFactor, 
-            deploymentArgs.maxDiscount
+            maxDiscounts
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
@@ -198,6 +204,11 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
         }
 
+        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount()); 
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            maxDiscounts[i] = deploymentArgs.maxDiscount; 
+        }
+
         liquidation = new Liquidation(
             address(ionPool), 
             protocol,
@@ -205,7 +216,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             liquidationThresholds, 
             deploymentArgs.targetHealth, 
             deploymentArgs.reserveFactor, 
-            deploymentArgs.maxDiscount
+            maxDiscounts
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
