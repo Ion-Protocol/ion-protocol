@@ -58,10 +58,10 @@ contract DeployInitialReserveAndSpotOraclesScript is BaseScript {
         swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, new address[](3), 0, MAX_CHANGE);
 
         wstEthSpotOracle =
-        new WstEthSpotOracle(STETH_ILK_INDEX, WST_ETH_LTV, address(wstEthReserveOracle), MAINNET_ETH_PER_STETH_CHAINLINK, MAINNET_WSTETH);
+        new WstEthSpotOracle(WST_ETH_LTV, address(wstEthReserveOracle), MAINNET_ETH_PER_STETH_CHAINLINK, MAINNET_WSTETH);
         ethXSpotOracle =
-        new EthXSpotOracle(ETHX_ILK_INDEX, ETHX_LTV, address(ethXReserveOracle), MAINNET_USD_PER_ETHX_REDSTONE, MAINNET_USD_PER_ETH_CHAINLINK);
+        new EthXSpotOracle(ETHX_LTV, address(ethXReserveOracle), MAINNET_USD_PER_ETHX_REDSTONE, MAINNET_USD_PER_ETH_CHAINLINK);
         swEthSpotOracle =
-        new SwEthSpotOracle(SWETH_ILK_INDEX, SWETH_LTV, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, SWETH_SECONDS_AGO);
+            new SwEthSpotOracle(SWETH_LTV, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, SWETH_SECONDS_AGO);
     }
 }

@@ -88,14 +88,7 @@ contract MockWhitelist {
 contract MockSpotOracle is SpotOracle {
     uint256 price;
 
-    constructor(
-        uint8 ilkIndex,
-        uint256 ltv,
-        address reserveOracle,
-        uint256 _price
-    )
-        SpotOracle(ilkIndex, ltv, reserveOracle)
-    {
+    constructor(uint256 ltv, address reserveOracle, uint256 _price) SpotOracle(ltv, reserveOracle) {
         price = _price;
     }
 
@@ -270,7 +263,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
             MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE);
-            MockSpotOracle spotOracle = new MockSpotOracle(i, LTV, address(reserveOracle), PRICE);
+            MockSpotOracle spotOracle = new MockSpotOracle(LTV, address(reserveOracle), PRICE);
             spotOracles.push(spotOracle);
             ionPool.updateIlkSpot(i, spotOracle);
             ionPool.updateIlkDebtCeiling(i, debtCeilings[i]);
@@ -347,7 +340,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             assertEq(ilkConfig.minimumAboveKinkSlope, minimumAboveKinkSlopes[i], "minimum above kink slope");
         }
 
-        assertEq(interestRateModule.collateralCount(), collaterals.length, "collateral count");
+        assertEq(interestRateModule.COLLATERAL_COUNT(), collaterals.length, "collateral count");
     }
 
     function _getUnderlying() internal view virtual returns (address) {

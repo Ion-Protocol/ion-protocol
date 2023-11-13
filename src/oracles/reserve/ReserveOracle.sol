@@ -13,17 +13,15 @@ abstract contract ReserveOracle {
     using SafeCast for *;
     using WadRayMath for uint256;
 
-    uint8 public immutable ilkIndex;
+    uint8 public immutable ILK_INDEX;
+    uint8 public immutable QUORUM; // the number of feeds to aggregate
+    uint256 public immutable MAX_CHANGE; // maximum change allowed in percentage [ray] i.e. 3e25 [ray] would be 3%
 
-    uint8 public immutable quorum; // the number of feeds to aggregate
-
-    uint256 public immutable maxChange; // maximum change allowed in percentage [ray] i.e. 3e25 [ray] would be 3%
+    IReserveFeed public immutable FEED0; // different reserve oracle feeds excluding the protocol exchange rate
+    IReserveFeed public immutable FEED1;
+    IReserveFeed public immutable FEED2;
 
     uint256 public currentExchangeRate; // [wad] the bounded queried last time
-
-    IReserveFeed public immutable feed0; // different reserve oracle feeds excluding the protocol exchange rate
-    IReserveFeed public immutable feed1;
-    IReserveFeed public immutable feed2;
 
     // --- Events ---
     event UpdateExchangeRate(uint256 exchangeRate);
@@ -48,13 +46,13 @@ abstract contract ReserveOracle {
             revert InvalidQuorum(_quorum);
         }
 
-        ilkIndex = _ilkIndex;
-        quorum = _quorum;
-        maxChange = _maxChange;
+        ILK_INDEX = _ilkIndex;
+        QUORUM = _quorum;
+        MAX_CHANGE = _maxChange;
 
-        feed0 = IReserveFeed(_feeds[0]);
-        feed1 = IReserveFeed(_feeds[1]);
-        feed2 = IReserveFeed(_feeds[2]);
+        FEED0 = IReserveFeed(_feeds[0]);
+        FEED1 = IReserveFeed(_feeds[1]);
+        FEED2 = IReserveFeed(_feeds[2]);
     }
 
     /**
@@ -62,20 +60,20 @@ abstract contract ReserveOracle {
      * the min. Does not include the protocol exchange rate.
      * @notice if quorum isn't met, should revert
      */
-    function _aggregate(uint8 _ilkIndex) internal view returns (uint256 val) {
-        if (quorum == 0) {
+    function _aggregate(uint8 _ILK_INDEX) internal view returns (uint256 val) {
+        if (QUORUM == 0) {
             return type(uint256).max;
-        } else if (quorum == 1) {
-            val = IReserveFeed(feed0).getExchangeRate(_ilkIndex);
-        } else if (quorum == 2) {
-            uint256 feed0ExchangeRate = IReserveFeed(feed0).getExchangeRate(_ilkIndex);
-            uint256 feed1ExchangeRate = IReserveFeed(feed1).getExchangeRate(_ilkIndex);
-            val = ((feed0ExchangeRate + feed1ExchangeRate) / uint256(quorum));
-        } else if (quorum == 3) {
-            uint256 feed0ExchangeRate = IReserveFeed(feed0).getExchangeRate(_ilkIndex);
-            uint256 feed1ExchangeRate = IReserveFeed(feed1).getExchangeRate(_ilkIndex);
-            uint256 feed2ExchangeRate = IReserveFeed(feed2).getExchangeRate(_ilkIndex);
-            val = ((feed0ExchangeRate + feed1ExchangeRate + feed2ExchangeRate) / uint256(quorum));
+        } else if (QUORUM == 1) {
+            val = IReserveFeed(FEED0).getExchangeRate(_ILK_INDEX);
+        } else if (QUORUM == 2) {
+            uint256 feed0ExchangeRate = IReserveFeed(FEED0).getExchangeRate(_ILK_INDEX);
+            uint256 feed1ExchangeRate = IReserveFeed(FEED1).getExchangeRate(_ILK_INDEX);
+            val = ((feed0ExchangeRate + feed1ExchangeRate) / uint256(QUORUM));
+        } else if (QUORUM == 3) {
+            uint256 feed0ExchangeRate = IReserveFeed(FEED0).getExchangeRate(_ILK_INDEX);
+            uint256 feed1ExchangeRate = IReserveFeed(FEED1).getExchangeRate(_ILK_INDEX);
+            uint256 feed2ExchangeRate = IReserveFeed(FEED2).getExchangeRate(_ILK_INDEX);
+            val = ((feed0ExchangeRate + feed1ExchangeRate + feed2ExchangeRate) / uint256(QUORUM));
         }
     }
 
@@ -85,7 +83,7 @@ abstract contract ReserveOracle {
     }
 
     function _initializeExchangeRate() internal {
-        currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
+        currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ILK_INDEX));
         if (currentExchangeRate == 0) {
             revert InvalidInitialization(currentExchangeRate);
         }
@@ -97,8 +95,8 @@ abstract contract ReserveOracle {
     function updateExchangeRate() public {
         uint256 _currentExchangeRate = currentExchangeRate;
 
-        uint256 minimum = Math.min(_getProtocolExchangeRate(), _aggregate(ilkIndex));
-        uint256 diff = _currentExchangeRate.rayMulDown(maxChange);
+        uint256 minimum = Math.min(_getProtocolExchangeRate(), _aggregate(ILK_INDEX));
+        uint256 diff = _currentExchangeRate.rayMulDown(MAX_CHANGE);
 
         uint256 bounded = _bound(minimum, _currentExchangeRate - diff, _currentExchangeRate + diff);
         currentExchangeRate = bounded;

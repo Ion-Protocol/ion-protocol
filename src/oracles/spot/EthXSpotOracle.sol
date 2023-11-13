@@ -16,20 +16,19 @@ uint8 constant CHAINLINK_DECIMALS = 8;
 contract EthXSpotOracle is SpotOracle {
     using WadRayMath for uint256;
 
-    IRedstonePriceFeed immutable redstoneEthXPriceFeed;
-    IChainlink immutable usdPerEthChainlink;
+    IRedstonePriceFeed immutable REDSTONE_ETHX_PRICE_FEED;
+    IChainlink immutable USD_PER_ETH_CHAINLINK;
 
     constructor(
-        uint8 _ilkIndex,
         uint256 _ltv,
         address _reserveOracle,
         address _redstoneEthXPriceFeed,
         address _usdPerEthChainlink
     )
-        SpotOracle(_ilkIndex, _ltv, _reserveOracle)
+        SpotOracle(_ltv, _reserveOracle)
     {
-        redstoneEthXPriceFeed = IRedstonePriceFeed(_redstoneEthXPriceFeed);
-        usdPerEthChainlink = IChainlink(_usdPerEthChainlink);
+        REDSTONE_ETHX_PRICE_FEED = IRedstonePriceFeed(_redstoneEthXPriceFeed);
+        USD_PER_ETH_CHAINLINK = IChainlink(_usdPerEthChainlink);
     }
 
     // @dev redstone oracle returns dollar value per ETHx with 6 decimals.
@@ -38,10 +37,10 @@ contract EthXSpotOracle is SpotOracle {
         // get price from the protocol feed
         // usd per ETHx
 
-        uint256 usdPerEthX = uint256(redstoneEthXPriceFeed.latestAnswer()).scaleUpToWad(REDSTONE_DECIMALS); //
+        uint256 usdPerEthX = uint256(REDSTONE_ETHX_PRICE_FEED.latestAnswer()).scaleUpToWad(REDSTONE_DECIMALS); //
 
         // usd per ETH
-        (, int256 _usdPerEth,,,) = usdPerEthChainlink.latestRoundData(); // price of stETH denominated in ETH
+        (, int256 _usdPerEth,,,) = USD_PER_ETH_CHAINLINK.latestRoundData(); // price of stETH denominated in ETH
         uint256 usdPerEth = uint256(_usdPerEth).scaleUpToWad(CHAINLINK_DECIMALS); // price of stETH denominated in ETH
 
         // (USD per ETHx) / (USD per ETH) = (USD per ETHx) * (ETH per USD) = ETH per ETHx

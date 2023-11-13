@@ -64,7 +64,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
     // at the expense of removing the ability to change the admin once it's set.
     // This is acceptable if the admin is always a ProxyAdmin instance or similar contract
     // with its own ability to transfer the permissions to another account.
-    address private immutable _admin;
+    address private immutable ADMIN;
 
     /**
      * @dev The proxy caller is the current admin, and can't fallback to the proxy target.
@@ -77,7 +77,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * {ERC1967Proxy-constructor}.
      */
     constructor(address _logic, address initialOwner, bytes memory _data) payable ERC1967Proxy(_logic, _data) {
-        _admin = address(new ProxyAdmin(initialOwner));
+        ADMIN = address(new ProxyAdmin(initialOwner));
         // Set the storage value and emit an event for ERC-1967 compatibility
         ERC1967Utils.changeAdmin(_proxyAdmin());
     }
@@ -86,7 +86,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * @dev Returns the admin of this proxy.
      */
     function _proxyAdmin() internal virtual returns (address) {
-        return _admin;
+        return ADMIN;
     }
 
     /**

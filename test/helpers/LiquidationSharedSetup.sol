@@ -241,7 +241,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             results.repay = results.dart * sArgs.rate;
 
             if (results.normalizedDebt != 0) {
-                uint256 resultingHealthRatio = getHealthRatio(
+                getHealthRatio(
                     results.collateral, // [wad]
                     results.normalizedDebt, // [wad]
                     sArgs.rate, // [ray]

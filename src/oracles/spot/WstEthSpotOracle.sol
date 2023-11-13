@@ -10,20 +10,19 @@ interface IWstEth {
 }
 
 contract WstEthSpotOracle is SpotOracle {
-    IChainlink immutable stEthToEthChainlink;
-    IWstEth immutable wstEth;
+    IChainlink immutable ST_ETH_TO_ETH_CHAINLINK;
+    IWstEth immutable WST_ETH;
 
     constructor(
-        uint8 _ilkIndex,
         uint256 _ltv,
         address _reserveOracle,
         address _stEthToEthChainlink,
         address _wstETH
     )
-        SpotOracle(_ilkIndex, _ltv, _reserveOracle)
+        SpotOracle(_ltv, _reserveOracle)
     {
-        stEthToEthChainlink = IChainlink(_stEthToEthChainlink);
-        wstEth = IWstEth(_wstETH);
+        ST_ETH_TO_ETH_CHAINLINK = IChainlink(_stEthToEthChainlink);
+        WST_ETH = IWstEth(_wstETH);
     }
 
     // @dev Because the collateral amount in the core contract is denominated in amount of wstETH tokens,
@@ -32,9 +31,9 @@ contract WstEthSpotOracle is SpotOracle {
     //       but the stEth to Eth conversion will simply be determined by the chainlink price oracle.
     function getPrice() public view override returns (uint256 ethPerWstEth) {
         // get price from the protocol feed
-        (, int256 _ethPerStEth,,,) = stEthToEthChainlink.latestRoundData(); // price of stETH denominated in ETH
+        (, int256 _ethPerStEth,,,) = ST_ETH_TO_ETH_CHAINLINK.latestRoundData(); // price of stETH denominated in ETH
         uint256 ethPerStEth = uint256(_ethPerStEth);
         // collateral * wstEthInEth = collateralInEth
-        ethPerWstEth = wstEth.getStETHByWstETH(uint256(ethPerStEth)); // stEth per wstEth
+        ethPerWstEth = WST_ETH.getStETHByWstETH(uint256(ethPerStEth)); // stEth per wstEth
     }
 }

@@ -9,6 +9,10 @@
       {
         "ignoreConstructors": true
       }
-    ]
+    ],
+    "state-visibility": "off",
+    "no-inline-assembly": "off",
+    "one-contract-per-file": "off",
+    "var-name-mixedcase": "off"
   }
 }
