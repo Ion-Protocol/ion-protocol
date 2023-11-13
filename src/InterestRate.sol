@@ -255,10 +255,18 @@ contract InterestRate {
         uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
         uint256 collateralApyRayInSeconds = YIELD_ORACLE.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
 
+        uint256 distributionFactor = ilkData.distributionFactor;
+        uint256 utilizationRate;
+        // The only time the distribution factor will be set to 0 is when a
+        // market has been sunset. In this case, we want to prevent division by
+        // 0, but we also want to prevent the borrow rate from skyrocketing. So
+        // we will return a reasonable borrow rate of kink utilization on the
+        // minimum curve.
+        if (distributionFactor == 0) {
+            return (ilkData.minimumKinkRate, ilkData.reserveFactor.scaleUpToRay(4));
+        }
         // [RAD] / [WAD] = [RAY]
-        uint256 utilizationRate =
-        // Prevent division by 0
-        totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(ilkData.distributionFactor.scaleUpToWad(4)));
+        totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(distributionFactor.scaleUpToWad(4)));
 
         // Avoid stack too deep
         uint256 adjustedBelowKinkSlope;
