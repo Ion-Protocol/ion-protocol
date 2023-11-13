@@ -59,7 +59,7 @@ abstract contract ReserveOracle {
 
     /**
      * @dev queries values from whitelisted data feeds and calculates
-     * the min. Does not include the protocol exchange rate.
+     *      the min. Does not include the protocol exchange rate.
      * @notice if quorum isn't met, should revert
      */
     function _aggregate(uint8 _ilkIndex) internal view returns (uint256 val) {
@@ -92,7 +92,7 @@ abstract contract ReserveOracle {
     }
 
     // @dev Takes the minimum between the aggregated values and the protocol exchange rate,
-    //      then bounds it up to the maximum change and writes the bounded value to the state.
+    // then bounds it up to the maximum change and writes the bounded value to the state.
     // NOTE: keepers should call this update to reflect recent values
     function updateExchangeRate() public {
         uint256 _currentExchangeRate = currentExchangeRate;

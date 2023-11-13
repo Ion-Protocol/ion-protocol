@@ -20,7 +20,7 @@ contract Liquidation {
     error InvalidReserveOraclesLength(uint256 length);
     error InvalidLiquidationThresholdsLength(uint256 length);
 
-    // --- parameters ---
+    // --- Parameters ---
 
     uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
     uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
@@ -118,7 +118,7 @@ contract Liquidation {
     }
 
     /**
-     * @notice Internal helper function for calculating the repay amount
+     * @notice Internal helper function for calculating the repay amount. 
      * @param debtValue [rad] totalDebt
      * @param collateralValue [rad] collateral * exchangeRate * liquidationThreshold
      * @param liquidationThreshold [ray]
@@ -155,9 +155,6 @@ contract Liquidation {
 
     /**
      * @notice Executes collateral sale and repayment of debt by liquidators.
-     * TODO: all eth?
-     * @dev This function assumes that the `kpr` already has internal alleth
-     *      and approved liq to move its alleth.
      * @param ilkIndex index of the collateral in IonPool
      * @param vault the position to be liquidated
      * @param kpr payer of the debt and receiver of the collateral
@@ -203,7 +200,6 @@ contract Liquidation {
         // First branch: protocol liquidation
         //    if repay > total debt, more debt needs to be paid off than available to go back to target health
         //    Move exactly all collateral and debt to the protocol.
-        //    Keeper pays gas but is otherwise left untouched.
         // Second branch: resulting debt is below dust
         //    There is enough collateral to cover the debt and go back to target health,
         //    but it would leave a debt amount less than dust.
@@ -237,7 +233,7 @@ contract Liquidation {
             liquidateArgs.repay = liquidateArgs.dart * rate; // 27 decimals precision loss on original repay
         }
 
-        // below code only reached for dust or partial liquidations
+        // below code is only reached for dust or partial liquidations
 
         // exact amount to be transferred in `_transferWeth`
         uint256 transferAmt = (liquidateArgs.repay / RAY);

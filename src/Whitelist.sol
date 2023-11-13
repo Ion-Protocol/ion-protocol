@@ -43,7 +43,9 @@ contract Whitelist is Ownable2Step {
     }
 
     /**
-     * @dev called by external modifiers to prove inclusion as a borrower
+     * @notice Called by external modifiers to prove inclusion as a borrower. 
+     * @dev If the root is just zero, then the whitelist is effectively turned off as every address
+     * will be allowed. 
      * @return true if the addr is part of the borrower whitelist or the protocol whitelist. False otherwise
      */
     function isWhitelistedBorrower(
@@ -67,7 +69,9 @@ contract Whitelist is Ownable2Step {
     }
 
     /**
-     * @dev called by external modifiers to prove inclusion as a lender
+     * @notice Called by external modifiers to prove inclusion as a lender. 
+     * @dev If the root is just zero, then the whitelist is effectively turned off as every address
+     * will be allowed.
      * @return true if the addr is part of the lender whitelist or the protocol whitelist. False otherwise
      */
     function isWhitelistedLender(address addr, bytes32[] calldata proof) external view returns (bool) {

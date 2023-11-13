@@ -27,7 +27,6 @@ contract EthXReserveOracle is ReserveOracle {
     }
 
     // @dev exchange rate is total LST supply divided by total underlying ETH
-    // NOTE:
     function _getProtocolExchangeRate() internal view override returns (uint256) {
         return IStaderStakePoolsManager(protocolFeed).getExchangeRate();
     }
