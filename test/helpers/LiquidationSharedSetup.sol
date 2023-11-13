@@ -251,17 +251,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
             results.collateral = sArgs.collateral - results.gemOut;
             results.normalizedDebt = sArgs.normalizedDebt - results.dart;
             results.repay = results.dart * sArgs.rate;
-
-            if (results.normalizedDebt != 0) {
-                uint256 resultingHealthRatio = getHealthRatio(
-                    results.collateral, // [wad]
-                    results.normalizedDebt, // [wad]
-                    sArgs.rate, // [ray]
-                    _sArgs.exchangeRate, // [wad] but converted to ray during calculation
-                    dArgs.liquidationThreshold // [ray]
-                );
-            }
-
             results.category = 2;
         } else {
             require(false, "panic"); // shouldn't occur
