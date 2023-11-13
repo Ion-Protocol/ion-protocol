@@ -14,16 +14,16 @@ contract GemJoin is Ownable2Step, Pausable {
 
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable gem;
-    IonPool public immutable pool;
-    uint8 public immutable ilkIndex;
+    IERC20 public immutable GEM;
+    IonPool public immutable POOL;
+    uint8 public immutable ILK_INDEX;
 
     uint256 public totalGem;
 
     constructor(IonPool _pool, IERC20 _gem, uint8 _ilkIndex, address owner) Ownable(owner) {
-        gem = _gem;
-        pool = _pool;
-        ilkIndex = _ilkIndex;
+        GEM = _gem;
+        POOL = _pool;
+        ILK_INDEX = _ilkIndex;
 
         // Sanity check
         if (_pool.getIlkAddress(_ilkIndex) != address(_gem)) revert WrongIlkAddress(_ilkIndex, _gem);
@@ -53,8 +53,8 @@ contract GemJoin is Ownable2Step, Pausable {
 
         totalGem += amount;
 
-        pool.mintAndBurnGem(ilkIndex, user, int256(amount));
-        gem.safeTransferFrom(msg.sender, address(this), amount);
+        POOL.mintAndBurnGem(ILK_INDEX, user, int256(amount));
+        GEM.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /**
@@ -65,7 +65,7 @@ contract GemJoin is Ownable2Step, Pausable {
 
         totalGem -= amount;
 
-        pool.mintAndBurnGem(ilkIndex, msg.sender, -int256(amount));
-        gem.safeTransfer(user, amount);
+        POOL.mintAndBurnGem(ILK_INDEX, msg.sender, -int256(amount));
+        GEM.safeTransfer(user, amount);
     }
 }

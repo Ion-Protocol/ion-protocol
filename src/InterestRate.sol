@@ -77,7 +77,7 @@ contract InterestRate {
 
     error CollateralIndexOutOfBounds();
     error DistributionFactorsDoNotSumToOne(uint256 sum);
-    error TotalDebtsLength(uint256 collateralCount, uint256 totalIlkDebtsLength);
+    error TotalDebtsLength(uint256 COLLATERAL_COUNT, uint256 totalIlkDebtsLength);
     error InvalidYieldOracleAddress();
 
     /**
@@ -108,17 +108,17 @@ contract InterestRate {
     uint256 internal immutable ILKCONFIG_7B;
     uint256 internal immutable ILKCONFIG_7C;
 
-    uint256 public immutable collateralCount;
-    IYieldOracle public immutable yieldOracle;
+    uint256 public immutable COLLATERAL_COUNT;
+    IYieldOracle public immutable YIELD_ORACLE;
 
     constructor(IlkData[] memory ilkDataList, IYieldOracle _yieldOracle) {
         if (address(_yieldOracle) == address(0)) revert InvalidYieldOracleAddress();
 
-        collateralCount = ilkDataList.length;
-        yieldOracle = _yieldOracle;
+        COLLATERAL_COUNT = ilkDataList.length;
+        YIELD_ORACLE = _yieldOracle;
 
         uint256 distributionFactorSum = 0;
-        for (uint256 i = 0; i < collateralCount;) {
+        for (uint256 i = 0; i < COLLATERAL_COUNT;) {
             distributionFactorSum += ilkDataList[i].distributionFactor;
 
             // forgefmt: disable-next-line
@@ -145,7 +145,7 @@ contract InterestRate {
         view
         returns (uint256 packedConfig_a, uint256 packedConfig_b, uint256 packedConfig_c)
     {
-        if (index >= collateralCount) return (0, 0, 0);
+        if (index >= COLLATERAL_COUNT) return (0, 0, 0);
 
         IlkData memory ilkData = ilkDataList[index];
 
@@ -169,7 +169,7 @@ contract InterestRate {
     }
 
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
-        if (index > collateralCount - 1) revert CollateralIndexOutOfBounds();
+        if (index > COLLATERAL_COUNT - 1) revert CollateralIndexOutOfBounds();
 
         uint256 packedConfig_a;
         uint256 packedConfig_b;
@@ -253,7 +253,7 @@ contract InterestRate {
     {
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
         uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
-        uint256 collateralApyRayInSeconds = yieldOracle.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
+        uint256 collateralApyRayInSeconds = YIELD_ORACLE.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
 
         // [RAD] / [WAD] = [RAY]
         uint256 utilizationRate =

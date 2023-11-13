@@ -6,7 +6,7 @@ import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
 contract WstEthReserveOracle is ReserveOracle {
-    address public immutable wstEth;
+    address public immutable WST_ETH;
 
     constructor(
         address _wstEth,
@@ -17,7 +17,7 @@ contract WstEthReserveOracle is ReserveOracle {
     )
         ReserveOracle(_ilkIndex, _feeds, _quorum, _maxChange)
     {
-        wstEth = _wstEth;
+        WST_ETH = _wstEth;
         _initializeExchangeRate();
     }
 
@@ -30,6 +30,6 @@ contract WstEthReserveOracle is ReserveOracle {
     // ETH / stETH = total ether value / total stETH supply
     // ETH / wstETH = (ETH / stETH) * (stETH / wstETH)
     function _getProtocolExchangeRate() internal view override returns (uint256) {
-        return IWstEth(wstEth).stEthPerToken();
+        return IWstEth(WST_ETH).stEthPerToken();
     }
 }

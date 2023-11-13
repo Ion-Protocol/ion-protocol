@@ -28,24 +28,25 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
     IVault internal constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    bool immutable wethIsToken0OnUniswap;
-    IUniswapV3Pool public immutable flashloanPool;
+    bool immutable WETH_IS_TOKEN0_ON_UNISWAP;
+    IUniswapV3Pool public immutable FLASHLOAN_POOL;
 
     constructor(IUniswapV3Pool _flashloanPool) {
-        IERC20(address(weth)).approve(address(VAULT), type(uint256).max);
-        IERC20(address(lstToken)).approve(address(VAULT), type(uint256).max);
+        address weth = address(WETH);
+        IERC20(weth).approve(address(VAULT), type(uint256).max);
+        IERC20(address(LST_TOKEN)).approve(address(VAULT), type(uint256).max);
 
-        flashloanPool = _flashloanPool;
-        address token0 = IUniswapV3Pool(flashloanPool).token0();
-        address token1 = IUniswapV3Pool(flashloanPool).token1();
+        FLASHLOAN_POOL = _flashloanPool;
+        address token0 = IUniswapV3Pool(_flashloanPool).token0();
+        address token1 = IUniswapV3Pool(_flashloanPool).token1();
 
-        bool _wethIsToken0 = token0 == address(weth);
-        bool _wethIsToken1 = token1 == address(weth);
+        bool _wethIsToken0 = token0 == weth;
+        bool _wethIsToken1 = token1 == weth;
 
-        if (!_wethIsToken0 && !_wethIsToken1) revert WethNotInPoolPair(flashloanPool);
+        if (!_wethIsToken0 && !_wethIsToken1) revert WethNotInPoolPair(_flashloanPool);
 
         // Technically possible here for both tokens to be weth, but Uniswap does not allow for this
-        wethIsToken0OnUniswap = _wethIsToken0;
+        WETH_IS_TOKEN0_ON_UNISWAP = _wethIsToken0;
     }
 
     /**
@@ -63,7 +64,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         external
         payable
     {
-        lstToken.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit;
 
         if (amountToLeverage == 0) {
@@ -86,8 +87,8 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         // the value from the flashloan.
         uint256 wethIn = _simulateGivenOutBalancerSwap({
             fundManagement: fundManagement,
-            assetIn: address(weth),
-            assetOut: address(lstToken),
+            assetIn: address(WETH),
+            assetOut: address(LST_TOKEN),
             amountIn: amountToLeverage
         });
 
@@ -99,10 +100,10 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
         uint256 amount0ToFlash;
         uint256 amount1ToFlash;
-        if (wethIsToken0OnUniswap) amount0ToFlash = wethIn;
+        if (WETH_IS_TOKEN0_ON_UNISWAP) amount0ToFlash = wethIn;
         else amount1ToFlash = wethIn;
 
-        flashloanPool.flash(address(this), amount0ToFlash, amount1ToFlash, abi.encode(flashCallbackData));
+        FLASHLOAN_POOL.flash(address(this), amount0ToFlash, amount1ToFlash, abi.encode(flashCallbackData));
     }
 
     /**
@@ -116,10 +117,10 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
         uint256 amount0ToFlash;
         uint256 amount1ToFlash;
-        if (wethIsToken0OnUniswap) amount0ToFlash = debtToRemove;
+        if (WETH_IS_TOKEN0_ON_UNISWAP) amount0ToFlash = debtToRemove;
         else amount1ToFlash = debtToRemove;
 
-        flashloanPool.flash(
+        FLASHLOAN_POOL.flash(
             address(this),
             amount0ToFlash,
             amount1ToFlash,
@@ -162,7 +163,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
      * @param data Any data passed through by the caller via the IUniswapV3PoolActions#flash call
      */
     function uniswapV3FlashCallback(uint256 fee0, uint256 fee1, bytes calldata data) external override {
-        if (msg.sender != address(flashloanPool)) revert ReceiveCallerNotPool(msg.sender);
+        if (msg.sender != address(FLASHLOAN_POOL)) revert ReceiveCallerNotPool(msg.sender);
 
         FlashCallbackData memory flashCallbackData = abi.decode(data, (FlashCallbackData));
 
@@ -190,8 +191,8 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
                 poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
                 kind: IVault.SwapKind.GIVEN_OUT,
-                assetIn: IAsset(address(weth)),
-                assetOut: IAsset(address(lstToken)),
+                assetIn: IAsset(address(WETH)),
+                assetOut: IAsset(address(LST_TOKEN)),
                 amount: amountToLeverage,
                 userData: ""
             });
@@ -208,15 +209,15 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             uint256 totalCollateral = flashCallbackData.initialDeposit + amountToLeverage;
             _depositAndBorrow(user, address(this), totalCollateral, wethToRepay, AmountToBorrow.IS_MIN);
 
-            weth.transfer(msg.sender, wethToRepay);
+            WETH.transfer(msg.sender, wethToRepay);
         } else {
             // When deleveraging
             uint256 totalRepayment = flashCallbackData.wethFlashloaned + fee;
 
             uint256 collateralIn = _simulateGivenOutBalancerSwap({
                 fundManagement: fundManagement,
-                assetIn: address(lstToken),
-                assetOut: address(weth),
+                assetIn: address(LST_TOKEN),
+                assetOut: address(WETH),
                 amountIn: totalRepayment
             });
 
@@ -230,15 +231,15 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
                 poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
                 kind: IVault.SwapKind.GIVEN_OUT,
-                assetIn: IAsset(address(lstToken)),
-                assetOut: IAsset(address(weth)),
+                assetIn: IAsset(address(LST_TOKEN)),
+                assetOut: IAsset(address(WETH)),
                 amount: totalRepayment,
                 userData: ""
             });
 
             VAULT.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
 
-            weth.transfer(msg.sender, totalRepayment);
+            WETH.transfer(msg.sender, totalRepayment);
         }
     }
 

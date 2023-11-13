@@ -31,11 +31,11 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
     { }
 
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
-        weth.withdraw(amountWeth);
-        return IWstEth(address(lstToken)).depositForLst(amountWeth);
+        WETH.withdraw(amountWeth);
+        return IWstEth(address(LST_TOKEN)).depositForLst(amountWeth);
     }
 
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {
-        return IWstEth(address(lstToken)).getEthAmountInForLstAmountOut(amountLst);
+        return IWstEth(address(LST_TOKEN)).getEthAmountInForLstAmountOut(amountLst);
     }
 }
