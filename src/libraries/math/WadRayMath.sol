@@ -7,11 +7,15 @@ uint256 constant WAD = 1e18;
 uint256 constant RAY = 1e27;
 uint256 constant RAD = 1e45;
 
+/**
+ * @title WadRayMath library
+ * @notice This library provides mul/div[up/down] functionality for WAD, RAY and
+ * RAD with phantom overflow protection as well as scale[up/down] functionality
+ * for WAD, RAY and RAD.
+ */
 library WadRayMath {
     using Math for uint256;
 
-    error MultiplicationOverflow(uint256 a, uint256 b);
-    error DivisionByZero();
     error NotScalingUp(uint256 from, uint256 to);
     error NotScalingDown(uint256 from, uint256 to);
 

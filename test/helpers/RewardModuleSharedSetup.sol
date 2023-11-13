@@ -19,7 +19,7 @@ contract RewardModuleExposed is RewardModule {
         external
         initializer
     {
-        RewardModule.initialize(_underlying, _treasury, decimals_, name_, symbol_);
+        RewardModule._initialize(_underlying, _treasury, decimals_, name_, symbol_);
     }
 
     // --- Cheats ---

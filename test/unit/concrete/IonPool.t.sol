@@ -61,6 +61,9 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
         uint256 supplyCap = 0;
         ionPool.updateSupplyCap(supplyCap);
 
+        underlying.mint(address(this), supplyAmount);
+        underlying.approve(address(ionPool), type(uint256).max);
+
         vm.expectRevert(abi.encodeWithSelector(IonPool.DepositSurpassesSupplyCap.selector, supplyAmount, supplyCap));
         ionPool.supply(lender1, supplyAmount, new bytes32[](0));
     }

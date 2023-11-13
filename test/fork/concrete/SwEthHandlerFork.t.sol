@@ -95,7 +95,7 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
-            1e27 / RAY
+            roundingError
         );
         assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
         assertLe(weth.balanceOf(address(swEthHandler)), roundingError);
@@ -273,6 +273,6 @@ contract SwEthHandler_WithRateChange_ForkTest is SwEthHandler_ForkTest {
     function setUp() public virtual override {
         super.setUp();
 
-        ionPool.setRate(ilkIndex, 1.5708923502395e27);
+        ionPool.setRate(ilkIndex, 3.5708923502395e27);
     }
 }

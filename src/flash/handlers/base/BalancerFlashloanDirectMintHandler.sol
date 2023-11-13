@@ -41,8 +41,10 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
      * @notice Code assumes Balancer flashloans remain free
      * @param initialDeposit in collateral terms
      * @param resultingAdditionalCollateral in collateral terms
-     * @param maxResultingDebt in WETH terms. This is not a bound since lst mints
-     * do not incur slippage.
+     * @param maxResultingDebt in WETH terms. While it is unlikely that the
+     * exchange rate changes from when a transaction is submitted versus when it
+     * is executed, it is still possible so we want to allow for a bound here,
+     * even though it doesn't pose the same level of threat as slippage.
      */
     function flashLeverageCollateral(
         uint256 initialDeposit,
@@ -61,12 +63,18 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amountToLeverage;
 
+        if (amounts[0] == 0) {
+            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
+            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
+            return;
+        }
+
         uint256 wethRequiredForRepayment = _getEthAmountInForLstAmountOut(amountToLeverage);
         if (wethRequiredForRepayment > maxResultingDebt) {
             revert FlashloanRepaymentTooExpensive(wethRequiredForRepayment, maxResultingDebt);
         }
 
-        // Prevents attacked from initiating flashloan and passing malicious data through callback
+        // Prevents attackers from initiating flashloan and passing malicious data through callback
         flashloanInitiated = 2;
 
         VAULT.flashLoan(
@@ -83,10 +91,10 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
      * @notice Code assumes Balancer flashloans remain free
      * @param initialDeposit in collateral terms
      * @param resultingAdditionalCollateral in collateral terms
-     * @param maxResultingDebt in WETH terms. This is not a bound since lst mints
-     * do not incur slippage. However, `maxResultingDebt` weth will be used to mint
-     * the lst, and the outputted lst amount should match the
-     * `resultingAdditionalCollateral` value.
+     * @param maxResultingDebt in WETH terms. While it is unlikely that the
+     * exchange rate changes from when a transaction is submitted versus when it
+     * is executed, it is still possible so we want to allow for a bound here,
+     * even though it doesn't pose the same level of threat as slippage.
      */
     function flashLeverageWeth(
         uint256 initialDeposit,
@@ -104,6 +112,20 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256 amountLst = resultingAdditionalCollateral - initialDeposit; // in collateral terms
         uint256 amountWethToFlashloan = _getEthAmountInForLstAmountOut(amountLst);
 
+        if (amountWethToFlashloan == 0) {
+            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
+            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
+            return;
+        }
+
+        // It is technically possible to accrue slight dust amounts more of debt
+        // than maxResultingDebt because you may need to borrow slightly more at
+        // the IonPool level to receieve the desired amount of WETH. This is
+        // because the IonPool will round in its favor and always gives out dust
+        // amounts less of WETH than the debt accrued to the position. However,
+        // this will always be bounded by the rate of the ilk at the time
+        // divided by RAY and will NEVER be subject to slippage, which is what
+        // we really want to protect against.
         if (amountWethToFlashloan > maxResultingDebt) {
             revert FlashloanRepaymentTooExpensive(amountWethToFlashloan, maxResultingDebt);
         }
@@ -153,12 +175,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         (address user, uint256 initialDeposit, uint256 resultingAdditionalCollateral, uint256 maxResultingDebt) =
             abi.decode(userData, (address, uint256, uint256, uint256));
 
-        if (maxResultingDebt == 0) {
-            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
-            _depositAndBorrow(user, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
-            return;
-        }
-
         // Flashloaned WETH needs to be converted into collateral asset
         if (address(token) == address(weth)) {
             uint256 collateralFromDeposit = _depositWethForLst(amounts[0]);
@@ -184,7 +200,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, wethToBorrow, AmountToBorrow.IS_MIN);
 
             // Convert borrowed WETH back to collateral token
-            uint256 tokenAmountReceived = _depositWethForLst(maxResultingDebt);
+            uint256 tokenAmountReceived = _depositWethForLst(wethToBorrow);
 
             lstToken.safeTransfer(address(VAULT), tokenAmountReceived);
         }

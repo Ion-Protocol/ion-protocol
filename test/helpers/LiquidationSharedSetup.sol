@@ -74,16 +74,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         reserveOracle2 = new MockReserveOracle(0);
         reserveOracle3 = new MockReserveOracle(0);
 
-        exchangeRateOracles = [
-            address(reserveOracle1),
-            address(reserveOracle2),
-            address(reserveOracle3),
-            address(0),
-            address(0),
-            address(0),
-            address(0),
-            address(0)
-        ];
+        exchangeRateOracles = [address(reserveOracle1), address(reserveOracle2), address(reserveOracle3)];
     }
 
     /**

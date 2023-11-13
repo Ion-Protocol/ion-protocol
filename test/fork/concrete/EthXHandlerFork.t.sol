@@ -261,6 +261,6 @@ contract EthXHandler_WithRateChange_ForkTest is EthXHandler_ForkTest {
     function setUp() public virtual override {
         super.setUp();
 
-        ionPool.setRate(ilkIndex, 1.5708923502395e27);
+        ionPool.setRate(ilkIndex, 3.5708923502395e27);
     }
 }

@@ -67,6 +67,12 @@ abstract contract IonHandlerBase {
         IERC20(ilkAddress).approve(address(_gemJoin), type(uint256).max);
     }
 
+    /**
+     * 
+     * @param amountCollateral amount of collateral to deposit.
+     * @param amountToBorrow amount of WETH to borrow. Due to rounding, true borrow amount might be slightly less.
+     * @param proof merkle proof that the user is whitelisted.
+     */
     function depositAndBorrow(
         uint256 amountCollateral,
         uint256 amountToBorrow,
@@ -80,7 +86,6 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     *
      * @param vaultHolder the user who will be responsible for repaying debt
      * @param receiver the user who receives the borrowed funds
      * @param amountCollateral to move into vault
@@ -149,6 +154,9 @@ abstract contract IonHandlerBase {
         gemJoin.exit(receiver, collateralToWithdraw);
     }
 
+    /**
+     * @dev To allow unwrapping of WETH into ETH
+     */
     receive() external payable {
         if (msg.sender != address(weth)) revert CannotSendEthToContract();
     }

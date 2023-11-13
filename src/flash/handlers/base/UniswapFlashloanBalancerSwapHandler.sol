@@ -49,11 +49,11 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     }
 
     /**
-     * @notice Uniswap flashloan do incur a fee
-     * @param initialDeposit in collateral terms
-     * @param resultingAdditionalCollateral in collateral terms
-     * @param maxResultingAdditionalDebt in WETH terms. This value also allows the user to
-     * control slippage of the swap.
+     * @notice Uniswap flashloans do incur a fee.
+     * @param initialDeposit in collateral terms.
+     * @param resultingAdditionalCollateral in collateral terms.
+     * @param maxResultingAdditionalDebt in WETH terms. This value also allows
+     * the user to control slippage of the swap.
      */
     function flashLeverageWethAndSwap(
         uint256 initialDeposit,
@@ -105,6 +105,12 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         flashloanPool.flash(address(this), amount0ToFlash, amount1ToFlash, abi.encode(flashCallbackData));
     }
 
+    /**
+     * @dev Uniswap flashloans do incur a fee.
+     * @param maxCollateralToRemove The max amount of collateral willing to sell
+     * to repay `debtToRemove` debt.
+     * @param debtToRemove The desired amount of debt to remove.
+     */
     function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove) external {
         if (debtToRemove == 0) return;
 

@@ -25,17 +25,29 @@ contract GemJoin is Ownable2Step, Pausable {
         pool = _pool;
         ilkIndex = _ilkIndex;
 
+        // Sanity check
         if (_pool.getIlkAddress(_ilkIndex) != address(_gem)) revert WrongIlkAddress(_ilkIndex, _gem);
     }
 
+    /**
+     * @dev Pauses the contract.
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @dev Unpauses the contract.
+     */
     function unpause() external onlyOwner {
         _unpause();
     }
 
+    /**
+     * @dev Gem will be sourced from `msg.sender` and credited to `user`.
+     * @param user to credit the gem to
+     * @param amount of gem to add
+     */
     function join(address user, uint256 amount) external whenNotPaused {
         if (int256(amount) < 0) revert Int256Overflow();
 
@@ -45,6 +57,9 @@ contract GemJoin is Ownable2Step, Pausable {
         gem.safeTransferFrom(msg.sender, address(this), amount);
     }
 
+    /**
+     * @dev Gem will be debited from `msg.sender` and sent to `user`.
+     */
     function exit(address user, uint256 amount) external whenNotPaused {
         if (int256(amount) < 0) revert Int256Overflow();
 
