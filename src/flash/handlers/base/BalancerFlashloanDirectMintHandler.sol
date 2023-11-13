@@ -61,6 +61,12 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amountToLeverage;
 
+        if (amounts[0] == 0) {
+            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
+            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
+            return;
+        }
+
         uint256 wethRequiredForRepayment = _getEthAmountInForLstAmountOut(amountToLeverage);
         if (wethRequiredForRepayment > maxResultingDebt) {
             revert FlashloanRepaymentTooExpensive(wethRequiredForRepayment, maxResultingDebt);
@@ -104,6 +110,11 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256 amountLst = resultingAdditionalCollateral - initialDeposit; // in collateral terms
         uint256 amountWethToFlashloan = _getEthAmountInForLstAmountOut(amountLst);
 
+        if (amountWethToFlashloan == 0) {
+            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
+            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
+            return;
+        }
         if (amountWethToFlashloan > maxResultingDebt) {
             revert FlashloanRepaymentTooExpensive(amountWethToFlashloan, maxResultingDebt);
         }
@@ -153,12 +164,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         (address user, uint256 initialDeposit, uint256 resultingAdditionalCollateral, uint256 maxResultingDebt) =
             abi.decode(userData, (address, uint256, uint256, uint256));
 
-        if (maxResultingDebt == 0) {
-            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
-            _depositAndBorrow(user, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
-            return;
-        }
-
         // Flashloaned WETH needs to be converted into collateral asset
         if (address(token) == address(weth)) {
             uint256 collateralFromDeposit = _depositWethForLst(amounts[0]);
@@ -184,7 +189,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, wethToBorrow, AmountToBorrow.IS_MIN);
 
             // Convert borrowed WETH back to collateral token
-            uint256 tokenAmountReceived = _depositWethForLst(maxResultingDebt);
+            uint256 tokenAmountReceived = _depositWethForLst(wethToBorrow);
 
             lstToken.safeTransfer(address(VAULT), tokenAmountReceived);
         }
