@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
@@ -17,7 +17,7 @@ abstract contract SpotOracle {
 
     // --- Errors ---
     error InvalidLtv(uint256 ltv);
-    error InvalidReserveOracle(address _reserveOracle);
+    error InvalidReserveOracle();
 
     constructor(uint8 _ilkIndex, uint256 _ltv, address _reserveOracle) {
         ilkIndex = _ilkIndex;
@@ -25,7 +25,7 @@ abstract contract SpotOracle {
             revert InvalidLtv(_ltv);
         }
         if (address(_reserveOracle) == address(0)) {
-            revert InvalidReserveOracle(address(_reserveOracle));
+            revert InvalidReserveOracle();
         }
         ltv = _ltv;
         reserveOracle = ReserveOracle(_reserveOracle);

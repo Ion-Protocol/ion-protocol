@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import { WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";

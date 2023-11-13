@@ -1001,7 +1001,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         return either(user == operator, $.isOperator[user][operator] == 1);
     }
-    
+
     /**
      * @dev This includes unbacked debt.
      * @return The total amount of debt.
@@ -1062,7 +1062,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     /**
      * @dev Calculates the increase in debt and supply factors for a given
      * `ilkIndex` should it's interest be accrued.
-     * 
+     *
      */
     function calculateRewardAndDebtDistribution(uint8 ilkIndex)
         external

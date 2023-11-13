@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
 import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { SwEthSpotOracle } from "src/oracles/spot/SwEthSpotOracle.sol";
