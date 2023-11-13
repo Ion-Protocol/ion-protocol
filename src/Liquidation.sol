@@ -9,21 +9,21 @@ import { IonPool } from "src/IonPool.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-uint8 constant ILK_COUNT = 8;
-
 contract Liquidation {
     using SafeERC20 for IERC20;
     using WadRayMath for uint256;
     using SafeCast for uint256;
 
-    error LiquidationThresholdCannotBeZero(uint256 liquidationThreshold);
-    error ExchangeRateCannotBeZero(uint256 exchangeRate);
+    error LiquidationThresholdCannotBeZero();
+    error ExchangeRateCannotBeZero();
     error VaultIsNotUnsafe(uint256 healthRatio);
+    error InvalidReserveOraclesLength(uint256 length);
+    error InvalidLiquidationThresholdsLength(uint256 length);
 
     // --- parameters ---
 
     uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
-    uint256 public immutable RESERVE_FACTOR; // [ray] ex) 0.02e27 is 2%
+    uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
     uint256 public immutable MAX_DISCOUNT; // [ray] ex) 0.2e27 is 20%
 
     // liquidation thresholds
@@ -48,7 +48,7 @@ contract Liquidation {
         address _ionPool,
         address _protocol,
         address[] memory _reserveOracles,
-        uint256[ILK_COUNT] memory _liquidationThresholds,
+        uint256[] memory _liquidationThresholds,
         uint256 _targetHealth,
         uint256 _reserveFactor,
         uint256 _maxDiscount
@@ -57,8 +57,16 @@ contract Liquidation {
         POOL = ionPool_;
         PROTOCOL = _protocol;
 
+        uint256 ilkCount = POOL.ilkCount();
+        if (_reserveOracles.length != ilkCount) {
+            revert InvalidReserveOraclesLength(_reserveOracles.length);
+        }
+        if (_liquidationThresholds.length != ilkCount) {
+            revert InvalidLiquidationThresholdsLength(_liquidationThresholds.length);
+        }
+
         TARGET_HEALTH = _targetHealth;
-        RESERVE_FACTOR = _reserveFactor;
+        BASE_DISCOUNT = _reserveFactor;
         MAX_DISCOUNT = _maxDiscount;
 
         IERC20 underlying = ionPool_.underlying();
@@ -136,7 +144,8 @@ contract Liquidation {
 
     /**
      * @notice Executes collateral sale and repayment of debt by liquidators.
-     * @dev This function assumes that the kpr already has internal alleth
+     * TODO: all eth?
+     * @dev This function assumes that the `kpr` already has internal alleth
      *      and approved liq to move its alleth.
      * @param ilkIndex index of the collateral in IonPool
      * @param vault the position to be liquidated
@@ -151,10 +160,10 @@ contract Liquidation {
         (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex);
 
         if (exchangeRate == 0) {
-            revert ExchangeRateCannotBeZero(exchangeRate);
+            revert ExchangeRateCannotBeZero();
         }
         if (liquidationThreshold == 0) {
-            revert LiquidationThresholdCannotBeZero(liquidationThreshold);
+            revert LiquidationThresholdCannotBeZero();
         }
 
         // collateralValue = collateral * exchangeRate * liquidationThreshold
@@ -171,14 +180,14 @@ contract Liquidation {
                 revert VaultIsNotUnsafe(healthRatio);
             }
 
-            uint256 discount = RESERVE_FACTOR + (RAY - healthRatio); // [ray] + ([ray] - [ray])
+            uint256 discount = BASE_DISCOUNT + (RAY - healthRatio); // [ray] + ([ray] - [ray])
             discount = discount <= MAX_DISCOUNT ? discount : MAX_DISCOUNT; // cap discount to maxDiscount
             liquidateArgs.price = exchangeRate.rayMulUp(RAY - discount); // ETH price per LST, round up in protocol
                 // favor
             liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, collateralValue, liquidationThreshold, discount);
         }
 
-        // First branch: full liquidation
+        // First branch: protocol liquidation
         //    if repay > total debt, more debt needs to be paid off than available to go back to target health
         //    Move exactly all collateral and debt to the protocol.
         //    Keeper pays gas but is otherwise left untouched.

@@ -92,7 +92,10 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
 
         // liquidations contract
-        uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
+        }
         liquidation = new Liquidation(
             address(ionPool),  
             protocol,
@@ -190,7 +193,11 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
 
         // liquidations contract
-        uint256[ILK_COUNT] memory liquidationThresholds = [deploymentArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
+        }
+
         liquidation = new Liquidation(
             address(ionPool), 
             protocol,
