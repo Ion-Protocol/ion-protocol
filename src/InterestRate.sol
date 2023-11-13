@@ -279,6 +279,7 @@ contract InterestRate {
         uint256 minimumBelowKinkSlope =
             (ilkData.minimumKinkRate - ilkData.minimumBaseRate).rayDivDown(optimalUtilizationRateRay);
 
+        // Below kink
         if (utilizationRate < optimalUtilizationRateRay) {
             uint256 adjustedBorrowRate = adjustedBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.adjustedBaseRate;
             uint256 minimumBorrowRate = minimumBelowKinkSlope.rayMulDown(utilizationRate) + ilkData.minimumBaseRate;
@@ -288,7 +289,13 @@ contract InterestRate {
             } else {
                 return (adjustedBorrowRate, ilkData.reserveFactor.scaleUpToRay(4));
             }
-        } else {
+        }
+        // Above kink
+        else {
+
+            // For the above kink calculation, we will use the below kink slope
+            // for all utilization up until the kink. From that point on we will
+            // use the above kink slope.
             uint256 excessUtil = utilizationRate - optimalUtilizationRateRay;
 
             uint256 adjustedNormalRate =

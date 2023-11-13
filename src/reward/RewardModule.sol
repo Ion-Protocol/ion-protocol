@@ -86,7 +86,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         }
     }
 
-    function initialize(
+    function _initialize(
         address _underlying,
         address _treasury,
         uint8 decimals_,
@@ -216,6 +216,10 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         $.supplyFactor = newSupplyFactor;
     }
 
+    /**
+     * @dev Updates the treasury address 
+     * @param newTreasury address of new treasury
+     */
     function updateTreasury(address newTreasury) external onlyRole(ION) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         $.treasury = newTreasury;
@@ -225,11 +229,17 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
 
     // --- Getters ---
 
+    /**
+     * @dev Address of underlying asset
+     */
     function underlying() public view returns (IERC20) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.underlying;
     }
 
+    /**
+     * @dev Decimals of the position asset
+     */
     function decimals() public view returns (uint8) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.decimals;
@@ -253,16 +263,25 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         return $._normalizedBalances[user];
     }
 
+    /**
+     * @dev Name of the position asset
+     */
     function name() public view returns (string memory) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.name;
     }
 
+    /**
+     * @dev Symbol of the position asset
+     */
     function symbol() public view returns (string memory) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.symbol;
     }
 
+    /**
+     * @dev Current treasury address
+     */
     function treasury() public view returns (address) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.treasury;
@@ -283,11 +302,17 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         return _normalizedTotalSupply.rayMulDown($.supplyFactor);
     }
 
+    /**
+     * @dev Current normalized total supply
+     */
     function normalizedTotalSupply() public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.normalizedTotalSupply;
     }
 
+    /**
+     * @dev Current supply factor
+     */
     function supplyFactor() public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.supplyFactor;

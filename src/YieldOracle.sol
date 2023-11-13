@@ -37,12 +37,13 @@ uint256 constant UPDATE_LOCK_LENGTH = 84_600;
 
 /**
  * @dev This contract stores a history of the exchange rates of each collateral
- * for the pat `LOOK_BACK` days. Every time, that `updateAll()` is called, it
- * will update the most recent value in the history with the current exchange
- * rate and it will also calculate the APY for each collateral type baesd on the
- * data currently in the buffer. The APY is calculated by taking the difference
- * between the first and last element (before the update) and averaging it out
- * over the year
+ * for the past `LOOK_BACK` days. Every time, that `updateAll()` is called, it
+ * will update the value at `currentIndex` in the `historicalExchangeRates` with the
+ * current exchange rate and it will also calculate the APY for each collateral
+ * type based on the data currently in the buffer. The APY is calculated by
+ * taking the difference between the new element being added and the element
+ * being replaced. This provides a growth amount of `LOOK_BACK` days. This value
+ * is then projected out to a year.
  */
 contract YieldOracle is IYieldOracle, Ownable2Step {
     using Math for uint256;
@@ -87,10 +88,18 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
         _updateAll();
     }
 
+    /**
+     * @param _ionPool pool instance
+     */
     function updateIonPool(IonPool _ionPool) external onlyOwner {
         ionPool = _ionPool;
     }
 
+    /**
+     * @dev Every update should also accrue interest on `IonPool`. This is
+     * because an update to the apy changes interest rates which means the
+     * previous interest rate must be accrued, or else its effect will be lost.
+     */
     function updateAll() external {
         ionPool.accrueInterest();
         _updateAll();
@@ -106,10 +115,14 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
             uint64 newExchangeRate = _getExchangeRate(i);
             uint64 previousExchangeRate = previousExchangeRates[i];
 
+            // Enforce that the exchange rate is not 0 and that it is greater
+            // than the previous exchange rate
             if (newExchangeRate == 0 || newExchangeRate < previousExchangeRate) revert InvalidExchangeRate(i);
 
             uint256 exchangeRateIncrease = newExchangeRate - previousExchangeRate;
 
+            // It should be noted that if this exchange rate increase were too
+            // large, it could overflow the uint32.
             // [WAD] * [APY_PRECISION] / [WAD] = [APY_PRECISION]
             uint32 newApy = exchangeRateIncrease.mulDiv(PERIODS, previousExchangeRate).toUint32();
             apys[i] = newApy;
