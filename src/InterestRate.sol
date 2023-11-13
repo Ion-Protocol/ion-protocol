@@ -37,7 +37,7 @@ uint256 constant MINIMUM_KINK_RATE_MASK =         0x0000000000000000FFFFFFFFFFFF
 //                                                256  240 224 208                     112                     16   0
 //                                                 | __ |   |   |     min_base_rate     |     adj_base_rate     |   |
 //                                                        ^   ^                                                   ^
-//                                                        ^  opt_util                                       reserve_factor
+//                                                        ^  opt_util                                 reserve_factor
 //                                       distribution_factor
 
 uint256 constant RESERVE_FACTOR_MASK =            0x000000000000000000000000000000000000000000000000000000000000FFFF;
@@ -255,10 +255,17 @@ contract InterestRate {
         uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
         uint256 collateralApyRayInSeconds = YIELD_ORACLE.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
 
+        uint256 distributionFactor = ilkData.distributionFactor;
+        // The only time the distribution factor will be set to 0 is when a
+        // market has been sunset. In this case, we want to prevent division by
+        // 0, but we also want to prevent the borrow rate from skyrocketing. So
+        // we will return a reasonable borrow rate of kink utilization on the
+        // minimum curve.
+        if (distributionFactor == 0) {
+            return (ilkData.minimumKinkRate, ilkData.reserveFactor.scaleUpToRay(4));
+        }
         // [RAD] / [WAD] = [RAY]
-        uint256 utilizationRate =
-        // Prevent division by 0
-        totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(ilkData.distributionFactor.scaleUpToWad(4)));
+        uint256 utilizationRate = totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(distributionFactor.scaleUpToWad(4)));
 
         // Avoid stack too deep
         uint256 adjustedBelowKinkSlope;
