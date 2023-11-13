@@ -17,8 +17,6 @@ contract DeployYieldOracleScript is BaseScript {
     string configPath = "./deployment-config/01_YieldOracle.json";
     string config = vm.readFile(configPath);
 
-    uint256 internal consta = 10 ** (PROVIDER_PRECISION - APY_PRECISION);
-
     function run() public broadcast returns (YieldOracle yieldOracle) {
         string[] memory configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
         assert(configKeys.length == ILK_COUNT);

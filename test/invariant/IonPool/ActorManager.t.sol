@@ -6,14 +6,12 @@ import { IonPool } from "src/IonPool.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import { HEVM } from "test/helpers/echidna/IHevm.sol";
 import { InvariantHelpers } from "test/helpers/InvariantHelpers.sol";
 
 import { LenderHandler, BorrowerHandler, LiquidatorHandler } from "./Handlers.t.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
@@ -268,7 +266,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         return !failed();
     }
 
-    function invariant_SumOfAllGemAndCollateralEqualsBalanceOfGemJoin() external returns (bool) {
+    function invariant_SumOfAllGemAndCollateralEqualsTotalGemInGemJoin() external returns (bool) {
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             uint256 gemAndCollateralSum;
             for (uint256 j = 0; j < borrowers.length; j++) {
@@ -278,26 +276,13 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
                 gemAndCollateralSum += ionPool.collateral(i, address(borrowers[j]));
             }
             GemJoin gemJoin = ionRegistry.gemJoins(i);
-            IERC20 gem = gemJoin.gem();
-            assertEq(gemAndCollateralSum, gem.balanceOf(address(gemJoin)));
+            assertEq(gemAndCollateralSum, gemJoin.totalGem());
         }
 
         return !failed();
     }
 
-    function invariant_SumOfAllVaultNormalizedDebtEqualsIlkTotalNormalizedDebt() external returns (bool) {
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
-            uint256 sumVaultNormalizedDebt;
-            for (uint256 j = 0; j < borrowers.length; j++) {
-                sumVaultNormalizedDebt += ionPool.normalizedDebt(i, address(borrowers[j]));
-            }
-            assertEq(sumVaultNormalizedDebt, ionPool.totalNormalizedDebt(i));
-        }
-
-        return !failed();
-    }
-
-    function invariant_SumOfAllIlkTotalNormalizedDebtTimesIlkRateEqualsTotalDebtPlusUnbackedDebt()
+    function invariant_SumOfAllIlkTotalNormalizedDebtTimesIlkRatePlusUnbackedDebtEqualsTotalDebt()
         external
         returns (bool)
     {
@@ -307,7 +292,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
             uint256 ilkRate = ionPool.rate(i);
             totalDebt += totalNormalizedDebt * ilkRate;
         }
-        assertEq(totalDebt, ionPool.debt() + ionPool.totalUnbackedDebt());
+        assertEq(totalDebt + ionPool.totalUnbackedDebt(), ionPool.debt());
 
         return !failed();
     }

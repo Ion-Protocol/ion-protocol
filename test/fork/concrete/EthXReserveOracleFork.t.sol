@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
 import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";
 import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
-import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
 
 contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
@@ -56,7 +56,8 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
             maxChange
         );
 
-        uint256 expectedExchangeRate = (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
+        uint256 expectedExchangeRate =
+            (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
         uint256 protocolExchangeRate = ethXReserveOracle.currentExchangeRate();
 
         assertEq(protocolExchangeRate, expectedExchangeRate, "min exchange rate");

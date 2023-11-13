@@ -59,6 +59,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
 
     event MintToTreasury(address indexed treasury, uint256 amount, uint256 supplyFactor);
 
+    event TreasuryUpdate(address treasury);
+
     struct RewardModuleStorage {
         IERC20 underlying;
         uint8 decimals;
@@ -74,6 +76,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     bytes32 public constant ION = keccak256("ION");
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.RewardModule")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line
     bytes32 private constant RewardModuleStorageLocation =
         0xdb3a0d63a7808d7d0422c40bb62354f42bff7602a547c329c1453dbcbeef4900;
 
@@ -83,7 +86,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         }
     }
 
-    function initialize(
+    function _initialize(
         address _underlying,
         address _treasury,
         uint8 decimals_,
@@ -104,6 +107,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         $.name = name_;
         $.symbol = symbol_;
         $.supplyFactor = RAY;
+
+        emit TreasuryUpdate(_treasury);
     }
 
     /**
@@ -211,18 +216,30 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         $.supplyFactor = newSupplyFactor;
     }
 
+    /**
+     * @dev Updates the treasury address 
+     * @param newTreasury address of new treasury
+     */
     function updateTreasury(address newTreasury) external onlyRole(ION) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         $.treasury = newTreasury;
+
+        emit TreasuryUpdate(newTreasury);
     }
 
     // --- Getters ---
 
+    /**
+     * @dev Address of underlying asset
+     */
     function underlying() public view returns (IERC20) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.underlying;
     }
 
+    /**
+     * @dev Decimals of the position asset
+     */
     function decimals() public view returns (uint8) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.decimals;
@@ -246,16 +263,25 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         return $._normalizedBalances[user];
     }
 
+    /**
+     * @dev Name of the position asset
+     */
     function name() public view returns (string memory) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.name;
     }
 
+    /**
+     * @dev Symbol of the position asset
+     */
     function symbol() public view returns (string memory) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.symbol;
     }
 
+    /**
+     * @dev Current treasury address
+     */
     function treasury() public view returns (address) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.treasury;
@@ -276,11 +302,17 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         return _normalizedTotalSupply.rayMulDown($.supplyFactor);
     }
 
+    /**
+     * @dev Current normalized total supply
+     */
     function normalizedTotalSupply() public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.normalizedTotalSupply;
     }
 
+    /**
+     * @dev Current supply factor
+     */
     function supplyFactor() public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         return $.supplyFactor;

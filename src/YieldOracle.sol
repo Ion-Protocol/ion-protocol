@@ -10,20 +10,21 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { console2 } from "forge-std/console2.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
-// historicalExchangeRate can be thought of as a matrix of past exchange rates by collateral types. With a uint32 type
-// storing exchange rates, 8 can be stored in one storage slot. Each day will consume ceil(ILK_COUNT / 8) storage slots.
+// historicalExchangeRates can be thought of as a matrix of past exchange rates by collateral types. With a uint64 type
+// storing exchange rates, 4 can be stored in one storage slot. So each day will consume ceil(ILK_COUNT / 4) storage
+// slots.
 //
 //  look back days  | storage slot  ||                             data
 //
-//                  |                  256                             128      64     32       0
-//                  |               ||  |       |       |       | ilk_n | ilk_3 | ilk_2 | ilk_1 |
-//        1         |     n + 0     ||  |       |       |       |       |       |       |       |
-//        2         |     n + 1     ||  |       |       |       |       |       |       |       |
-//       ...        |    n + ...    ||  |       |       |       |       |       |       |       |
-//        n         |     n + n     ||  |       |       |       |       |       |       |       |
+//                  |                  256             172             128              64              0
+//                  |               ||  |     ilk_4     |     ilk_3     |     ilk_2     |     ilk_1     |
+//        1         |     n + 0     ||  |               |               |               |               |
+//        2         |     n + 1     ||  |               |               |               |               |
+//       ...        |    n + ...    ||  |               |               |               |               |
+//        n         |     n + n     ||  |               |               |               |               |
+//
+// A uint64 has the capacity to store up to around ~18e18 which is more than enough to fit an exchange rate that only
+// ever hovers around 1e18.
 
 uint8 constant APY_PRECISION = 8;
 uint8 constant PROVIDER_PRECISION = 18;
@@ -34,6 +35,16 @@ uint32 constant ILK_COUNT = 3;
 // Seconds in 23.5 hours. This will allow for updates around the same time of day
 uint256 constant UPDATE_LOCK_LENGTH = 84_600;
 
+/**
+ * @dev This contract stores a history of the exchange rates of each collateral
+ * for the past `LOOK_BACK` days. Every time, that `updateAll()` is called, it
+ * will update the value at `currentIndex` in the `historicalExchangeRates` with the
+ * current exchange rate and it will also calculate the APY for each collateral
+ * type based on the data currently in the buffer. The APY is calculated by
+ * taking the difference between the new element being added and the element
+ * being replaced. This provides a growth amount of `LOOK_BACK` days. This value
+ * is then projected out to a year.
+ */
 contract YieldOracle is IYieldOracle, Ownable2Step {
     using Math for uint256;
     using SafeCast for uint256;
@@ -77,10 +88,18 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
         _updateAll();
     }
 
+    /**
+     * @param _ionPool pool instance
+     */
     function updateIonPool(IonPool _ionPool) external onlyOwner {
         ionPool = _ionPool;
     }
 
+    /**
+     * @dev Every update should also accrue interest on `IonPool`. This is
+     * because an update to the apy changes interest rates which means the
+     * previous interest rate must be accrued, or else its effect will be lost.
+     */
     function updateAll() external {
         ionPool.accrueInterest();
         _updateAll();
@@ -96,10 +115,14 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
             uint64 newExchangeRate = _getExchangeRate(i);
             uint64 previousExchangeRate = previousExchangeRates[i];
 
+            // Enforce that the exchange rate is not 0 and that it is greater
+            // than the previous exchange rate
             if (newExchangeRate == 0 || newExchangeRate < previousExchangeRate) revert InvalidExchangeRate(i);
 
             uint256 exchangeRateIncrease = newExchangeRate - previousExchangeRate;
 
+            // It should be noted that if this exchange rate increase were too
+            // large, it could overflow the uint32.
             // [WAD] * [APY_PRECISION] / [WAD] = [APY_PRECISION]
             uint32 newApy = exchangeRateIncrease.mulDiv(PERIODS, previousExchangeRate).toUint32();
             apys[i] = newApy;

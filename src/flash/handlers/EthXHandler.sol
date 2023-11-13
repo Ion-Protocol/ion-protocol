@@ -21,7 +21,7 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
     using StaderLibrary for IStaderStakePoolsManager;
 
     // Stader deposit contract is separate from the ETHx lst contract
-    IStaderStakePoolsManager immutable staderDeposit;
+    IStaderStakePoolsManager immutable STADER_DEPOSIT;
 
     constructor(
         uint8 _ilkIndex,
@@ -34,11 +34,15 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
         UniswapFlashloanBalancerSwapHandler(_wstEthUniswapPool)
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
     {
-        staderDeposit = _staderDeposit;
+        STADER_DEPOSIT = _staderDeposit;
     }
 
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
         weth.withdraw(amountWeth);
-        return staderDeposit.depositForLst(amountWeth);
+        return STADER_DEPOSIT.depositForLst(amountWeth);
+    }
+
+    function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {
+        return STADER_DEPOSIT.getEthAmountInForLstAmountOut(amountLst);
     }
 }

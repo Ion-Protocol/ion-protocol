@@ -38,24 +38,24 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     uint256 private flashloanInitiated = 1;
 
     /**
-     * @notice Entry point for strategies that flashloans collateral to leverage. 
-     * @dev Code assumes Balancer flashloans remain free
-     * @param initialDeposit [wad] the initial collateral brought by the caller
-     * @param resultingCollateral [wad] the total collateral amount in the resulting vault 
-     * @param resultingDebt [?] in WETH terms. This is not a bound since lst mints
-        TODO: this seems like it's in [wad]? make clear
-     * do not incur slippage.
+     * @notice Code assumes Balancer flashloans remain free
+     * @param initialDeposit in collateral terms
+     * @param resultingAdditionalCollateral in collateral terms
+     * @param maxResultingDebt in WETH terms. While it is unlikely that the
+     * exchange rate changes from when a transaction is submitted versus when it
+     * is executed, it is still possible so we want to allow for a bound here,
+     * even though it doesn't pose the same level of threat as slippage.
      */
     function flashLeverageCollateral(
         uint256 initialDeposit,
-        uint256 resultingCollateral,
-        uint256 resultingDebt
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingDebt
     )
         external
     {
         lstToken.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
-        uint256 amountToLeverage = resultingCollateral - initialDeposit; // in collateral terms
+        uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in collateral terms
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(lstToken));
@@ -63,14 +63,25 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amountToLeverage;
 
-        // Prevents attacked from initiating flashloan and passing malicious data through callback
+        if (amounts[0] == 0) {
+            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
+            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
+            return;
+        }
+
+        uint256 wethRequiredForRepayment = _getEthAmountInForLstAmountOut(amountToLeverage);
+        if (wethRequiredForRepayment > maxResultingDebt) {
+            revert FlashloanRepaymentTooExpensive(wethRequiredForRepayment, maxResultingDebt);
+        }
+
+        // Prevents attackers from initiating flashloan and passing malicious data through callback
         flashloanInitiated = 2;
 
         VAULT.flashLoan(
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
-            abi.encode(msg.sender, initialDeposit, resultingCollateral, resultingDebt)
+            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral, maxResultingDebt)
         );
 
         flashloanInitiated = 1;
@@ -79,16 +90,16 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @notice Code assumes Balancer flashloans remain free
      * @param initialDeposit in collateral terms
-     * @param resultingCollateral in collateral terms
-     * @param resultingDebt in WETH terms. This is not a bound since lst mints
-     * do not incur slippage. However, `resultingDebt` weth will be used to mint
-     * the lst, and the outputted lst amount should match the
-     * `resultingCollateral` value.
+     * @param resultingAdditionalCollateral in collateral terms
+     * @param maxResultingDebt in WETH terms. While it is unlikely that the
+     * exchange rate changes from when a transaction is submitted versus when it
+     * is executed, it is still possible so we want to allow for a bound here,
+     * even though it doesn't pose the same level of threat as slippage.
      */
     function flashLeverageWeth(
         uint256 initialDeposit,
-        uint256 resultingCollateral,
-        uint256 resultingDebt
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingDebt
     )
         external
         payable
@@ -98,8 +109,29 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(weth));
 
+        uint256 amountLst = resultingAdditionalCollateral - initialDeposit; // in collateral terms
+        uint256 amountWethToFlashloan = _getEthAmountInForLstAmountOut(amountLst);
+
+        if (amountWethToFlashloan == 0) {
+            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
+            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
+            return;
+        }
+
+        // It is technically possible to accrue slight dust amounts more of debt
+        // than maxResultingDebt because you may need to borrow slightly more at
+        // the IonPool level to receieve the desired amount of WETH. This is
+        // because the IonPool will round in its favor and always gives out dust
+        // amounts less of WETH than the debt accrued to the position. However,
+        // this will always be bounded by the rate of the ilk at the time
+        // divided by RAY and will NEVER be subject to slippage, which is what
+        // we really want to protect against.
+        if (amountWethToFlashloan > maxResultingDebt) {
+            revert FlashloanRepaymentTooExpensive(amountWethToFlashloan, maxResultingDebt);
+        }
+
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = resultingDebt;
+        amounts[0] = amountWethToFlashloan;
 
         flashloanInitiated = 2;
 
@@ -107,7 +139,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
-            abi.encode(msg.sender, initialDeposit, resultingCollateral, resultingDebt)
+            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral, maxResultingDebt)
         );
 
         flashloanInitiated = 1;
@@ -140,37 +172,35 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         if (flashloanInitiated != 2) revert ExternalBalancerFlashloanNotAllowed();
 
         IERC20Balancer token = tokens[0];
-        (address user, uint256 initialDeposit, uint256 resultingCollateral, uint256 resultingDebt) =
+        (address user, uint256 initialDeposit, uint256 resultingAdditionalCollateral, uint256 maxResultingDebt) =
             abi.decode(userData, (address, uint256, uint256, uint256));
 
-        if (resultingDebt == 0) {
-            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
-            _depositAndBorrow(user, address(this), resultingCollateral, 0, AmountToBorrow.IS_MAX);
-            return;
-        }
-
-        // Flashloaned WETH needs to be wrapped into collateral asset
+        // Flashloaned WETH needs to be converted into collateral asset
         if (address(token) == address(weth)) {
             uint256 collateralFromDeposit = _depositWethForLst(amounts[0]);
 
-            // Sanity check
-            assert(collateralFromDeposit + initialDeposit == resultingCollateral);
+            // Sanity checks
+            assert(collateralFromDeposit + initialDeposit == resultingAdditionalCollateral);
+            assert(collateralFromDeposit <= maxResultingDebt);
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
-            _depositAndBorrow(user, address(this), resultingCollateral, resultingDebt, AmountToBorrow.IS_MIN);
+            _depositAndBorrow(user, address(this), resultingAdditionalCollateral, amounts[0], AmountToBorrow.IS_MIN);
 
             weth.transfer(address(VAULT), amounts[0]);
         } else {
             if (address(lstToken) != address(token)) revert FlashloanedInvalidToken(address(token));
- 
-            // Sanity check
-            assert(amounts[0] + initialDeposit == resultingCollateral);
+
+            uint256 wethToBorrow = _getEthAmountInForLstAmountOut(amounts[0]);
+
+            // Sanity checks
+            assert(amounts[0] + initialDeposit == resultingAdditionalCollateral);
+            assert(wethToBorrow <= maxResultingDebt);
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
-            _depositAndBorrow(user, address(this), resultingCollateral, resultingDebt, AmountToBorrow.IS_MIN);
+            _depositAndBorrow(user, address(this), resultingAdditionalCollateral, wethToBorrow, AmountToBorrow.IS_MIN);
 
             // Convert borrowed WETH back to collateral token
-            uint256 tokenAmountReceived = _depositWethForLst(resultingDebt);
+            uint256 tokenAmountReceived = _depositWethForLst(wethToBorrow);
 
             lstToken.safeTransfer(address(VAULT), tokenAmountReceived);
         }
@@ -182,4 +212,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
      * @return amountLst received
      */
     function _depositWethForLst(uint256 amountWeth) internal virtual returns (uint256);
+
+    function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view virtual returns (uint256);
 }

@@ -12,8 +12,6 @@ import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
 import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { EthXReserveOracle } from "src/oracles/reserve/EthxReserveOracle.sol";
 
-import { IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
-
 import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
@@ -169,8 +167,8 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
         swEthSpotOracle =
         new SwEthSpotOracle(SWETH_ILK_INDEX, ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
-        
-        uint256 expectedPrice = swEthSpotOracle.getPrice(); 
+
+        uint256 expectedPrice = swEthSpotOracle.getPrice();
         uint256 expectedSpot = ltv.wadMulDown(expectedPrice);
 
         assertEq(swEthSpotOracle.getSpot(), expectedSpot, "spot");

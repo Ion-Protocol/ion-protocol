@@ -21,16 +21,10 @@ contract LiquidationTest is LiquidationSharedSetup {
     function test_ExchangeRateCannotBeZero() public {
         // deploy liquidations contract
         uint256 liquidationThreshold = 0.75e27;
-        uint256[ILK_COUNT] memory liquidationThresholds = [
-            liquidationThreshold,
-            liquidationThreshold,
-            liquidationThreshold,
-            liquidationThreshold,
-            liquidationThreshold,
-            liquidationThreshold,
-            liquidationThreshold,
-            liquidationThreshold
-        ];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = liquidationThreshold;
+        }
 
         uint256 _targetHealth = 1.25 ether;
         uint256 _reserveFactor = 0.02 ether;
@@ -47,7 +41,7 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         // liquidate call
         vm.startPrank(keeper1);
-        vm.expectRevert(abi.encodeWithSelector(Liquidation.ExchangeRateCannotBeZero.selector, 0));
+        vm.expectRevert(Liquidation.ExchangeRateCannotBeZero.selector);
         liquidation.liquidate(ILK_INDEX, borrower1, keeper1);
         vm.stopPrank();
     }
@@ -60,7 +54,10 @@ contract LiquidationTest is LiquidationSharedSetup {
     function test_RevertWhen_VaultIsNotUnsafe() public {
         // deploy liquidations contract
         uint256 liquidationThreshold = 0.75e27;
-        uint256[ILK_COUNT] memory liquidationThresholds = [liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = liquidationThreshold;
+        }
         uint256 _targetHealth = 1.25e27;
         uint256 _reserveFactor = 0.02e27;
         uint256 _maxDiscount = 0.2e27;
@@ -92,7 +89,10 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 _reserveFactor = 0.02e27;
         uint256 _maxDiscount = 0.2e27;
 
-        uint256[ILK_COUNT] memory liquidationThresholds = [liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = liquidationThreshold;
+        }
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, _maxDiscount);
 
@@ -149,7 +149,10 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
 
-        uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = dArgs.liquidationThreshold;
+        }
 
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
@@ -223,8 +226,10 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
 
-        uint256[ILK_COUNT] memory liquidationThresholds = [uint256(dArgs.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
-
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = dArgs.liquidationThreshold;
+        }
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
@@ -294,7 +299,10 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
 
-        uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = dArgs.liquidationThreshold;
+        }
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
@@ -378,7 +386,10 @@ contract LiquidationTest is LiquidationSharedSetup {
         dArgs.reserveFactor = 0.02e27; // [wad]
         dArgs.maxDiscount = 0.2e27; // [wad]
 
-        uint256[ILK_COUNT] memory liquidationThresholds = [dArgs.liquidationThreshold, 0, 0, 0, 0, 0, 0, 0];
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = dArgs.liquidationThreshold;
+        }
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
@@ -435,8 +446,10 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         Results memory results = calculateExpectedLiquidationResults(dArgs, sArgs);
 
-        uint256[ILK_COUNT] memory liquidationThresholds = [uint256(dArgs.liquidationThreshold), 0, 0, 0, 0, 0, 0, 0];
-
+        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            liquidationThresholds[i] = dArgs.liquidationThreshold;
+        }
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, dArgs.maxDiscount);
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));

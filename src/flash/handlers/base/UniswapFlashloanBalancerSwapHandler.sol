@@ -12,9 +12,6 @@ import { IAsset } from "@balancer-labs/v2-interfaces/contracts/vault/IAsset.sol"
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { console2 } from "forge-std/console2.sol";
-
 /**
  * @dev Some tokens only have liquidity on Balancer. Due to the reentrancy lock
  * on the Balancer vault, utilizing their free flashloan followed by a pool swap
@@ -28,7 +25,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     error WethNotInPoolPair(IUniswapV3Pool pool);
     error ReceiveCallerNotPool(address unauthorizedCaller);
     error ExternalUniswapFlashloanNotAllowed();
-    error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
 
     IVault internal constant vault = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -53,11 +49,11 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     }
 
     /**
-     * @notice Uniswap flashloan do incur a fee
-     * @param initialDeposit in collateral terms
-     * @param resultingAdditionalCollateral in collateral terms
-     * @param maxResultingAdditionalDebt in WETH terms. This value also allows the user to
-     * control slippage of the swap.
+     * @notice Uniswap flashloans do incur a fee.
+     * @param initialDeposit in collateral terms.
+     * @param resultingAdditionalCollateral in collateral terms.
+     * @param maxResultingAdditionalDebt in WETH terms. This value also allows
+     * the user to control slippage of the swap.
      */
     function flashLeverageWethAndSwap(
         uint256 initialDeposit,
@@ -109,6 +105,12 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         flashloanPool.flash(address(this), amount0ToFlash, amount1ToFlash, abi.encode(flashCallbackData));
     }
 
+    /**
+     * @dev Uniswap flashloans do incur a fee.
+     * @param maxCollateralToRemove The max amount of collateral willing to sell
+     * to repay `debtToRemove` debt.
+     * @param debtToRemove The desired amount of debt to remove.
+     */
     function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove) external {
         if (debtToRemove == 0) return;
 

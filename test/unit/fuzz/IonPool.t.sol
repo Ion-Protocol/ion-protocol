@@ -10,8 +10,6 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 uint256 constant COLLATERAL_COUNT = 3;
 
 using WadRayMath for uint256;
@@ -34,7 +32,10 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
 
     function testFuzz_RevertWhen_SupplyingAboveSupplyCap(uint256 supplyAmount) public {
         _changeSupplyFactorIfNeeded();
-        vm.assume(supplyAmount < type(uint128).max && supplyAmount > 0);
+        vm.assume(supplyAmount < type(uint128).max && supplyAmount / ionPool.supplyFactor() > 0);
+
+        underlying.mint(address(this), supplyAmount);
+        underlying.approve(address(ionPool), supplyAmount);
 
         uint256 supplyCap = 0;
         ionPool.updateSupplyCap(supplyCap);

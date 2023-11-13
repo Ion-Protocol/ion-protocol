@@ -12,7 +12,6 @@ import { MockIonPool } from "test/helpers/MockIonPool.sol";
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { stdJson as StdJson } from "forge-std/stdJson.sol";
 import { console2 } from "forge-std/console2.sol";
 
 contract YieldOracleExposed is YieldOracle {

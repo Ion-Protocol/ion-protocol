@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
+import { WAD, RAY } from "src/libraries/math/WadRayMath.sol";
 import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
 import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
@@ -50,7 +49,8 @@ contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
         WstEthReserveOracle stEthReserveOracle =
             new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
 
-        uint72 expectedMinExchangeRate = (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
+        uint72 expectedMinExchangeRate =
+            (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
 
         stEthReserveOracle.updateExchangeRate();
         uint256 protocolExchangeRate = stEthReserveOracle.currentExchangeRate();

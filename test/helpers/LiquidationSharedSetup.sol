@@ -74,16 +74,7 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         reserveOracle2 = new MockReserveOracle(0);
         reserveOracle3 = new MockReserveOracle(0);
 
-        exchangeRateOracles = [
-            address(reserveOracle1),
-            address(reserveOracle2),
-            address(reserveOracle3),
-            address(0),
-            address(0),
-            address(0),
-            address(0),
-            address(0)
-        ];
+        exchangeRateOracles = [address(reserveOracle1), address(reserveOracle2), address(reserveOracle3)];
     }
 
     /**
@@ -188,7 +179,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         pure
         returns (Results memory results)
     {
-
         DeploymentArgs memory dArgs;
         StateArgs memory sArgs;
         // copy to new memory
@@ -203,8 +193,6 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         dArgs.reserveFactor = _dArgs.reserveFactor;
         dArgs.maxDiscount = _dArgs.maxDiscount;
         dArgs.dust = _dArgs.dust;
-
-
 
         uint256 collateralValue = (sArgs.collateral * dArgs.liquidationThreshold).rayMulUp(sArgs.exchangeRate); // [rad]
 
@@ -255,7 +243,5 @@ contract LiquidationSharedSetup is IonPoolSharedSetup {
         } else {
             require(false, "panic"); // shouldn't occur
         }
-
-
     }
 }

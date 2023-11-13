@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { GemJoin } from "src/join/GemJoin.sol";
 import { IonPool } from "src/IonPool.sol";
-import { WAD, RAY, RAD, WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { RAY, WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { InterestRate, IlkData } from "src/InterestRate.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
@@ -15,8 +14,6 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 using Strings for uint256;
 using WadRayMath for uint256;
@@ -63,6 +60,9 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
 
         uint256 supplyCap = 0;
         ionPool.updateSupplyCap(supplyCap);
+
+        underlying.mint(address(this), supplyAmount);
+        underlying.approve(address(ionPool), type(uint256).max);
 
         vm.expectRevert(abi.encodeWithSelector(IonPool.DepositSurpassesSupplyCap.selector, supplyAmount, supplyCap));
         ionPool.supply(lender1, supplyAmount, new bytes32[](0));
@@ -1087,6 +1087,8 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
     event Paused(IonPausableUpgradeable.Pauses indexed pauseIndex, address account);
     event Unpaused(IonPausableUpgradeable.Pauses indexed pauseIndex, address account);
 
+    event TreasuryUpdate(address treasury);
+
     // Random non admin address
     address internal immutable NON_ADMIN = vm.addr(33);
 
@@ -1318,6 +1320,20 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         emit Unpaused(IonPausableUpgradeable.Pauses.SAFE, address(this));
         ionPool.unpauseSafeActions();
         assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), false);
+    }
+
+    function test_UpdateTreasury() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
+        );
+        vm.prank(NON_ADMIN);
+        ionPool.updateTreasury(address(0));
+
+        vm.expectEmit(true, true, true, true);
+        emit TreasuryUpdate(address(0));
+        ionPool.updateTreasury(address(0));
+
+        assertEq(ionPool.treasury(), address(0));
     }
 }
 
