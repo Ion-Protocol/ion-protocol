@@ -41,8 +41,10 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
      * @notice Code assumes Balancer flashloans remain free
      * @param initialDeposit in collateral terms
      * @param resultingAdditionalCollateral in collateral terms
-     * @param maxResultingDebt in WETH terms. This is not a bound since lst mints
-     * do not incur slippage.
+     * @param maxResultingDebt in WETH terms. While it is unlikely that the
+     * exchange rate changes from when a transaction is submitted versus when it
+     * is executed, it is still possible so we want to allow for a bound here,
+     * even though it doesn't pose the same level of threat as slippage.
      */
     function flashLeverageCollateral(
         uint256 initialDeposit,
@@ -72,7 +74,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             revert FlashloanRepaymentTooExpensive(wethRequiredForRepayment, maxResultingDebt);
         }
 
-        // Prevents attacked from initiating flashloan and passing malicious data through callback
+        // Prevents attackers from initiating flashloan and passing malicious data through callback
         flashloanInitiated = 2;
 
         VAULT.flashLoan(
@@ -89,10 +91,10 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
      * @notice Code assumes Balancer flashloans remain free
      * @param initialDeposit in collateral terms
      * @param resultingAdditionalCollateral in collateral terms
-     * @param maxResultingDebt in WETH terms. This is not a bound since lst mints
-     * do not incur slippage. However, `maxResultingDebt` weth will be used to mint
-     * the lst, and the outputted lst amount should match the
-     * `resultingAdditionalCollateral` value.
+     * @param maxResultingDebt in WETH terms. While it is unlikely that the
+     * exchange rate changes from when a transaction is submitted versus when it
+     * is executed, it is still possible so we want to allow for a bound here,
+     * even though it doesn't pose the same level of threat as slippage.
      */
     function flashLeverageWeth(
         uint256 initialDeposit,
@@ -115,6 +117,15 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
             return;
         }
+
+        // It is technically possible to accrue slight dust amounts more of debt
+        // than maxResultingDebt because you may need to borrow slightly more at
+        // the IonPool level to receieve the desired amount of WETH. This is
+        // because the IonPool will round in its favor and always gives out dust
+        // amounts less of WETH than the debt accrued to the position. However,
+        // this will always be bounded by the rate of the ilk at the time
+        // divided by RAY and will NEVER be subject to slippage, which is what
+        // we really want to protect against.
         if (amountWethToFlashloan > maxResultingDebt) {
             revert FlashloanRepaymentTooExpensive(amountWethToFlashloan, maxResultingDebt);
         }
