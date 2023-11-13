@@ -702,7 +702,8 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         external
         onlyRole(LIQUIDATOR_ROLE)
     {
-        // TODO: confiscate vault should accrue interest rates since utilization changes
+        _accrueInterestForIlk(ilkIndex); 
+
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         Vault storage vault = $.vaults[ilkIndex][u];
