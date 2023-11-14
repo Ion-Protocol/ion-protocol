@@ -40,10 +40,10 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
     uint160 internal constant MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342;
 
-    IUniswapV3Factory immutable factory;
-    IUniswapV3Pool immutable pool;
-    uint24 immutable poolFee;
-    bool immutable wethIsToken0;
+    IUniswapV3Factory immutable FACTORY;
+    IUniswapV3Pool immutable UNISWAP_POOL;
+    bool immutable WETH_IS_TOKEN0;
+    uint24 immutable POOL_FEE;
 
     constructor(IUniswapV3Factory _factory, IUniswapV3Pool _pool, uint24 _poolFee, bool _wethIsToken0) {
         if (address(_factory) == address(0)) revert InvalidFactoryAddress();
@@ -52,12 +52,12 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         address token0 = _pool.token0();
         address token1 = _pool.token1();
 
-        if (token0 != address(weth) && token1 != address(weth)) revert InvalidUniswapPool();
+        if (token0 != address(WETH) && token1 != address(WETH)) revert InvalidUniswapPool();
 
-        factory = _factory;
-        pool = _pool;
-        wethIsToken0 = _wethIsToken0;
-        poolFee = _poolFee;
+        FACTORY = _factory;
+        UNISWAP_POOL = _pool;
+        WETH_IS_TOKEN0 = _wethIsToken0;
+        POOL_FEE = _poolFee;
     }
 
     struct FlashSwapData {
@@ -87,7 +87,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     )
         external
     {
-        lstToken.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in swEth
 
@@ -100,7 +100,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         // Flashswap WETH for collateral. We will return the WETH inside the Uniswap
         // callback
         // zeroForOne is WETH -> collateral
-        bool zeroForOne = wethIsToken0;
+        bool zeroForOne = WETH_IS_TOKEN0;
 
         FlashSwapData memory flashswapData = FlashSwapData({
             user: msg.sender,
@@ -134,7 +134,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         if (debtToRemove == 0) return;
 
         // collateral -> WETH
-        bool zeroForOne = !wethIsToken0;
+        bool zeroForOne = !WETH_IS_TOKEN0;
 
         FlashSwapData memory flashswapData =
             FlashSwapData({ user: msg.sender, changeInCollateralOrDebt: debtToRemove, zeroForOne: zeroForOne });
@@ -154,7 +154,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         private
         returns (uint256 amountIn)
     {
-        (int256 amount0Delta, int256 amount1Delta) = pool.swap(
+        (int256 amount0Delta, int256 amount1Delta) = UNISWAP_POOL.swap(
             recipient,
             zeroForOne,
             -amountOut.toInt256(),
@@ -189,18 +189,18 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
      * @param _data arbitrary data
      */
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external override {
-        if (msg.sender != address(pool)) revert CallbackOnlyCallableByPool(msg.sender);
+        if (msg.sender != address(UNISWAP_POOL)) revert CallbackOnlyCallableByPool(msg.sender);
 
         // swaps entirely within 0-liquidity regions are not supported
         if (amount0Delta == 0 && amount1Delta == 0) revert InvalidZeroLiquidityRegionSwap();
         FlashSwapData memory data = abi.decode(_data, (FlashSwapData));
 
         (address tokenIn, address tokenOut) =
-            data.zeroForOne ? (address(weth), address(lstToken)) : (address(lstToken), address(weth));
+            data.zeroForOne ? (address(WETH), address(LST_TOKEN)) : (address(LST_TOKEN), address(WETH));
 
         // Code below this if statement will always assume token0 is WETH. If it
         // is not actually the case, we will flip the vars
-        if (!wethIsToken0) {
+        if (!WETH_IS_TOKEN0) {
             (amount0Delta, amount1Delta) = (amount1Delta, amount0Delta);
             (tokenIn, tokenOut) = (tokenOut, tokenIn);
         }
@@ -210,7 +210,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
             amountToPay = uint256(amount0Delta);
 
             // Received `amountToLeverage` collateral from flashswap, will borrow
-            // necessary weth from IonPool position to pay back flashswap
+            // necessary WETH from IonPool position to pay back flashswap
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(
@@ -219,7 +219,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         } else {
             amountToPay = uint256(amount1Delta);
 
-            // Received `debtToRemove` weth from flashswap, will
+            // Received `debtToRemove` WETH from flashswap, will
             // withdraw necessary collateral from IonPool position to pay back flashswap
             _repayAndWithdraw(data.user, address(this), amountToPay, data.changeInCollateralOrDebt);
         }

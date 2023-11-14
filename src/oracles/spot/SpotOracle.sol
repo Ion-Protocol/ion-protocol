@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
@@ -10,25 +10,22 @@ import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 abstract contract SpotOracle {
     using WadRayMath for uint256;
 
-    uint8 public immutable ilkIndex;
-    uint256 public immutable ltv; // max LTV for a position (below liquidation threshold) [ray]
-
-    ReserveOracle public immutable reserveOracle;
+    uint256 public immutable LTV; // max LTV for a position (below liquidation threshold) [ray]
+    ReserveOracle public immutable RESERVE_ORACLE;
 
     // --- Errors ---
     error InvalidLtv(uint256 ltv);
-    error InvalidReserveOracle(address _reserveOracle);
+    error InvalidReserveOracle();
 
-    constructor(uint8 _ilkIndex, uint256 _ltv, address _reserveOracle) {
-        ilkIndex = _ilkIndex;
+    constructor(uint256 _ltv, address _reserveOracle) {
         if (_ltv > RAY) {
             revert InvalidLtv(_ltv);
         }
         if (address(_reserveOracle) == address(0)) {
-            revert InvalidReserveOracle(address(_reserveOracle));
+            revert InvalidReserveOracle();
         }
-        ltv = _ltv;
-        reserveOracle = ReserveOracle(_reserveOracle);
+        LTV = _ltv;
+        RESERVE_ORACLE = ReserveOracle(_reserveOracle);
     }
 
     // @dev overridden by collateral specific spot oracle contracts
@@ -39,11 +36,11 @@ abstract contract SpotOracle {
     // @return spot value of the asset in ETH [ray]
     function getSpot() external view returns (uint256 spot) {
         uint256 price = getPrice(); // must be [wad]
-        uint256 exchangeRate = ReserveOracle(reserveOracle).currentExchangeRate();
+        uint256 exchangeRate = ReserveOracle(RESERVE_ORACLE).currentExchangeRate();
 
         // Min the price with reserve oracle before multiplying by ltv
         uint256 min = Math.min(price, exchangeRate); // [wad]
 
-        spot = ltv.wadMulDown(min); // [ray] * [wad] / [wad] = [ray]
+        spot = LTV.wadMulDown(min); // [ray] * [wad] / [wad] = [ray]
     }
 }

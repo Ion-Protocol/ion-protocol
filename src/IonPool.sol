@@ -280,7 +280,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         // Sanity check
-        if (_interestRateModule.collateralCount() != $.ilks.length) {
+        if (_interestRateModule.COLLATERAL_COUNT() != $.ilks.length) {
             revert InvalidInterestRateModule(_interestRateModule);
         }
         $.interestRateModule = _interestRateModule;
@@ -468,6 +468,14 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         timestampIncrease = uint48(block.timestamp) - ilk.lastRateUpdate;
 
         // Debt distribution
+        // This form of rate accrual is much safer than distributing the new
+        // debt increase to the total debt since low debt amounts won't cause
+        // rounding errors to sky rocket the rate. This form of accrual is still
+        // subject to rate inflation, however, it would only be from an
+        // extremely high borrow rate rather than being a function of the
+        // current total debt in the system. This is very relevant for
+        // sunsetting markets, where the goal will be to reduce the total debt
+        // to 0.
         newRateIncrease = ilk.rate.rayMulUp(borrowRateExpT - RAY).toUint104(); // [RAY]
 
         newDebtIncrease = _totalNormalizedDebt * newRateIncrease; // [RAD]
@@ -1002,7 +1010,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         return either(user == operator, $.isOperator[user][operator] == 1);
     }
-    
+
     /**
      * @dev This includes unbacked debt.
      * @return The total amount of debt.
@@ -1063,7 +1071,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     /**
      * @dev Calculates the increase in debt and supply factors for a given
      * `ilkIndex` should it's interest be accrued.
-     * 
+     *
      */
     function calculateRewardAndDebtDistribution(uint8 ilkIndex)
         external

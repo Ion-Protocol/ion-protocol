@@ -36,7 +36,7 @@ uint256 constant MINIMUM_KINK_RATE_MASK =         0x0000000000000000FFFFFFFFFFFF
 //                                                256  240 224 208                     112                     16   0
 //                                                 | __ |   |   |     min_base_rate     |     adj_base_rate     |   |
 //                                                        ^   ^                                                   ^
-//                                                        ^  opt_util                                       reserve_factor
+//                                                        ^  opt_util                                 reserve_factor
 //                                       distribution_factor
 
 uint256 constant RESERVE_FACTOR_MASK =            0x000000000000000000000000000000000000000000000000000000000000FFFF;
@@ -76,7 +76,7 @@ contract InterestRate {
 
     error CollateralIndexOutOfBounds();
     error DistributionFactorsDoNotSumToOne(uint256 sum);
-    error TotalDebtsLength(uint256 collateralCount, uint256 totalIlkDebtsLength);
+    error TotalDebtsLength(uint256 COLLATERAL_COUNT, uint256 totalIlkDebtsLength);
     error InvalidYieldOracleAddress();
 
     /**
@@ -107,17 +107,17 @@ contract InterestRate {
     uint256 internal immutable ILKCONFIG_7B;
     uint256 internal immutable ILKCONFIG_7C;
 
-    uint256 public immutable collateralCount;
-    IYieldOracle public immutable yieldOracle;
+    uint256 public immutable COLLATERAL_COUNT;
+    IYieldOracle public immutable YIELD_ORACLE;
 
     constructor(IlkData[] memory ilkDataList, IYieldOracle _yieldOracle) {
         if (address(_yieldOracle) == address(0)) revert InvalidYieldOracleAddress();
 
-        collateralCount = ilkDataList.length;
-        yieldOracle = _yieldOracle;
+        COLLATERAL_COUNT = ilkDataList.length;
+        YIELD_ORACLE = _yieldOracle;
 
         uint256 distributionFactorSum = 0;
-        for (uint256 i = 0; i < collateralCount;) {
+        for (uint256 i = 0; i < COLLATERAL_COUNT;) {
             distributionFactorSum += ilkDataList[i].distributionFactor;
 
             // forgefmt: disable-next-line
@@ -144,7 +144,7 @@ contract InterestRate {
         view
         returns (uint256 packedConfig_a, uint256 packedConfig_b, uint256 packedConfig_c)
     {
-        if (index >= collateralCount) return (0, 0, 0);
+        if (index >= COLLATERAL_COUNT) return (0, 0, 0);
 
         IlkData memory ilkData = ilkDataList[index];
 
@@ -168,7 +168,7 @@ contract InterestRate {
     }
 
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
-        if (index > collateralCount - 1) revert CollateralIndexOutOfBounds();
+        if (index > COLLATERAL_COUNT - 1) revert CollateralIndexOutOfBounds();
 
         uint256 packedConfig_a;
         uint256 packedConfig_b;
@@ -252,12 +252,19 @@ contract InterestRate {
     {
         IlkData memory ilkData = _unpackCollateralConfig(ilkIndex);
         uint256 optimalUtilizationRateRay = ilkData.optimalUtilizationRate.scaleUpToRay(4);
-        uint256 collateralApyRayInSeconds = yieldOracle.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
+        uint256 collateralApyRayInSeconds = YIELD_ORACLE.apys(ilkIndex).scaleUpToRay(8) / SECONDS_IN_A_YEAR;
 
+        uint256 distributionFactor = ilkData.distributionFactor;
+        // The only time the distribution factor will be set to 0 is when a
+        // market has been sunset. In this case, we want to prevent division by
+        // 0, but we also want to prevent the borrow rate from skyrocketing. So
+        // we will return a reasonable borrow rate of kink utilization on the
+        // minimum curve.
+        if (distributionFactor == 0) {
+            return (ilkData.minimumKinkRate, ilkData.reserveFactor.scaleUpToRay(4));
+        }
         // [RAD] / [WAD] = [RAY]
-        uint256 utilizationRate =
-        // Prevent division by 0
-        totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(ilkData.distributionFactor.scaleUpToWad(4)));
+        uint256 utilizationRate = totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(distributionFactor.scaleUpToWad(4)));
 
         // Avoid stack too deep
         uint256 adjustedBelowKinkSlope;
@@ -294,7 +301,6 @@ contract InterestRate {
         }
         // Above kink
         else {
-
             // For the above kink calculation, we will use the below kink slope
             // for all utilization up until the kink. From that point on we will
             // use the above kink slope.

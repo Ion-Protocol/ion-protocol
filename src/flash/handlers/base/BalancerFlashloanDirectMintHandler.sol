@@ -53,12 +53,12 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     )
         external
     {
-        lstToken.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in collateral terms
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
-        addresses[0] = IERC20Balancer(address(lstToken));
+        addresses[0] = IERC20Balancer(address(LST_TOKEN));
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amountToLeverage;
@@ -104,10 +104,10 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         external
         payable
     {
-        lstToken.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
-        addresses[0] = IERC20Balancer(address(weth));
+        addresses[0] = IERC20Balancer(address(WETH));
 
         uint256 amountLst = resultingAdditionalCollateral - initialDeposit; // in collateral terms
         uint256 amountWethToFlashloan = _getEthAmountInForLstAmountOut(amountLst);
@@ -176,7 +176,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             abi.decode(userData, (address, uint256, uint256, uint256));
 
         // Flashloaned WETH needs to be converted into collateral asset
-        if (address(token) == address(weth)) {
+        if (address(token) == address(WETH)) {
             uint256 collateralFromDeposit = _depositWethForLst(amounts[0]);
 
             // Sanity checks
@@ -186,9 +186,9 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, amounts[0], AmountToBorrow.IS_MIN);
 
-            weth.transfer(address(VAULT), amounts[0]);
+            WETH.transfer(address(VAULT), amounts[0]);
         } else {
-            if (address(lstToken) != address(token)) revert FlashloanedInvalidToken(address(token));
+            if (address(LST_TOKEN) != address(token)) revert FlashloanedInvalidToken(address(token));
 
             uint256 wethToBorrow = _getEthAmountInForLstAmountOut(amounts[0]);
 
@@ -202,7 +202,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             // Convert borrowed WETH back to collateral token
             uint256 tokenAmountReceived = _depositWethForLst(wethToBorrow);
 
-            lstToken.safeTransfer(address(VAULT), tokenAmountReceived);
+            LST_TOKEN.safeTransfer(address(VAULT), tokenAmountReceived);
         }
     }
 

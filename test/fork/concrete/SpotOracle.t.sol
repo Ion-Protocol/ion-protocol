@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { SwEthSpotOracle } from "src/oracles/spot/SwEthSpotOracle.sol";
@@ -85,7 +85,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 0.5e27; // 0.5
 
         stEthSpotOracle = new WstEthSpotOracle(
-            STETH_ILK_INDEX, 
             ltv,
             address(stEthReserveOracle), 
             MAINNET_ETH_PER_STETH_CHAINLINK, 
@@ -100,7 +99,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 0.8e27; // 0.8
 
         stEthSpotOracle = new WstEthSpotOracle(
-            STETH_ILK_INDEX, 
             ltv, 
             address(stEthReserveOracle),
             MAINNET_ETH_PER_STETH_CHAINLINK, 
@@ -117,7 +115,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 1e27; // 1 100%
 
         stEthSpotOracle = new WstEthSpotOracle(
-            STETH_ILK_INDEX, 
             ltv, 
             address(stEthReserveOracle),
             MAINNET_ETH_PER_STETH_CHAINLINK, 
@@ -150,7 +147,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 0.5e27;
 
         swEthSpotOracle = new SwEthSpotOracle(
-            SWETH_ILK_INDEX, 
             ltv, 
             address(swEthReserveOracle), 
             MAINNET_SWETH_ETH_UNISWAP_01,
@@ -166,7 +162,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint32 secondsAgo = 100;
 
         swEthSpotOracle =
-        new SwEthSpotOracle(SWETH_ILK_INDEX, ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
+            new SwEthSpotOracle(ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
 
         uint256 expectedPrice = swEthSpotOracle.getPrice();
         uint256 expectedSpot = ltv.wadMulDown(expectedPrice);
@@ -179,7 +175,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint32 secondsAgo = 100;
 
         swEthSpotOracle =
-        new SwEthSpotOracle(SWETH_ILK_INDEX, ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
+            new SwEthSpotOracle(ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, secondsAgo);
 
         // update exchange rate
         uint256 newExchangeRate = 0.9e18;
@@ -197,7 +193,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
     function test_EthXSpotOracleViewPrice() public {
         uint256 ltv = 0.7e27;
         ethXSpotOracle = new EthXSpotOracle(
-            ETHX_ILK_INDEX,
             ltv, 
             address(ethXReserveOracle),
             MAINNET_USD_PER_ETHX_REDSTONE,
@@ -218,7 +213,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 0.85e27;
 
         ethXSpotOracle = new EthXSpotOracle(
-            ETHX_ILK_INDEX,
             ltv, 
             address(ethXReserveOracle), 
             MAINNET_USD_PER_ETHX_REDSTONE, 
@@ -240,7 +234,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 1e27;
 
         ethXSpotOracle = new EthXSpotOracle(
-            ETHX_ILK_INDEX,
             ltv, 
             address(ethXReserveOracle), 
             MAINNET_USD_PER_ETHX_REDSTONE, 

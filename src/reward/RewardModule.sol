@@ -217,7 +217,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     }
 
     /**
-     * @dev Updates the treasury address 
+     * @dev Updates the treasury address
      * @param newTreasury address of new treasury
      */
     function updateTreasury(address newTreasury) external onlyRole(ION) {

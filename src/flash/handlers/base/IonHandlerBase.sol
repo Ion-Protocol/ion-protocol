@@ -37,38 +37,38 @@ abstract contract IonHandlerBase {
         IS_MAX
     }
 
-    IWETH9 immutable weth;
-    uint8 immutable ilkIndex;
-    IonPool immutable ionPool;
-    GemJoin immutable gemJoin;
-    IERC20 immutable lstToken;
-    Whitelist immutable whitelist;
+    IWETH9 immutable WETH;
+    uint8 immutable ILK_INDEX;
+    IonPool immutable POOL;
+    GemJoin immutable JOIN;
+    IERC20 immutable LST_TOKEN;
+    Whitelist immutable WHITELIST;
 
     modifier onlyWhitelistedBorrowers(uint8, bytes32[] memory proof) {
-        whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, proof);
+        WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, proof);
         _;
     }
 
     constructor(uint8 _ilkIndex, IonPool _ionPool, GemJoin _gemJoin, Whitelist _whitelist) {
-        ionPool = _ionPool;
-        ilkIndex = _ilkIndex;
+        POOL = _ionPool;
+        ILK_INDEX = _ilkIndex;
 
-        IWETH9 _weth = IWETH9(address(ionPool.underlying()));
-        weth = _weth;
+        IWETH9 _weth = IWETH9(address(_ionPool.underlying()));
+        WETH = _weth;
 
-        address ilkAddress = ionPool.getIlkAddress(_ilkIndex);
-        lstToken = IERC20(ilkAddress);
+        address ilkAddress = POOL.getIlkAddress(_ilkIndex);
+        LST_TOKEN = IERC20(ilkAddress);
 
-        gemJoin = _gemJoin;
+        JOIN = _gemJoin;
 
-        whitelist = _whitelist;
+        WHITELIST = _whitelist;
 
-        _weth.approve(address(ionPool), type(uint256).max);
+        _weth.approve(address(_ionPool), type(uint256).max);
         IERC20(ilkAddress).approve(address(_gemJoin), type(uint256).max);
     }
 
     /**
-     * 
+     *
      * @param amountCollateral amount of collateral to deposit.
      * @param amountToBorrow amount of WETH to borrow. Due to rounding, true borrow amount might be slightly less.
      * @param proof merkle proof that the user is whitelisted.
@@ -79,9 +79,9 @@ abstract contract IonHandlerBase {
         bytes32[] calldata proof
     )
         external
-        onlyWhitelistedBorrowers(ilkIndex, proof)
+        onlyWhitelistedBorrowers(ILK_INDEX, proof)
     {
-        lstToken.safeTransferFrom(msg.sender, address(this), amountCollateral);
+        LST_TOKEN.safeTransferFrom(msg.sender, address(this), amountCollateral);
         _depositAndBorrow(msg.sender, msg.sender, amountCollateral, amountToBorrow, AmountToBorrow.IS_MAX);
     }
 
@@ -104,12 +104,12 @@ abstract contract IonHandlerBase {
     )
         internal
     {
-        gemJoin.join(address(this), amountCollateral);
+        JOIN.join(address(this), amountCollateral);
 
-        ionPool.depositCollateral(ilkIndex, vaultHolder, address(this), amountCollateral, new bytes32[](0));
+        POOL.depositCollateral(ILK_INDEX, vaultHolder, address(this), amountCollateral, new bytes32[](0));
 
-        uint256 currentRate = ionPool.rate(ilkIndex);
-        (,, uint256 newRateIncrease,,) = ionPool.calculateRewardAndDebtDistribution(ilkIndex);
+        uint256 currentRate = POOL.rate(ILK_INDEX);
+        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
         uint256 rateAfterAccrual = currentRate + newRateIncrease;
 
         uint256 normalizedAmountToBorrow;
@@ -120,7 +120,7 @@ abstract contract IonHandlerBase {
         }
 
         if (amountToBorrow != 0) {
-            ionPool.borrow(ilkIndex, vaultHolder, receiver, normalizedAmountToBorrow, new bytes32[](0));
+            POOL.borrow(ILK_INDEX, vaultHolder, receiver, normalizedAmountToBorrow, new bytes32[](0));
         }
     }
 
@@ -129,7 +129,7 @@ abstract contract IonHandlerBase {
      * @param collateralToWithdraw in collateral terms
      */
     function repayAndWithdraw(uint256 debtToRepay, uint256 collateralToWithdraw) external {
-        weth.transferFrom(msg.sender, address(this), debtToRepay);
+        WETH.transferFrom(msg.sender, address(this), debtToRepay);
         _repayAndWithdraw(msg.sender, msg.sender, collateralToWithdraw, debtToRepay);
     }
 
@@ -141,23 +141,23 @@ abstract contract IonHandlerBase {
     )
         internal
     {
-        uint256 currentRate = ionPool.rate(ilkIndex);
-        (,, uint256 newRateIncrease,,) = ionPool.calculateRewardAndDebtDistribution(ilkIndex);
+        uint256 currentRate = POOL.rate(ILK_INDEX);
+        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
         uint256 rateAfterAccrual = currentRate + newRateIncrease;
 
         uint256 normalizedDebtToRepay = debtToRepay.rayDivDown(rateAfterAccrual);
 
-        ionPool.repay(ilkIndex, vaultHolder, address(this), normalizedDebtToRepay);
+        POOL.repay(ILK_INDEX, vaultHolder, address(this), normalizedDebtToRepay);
 
-        ionPool.withdrawCollateral(ilkIndex, vaultHolder, address(this), collateralToWithdraw);
+        POOL.withdrawCollateral(ILK_INDEX, vaultHolder, address(this), collateralToWithdraw);
 
-        gemJoin.exit(receiver, collateralToWithdraw);
+        JOIN.exit(receiver, collateralToWithdraw);
     }
 
     /**
      * @dev To allow unwrapping of WETH into ETH
      */
     receive() external payable {
-        if (msg.sender != address(weth)) revert CannotSendEthToContract();
+        if (msg.sender != address(WETH)) revert CannotSendEthToContract();
     }
 }
