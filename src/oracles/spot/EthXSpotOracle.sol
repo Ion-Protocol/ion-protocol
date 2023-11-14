@@ -31,8 +31,10 @@ contract EthXSpotOracle is SpotOracle {
         USD_PER_ETH_CHAINLINK = IChainlink(_usdPerEthChainlink);
     }
 
+    // @notice Gets the price of ETHx in ETH. 
     // @dev redstone oracle returns dollar value per ETHx with 6 decimals.
-    //      This needs to be converted to [wad] and to ETH denomination.
+    // This needs to be converted to [wad] and to ETH denomination.
+    // @return ethPerEthX price of ETHx in ETH [wad] 
     function getPrice() public view override returns (uint256 ethPerEthX) {
         // get price from the protocol feed
         // usd per ETHx

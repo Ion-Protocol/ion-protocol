@@ -11,7 +11,6 @@ import { Test } from "forge-std/Test.sol";
 contract StaderLibrary_FuzzTest is Test {
     using StaderLibrary for IStaderStakePoolsManager;
 
-    // TODO: Move mainnet constants to one solidity file
     IStaderStakePoolsManager private constant MAINNET_STADER_DEPOSIT =
         IStaderStakePoolsManager(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
     address constant MAINNET_ETHX = 0xA35b1B31Ce002FBF2058D22F30f95D405200A15b;

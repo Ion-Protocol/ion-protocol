@@ -1359,11 +1359,6 @@ contract IonPool_PausedTest is IonPoolSharedSetup {
         vm.expectRevert(
             abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
         );
-        ionPool.mintAndBurnGem(0, address(0), 0);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
-        );
         ionPool.transferGem(0, address(0), address(0), 0);
     }
 

@@ -12,7 +12,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
 /**
- * @dev There a couple things to consider here from a security perspective. The
+ * @dev There are a couple things to consider here from a security perspective. The
  * first one is that the flashloan callback must only be callable from the
  * Balancer vault. This ensures that nobody can pass arbitrary data to the
  * callback. The second one is that the flashloan must only be initialized from

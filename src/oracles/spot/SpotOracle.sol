@@ -32,7 +32,7 @@ abstract contract SpotOracle {
     // @return price of the asset in ETH [wad]
     function getPrice() public view virtual returns (uint256 price);
 
-    // @dev pushes market price multiplied by the LTV
+    // @dev Gets the market price multiplied by the LTV. 
     // @return spot value of the asset in ETH [ray]
     function getSpot() external view returns (uint256 spot) {
         uint256 price = getPrice(); // must be [wad]

@@ -369,7 +369,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         // Safe actions should really only be paused in conjunction with unsafe
-        // actions. However, if for some reason only safe actions were unpaused,
+        // actions. However, if for some reason only safe actions were paused,
         // it would still be possible to accrue interest by withdrawing and/or
         // borrowing... so we prevent this outcome; but without reverting the tx
         // altogether.
@@ -658,15 +658,15 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         // ilk has been initialised
         if (ilkRate == 0) revert IlkNotInitialized(ilkIndex);
 
-        Vault memory vault = $.vaults[ilkIndex][u];
-        vault.collateral = _add(vault.collateral, changeInCollateral);
-        vault.normalizedDebt = _add(vault.normalizedDebt, changeInNormalizedDebt);
+        Vault memory _vault = $.vaults[ilkIndex][u];
+        _vault.collateral = _add(_vault.collateral, changeInCollateral);
+        _vault.normalizedDebt = _add(_vault.normalizedDebt, changeInNormalizedDebt);
 
         uint104 _totalNormalizedDebt = _add($.ilks[ilkIndex].totalNormalizedDebt, changeInNormalizedDebt).toUint104();
 
         // Prevent stack too deep
         {
-            uint256 newTotalDebtInVault = ilkRate * vault.normalizedDebt;
+            uint256 newTotalDebtInVault = ilkRate * _vault.normalizedDebt;
             // either debt has decreased, or debt ceilings are not exceeded
             if (
                 both(
@@ -681,9 +681,9 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
             if (
                 both(
                     either(changeInNormalizedDebt > 0, changeInCollateral < 0),
-                    newTotalDebtInVault > vault.collateral * ilkSpot
+                    newTotalDebtInVault > _vault.collateral * ilkSpot
                 )
-            ) revert UnsafePositionChange(newTotalDebtInVault, vault.collateral, ilkSpot);
+            ) revert UnsafePositionChange(newTotalDebtInVault, _vault.collateral, ilkSpot);
 
             // vault is either more safe, or the owner consents
             if (both(either(changeInNormalizedDebt > 0, changeInCollateral < 0), !isAllowed(u, _msgSender()))) {
@@ -704,7 +704,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
             }
 
             // vault has no debt, or a non-dusty amount
-            if (both(vault.normalizedDebt != 0, newTotalDebtInVault < $.ilks[ilkIndex].dust)) {
+            if (both(_vault.normalizedDebt != 0, newTotalDebtInVault < $.ilks[ilkIndex].dust)) {
                 revert VaultCannotBeDusty(newTotalDebtInVault, $.ilks[ilkIndex].dust);
             }
         }
@@ -712,7 +712,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         int256 changeInDebt = ilkRate.toInt256() * changeInNormalizedDebt;
 
         $.gem[ilkIndex][v] = _sub($.gem[ilkIndex][v], changeInCollateral);
-        $.vaults[ilkIndex][u] = vault;
+        $.vaults[ilkIndex][u] = _vault;
         $.ilks[ilkIndex].totalNormalizedDebt = _totalNormalizedDebt;
         newTotalDebt = _add($.debt, changeInDebt);
         $.debt = newTotalDebt;
@@ -794,14 +794,16 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         external
         onlyRole(LIQUIDATOR_ROLE)
     {
+        _accrueInterestForIlk(ilkIndex); 
+
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        Vault storage vault = $.vaults[ilkIndex][u];
+        Vault storage _vault = $.vaults[ilkIndex][u];
         Ilk storage ilk = $.ilks[ilkIndex];
         uint104 ilkRate = ilk.rate;
 
-        vault.collateral = _add(vault.collateral, changeInCollateral);
-        vault.normalizedDebt = _add(vault.normalizedDebt, changeInNormalizedDebt);
+        _vault.collateral = _add(_vault.collateral, changeInCollateral);
+        _vault.normalizedDebt = _add(_vault.normalizedDebt, changeInNormalizedDebt);
         ilk.totalNormalizedDebt = _add(uint256(ilk.totalNormalizedDebt), changeInNormalizedDebt).toUint104();
 
         // Unsafe cast OK since we know that ilkRate is less than 2^104
@@ -829,7 +831,6 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         int256 wad
     )
         external
-        whenNotPaused(Pauses.UNSAFE)
         onlyRole(GEM_JOIN_ROLE)
     {
         IonPoolStorage storage $ = _getIonPoolStorage();

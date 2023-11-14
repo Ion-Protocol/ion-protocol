@@ -26,8 +26,9 @@ contract SwEthSpotOracle is SpotOracle {
         SECONDS_AGO = _secondsAgo;
     }
 
-    // @dev
-    // NOTE: Uniswap returns price in swETH per ETH. This needs to be reciprocaled.
+    // @notice Gets the price of swETH in ETH. 
+    // @dev Uniswap returns price in swETH per ETH. This needs to be inversed.
+    // @return ethPerSwEth price of swETH in ETH [wad] 
     function getPrice() public view override returns (uint256 ethPerSwEth) {
         (int24 arithmeticMeanTick,) = UniswapOracleLibrary.consult(address(POOL), SECONDS_AGO);
         uint256 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);

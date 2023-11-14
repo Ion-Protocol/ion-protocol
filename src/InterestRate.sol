@@ -23,7 +23,6 @@ struct IlkData {
     uint96 minimumAboveKinkSlope; // 27 decimals
 }
 
-
 // Word 1
 //
 //                                                256  240   216   192                     96                      0
@@ -276,10 +275,13 @@ contract InterestRate {
             }
 
             // Underflow occured
+            // If underflow occured, then the Apy was too low or the profitMargin was too high and 
+            // we would want to switch to minimum borrow rate. Set slopeNumerator to zero such 
+            // that adjusted borrow rate is below the minimum borrow rate. 
             if (slopeNumerator > collateralApyRayInSeconds) {
                 slopeNumerator = 0;
             }
-
+            
             adjustedBelowKinkSlope = slopeNumerator.rayDivDown(optimalUtilizationRateRay);
         }
 

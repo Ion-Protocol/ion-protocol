@@ -20,11 +20,14 @@ contract Liquidation {
     error InvalidReserveOraclesLength(uint256 length);
     error InvalidLiquidationThresholdsLength(uint256 length);
 
-    // --- parameters ---
+    // --- Parameters ---
 
     uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
     uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
-    uint256 public immutable MAX_DISCOUNT; // [ray] ex) 0.2e27 is 20%
+
+    uint256 public immutable MAX_DISCOUNT_0; // [ray] ex) 0.2e27 is 20% 
+    uint256 public immutable MAX_DISCOUNT_1; 
+    uint256 public immutable MAX_DISCOUNT_2; 
 
     // liquidation thresholds
     uint256 public immutable LIQUIDATION_THRESHOLD_0; // [ray] liquidation threshold for ilkIndex 0
@@ -51,7 +54,7 @@ contract Liquidation {
         uint256[] memory _liquidationThresholds,
         uint256 _targetHealth,
         uint256 _reserveFactor,
-        uint256 _maxDiscount
+        uint256[] memory _maxDiscount
     ) {
         IonPool ionPool_ = IonPool(_ionPool);
         POOL = ionPool_;
@@ -67,7 +70,10 @@ contract Liquidation {
 
         TARGET_HEALTH = _targetHealth;
         BASE_DISCOUNT = _reserveFactor;
-        MAX_DISCOUNT = _maxDiscount;
+
+        MAX_DISCOUNT_0 = _maxDiscount[0]; 
+        MAX_DISCOUNT_1 = _maxDiscount[1]; 
+        MAX_DISCOUNT_2 = _maxDiscount[2]; 
 
         IERC20 underlying = ionPool_.underlying();
         underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
@@ -82,32 +88,37 @@ contract Liquidation {
         RESERVE_ORACLE_2 = _reserveOracles[2];
     }
 
+    struct Configs {
+        uint256 liquidationThreshold; 
+        uint256 maxDiscount; 
+        address reserveOracle; 
+    }
     /**
      * @notice Returns the exchange rate and liquidation threshold for the given ilkIndex.
      */
-    function _getExchangeRateAndLiquidationThreshold(uint8 ilkIndex)
+    function _getConfigs(uint8 ilkIndex)
         internal
         view
-        returns (uint256 liquidationThreshold, uint256 exchangeRate)
+        returns (Configs memory configs)
     {
         address reserveOracle;
         if (ilkIndex == 0) {
-            reserveOracle = RESERVE_ORACLE_0;
-            liquidationThreshold = LIQUIDATION_THRESHOLD_0;
+            configs.reserveOracle = RESERVE_ORACLE_0;
+            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
+            configs.maxDiscount = MAX_DISCOUNT_0; 
         } else if (ilkIndex == 1) {
-            reserveOracle = RESERVE_ORACLE_1;
-            liquidationThreshold = LIQUIDATION_THRESHOLD_1;
+            configs.reserveOracle = RESERVE_ORACLE_1;
+            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_1;
+            configs.maxDiscount = MAX_DISCOUNT_1;
         } else if (ilkIndex == 2) {
-            reserveOracle = RESERVE_ORACLE_2;
-            liquidationThreshold = LIQUIDATION_THRESHOLD_2;
+            configs.reserveOracle = RESERVE_ORACLE_2;
+            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_2;
+            configs.maxDiscount = MAX_DISCOUNT_2;
         }
-        // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
-        exchangeRate = ReserveOracle(reserveOracle).currentExchangeRate();
-        exchangeRate = uint256(exchangeRate).scaleUpToRay(18);
     }
 
     /**
-     * @notice Internal helper function for calculating the repay amount
+     * @notice Internal helper function for calculating the repay amount. 
      * @param debtValue [rad] totalDebt
      * @param collateralValue [rad] collateral * exchangeRate * liquidationThreshold
      * @param liquidationThreshold [ray]
@@ -144,9 +155,6 @@ contract Liquidation {
 
     /**
      * @notice Executes collateral sale and repayment of debt by liquidators.
-     * TODO: all eth?
-     * @dev This function assumes that the `kpr` already has internal alleth
-     *      and approved liq to move its alleth.
      * @param ilkIndex index of the collateral in IonPool
      * @param vault the position to be liquidated
      * @param kpr payer of the debt and receiver of the collateral
@@ -154,15 +162,17 @@ contract Liquidation {
     function liquidate(uint8 ilkIndex, address vault, address kpr) external {
         LiquidateArgs memory liquidateArgs;
 
+        Configs memory configs = _getConfigs(ilkIndex);
+
+        // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
+        uint256 exchangeRate = uint256(ReserveOracle(configs.reserveOracle).currentExchangeRate()).scaleUpToRay(18);
         (uint256 collateral, uint256 normalizedDebt) = POOL.vault(ilkIndex, vault);
         uint256 rate = POOL.rate(ilkIndex);
-
-        (uint256 liquidationThreshold, uint256 exchangeRate) = _getExchangeRateAndLiquidationThreshold(ilkIndex);
 
         if (exchangeRate == 0) {
             revert ExchangeRateCannotBeZero();
         }
-        if (liquidationThreshold == 0) {
+        if (configs.liquidationThreshold == 0) {
             revert LiquidationThresholdCannotBeZero();
         }
 
@@ -173,7 +183,7 @@ contract Liquidation {
         // debtValue = [wad] * [ray] = [rad]
         // healthRatio = [rad] * RAY / [rad] = [ray]
         // round down in protocol favor
-        uint256 collateralValue = (collateral * exchangeRate).rayMulDown(liquidationThreshold);
+        uint256 collateralValue = (collateral * exchangeRate).rayMulDown(configs.liquidationThreshold);
         {
             uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
             if (healthRatio >= RAY) {
@@ -181,16 +191,15 @@ contract Liquidation {
             }
 
             uint256 discount = BASE_DISCOUNT + (RAY - healthRatio); // [ray] + ([ray] - [ray])
-            discount = discount <= MAX_DISCOUNT ? discount : MAX_DISCOUNT; // cap discount to maxDiscount
+            discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount
             liquidateArgs.price = exchangeRate.rayMulUp(RAY - discount); // ETH price per LST, round up in protocol
                 // favor
-            liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, collateralValue, liquidationThreshold, discount);
+            liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
         }
 
         // First branch: protocol liquidation
         //    if repay > total debt, more debt needs to be paid off than available to go back to target health
         //    Move exactly all collateral and debt to the protocol.
-        //    Keeper pays gas but is otherwise left untouched.
         // Second branch: resulting debt is below dust
         //    There is enough collateral to cover the debt and go back to target health,
         //    but it would leave a debt amount less than dust.
@@ -224,7 +233,7 @@ contract Liquidation {
             liquidateArgs.repay = liquidateArgs.dart * rate; // 27 decimals precision loss on original repay
         }
 
-        // below code only reached for dust or partial liquidations
+        // below code is only reached for dust or partial liquidations
 
         // exact amount to be transferred in `_transferWeth`
         uint256 transferAmt = (liquidateArgs.repay / RAY);
