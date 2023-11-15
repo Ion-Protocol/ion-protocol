@@ -1,66 +1,47 @@
-## Foundry
+## Ion Protocol
+TODO: [Overview] 
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## User Docs
 
-Foundry consists of:
+`docs.ionprotocol.io`
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+## Technical Docs
 
 ## Usage
 
-### Build
+### Installing Dependencies 
 
+Install Bun 
 ```shell
-$ forge build
+$ curl -fsSL https://bun.sh/install | bash 
+```
+
+Run Bun install for javascript dependencies
+```shell
+$ bun install
+```
+
+### Environmental Variables 
+
+Copy .env.example to .env and add environmental variables. 
+
+```
+MAINNET_RPC_URL=https://mainnet.infura.io/v3/
+MAINNET_ARCHIVE_RPC_URL=
+MAINNET_ETHERSCAN_URL=https://api.etherscan.io/api
+ETHERSCAN_API_KEY=
 ```
 
 ### Test
 
+1. The test suite includes fork tests that require foundry ffi. 
+2. Add RPC_URLs to the .env and run forge test with the --ffi flag. 
 ```shell
-$ forge test
+$ forge test --ffi 
 ```
 
 ### Format
 
 ```shell
 $ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
 ```
