@@ -101,7 +101,6 @@ contract Liquidation {
         view
         returns (Configs memory configs)
     {
-        address reserveOracle;
         if (ilkIndex == 0) {
             configs.reserveOracle = RESERVE_ORACLE_0;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;

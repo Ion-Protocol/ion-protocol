@@ -5,6 +5,6 @@
   "name": "Ion Weth",
   "symbol": "iWETH",
   "initialDefaultAdmin": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "whitelist": "0x55027d3dBBcEA0327eF73eFd74ba0Af42A13A966",
-  "interestRateModule": "0xbeC6419cD931e29ef41157fe24C6928a0C952f0b"
+  "whitelist": "0x057cD3082EfED32d5C907801BF3628B27D88fD80",
+  "interestRateModule": "0x519b05b3655F4b89731B677d64CEcf761f4076f6"
 }

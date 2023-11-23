@@ -35,7 +35,6 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256 _targetHealth = 1.25 ether;
         uint256 _reserveFactor = 0.02 ether;
-        uint256 _maxDiscount = 0.2 ether;
 
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, maxDiscounts);
@@ -74,7 +73,6 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256 _targetHealth = 1.25e27;
         uint256 _reserveFactor = 0.02e27;
-        uint256 _maxDiscount = 0.2e27;
 
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, maxDiscounts);
