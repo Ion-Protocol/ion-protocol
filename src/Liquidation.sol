@@ -96,9 +96,11 @@ contract Liquidation {
     /**
      * @notice Returns the exchange rate and liquidation threshold for the given ilkIndex.
      */
-
-    function _getConfigs(uint8 ilkIndex) internal view returns (Configs memory configs) {
-        address reserveOracle;
+    function _getConfigs(uint8 ilkIndex)
+        internal
+        view
+        returns (Configs memory configs)
+    {
         if (ilkIndex == 0) {
             configs.reserveOracle = RESERVE_ORACLE_0;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
