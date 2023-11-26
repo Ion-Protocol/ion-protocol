@@ -1,4 +1,7 @@
-# Run 'anvil --fork-url $RPC --chain-id 31337' first
+# Run 
+# 1. anvil --fork-url $RPC --chain-id 31337
+# 2. bash node.sh 
+# 3. forge script script/__TestFlashLeverage.s.sol --rpc-url http://localhost:8545 
 # We won't `source .env` here so all auth will be done using test accounts
 
 # Deploy YieldOracle
@@ -96,4 +99,16 @@ jq --arg ionpool_addr "$ionpool_addr" \
 
 CHAIN_ID=1 forge script script/10_DeployIonZapper.s.sol --rpc-url http://localhost:8545 --broadcast --slow --tc DeployIonZapperScript
 
-# run the deployment tests 
+# write all the deployed addresses to json
+wst_eth_handler_addr=$(jq '.returns.wstEthHandler.value' 'broadcast/08_DeployInitialHandlers.s.sol/31337/run-latest.json' | xargs)
+eth_x_handler_addr=$(jq '.returns.ethXHandler.value' 'broadcast/08_DeployInitialHandlers.s.sol/31337/run-latest.json' | xargs)
+sw_eth_handler_addr=$(jq '.returns.swEthHandler.value' 'broadcast/08_DeployInitialHandlers.s.sol/31337/run-latest.json' | xargs)
+
+echo "{
+    \"interestRate\": \"$interest_rate_addr\",
+    \"ionPool\": \"$ionpool_addr\", 
+    \"whitelist\": \"$whitelist_addr\", 
+    \"wstEthHandler\": \"$wst_eth_handler_addr\",
+    \"ethXHandler\": \"$eth_x_handler_addr\",
+    \"swEthHandler\": \"$sw_eth_handler_addr\"
+}" > ./deployment-config/DeployedAddresses.json
