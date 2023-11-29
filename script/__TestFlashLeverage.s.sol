@@ -25,8 +25,6 @@ IERC20 constant MAINNET_ETHX = IERC20(0xA35b1B31Ce002FBF2058D22F30f95D405200A15b
 
 IWETH9 constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-
-
 using LidoLibrary for IWstEth;
 using StaderLibrary for IStaderStakePoolsManager;
 using SwellLibrary for ISwEth;

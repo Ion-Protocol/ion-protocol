@@ -103,10 +103,12 @@ CHAIN_ID=1 forge script script/10_DeployIonZapper.s.sol --rpc-url http://localho
 wst_eth_handler_addr=$(jq '.returns.wstEthHandler.value' 'broadcast/08_DeployInitialHandlers.s.sol/31337/run-latest.json' | xargs)
 eth_x_handler_addr=$(jq '.returns.ethXHandler.value' 'broadcast/08_DeployInitialHandlers.s.sol/31337/run-latest.json' | xargs)
 sw_eth_handler_addr=$(jq '.returns.swEthHandler.value' 'broadcast/08_DeployInitialHandlers.s.sol/31337/run-latest.json' | xargs)
+ion_zapper_addr=$(jq '.returns.ionZapper.value' 'broadcast/10_DeployIonZapper.s.sol/31337/run-latest.json' | xargs)
 
 echo "{
     \"interestRate\": \"$interest_rate_addr\",
-    \"ionPool\": \"$ionpool_addr\", 
+    \"ionPool\": \"$ionpool_addr\",
+    \"ionZapper\": \"$ion_zapper_addr\",  
     \"whitelist\": \"$whitelist_addr\", 
     \"wstEthHandler\": \"$wst_eth_handler_addr\",
     \"ethXHandler\": \"$eth_x_handler_addr\",

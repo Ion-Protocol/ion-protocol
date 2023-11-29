@@ -16,7 +16,7 @@ const ETHERSCAN_URL =
     ? process.env.GOERLI_ETHERSCAN_URL
     : process.env.MAINNET_ETHERSCAN_URL;
 const RPC_URL = 
-  CHAIN_ID == "5" ? process.env.GOERLI_ARCHIVE : process.env.MAINNET_ARCHIVE;
+  CHAIN_ID == "5" ? process.env.GOERLI_ARCHIVE : process.env.MAINNET_ARCHIVE_RPC_URL;
 
 const exchangeRateAddresses = {
   lido: {
