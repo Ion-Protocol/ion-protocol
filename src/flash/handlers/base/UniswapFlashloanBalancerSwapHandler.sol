@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
+import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3FlashCallback } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3FlashCallback.sol";

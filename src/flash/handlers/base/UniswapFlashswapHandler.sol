@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath } from "../../../libraries/math/WadRayMath.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";

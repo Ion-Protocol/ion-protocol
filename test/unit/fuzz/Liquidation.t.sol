@@ -98,9 +98,9 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
         }
 
-        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount()); 
+        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount());
         for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            maxDiscounts[i] = deploymentArgs.maxDiscount; 
+            maxDiscounts[i] = deploymentArgs.maxDiscount;
         }
 
         liquidation = new Liquidation(
@@ -205,9 +205,9 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
         }
 
-        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount()); 
+        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount());
         for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            maxDiscounts[i] = deploymentArgs.maxDiscount; 
+            maxDiscounts[i] = deploymentArgs.maxDiscount;
         }
 
         liquidation = new Liquidation(

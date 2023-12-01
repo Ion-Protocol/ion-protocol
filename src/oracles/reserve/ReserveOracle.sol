@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
+import { IReserveFeed } from "../../interfaces/IReserveFeed.sol";
+import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 // should equal to the number of feeds available in the contract
 uint8 constant MAX_FEED_COUNT = 3;

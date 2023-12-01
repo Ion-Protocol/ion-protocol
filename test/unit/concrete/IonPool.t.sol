@@ -1046,8 +1046,10 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
             assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
 
             vm.expectEmit(true, true, true, true);
-            // Rate will be 1e27 here 
-            emit Borrow(i, borrower1, borrower1, normalizedBorrowAmount, RAY, (borrowedSoFar += normalizedBorrowAmount * RAY));
+            // Rate will be 1e27 here
+            emit Borrow(
+                i, borrower1, borrower1, normalizedBorrowAmount, RAY, (borrowedSoFar += normalizedBorrowAmount * RAY)
+            );
             vm.prank(borrower1);
             ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
 
