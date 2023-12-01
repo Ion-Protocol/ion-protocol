@@ -2,18 +2,17 @@
 
 pragma solidity 0.8.21;
 
-import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
-import { SwEthSpotOracle } from "src/oracles/spot/SwEthSpotOracle.sol";
-import { WstEthSpotOracle } from "src/oracles/spot/WstEthSpotOracle.sol";
-import { EthXSpotOracle } from "src/oracles/spot/EthXSpotOracle.sol";
+import { SpotOracle } from "../../../src/oracles/spot/SpotOracle.sol";
+import { SwEthSpotOracle } from "../../../src/oracles/spot/SwEthSpotOracle.sol";
+import { WstEthSpotOracle } from "../../../src/oracles/spot/WstEthSpotOracle.sol";
+import { EthXSpotOracle } from "../../../src/oracles/spot/EthXSpotOracle.sol";
+import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
+import { SwEthReserveOracle } from "../../../src/oracles/reserve/SwEthReserveOracle.sol";
+import { WstEthReserveOracle } from "../../../src/oracles/reserve/WstEthReserveOracle.sol";
+import { EthXReserveOracle } from "../../../src/oracles/reserve/EthxReserveOracle.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
-import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
-import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
-import { EthXReserveOracle } from "src/oracles/reserve/EthxReserveOracle.sol";
-
-import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
 import { console2 } from "forge-std/console2.sol";
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { IWstEth, IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
-import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";
+import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
+import { IWstEth, IStaderStakePoolsManager } from "../../src/interfaces/ProviderInterfaces.sol";
+import { ReserveFeed } from "../../src/oracles/reserve/ReserveFeed.sol";
 
-import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
-import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
+import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
+import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 
 // fork tests for integrating with external contracts
 contract ReserveOracleSharedSetup is IonPoolSharedSetup {

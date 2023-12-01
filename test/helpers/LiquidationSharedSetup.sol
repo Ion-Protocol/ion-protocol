@@ -3,9 +3,10 @@
 pragma solidity 0.8.21;
 
 import { IonPoolSharedSetup, MockReserveOracle } from "../helpers/IonPoolSharedSetup.sol";
-import { Liquidation } from "src/Liquidation.sol";
-import { GemJoin } from "src/join/GemJoin.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { Liquidation } from "../../src/Liquidation.sol";
+import { GemJoin } from "../../src/join/GemJoin.sol";
+import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
+
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { YieldOracle, LOOK_BACK, ILK_COUNT } from "src/YieldOracle.sol";
+import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../../src/YieldOracle.sol";
 
 import {
     YieldOracleSharedSetup,
     WST_ETH_EXCHANGE_RATE,
     STADER_ETH_EXCHANGE_RATE,
     SWELL_ETH_EXCHANGE_RATE
-} from "test/helpers/YieldOracleSharedSetup.sol";
+} from "../../helpers/YieldOracleSharedSetup.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 

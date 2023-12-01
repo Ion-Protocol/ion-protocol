@@ -2,9 +2,11 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "../../src/IonPool.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { InterestRate } from "../../src/InterestRate.sol";
+
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
+
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract IonPoolExposed is IonPool {
     constructor(

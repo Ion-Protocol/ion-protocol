@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { IonPool } from "../../src/IonPool.sol";
+import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 
 library InvariantHelpers {
     using WadRayMath for *;

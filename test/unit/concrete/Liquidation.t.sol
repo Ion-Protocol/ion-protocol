@@ -3,9 +3,10 @@ pragma solidity 0.8.21;
 
 // import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
-import { Liquidation } from "src/Liquidation.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { LiquidationSharedSetup } from "../../helpers/LiquidationSharedSetup.sol";
+import { Liquidation } from "../../../src/Liquidation.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
+
 import "forge-std/console.sol";
 
 contract MockstEthReserveOracle {

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModule } from "src/reward/RewardModule.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { TransparentUpgradeableProxy } from "src/admin/TransparentUpgradeableProxy.sol";
-import { ProxyAdmin } from "src/admin/ProxyAdmin.sol";
+import { RewardModule } from "../../src/reward/RewardModule.sol";
+import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
+import { TransparentUpgradeableProxy } from "../../src/admin/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "../../src/admin/ProxyAdmin.sol";
 
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModuleSharedSetup } from "test/helpers/RewardModuleSharedSetup.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
+
+import { RewardModuleSharedSetup } from "../../helpers/RewardModuleSharedSetup.sol";
 import { UserHandler, SupplyFactorIncreaseHandler } from "./Handlers.t.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { Liquidation } from "src/Liquidation.sol";
+import { LiquidationSharedSetup } from "../../helpers/LiquidationSharedSetup.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
+import { Liquidation } from "../../../src/Liquidation.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**

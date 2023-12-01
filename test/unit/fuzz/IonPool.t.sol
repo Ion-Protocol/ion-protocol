@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
+import { IonPool } from "../../../src/IonPool.sol";
+import { WadRayMath, RAY } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { IIonPoolEvents } from "test/helpers/IIonPoolEvents.sol";
-import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
+import { IIonPoolEvents } from "../../helpers/IIonPoolEvents.sol";
+import { IonPoolSharedSetup } from "../../helpers/IonPoolSharedSetup.sol";
+import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
