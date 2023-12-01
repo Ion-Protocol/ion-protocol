@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { Whitelist } from "src/Whitelist.sol";
-import { InterestRate } from "src/InterestRate.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { Whitelist } from "../src/Whitelist.sol";
+import { InterestRate } from "../src/InterestRate.sol";
 
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -20,7 +20,7 @@ contract DeployIonPoolScript is BaseScript {
     string configPath = "./deployment-config/04_IonPool.json";
     string config = vm.readFile(configPath);
 
-    function run() public broadcast returns (IonPool ionPool, TransparentUpgradeableProxy proxy) {
+    function run() public broadcast returns (IonPool ionPool) {
         IonPool ionPoolImpl = new IonPool();
 
         address underlying = config.readAddress(".underlying");
@@ -44,7 +44,7 @@ contract DeployIonPoolScript is BaseScript {
             whitelist
         );
 
-        proxy = new TransparentUpgradeableProxy(address(ionPoolImpl), initialDefaultAdmin, initData);
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(ionPoolImpl), initialDefaultAdmin, initData);
         ionPool = IonPool(address(proxy));
     }
 }

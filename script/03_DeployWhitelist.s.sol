@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { Whitelist } from "src/Whitelist.sol";
+import { Whitelist } from "../src/Whitelist.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 

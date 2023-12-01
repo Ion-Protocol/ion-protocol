@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
-import { WstEthSpotOracle } from "src/oracles/spot/WstEthSpotOracle.sol";
-import { EthXReserveOracle } from "src/oracles/reserve/EthXReserveOracle.sol";
-import { EthXSpotOracle } from "src/oracles/spot/EthXSpotOracle.sol";
-import { SwEthReserveOracle } from "src/oracles/reserve/SwEthReserveOracle.sol";
-import { SwEthSpotOracle } from "src/oracles/spot/SwEthSpotOracle.sol";
+import { WstEthReserveOracle } from "../src/oracles/reserve/WstEthReserveOracle.sol";
+import { WstEthSpotOracle } from "../src/oracles/spot/WstEthSpotOracle.sol";
+import { EthXReserveOracle } from "../src/oracles/reserve/EthXReserveOracle.sol";
+import { EthXSpotOracle } from "../src/oracles/spot/EthXSpotOracle.sol";
+import { SwEthReserveOracle } from "../src/oracles/reserve/SwEthReserveOracle.sol";
+import { SwEthSpotOracle } from "../src/oracles/spot/SwEthSpotOracle.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 

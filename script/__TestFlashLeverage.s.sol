@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { WstEthHandler } from "src/flash/handlers/WstEthHandler.sol";
-import { EthXHandler } from "src/flash/handlers/EthXHandler.sol";
-import { SwEthHandler } from "src/flash/handlers/SwEthHandler.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
-import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
-import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
-import { SwellLibrary } from "src/libraries/SwellLibrary.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { WstEthHandler } from "../src/flash/handlers/WstEthHandler.sol";
+import { EthXHandler } from "../src/flash/handlers/EthXHandler.sol";
+import { SwEthHandler } from "../src/flash/handlers/SwEthHandler.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth } from "../src/interfaces/ProviderInterfaces.sol";
+import { LidoLibrary } from "../src/libraries/LidoLibrary.sol";
+import { StaderLibrary } from "../src/libraries/StaderLibrary.sol";
+import { SwellLibrary } from "../src/libraries/SwellLibrary.sol";
+import { IWETH9 } from "../src/interfaces/IWETH9.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 IonPool constant POOL = IonPool(0xB2ff9d5e60d68A52cea3cd041b32f1390A880365);
