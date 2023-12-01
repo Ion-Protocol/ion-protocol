@@ -10,22 +10,25 @@ import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
 import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
 import { SwellLibrary } from "src/libraries/SwellLibrary.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { BaseScript } from "script/Base.s.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-IonPool constant POOL = IonPool(0x92b0d1Cc77b84973B7041CB9275d41F09840eaDd);
+IonPool constant POOL = IonPool(0xB2ff9d5e60d68A52cea3cd041b32f1390A880365);
 IWstEth constant WST_ETH = IWstEth(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
 IStaderStakePoolsManager constant MAINNET_STADER = IStaderStakePoolsManager(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
 ISwEth constant MAINNET_SWELL = ISwEth(0xf951E335afb289353dc249e82926178EaC7DEd78);
 
 IERC20 constant MAINNET_ETHX = IERC20(0xA35b1B31Ce002FBF2058D22F30f95D405200A15b);
 
-WstEthHandler constant WSTETH_HANDLER = WstEthHandler(payable(0xc3b99d27eF3B07C94Ee3cFD670281F0CF98A02f1));
-EthXHandler constant ETHX_HANDLER = EthXHandler(payable(0x20F5f006a0184883068bBF58fb0c526A8EEa8BFD));
-SwEthHandler constant SWETH_HANDLER = SwEthHandler(payable(0x975cDd867aCB99f0195be09C269E2440aa1b1FA8));
+WstEthHandler constant WSTETH_HANDLER = WstEthHandler(payable(0x575D3d18666B28680255a202fB5d482D1949bB32));
+EthXHandler constant ETHX_HANDLER = EthXHandler(payable(0x4458AcB1185aD869F982D51b5b0b87e23767A3A9));
+SwEthHandler constant SWETH_HANDLER = SwEthHandler(payable(0x8d375dE3D5DDde8d8caAaD6a4c31bD291756180b));
+
+IUniswapV3Pool constant SWETH_ETH_POOL = IUniswapV3Pool(0x30eA22C879628514f1494d4BBFEF79D21A6B49A2);
 
 IWETH9 constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
@@ -35,6 +38,7 @@ using SwellLibrary for ISwEth;
 
 contract FlashLeverageScript is BaseScript {
     function run() public broadcast {
+        SWETH_ETH_POOL.increaseObservationCardinalityNext(100);
         POOL.updateSupplyCap(1000 ether);
         WETH.deposit{ value: 500 ether }();
         WETH.approve(address(POOL), type(uint256).max);
