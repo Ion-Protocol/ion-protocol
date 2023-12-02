@@ -92,7 +92,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             assetOut: address(LST_TOKEN),
             amountIn: amountToLeverage
         });
- 
+
         flashCallbackData.user = msg.sender;
         flashCallbackData.initialDeposit = initialDeposit;
         flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove = maxResultingAdditionalDebt;

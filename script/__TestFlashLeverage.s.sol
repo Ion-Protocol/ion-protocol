@@ -26,6 +26,8 @@ IERC20 constant MAINNET_ETHX = IERC20(0xA35b1B31Ce002FBF2058D22F30f95D405200A15b
 
 IWETH9 constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
+IUniswapV3Pool constant SWETH_ETH_POOL = IUniswapV3Pool(0x30eA22C879628514f1494d4BBFEF79D21A6B49A2);
+
 using LidoLibrary for IWstEth;
 using StaderLibrary for IStaderStakePoolsManager;
 using SwellLibrary for ISwEth;
@@ -33,16 +35,15 @@ using SwellLibrary for ISwEth;
 contract FlashLeverageScript is BaseScript {
     string configPath = "./deployment-config/DeployedAddresses.json";
     string config = vm.readFile(configPath);
-    
-    function run() public broadcast {
 
-        IonPool pool = IonPool(vm.parseJsonAddress(config, ".ionPool")); 
+    function run() public broadcast {
+        IonPool pool = IonPool(vm.parseJsonAddress(config, ".ionPool"));
         WstEthHandler wstEthHandler = WstEthHandler(payable(vm.parseJsonAddress(config, ".wstEthHandler")));
         EthXHandler ethXHandler = EthXHandler(payable(vm.parseJsonAddress(config, ".ethXHandler")));
         SwEthHandler swEthHandler = SwEthHandler(payable(vm.parseJsonAddress(config, ".swEthHandler")));
-        
+
         SWETH_ETH_POOL.increaseObservationCardinalityNext(100);
-        POOL.updateSupplyCap(1000 ether);
+        pool.updateSupplyCap(1000 ether);
         WETH.deposit{ value: 500 ether }();
         WETH.approve(address(pool), type(uint256).max);
         pool.supply(address(this), 500 ether, new bytes32[](0));

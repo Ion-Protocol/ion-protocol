@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol"; 
+import { IonPool } from "src/IonPool.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
@@ -25,7 +25,6 @@ contract DeployIonZapperScript is BaseScript {
     string config = vm.readFile(configPath);
 
     function run() public broadcast returns (IonZapper ionZapper) {
-
         IonPool ionPool = IonPool(vm.parseJsonAddress(config, ".ionPool"));
         IWETH9 weth = IWETH9(vm.parseJsonAddress(config, ".weth"));
         IERC20 stEth = IERC20(vm.parseJsonAddress(config, ".stEth"));

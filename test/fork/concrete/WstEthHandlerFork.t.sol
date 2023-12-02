@@ -55,32 +55,6 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
 }
 
 contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
-
-    function testFork_ZapDepositAndBorrow() external {
-        uint256 ethDepositAmount = 2e18; // in eth 
-        uint256 borrowAmount = 0.5e18; // in weth
-
-        vm.deal(address(this), ethDepositAmount);
-        (bool sent, ) = address(MAINNET_STETH).call{value: ethDepositAmount}(""); 
-        assertTrue(sent, "mint stEth call"); 
-
-        uint256 stEthDepositAmount = IERC20(address(MAINNET_STETH)).balanceOf(address(this)); 
-        uint256 wstEthDepositAmount = MAINNET_WSTETH.getWstETHByStETH(stEthDepositAmount); // in wstEth  
-
-        IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
-        ionPool.addOperator(address(wstEthHandler)); 
-        wstEthHandler.zapDepositAndBorrow(stEthDepositAmount, borrowAmount);
-
-        uint256 currentRate = ionPool.rate(ilkIndex);
-        uint256 roundingError = currentRate / RAY;
-
-        assertEq(ionPool.collateral(ilkIndex, address(this)), wstEthDepositAmount);
-        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), borrowAmount.rayDivUp(currentRate));
-        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
-        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
-
-    }
-
     function testFork_FlashloanCollateral() public virtual {
         uint256 initialDeposit = 1e18; // in wstEth
         uint256 resultingAdditionalCollateral = 5e18; // in wstEth
@@ -331,6 +305,105 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         vm.expectRevert();
         wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+    }
+}
+
+contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
+    function _mintStEth(uint256 amount) internal {
+        vm.deal(address(this), amount);
+        (bool sent,) = address(MAINNET_STETH).call{ value: amount }("");
+        assertTrue(sent, "mint stEth failed");
+    }
+
+    function testFork_ZapDepositAndBorrow() external {
+        uint256 ethDepositAmount = 2e18; // in eth
+        uint256 borrowAmount = 0.5e18; // in weth
+
+        _mintStEth(ethDepositAmount);
+
+        uint256 stEthDepositAmount = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
+
+        IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
+        ionPool.addOperator(address(wstEthHandler));
+        wstEthHandler.zapDepositAndBorrow(stEthDepositAmount, borrowAmount);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        uint256 expectedWstEthDepositAmount = MAINNET_WSTETH.getWstETHByStETH(stEthDepositAmount); // in wstEth
+
+        assertEq(ionPool.collateral(ilkIndex, address(this)), expectedWstEthDepositAmount);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), borrowAmount.rayDivUp(currentRate));
+        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
+    }
+
+    function testFork_ZapFlashLeverageCollateral() external {
+        uint256 ethDepositAmount = 2e18; // in eth
+        _mintStEth(ethDepositAmount);
+
+        // input to zap
+        uint256 stEthDepositAmount = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
+        uint256 resultingAdditionalStEthCollateral = 5e18; // in stEth
+
+        // expected input to flashLeverageCollateral
+        uint256 wstEthDepositAmount = MAINNET_WSTETH.getWstETHByStETH(stEthDepositAmount);
+        uint256 resultingAdditionalWstEthCollateral =
+            IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingAdditionalStEthCollateral);
+
+        uint256 maxResultingDebt =
+            MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingAdditionalWstEthCollateral - wstEthDepositAmount);
+
+        IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
+        ionPool.addOperator(address(wstEthHandler));
+        wstEthHandler.zapFlashLeverageCollateral(
+            stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt
+        );
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)),
+            maxResultingDebt,
+            "max resulting debt"
+        );
+        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0, "handler wstEth balance");
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError, "handler weth dust");
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalWstEthCollateral, "collateral");
+    }
+
+    function testFork_ZapFlashLeverageWeth() external {
+        uint256 ethDepositAmount = 2e18; // in eth
+        _mintStEth(ethDepositAmount);
+
+        // input to zap
+        uint256 stEthDepositAmount = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
+        uint256 resultingAdditionalStEthCollateral = 5e18; // in stEth
+
+        // expected input to flashLeverageCollateral
+        uint256 wstEthDepositAmount = MAINNET_WSTETH.getWstETHByStETH(stEthDepositAmount);
+        uint256 resultingAdditionalWstEthCollateral =
+            IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingAdditionalStEthCollateral);
+
+        uint256 maxResultingDebt =
+            MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingAdditionalWstEthCollateral - wstEthDepositAmount);
+
+        IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
+        ionPool.addOperator(address(wstEthHandler));
+        wstEthHandler.zapFlashLeverageWeth(stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)),
+            maxResultingDebt,
+            "max resulting debt"
+        );
+        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0, "handler wstEth balance");
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError, "handler weth dust");
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalWstEthCollateral, "collateral");
     }
 }
 

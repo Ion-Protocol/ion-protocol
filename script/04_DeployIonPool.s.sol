@@ -44,7 +44,8 @@ contract DeployIonPoolScript is BaseScript {
             whitelist
         );
 
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(ionPoolImpl), initialDefaultAdmin, initData);
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(ionPoolImpl), initialDefaultAdmin, initData);
         ionPool = IonPool(address(proxy));
     }
 }

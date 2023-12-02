@@ -794,7 +794,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         external
         onlyRole(LIQUIDATOR_ROLE)
     {
-        _accrueInterestForIlk(ilkIndex); 
+        _accrueInterestForIlk(ilkIndex);
 
         IonPoolStorage storage $ = _getIonPoolStorage();
 
@@ -825,14 +825,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * @param usr user
      * @param wad amount to add or remove
      */
-    function mintAndBurnGem(
-        uint8 ilkIndex,
-        address usr,
-        int256 wad
-    )
-        external
-        onlyRole(GEM_JOIN_ROLE)
-    {
+    function mintAndBurnGem(uint8 ilkIndex, address usr, int256 wad) external onlyRole(GEM_JOIN_ROLE) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.gem[ilkIndex][usr] = _add($.gem[ilkIndex][usr], wad);

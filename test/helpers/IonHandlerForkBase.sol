@@ -38,7 +38,7 @@ interface IComposableStableSwapPool {
 abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     uint256 constant INITIAL_THIS_UNDERLYING_BALANCE = 20e18;
 
-    IStEth constant MAINNET_STETH = IStEth(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84); 
+    IStEth constant MAINNET_STETH = IStEth(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstEth constant MAINNET_WSTETH = IWstEth(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     IStaderStakePoolsManager constant MAINNET_STADER =
         IStaderStakePoolsManager(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);

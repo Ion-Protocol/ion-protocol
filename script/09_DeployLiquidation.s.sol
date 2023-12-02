@@ -17,17 +17,16 @@ contract DeployLiquidationScript is BaseScript {
     string config = vm.readFile(configPath);
 
     function run() public broadcast returns (Liquidation liquidation) {
-
-        address ionPool = vm.parseJsonAddress(config, ".ionPool"); 
-        address protocol = vm.parseJsonAddress(config, ".protocol"); 
-        address[] memory reserveOracles = vm.parseJsonAddressArray(config, ".reserveOracles"); 
-        uint256[] memory liquidationThresholds = vm.parseJsonUintArray(config, ".liquidationThresholds");  
-        uint256 targetHealth = vm.parseJsonUint(config, ".targetHealth"); 
+        address ionPool = vm.parseJsonAddress(config, ".ionPool");
+        address protocol = vm.parseJsonAddress(config, ".protocol");
+        address[] memory reserveOracles = vm.parseJsonAddressArray(config, ".reserveOracles");
+        uint256[] memory liquidationThresholds = vm.parseJsonUintArray(config, ".liquidationThresholds");
+        uint256 targetHealth = vm.parseJsonUint(config, ".targetHealth");
         uint256 reserveFactor = vm.parseJsonUint(config, ".reserveFactor");
-        uint256[] memory maxDiscounts = vm.parseJsonUintArray(config, ".maxDiscounts"); 
+        uint256[] memory maxDiscounts = vm.parseJsonUintArray(config, ".maxDiscounts");
 
-        // TODO: after import constants 
-        // assert(reserveOracles.length == ILK_COUNT); 
+        // TODO: after import constants
+        // assert(reserveOracles.length == ILK_COUNT);
         // assert(liquidationThresholds.length == ILK_COUNT);
         // assert(maxDiscounts.length == ILK_COUNT);
 
@@ -41,5 +40,4 @@ contract DeployLiquidationScript is BaseScript {
             maxDiscounts
         );
     }
-
 }

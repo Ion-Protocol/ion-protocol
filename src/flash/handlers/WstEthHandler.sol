@@ -31,7 +31,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
         // token0 is wstEth
         UniswapFlashswapHandler(_factory, _wstEthUniswapPool, _poolFee, false)
-    {      
+    {
         // NOTE: approves wstEth contract infinite approval to move this contract's stEth
         STETH.approve(address(LST_TOKEN), type(uint256).max);
     }
@@ -45,9 +45,39 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         return IWstEth(address(LST_TOKEN)).getEthAmountInForLstAmountOut(amountLst);
     }
 
-    function zapDepositAndBorrow(uint256 amountStEth, uint256 amountToBorrow) external {
-        STETH.transferFrom(msg.sender, address(this), amountStEth);
-        uint256 outputWstEthAmount = IWstEth(address(LST_TOKEN)).wrap(amountStEth);
-        _depositAndBorrow(msg.sender, msg.sender, outputWstEthAmount, amountToBorrow, AmountToBorrow.IS_MAX); 
+    function zapDepositAndBorrow(uint256 stEthAmount, uint256 amountToBorrow) external {
+        STETH.transferFrom(msg.sender, address(this), stEthAmount);
+        uint256 outputWstEthAmount = IWstEth(address(LST_TOKEN)).wrap(stEthAmount);
+        _depositAndBorrow(msg.sender, msg.sender, outputWstEthAmount, amountToBorrow, AmountToBorrow.IS_MAX);
     }
+
+    function zapFlashLeverageCollateral(
+        uint256 initialStEthDeposit,
+        uint256 resultingAdditionalStEthCollateral,
+        uint256 maxResultingDebt
+    )
+        external
+    {
+        STETH.transferFrom(msg.sender, address(this), initialStEthDeposit);
+        uint256 initialDepositWstEthAmount = IWstEth(address(LST_TOKEN)).wrap(initialStEthDeposit);
+        uint256 resultingAdditionalWstEthCollateral =
+            IWstEth(address(LST_TOKEN)).getWstETHByStETH(resultingAdditionalStEthCollateral);
+        _flashLeverageCollateral(initialDepositWstEthAmount, resultingAdditionalWstEthCollateral, maxResultingDebt);
+    }
+
+    function zapFlashLeverageWeth(
+        uint256 initialStEthDeposit,
+        uint256 resultingAdditionalStEthCollateral,
+        uint256 maxResultingDebt
+    )
+        external
+    {
+        STETH.transferFrom(msg.sender, address(this), initialStEthDeposit);
+        uint256 initialDepositWstEthAmount = IWstEth(address(LST_TOKEN)).wrap(initialStEthDeposit);
+        uint256 resultingAdditionalWstEthCollateral =
+            IWstEth(address(LST_TOKEN)).getWstETHByStETH(resultingAdditionalStEthCollateral);
+        _flashLeverageWeth(initialDepositWstEthAmount, resultingAdditionalWstEthCollateral, maxResultingDebt);
+    }
+
+    function zapFlashswapLeverage() external { }
 }

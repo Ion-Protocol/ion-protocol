@@ -10,6 +10,8 @@ import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vaul
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import { console2 } from "forge-std/console2.sol";
+
 IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
 /**
@@ -55,7 +57,21 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         external
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        _flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+    }
 
+    /**
+     * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
+     * that needs additional logic
+     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     */
+    function _flashLeverageCollateral(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingDebt
+    )
+        internal
+    {
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in collateral terms
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
@@ -103,10 +119,23 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256 maxResultingDebt
     )
         external
-        payable
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        _flashLeverageWeth(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+    }
 
+    /**
+     * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
+     * that needs additional logic
+     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     */
+    function _flashLeverageWeth(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingDebt
+    )
+        internal
+    {
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(WETH));
 
