@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModule } from "src/reward/RewardModule.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { RewardModule } from "../../../src/reward/RewardModule.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { RewardModuleSharedSetup } from "test/helpers/RewardModuleSharedSetup.sol";
+import { RewardModuleSharedSetup } from "../../helpers/RewardModuleSharedSetup.sol";
 
 contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
     using WadRayMath for uint256;

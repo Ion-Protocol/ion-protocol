@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { GemJoin } from "src/join/GemJoin.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { GemJoin } from "../src/join/GemJoin.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 

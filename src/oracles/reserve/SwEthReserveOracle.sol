@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
+import { ISwEth } from "../../interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
 // https://etherscan.io/token/0xf951E335afb289353dc249e82926178EaC7DEd78#readProxyContract
@@ -22,7 +22,7 @@ contract SwEthReserveOracle is ReserveOracle {
         _initializeExchangeRate();
     }
 
-    // @notice returns the exchange rate between swETH to ETH that is supported by Swel. 
+    // @notice returns the exchange rate between swETH to ETH that is supported by Swell.
     function _getProtocolExchangeRate() internal view override returns (uint256 protocolExchangeRate) {
         protocolExchangeRate = ISwEth(protocolFeed).getRate();
     }

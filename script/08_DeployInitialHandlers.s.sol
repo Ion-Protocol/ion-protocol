@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { WstEthHandler } from "src/flash/handlers/WstEthHandler.sol";
-import { EthXHandler } from "src/flash/handlers/EthXHandler.sol";
-import { SwEthHandler } from "src/flash/handlers/SwEthHandler.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
-import { GemJoin } from "src/join/GemJoin.sol";
-import { Whitelist } from "src/Whitelist.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { WstEthHandler } from "../src/flash/handlers/WstEthHandler.sol";
+import { EthXHandler } from "../src/flash/handlers/EthXHandler.sol";
+import { SwEthHandler } from "../src/flash/handlers/SwEthHandler.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth } from "../src/interfaces/ProviderInterfaces.sol";
+import { IWETH9 } from "../src/interfaces/IWETH9.sol";
+import { GemJoin } from "../src/join/GemJoin.sol";
+import { Whitelist } from "../src/Whitelist.sol";
 
 import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 

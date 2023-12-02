@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { InterestRate, IlkData } from "src/InterestRate.sol";
-import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
+import { InterestRate, IlkData } from "../src/InterestRate.sol";
+import { IYieldOracle } from "../src/interfaces/IYieldOracle.sol";
 
 import { LibString } from "solady/src/utils/LibString.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 

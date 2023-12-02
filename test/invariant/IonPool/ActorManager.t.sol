@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { GemJoin } from "src/join/GemJoin.sol";
-import { IonPool } from "src/IonPool.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { GemJoin } from "../../../src/join/GemJoin.sol";
+import { IonPool } from "../../../src/IonPool.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
-import { InvariantHelpers } from "test/helpers/InvariantHelpers.sol";
+import { IonPoolSharedSetup } from "../../helpers/IonPoolSharedSetup.sol";
+import { InvariantHelpers } from "../../helpers/InvariantHelpers.sol";
 
 import { LenderHandler, BorrowerHandler, LiquidatorHandler } from "./Handlers.t.sol";
 

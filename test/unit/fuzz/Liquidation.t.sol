@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { LiquidationSharedSetup } from "test/helpers/LiquidationSharedSetup.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { Liquidation } from "src/Liquidation.sol";
+import { LiquidationSharedSetup } from "../../helpers/LiquidationSharedSetup.sol";
+import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
+import { Liquidation } from "../../../src/Liquidation.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
@@ -97,9 +98,9 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
         }
 
-        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount()); 
+        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount());
         for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            maxDiscounts[i] = deploymentArgs.maxDiscount; 
+            maxDiscounts[i] = deploymentArgs.maxDiscount;
         }
 
         liquidation = new Liquidation(
@@ -204,9 +205,9 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
         }
 
-        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount()); 
+        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount());
         for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            maxDiscounts[i] = deploymentArgs.maxDiscount; 
+            maxDiscounts[i] = deploymentArgs.maxDiscount;
         }
 
         liquidation = new Liquidation(

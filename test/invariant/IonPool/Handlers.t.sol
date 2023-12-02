@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
-import { IonRegistry } from "src/periphery/IonRegistry.sol";
-import { GemJoin } from "src/join/GemJoin.sol";
-import { SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
+import { WadRayMath, RAY } from "../../../src/libraries/math/WadRayMath.sol";
+import { IonRegistry } from "../../../src/periphery/IonRegistry.sol";
+import { GemJoin } from "../../../src/join/GemJoin.sol";
+import { SECONDS_IN_A_YEAR } from "../../../src/InterestRate.sol";
 
-import { IonPoolExposed } from "test/helpers/IonPoolSharedSetup.sol";
-import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.sol";
-import { HEVM } from "test/helpers/echidna/IHevm.sol";
-import { InvariantHelpers } from "test/helpers/InvariantHelpers.sol";
+import { IonPoolExposed } from "../../helpers/IonPoolSharedSetup.sol";
+import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
+import { HEVM } from "../../helpers/echidna/IHevm.sol";
+import { InvariantHelpers } from "../../helpers/InvariantHelpers.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";

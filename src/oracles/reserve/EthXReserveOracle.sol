@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
+import { IStaderStakePoolsManager } from "../../interfaces/ProviderInterfaces.sol";
+import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 uint8 constant ethXDecimals = 18;
 

@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.21;
 
-import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
+import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
 contract WstEthReserveOracle is ReserveOracle {

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WAD, RAY } from "src/libraries/math/WadRayMath.sol";
-import { WstEthReserveOracle } from "src/oracles/reserve/WstEthReserveOracle.sol";
-import { ReserveFeed } from "src/oracles/reserve/ReserveFeed.sol";
-import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
-import { IStEth, IWstEth } from "src/interfaces/ProviderInterfaces.sol";
+import { WAD, RAY } from "../../../src/libraries/math/WadRayMath.sol";
+import { WstEthReserveOracle } from "../../../src/oracles/reserve/WstEthReserveOracle.sol";
+import { ReserveFeed } from "../../../src/oracles/reserve/ReserveFeed.sol";
+import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
+import { IStEth, IWstEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 
-import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.sol";
+import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
 // fork tests for integrating with external contracts
 contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {

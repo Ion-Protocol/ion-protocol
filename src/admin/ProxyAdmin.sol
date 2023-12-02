@@ -4,6 +4,7 @@
 pragma solidity ^0.8.20;
 
 import { ITransparentUpgradeableProxy } from "./TransparentUpgradeableProxy.sol";
+
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 

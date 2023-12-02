@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { GemJoin } from "src/join/GemJoin.sol";
+import { GemJoin } from "../join/GemJoin.sol";
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 

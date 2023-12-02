@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModuleExposed } from "../../helpers/RewardModuleSharedSetup.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
+
+import { RewardModuleExposed } from "../../helpers/RewardModuleSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 
 import { CommonBase } from "forge-std/Base.sol";

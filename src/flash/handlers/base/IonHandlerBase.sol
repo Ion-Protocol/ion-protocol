@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
-import { GemJoin } from "src/join/GemJoin.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { Whitelist } from "src/Whitelist.sol";
+import { IonPool } from "../../../IonPool.sol";
+import { IWETH9 } from "../../../interfaces/IWETH9.sol";
+import { GemJoin } from "../../../join/GemJoin.sol";
+import { WadRayMath } from "../../../libraries/math/WadRayMath.sol";
+import { Whitelist } from "../../../Whitelist.sol";
+
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 

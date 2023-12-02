@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.21;
+
+import { IonPool } from "./IonPool.sol";
+import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
+import { ReserveOracle } from "./oracles/reserve/ReserveOracle.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
-import { IonPool } from "src/IonPool.sol";
-import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract Liquidation {
@@ -25,9 +25,9 @@ contract Liquidation {
     uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
     uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
 
-    uint256 public immutable MAX_DISCOUNT_0; // [ray] ex) 0.2e27 is 20% 
-    uint256 public immutable MAX_DISCOUNT_1; 
-    uint256 public immutable MAX_DISCOUNT_2; 
+    uint256 public immutable MAX_DISCOUNT_0; // [ray] ex) 0.2e27 is 20%
+    uint256 public immutable MAX_DISCOUNT_1;
+    uint256 public immutable MAX_DISCOUNT_2;
 
     // liquidation thresholds
     uint256 public immutable LIQUIDATION_THRESHOLD_0; // [ray] liquidation threshold for ilkIndex 0
@@ -71,9 +71,9 @@ contract Liquidation {
         TARGET_HEALTH = _targetHealth;
         BASE_DISCOUNT = _reserveFactor;
 
-        MAX_DISCOUNT_0 = _maxDiscount[0]; 
-        MAX_DISCOUNT_1 = _maxDiscount[1]; 
-        MAX_DISCOUNT_2 = _maxDiscount[2]; 
+        MAX_DISCOUNT_0 = _maxDiscount[0];
+        MAX_DISCOUNT_1 = _maxDiscount[1];
+        MAX_DISCOUNT_2 = _maxDiscount[2];
 
         IERC20 underlying = ionPool_.underlying();
         underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
@@ -89,9 +89,9 @@ contract Liquidation {
     }
 
     struct Configs {
-        uint256 liquidationThreshold; 
-        uint256 maxDiscount; 
-        address reserveOracle; 
+        uint256 liquidationThreshold;
+        uint256 maxDiscount;
+        address reserveOracle;
     }
     /**
      * @notice Returns the exchange rate and liquidation threshold for the given ilkIndex.
@@ -104,7 +104,7 @@ contract Liquidation {
         if (ilkIndex == 0) {
             configs.reserveOracle = RESERVE_ORACLE_0;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
-            configs.maxDiscount = MAX_DISCOUNT_0; 
+            configs.maxDiscount = MAX_DISCOUNT_0;
         } else if (ilkIndex == 1) {
             configs.reserveOracle = RESERVE_ORACLE_1;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_1;
@@ -117,7 +117,7 @@ contract Liquidation {
     }
 
     /**
-     * @notice Internal helper function for calculating the repay amount. 
+     * @notice Internal helper function for calculating the repay amount.
      * @param debtValue [rad] totalDebt
      * @param collateralValue [rad] collateral * exchangeRate * liquidationThreshold
      * @param liquidationThreshold [ray]
@@ -138,7 +138,9 @@ contract Liquidation {
         // repayDen = (targetHealth - (liquidationThreshold / (1 - discount)))
         // repay = repayNum / repayDen
 
-        // round up repay in protocol favor for safer post-liquidation position
+        // Round up repay in protocol favor for safer post-liquidation position
+        // This will never underflow because at this point we know health ratio
+        // is less than 1, which means that collateralValue < debtValue.
         uint256 repayNum = debtValue.rayMulUp(TARGET_HEALTH) - collateralValue; // [rad] - [rad] = [rad]
         uint256 repayDen = TARGET_HEALTH - liquidationThreshold.rayDivUp(RAY - discount); // [ray]
         repay = repayNum.rayDivUp(repayDen); // [rad] * RAY / [ray] = [rad]
@@ -193,7 +195,8 @@ contract Liquidation {
             discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount
             liquidateArgs.price = exchangeRate.rayMulUp(RAY - discount); // ETH price per LST, round up in protocol
                 // favor
-            liquidateArgs.repay = _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
+            liquidateArgs.repay =
+                _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
         }
 
         // First branch: protocol liquidation

@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.21;
 
-import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
-import { IChainlink } from "src/interfaces/IChainlink.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
+import { IChainlink } from "../../interfaces/IChainlink.sol";
+import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 
 interface IRedstonePriceFeed {
     function latestAnswer() external view returns (int256 answer);
@@ -31,10 +31,10 @@ contract EthXSpotOracle is SpotOracle {
         USD_PER_ETH_CHAINLINK = IChainlink(_usdPerEthChainlink);
     }
 
-    // @notice Gets the price of ETHx in ETH. 
+    // @notice Gets the price of ETHx in ETH.
     // @dev redstone oracle returns dollar value per ETHx with 6 decimals.
     // This needs to be converted to [wad] and to ETH denomination.
-    // @return ethPerEthX price of ETHx in ETH [wad] 
+    // @return ethPerEthX price of ETHx in ETH [wad]
     function getPrice() public view override returns (uint256 ethPerEthX) {
         // get price from the protocol feed
         // usd per ETHx

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { YieldOracle, LOOK_BACK, ILK_COUNT } from "src/YieldOracle.sol";
+import { IonPool } from "../../src/IonPool.sol";
+import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
 
-import { MockIonPool } from "test/helpers/MockIonPool.sol";
+import { MockIonPool } from "../helpers/MockIonPool.sol";
 
 import { Test } from "forge-std/Test.sol";
 
