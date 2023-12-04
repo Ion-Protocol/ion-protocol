@@ -51,8 +51,23 @@ contract ZapSupply is Addresses {
 
 contract View is Addresses {
     function run() public view {
+        address user = broadcaster; 
+        console2.log("user: ", user);
+
         // console2.log("supply cap: ", pool.supplyCap());
-        console2.log("rewardToken Balance: ", pool.balanceOf(ADDRESS_1));
+        (uint256 collateral0, uint256 normalizedDebt0) = pool.vault(0, user); 
+        (uint256 collateral1, uint256 normalizedDebt1) = pool.vault(1, user); 
+        (uint256 collateral2, uint256 normalizedDebt2) = pool.vault(2, user); 
+
+        
         console2.log("weth: ", pool.weth());
+        console2.log("rewardToken Balance: ", pool.balanceOf(user));
+
+        console2.log("collateral0: ", collateral0);
+        console2.log("normalizedDebt0: ", normalizedDebt0);
+        console2.log("collateral1: ", collateral1);
+        console2.log("normalizedDebt1: ", normalizedDebt1);
+        console2.log("collateral2: ", collateral2);
+        console2.log("normalizedDebt2: ", normalizedDebt2);
     }
 }
