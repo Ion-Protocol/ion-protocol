@@ -5,6 +5,7 @@
 #    - RPC_URL=<RPC_URL> bash node.sh
 # 3. forge script script/__TestFlashLeverage.s.sol --rpc-url http://localhost:8545 
 # We won't `source .env` here so all auth will be done using test accounts
+# TODO: Can we fund wallet with faucet through the cli 
 
 source .env 
 
@@ -17,7 +18,7 @@ echo "RPC_URL: " $RPC_URL
 if [ $RPC_URL == "http://localhost:8545" ]; then
     chain_id=31337 
 else 
-    chain_id=1
+    chain_id=2
 fi
 
 echo -e "chain_id: $chain_id\n"
