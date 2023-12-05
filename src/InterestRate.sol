@@ -167,6 +167,10 @@ contract InterestRate {
         );
     }
 
+    function unpackCollateralConfig(uint256 index) external view returns (IlkData memory ilkData) {
+        ilkData = _unpackCollateralConfig(index);
+    }
+
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
         if (index > COLLATERAL_COUNT - 1) revert CollateralIndexOutOfBounds();
 

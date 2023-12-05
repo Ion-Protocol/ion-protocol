@@ -17,6 +17,7 @@ import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswa
 contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using LidoLibrary for IWstEth;
 
+    // TODO: this fails the non-fork test because it doesn't exist outside mainnet
     IERC20 constant STETH = IERC20(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
 
     constructor(

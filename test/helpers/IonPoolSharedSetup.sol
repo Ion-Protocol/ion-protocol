@@ -47,9 +47,9 @@ contract MockYieldOracle is IYieldOracle {
 contract InterestRateExposed is InterestRate {
     constructor(IlkData[] memory ilks, IYieldOracle apyOracle) InterestRate(ilks, apyOracle) { }
 
-    function unpackCollateralConfig(uint256 index) external view returns (IlkData memory ilkData) {
-        return _unpackCollateralConfig(index);
-    }
+    // function unpackCollateralConfig(uint256 index) external view returns (IlkData memory ilkData) {
+    //     return _unpackCollateralConfig(index);
+    // }
 }
 
 contract IonPoolExposed is IonPool {
