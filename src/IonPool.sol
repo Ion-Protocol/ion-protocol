@@ -42,9 +42,9 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
     // --- Events ---
     event IlkInitialized(uint8 indexed ilkIndex, address indexed ilkAddress);
-    event IlkSpotUpdated(address newSpot);
-    event IlkDebtCeilingUpdated(uint256 newDebtCeiling);
-    event IlkDustUpdated(uint256 newDust);
+    event IlkSpotUpdated(uint8 indexed ilkIndex, address newSpot);
+    event IlkDebtCeilingUpdated(uint8 indexed ilkIndex, uint256 newDebtCeiling);
+    event IlkDustUpdated(uint8 indexed ilkIndex, uint256 newDust);
     event SupplyCapUpdated(uint256 newSupplyCap);
     event InterestRateModuleUpdated(address newModule);
     event WhitelistUpdated(address newWhitelist);
@@ -217,7 +217,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         $.ilks[ilkIndex].spot = newSpot;
 
-        emit IlkSpotUpdated(address(newSpot));
+        emit IlkSpotUpdated(ilkIndex, address(newSpot));
     }
 
     /**
@@ -233,7 +233,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         $.ilks[ilkIndex].debtCeiling = newCeiling;
 
-        emit IlkDebtCeilingUpdated(newCeiling);
+        emit IlkDebtCeilingUpdated(ilkIndex, newCeiling);
     }
 
     /**
@@ -250,7 +250,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         $.ilks[ilkIndex].dust = newDust;
 
-        emit IlkDustUpdated(newDust);
+        emit IlkDustUpdated(ilkIndex, newDust);
     }
 
     /**
