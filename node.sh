@@ -1,10 +1,10 @@
 # Run 
 # 1. Set up testnet
 #    - via `anvil --fork-url $RPC --chain-id 31337` or Tenderly Devnet. 
-# 2. Run bash node.sh with the testnet rpc url. 
-#    - RPC_URL=<RPC_URL> bash node.sh
-# 3. forge script script/__TestFlashLeverage.s.sol --rpc-url http://localhost:8545 
-# We won't `source .env` here so all auth will be done using test accounts
+# 2. Set the env variables. 
+# 3. Run `bash node.sh` 
+# 4. forge script script/__TestFlashLeverage.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY 
+
 # TODO: Can we fund wallet with faucet through the cli 
 
 source .env 
