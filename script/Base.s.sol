@@ -36,13 +36,18 @@ abstract contract BaseScript is Script {
 
     modifier broadcast() {
         vm.startBroadcast(broadcaster);
-        console2.log("broadcaster: ", broadcaster);
         _;
         vm.stopBroadcast();
     }
 
     modifier broadcastFrom(address from) {
         vm.startBroadcast(from);
+        _;
+        vm.stopBroadcast();
+    }
+
+    modifier broadcastFromSk(uint256 sk) {
+        vm.startBroadcast(sk);
         _;
         vm.stopBroadcast();
     }
