@@ -20,8 +20,8 @@ contract DeployIonPoolScript is BaseScript {
     string configPath = "./deployment-config/04_IonPool.json";
     string config = vm.readFile(configPath);
 
-    function run() public broadcast returns (IonPool ionPool) {
-        IonPool ionPoolImpl = new IonPool();
+    function run() public broadcast returns (IonPool ionPoolImpl, IonPool ionPool) {
+        ionPoolImpl = new IonPool();
 
         address underlying = config.readAddress(".underlying");
         address treasury = config.readAddress(".treasury");

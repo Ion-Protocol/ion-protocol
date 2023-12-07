@@ -13,12 +13,12 @@ source .env
 echo "ETH_FROM: " $ETH_FROM
 echo "PRIVATE_KEY: " $PRIVATE_KEY  
 echo "RPC_URL: " $RPC_URL
-
+echo "CHAIN_ID: " $CHAIN_ID
 # Set Chain ID based on deployment route 
 if [ $RPC_URL == "http://localhost:8545" ]; then
     chain_id=31337 
 else 
-    chain_id=2
+    chain_id=$CHAIN_ID
 fi
 
 echo -e "chain_id: $chain_id\n"
@@ -80,7 +80,7 @@ forge script script/08_DeployInitialHandlers.s.sol --rpc-url $RPC_URL --private-
 
 # Deploy Liquidation
 echo "DEPLOYING LIQUIDATION..."
-protocol_addr="0x0000000000000000000000000000000000000001" # should be configured seprately at the top
+protocol_addr=$(jq .treasury "deployment-config/04_IonPool.json" | xargs) # copies from IonPool configuration
 wst_eth_reserve=$(jq '.returns.wstEthReserveOracle.value' "broadcast/05_DeployInitialReserveAndSpotOracles.s.sol/$chain_id/run-latest.json" | xargs)
 ethx_reserve=$(jq '.returns.ethXReserveOracle.value' "broadcast/05_DeployInitialReserveAndSpotOracles.s.sol/$chain_id/run-latest.json" | xargs)
 sw_eth_reserve=$(jq '.returns.swEthReserveOracle.value' "broadcast/05_DeployInitialReserveAndSpotOracles.s.sol/$chain_id/run-latest.json" | xargs)

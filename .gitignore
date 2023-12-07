@@ -3,19 +3,17 @@ cache/
 out/
 coverage/
 
-# Ignores development broadcast logs
-!/broadcast
-/broadcast/*/31337/
-/broadcast/*/2/
-/broadcast/**/dry-run/
+# Ignore all broadcast except for chain id 1
+/broadcast/*
+!/broadcast/*/
+/broadcast/*/*
+!/broadcast/*/1/
 
 # Dependency directories
-
 node_modules/
 package-lock.json
 
 # dotenv environment variable files
-
 .env
 .env.development.local
 .env.test.local
