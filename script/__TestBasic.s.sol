@@ -79,8 +79,32 @@ contract SetUp is Addresses {
         pool.updateIlkDebtCeiling(2, type(uint256).max);
     }
 
+
     function fund(address user, uint256 amount) internal broadcast {
         user.call{ value: amount }("");
+    }
+    
+    function mintWeth(uint256 sk, uint256 amount) internal broadcastFromSk(sk) {
+        WETH.deposit{ value: amount }(); 
+    }
+
+    function fundCollateral(uint8 ilkIndex, address user, uint256 amount) internal broadcast {
+       IERC20 collateral = IERC20(pool.getIlkAddress(ilkIndex));
+       IonHandlerBase handler; 
+       uint256 mintedAmount; 
+       if (ilkIndex == 0) {
+            handler = wstEthHandler;
+            mintedAmount = WSTETH.depositForLst(amount);
+        } else if (ilkIndex == 1) {
+            handler = ethXHandler;
+            mintedAmount = STADER_MANAGER.depositForLst({ ethAmount: amount, receiver: user });
+        } else if (ilkIndex == 2) {
+            handler = swEthHandler;
+            mintedAmount = SWETH.depositForLst(amount);
+        } 
+        if (user != broadcaster) {
+            collateral.transfer(user, mintedAmount); 
+        }
     }
 
     function supply(address user, uint256 sk, uint256 amount) internal broadcastFromSk(sk) {
@@ -171,6 +195,12 @@ contract SetUp is Addresses {
     }
 }
 
+// contract Deal is SetUp {
+//     function run() public override {
+//         vm.deal();
+//     }
+// }
+
 contract AdminInit is SetUp {
     function run() public override {
         adminInit();
@@ -185,11 +215,45 @@ contract Borrowers is SetUp {
     }
 }
 
+contract Supply is SetUp {
+    function run() public override {
+        address user = 0x6450311D9A60c744b8Db774A6B9898938A0fD3eA;
+        uint256 sk = 0xfa463d3ae3a9deb586e11e8edb99861441f30c58dfc22de4cb3b1e1c07de1182; 
+        supply(user, sk, 50 ether);
+        info(user); 
+    }
+}
+
+contract FundCollateral is SetUp {
+    function run() public override {
+        fundCollateral(0, broadcaster, 10 ether); 
+        fundCollateral(1, broadcaster, 10 ether); 
+        fundCollateral(2, broadcaster, 10 ether); 
+    }
+}
+
+contract MintWeth is SetUp {
+    function run() public override {
+        uint256 sk = 0x0; 
+        mintWeth(sk, 10 ether); 
+    }
+}
+
 contract View is SetUp {
     function run() public view override {
+        console2.log("--- Deployer ---"); 
+        console2.log("eth balance: ", broadcaster.balance); 
+
         console2.log("--- Protocol ---");
         console2.log("WETH.balanceOf(address(pool)): ", WETH.balanceOf(address(pool)));
         console2.log("weth: ", pool.weth());
+
+        console2.log("--- wstETH ---"); 
+        console2.log("pool.totalNormalizedDebt: ", pool.totalNormalizedDebt(0)); 
+        console2.log("pool.rate: ", pool.rate(0));
+        console2.log("pool debt: ", pool.totalNormalizedDebt(0) * pool.rate(0)); 
+        console2.log("pool ceiling [rad]: ", pool.debtCeiling(0)); 
+        console2.log("pool ceiling [wad]: ", pool.debtCeiling(0) / 1e27); 
 
         info(lender1.addr);
         info(lender2.addr);
@@ -197,5 +261,7 @@ contract View is SetUp {
         info(borrower1.addr);
         info(borrower2.addr);
         info(borrower3.addr);
+        info(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+        info(0x6450311D9A60c744b8Db774A6B9898938A0fD3eA);
     }
 }
