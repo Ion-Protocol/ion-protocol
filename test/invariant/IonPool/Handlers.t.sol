@@ -159,7 +159,7 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
             ilkIndexedState[i].totalNormalizedDebt = ionPool.totalNormalizedDebt(_ilkIndex);
             ilkIndexedState[i].rate = ionPool.rate(_ilkIndex);
             ilkIndexedState[i].totalGem = registry.gemJoins(_ilkIndex).totalGem();
-            (uint256 currentBorrowRate,) = ionPool.getCurrentBorrowRate(_ilkIndex);
+            (,uint256 currentBorrowRate,) = ionPool.getCurrentBorrowRate(_ilkIndex);
             ilkIndexedState[i].newInterestRatePerSecond = currentBorrowRate;
             ilkIndexedState[i].newInterestRatePerYear = ((currentBorrowRate - RAY) * SECONDS_IN_A_YEAR) + RAY;
             ilkIndexedState[i].utilizationRate =
