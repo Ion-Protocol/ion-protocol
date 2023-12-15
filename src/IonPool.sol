@@ -1048,7 +1048,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     /**
      * @dev Gets the current borrow rate for borrowing against a given collateral.
      */
-    function getCurrentBorrowRate(uint8 ilkIndex) public view returns (uint256 borrowRate, uint256 reserveFactor) {
+    function getCurrentBorrowRate(uint8 ilkIndex) public view returns (uint256 totalDebt, uint256 borrowRate, uint256 reserveFactor) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         uint256 totalEthSupply = totalSupply();
