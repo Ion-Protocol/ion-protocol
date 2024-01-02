@@ -64,7 +64,7 @@ contract IonZapper {
         POOL.repay(ilkIndex, msg.sender, msg.sender, normalizedAmountToRepay);
     }
 
-    function zapDepositWstEth(uint256 amountStEth) external payable {
+    function zapDepositWstEth(uint256 amountStEth) external {
         STETH.transferFrom(msg.sender, address(this), amountStEth);
 
         uint256 outputWstEthAmount = WSTETH.wrap(amountStEth);
