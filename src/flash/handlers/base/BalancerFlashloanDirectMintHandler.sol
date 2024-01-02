@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
+import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 
 import { IVault, IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
@@ -29,6 +30,7 @@ IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
  */
 abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLoanRecipient {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH9;
 
     error ReceiveCallerNotVault(address unauthorizedCaller);
     error FlashLoanedTooManyTokens(uint256 amountTokens);
@@ -186,7 +188,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, amounts[0], AmountToBorrow.IS_MIN);
 
-            WETH.transfer(address(VAULT), amounts[0]);
+            WETH.safeTransfer(address(VAULT), amounts[0]);
         } else {
             if (address(LST_TOKEN) != address(token)) revert FlashloanedInvalidToken(address(token));
 
