@@ -15,6 +15,8 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 
+import { console } from "forge-std/console.sol";
+
 using Strings for uint256;
 using WadRayMath for uint256;
 
@@ -1389,5 +1391,258 @@ contract IonPool_PausedTest is IonPoolSharedSetup {
             abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
         );
         ionPool.repayBadDebt(address(0), 0);
+    }
+}
+
+contract IonPool_WhitelistTest is IonPoolSharedSetup {
+    address[3] borrowers = [
+        0x1111111111111111111111111111111111111111,
+        0x2222222222222222222222222222222222222222,
+        0x3333333333333333333333333333333333333333
+    ];
+
+    address[5] lenders = [
+        0x0000000000000000000000000000000000000001,
+        0x0000000000000000000000000000000000000002,
+        0x0000000000000000000000000000000000000003,
+        0x0000000000000000000000000000000000000004,
+        0x0000000000000000000000000000000000000005
+    ];
+
+    // generate merkle root
+    // [["0x1111111111111111111111111111111111111111"],
+    // ["0x2222222222222222222222222222222222222222"],
+    // ["0x3333333333333333333333333333333333333333"]];
+    // => 0xae6afff7b7c4d883d5efd44afa0b98e80317697e8984b4c2de7c54b49c1c4dd4
+    bytes32 borrowersRoot = 0xae6afff7b7c4d883d5efd44afa0b98e80317697e8984b4c2de7c54b49c1c4dd4;
+
+    // generate merkle root
+    // ["0x0000000000000000000000000000000000000001"],
+    // ["0x0000000000000000000000000000000000000002"],
+    // ["0x0000000000000000000000000000000000000003"],
+    // ["0x0000000000000000000000000000000000000004"],
+    // ["0x0000000000000000000000000000000000000005"],
+    // => 0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094
+    bytes32 lendersRoot = 0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094;
+
+    bytes[] borrowerProofs = [
+        abi.encode(
+            32,
+            2,
+            0x708e7cb9a75ffb24191120fba1c3001faa9078147150c6f2747569edbadee751,
+            0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192
+        ),
+        abi.encode(
+            32,
+            2,
+            0xa7409058568815d08a7ad3c7d4fd44cf1dec90c620cb31e55ad24c654f7ba34f,
+            0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192
+        ),
+        abi.encode(
+            32,
+            1,
+            0xc6ce8ae383124b268df66d71f0af2206e6dafb13eba0b03806eed8a4e7991329
+        )
+    ];
+
+    bytes[] lenderProofs = [
+        abi.encode(
+            32,
+            2,
+            0x2584db4a68aa8b172f70bc04e2e74541617c003374de6eb4b295e823e5beab01,
+            0xc949c2dc5da2bd9a4f5ae27532dfbb3551487bed50825cd099ff5d0a8d613ab5
+        ),
+        abi.encode(
+            32,
+            3,
+            0x16db2e4b9f8dc120de98f8491964203ba76de27b27b29c2d25f85a325cd37477,
+            0xc167b0e3c82238f4f2d1a50a8b3a44f96311d77b148c30dc0ef863e1a060dcb6,
+            0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7
+        ),
+        abi.encode(
+            32,
+            2,
+            0xb5d9d894133a730aa651ef62d26b0ffa846233c74177a591a4a896adfda97d22,
+            0xc949c2dc5da2bd9a4f5ae27532dfbb3551487bed50825cd099ff5d0a8d613ab5
+        ),
+        abi.encode(
+            32,
+            2,
+            0x161691c7185a37ff918e70bebef716ddd87844ac47f419ea23eaf4fe983fbf2c,
+            0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7
+        ),
+        abi.encode(
+            32,
+            3,
+            0x1ab0c6948a275349ae45a06aad66a8bd65ac18074615d53676c09b67809099e0,
+            0xc167b0e3c82238f4f2d1a50a8b3a44f96311d77b148c30dc0ef863e1a060dcb6,
+            0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7
+        )
+    ];
+
+    Whitelist _whitelist;
+
+    function setUp() public override {
+        super.setUp();
+        bytes32[] memory borrowersRoots = new bytes32[](3);
+        for (uint256 i = 0; i < borrowers.length; ++i) {
+            borrowersRoots[i] = borrowersRoot;
+        }
+
+        _whitelist = new Whitelist(borrowersRoots, lendersRoot);
+        ionPool.updateWhitelist(_whitelist);
+    }
+
+    function test_SupplyWorksWhenLenderWhitelisted() external {
+        for (uint256 i = 0; i < lenders.length; ++i) {
+            uint256 supplyAmount = 1e18;
+
+            underlying.mint(lenders[i], supplyAmount);
+
+            vm.startPrank(lenders[i]);
+            underlying.approve(address(ionPool), type(uint256).max);
+
+            bytes32[] memory lenderProof = abi.decode(lenderProofs[i], (bytes32[]));
+            ionPool.supply(lenders[i], 1e18, lenderProof);
+            vm.stopPrank();
+        }
+    }
+
+    function test_DepositCollateralWorksWhenBorrowerWhitelisted() external {
+        for (uint256 i = 0; i < borrowers.length; ++i) {
+            uint256 collateralDepositAmount = 1e18;
+
+            for (uint8 j = 0; j < collaterals.length; ++j) {
+                ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[i], collateralDepositAmount);
+
+                vm.startPrank(borrowers[i]);
+                collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+                gemJoins[j].join(borrowers[i], collateralDepositAmount);
+
+                bytes32[] memory borrowerProof = abi.decode(borrowerProofs[i], (bytes32[]));
+                ionPool.depositCollateral(j, borrowers[i], borrowers[i], collateralDepositAmount, borrowerProof);
+                vm.stopPrank();
+            }
+        }
+    }
+
+    function test_BorrowWorksWhenBorrowerWhitelisted() external {
+        for (uint256 i = 0; i < borrowers.length; ++i) {
+            underlying.mint(address(this), 4e18);
+            bytes32[] memory lenderProof = abi.decode(lenderProofs[0], (bytes32[]));
+
+            underlying.approve(address(ionPool), type(uint256).max);
+            ionPool.supply(lenders[0], 4e18, lenderProof);
+
+            uint256 borrowAmount = 1e18;
+            uint256 collateralDepositAmount = 5e18;
+
+            for (uint8 j = 0; j < collaterals.length; ++j) {
+                ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[i], collateralDepositAmount);
+
+                vm.startPrank(borrowers[i]);
+                collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+                gemJoins[j].join(borrowers[i], collateralDepositAmount);
+
+                bytes32[] memory borrowerProof = abi.decode(borrowerProofs[i], (bytes32[]));
+                ionPool.depositCollateral(j, borrowers[i], borrowers[i], collateralDepositAmount, borrowerProof);
+
+                ionPool.borrow(j, borrowers[i], borrowers[i], borrowAmount, borrowerProof);
+                vm.stopPrank();
+            }
+        }
+    }
+
+    function test_RevertWhen_SupplyingLenderNotWhitelisted() external {
+        uint256 supplyAmount = 1e18;
+
+        underlying.mint(lenders[0], supplyAmount);
+
+        underlying.approve(address(ionPool), type(uint256).max);
+
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedLender.selector, address(this)));
+        ionPool.supply(address(this), 1e18, new bytes32[](0));
+    }
+
+    function test_SupplyForWhitelistedUser() external {
+        uint256 supplyAmount = 1e18;
+
+        underlying.mint(address(this), supplyAmount);
+
+        underlying.approve(address(ionPool), type(uint256).max);
+
+        bytes32[] memory lenderProof = abi.decode(lenderProofs[0], (bytes32[]));
+        ionPool.supply(lenders[0], 1e18, lenderProof);
+    }
+
+    function test_RevertWhen_DepositingCollateralBorrowerNotWhitelisted() external {
+        uint256 collateralDepositAmount = 1e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[0], collateralDepositAmount);
+
+            vm.startPrank(borrowers[0]);
+            collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+            gemJoins[j].join(borrowers[0], collateralDepositAmount);
+
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, j, address(this)));
+            ionPool.depositCollateral(j, address(this), address(this), collateralDepositAmount, new bytes32[](0));
+            vm.stopPrank();
+        }
+    }
+
+    function test_DepositingCollateralForWhitelistedUser() external {
+        uint256 collateralDepositAmount = 1e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            ERC20PresetMinterPauser(address(collaterals[j])).mint(address(this), collateralDepositAmount);
+
+            collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+            gemJoins[j].join(address(this), collateralDepositAmount);
+
+            bytes32[] memory borrowerProof = abi.decode(borrowerProofs[0], (bytes32[]));
+            ionPool.depositCollateral(j, borrowers[0], address(this), collateralDepositAmount, borrowerProof);
+        }
+    }
+
+    function test_RevertWhen_BorrowingBorrowerNotWhitelisted() external {
+        uint256 borrowAmount = 1e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, j, address(this)));
+            ionPool.borrow(j, address(this), address(this), borrowAmount, new bytes32[](0));
+        }
+    }
+
+    function test_OperatorCreatesBorrowForWhitelistedUser() external {
+        underlying.mint(address(this), 4e18);
+        bytes32[] memory lenderProof = abi.decode(lenderProofs[0], (bytes32[]));
+
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.supply(lenders[0], 4e18, lenderProof);
+
+        uint256 borrowAmount = 1e18;
+        uint256 collateralDepositAmount = 5e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[0], collateralDepositAmount);
+
+            vm.startPrank(borrowers[0]);
+            collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+            gemJoins[j].join(borrowers[0], collateralDepositAmount);
+
+            bytes32[] memory borrowerProof = abi.decode(borrowerProofs[0], (bytes32[]));
+            ionPool.depositCollateral(j, borrowers[0], borrowers[0], collateralDepositAmount, borrowerProof);
+
+            ionPool.addOperator(address(this));
+            vm.stopPrank();
+
+            ionPool.borrow(j, borrowers[0], borrowers[0], borrowAmount, borrowerProof);
+        }
     }
 }

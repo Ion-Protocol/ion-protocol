@@ -59,10 +59,14 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     function flashLeverageWethAndSwap(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
-        uint256 maxResultingAdditionalDebt
+        uint256 maxResultingAdditionalDebt,
+        uint256 deadline,
+        bytes32[] calldata proof
     )
         external
         payable
+        checkDeadline(deadline)
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit;
@@ -112,7 +116,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
      * to repay `debtToRemove` debt.
      * @param debtToRemove The desired amount of debt to remove.
      */
-    function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove) external {
+    function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove, uint256 deadline) external checkDeadline(deadline) {
         if (debtToRemove == 0) return;
 
         uint256 amount0ToFlash;

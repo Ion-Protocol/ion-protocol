@@ -31,6 +31,12 @@ abstract contract IonHandlerBase {
 
     error CannotSendEthToContract();
     error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
+    error TransactionDeadlineReached(uint256 deadline);
+
+    modifier checkDeadline(uint256 deadline) {
+        if (deadline <= block.timestamp) revert TransactionDeadlineReached(deadline);
+        _;
+    }
 
     enum AmountToBorrow {
         IS_MIN,
@@ -44,8 +50,8 @@ abstract contract IonHandlerBase {
     IERC20 immutable LST_TOKEN;
     Whitelist immutable WHITELIST;
 
-    modifier onlyWhitelistedBorrowers(uint8, bytes32[] memory proof) {
-        WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, proof);
+    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
+        WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, msg.sender, proof);
         _;
     }
 
@@ -79,7 +85,7 @@ abstract contract IonHandlerBase {
         bytes32[] calldata proof
     )
         external
-        onlyWhitelistedBorrowers(ILK_INDEX, proof)
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), amountCollateral);
         _depositAndBorrow(msg.sender, msg.sender, amountCollateral, amountToBorrow, AmountToBorrow.IS_MAX);

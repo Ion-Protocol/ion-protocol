@@ -33,7 +33,7 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         weth.approve(address(swEthHandler), type(uint256).max);
         ionPool.addOperator(address(swEthHandler));
 
-        swEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
+        swEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -60,7 +60,7 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
 
         vm.assume(!unsafePositionChange);
 
-        swEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
+        swEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -84,7 +84,7 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         weth.approve(address(swEthHandler), type(uint256).max);
         ionPool.addOperator(address(swEthHandler));
 
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -105,7 +105,7 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         ionPool.addOperator(address(swEthHandler));
 
         vm.recordLogs();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -130,7 +130,7 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
-        swEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        swEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;

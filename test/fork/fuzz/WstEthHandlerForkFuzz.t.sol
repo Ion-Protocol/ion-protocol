@@ -33,7 +33,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
-        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
+        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -60,7 +60,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         vm.assume(!unsafePositionChange);
 
-        wstEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
+        wstEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -84,7 +84,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
-        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -105,7 +105,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         vm.recordLogs();
-        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -130,7 +130,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
-        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
