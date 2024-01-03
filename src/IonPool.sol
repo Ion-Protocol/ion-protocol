@@ -35,6 +35,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     error IlkAlreadyAdded(address ilkAddress);
     error IlkNotInitialized(uint256 ilkIndex);
     error DepositSurpassesSupplyCap(uint256 depositAmount, uint256 supplyCap);
+    error MaxIlksReached();
 
     error InvalidIlkAddress();
     error InvalidInterestRateModule(InterestRate invalidInterestRateModule);
@@ -193,9 +194,14 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         if (ilkAddress == address(0)) revert InvalidIlkAddress();
         if (!$.ilkAddresses.add(ilkAddress)) revert IlkAlreadyAdded(ilkAddress);
 
+        uint256 ilksLength = $.ilks.length;
+
+        // Explicitly enforce the max number of collaterals
+        if (ilksLength >= uint256(type(uint8).max) + 1) revert MaxIlksReached();
+
         // Unsafe cast OK since we don't plan on having more than 256
         // collaterals
-        uint8 ilkIndex = uint8($.ilks.length);
+        uint8 ilkIndex = uint8(ilksLength);
         Ilk memory newIlk;
         $.ilks.push(newIlk);
         Ilk storage ilk = $.ilks[ilkIndex];
