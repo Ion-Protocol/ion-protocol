@@ -15,6 +15,8 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 using Strings for uint256;
 using WadRayMath for uint256;
 
@@ -1064,30 +1066,36 @@ contract IonPool_InterestTest is IonPoolSharedSetup {
             uint48[] memory timestampIncreases
         ) = ionPool.calculateRewardAndDebtDistribution();
 
-        uint256 supplyFactorBefore = ionPool.supplyFactor();
+        uint256 supplyFactorBefore = ionPool.supplyFactorUnaccrued();
         uint256[] memory ratesBefore = new uint256[](ionPool.ilkCount());
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
-            ratesBefore[i] = ionPool.rate(i);
+            ratesBefore[i] = ionPool.rateUnaccrued(i);
         }
-        uint256 totalDebtBefore = ionPool.debt();
+        uint256 totalDebtBefore = ionPool.debtUnaccrued();
         uint256[] memory timestampsBefore = new uint256[](ionPool.ilkCount());
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             timestampsBefore[i] = ionPool.lastRateUpdate(i);
         }
 
-        for (uint8 i = 0; i < 1; i++) {
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             (uint256 newRateIncrease, uint256 newTimestampIncrease) =
                 ionPool.calculateRewardAndDebtDistributionForIlk(i);
             assertEq(rateIncreases[i], newRateIncrease);
             assertEq(timestampIncreases[i], newTimestampIncrease);
         }
 
-        ionPool.accrueInterest();
-
         assertEq(supplyFactorBefore + totalSupplyFactorIncrease, ionPool.supplyFactor());
         assertEq(totalDebtBefore + totalDebtIncrease, ionPool.debt());
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             assertEq(ratesBefore[i] + rateIncreases[i], ionPool.rate(i));
+        }
+
+        ionPool.accrueInterest();
+
+        assertEq(ionPool.supplyFactorUnaccrued(), ionPool.supplyFactor());
+        assertEq(ionPool.debtUnaccrued(), ionPool.debt());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            assertEq(ionPool.rateUnaccrued(i), ionPool.rate(i));
             assertEq(timestampsBefore[i] + timestampIncreases[i], ionPool.lastRateUpdate(i));
         }
     }

@@ -15,6 +15,8 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 contract IonPool is IonPausableUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
@@ -322,7 +324,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * @dev Pause actions that put the protocol into a further safe state.
      * These are actions that put liquidity into the system (e.g. repaying,
      * depositing base)
-     * 
+     *
      * This will also pause UNSAFE actions.
      *
      * Pausing accrual is also necessary with this since disabling repaying
@@ -339,7 +341,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
     /**
      * @dev Unpause actions that put the protocol into a further safe state.
-     * 
+     *
      * This will also unpause UNSAFE actions.
      *
      * Will also update the `lastRateUpdate` to the unpause transaction
@@ -380,7 +382,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         // borrowing... so we prevent this outcome; but without reverting the tx
         // altogether.
         if (paused(Pauses.SAFE)) return ($.debt);
-        uint256 totalEthSupply = totalSupply();
+        uint256 totalEthSupply = totalSupplyUnaccrued();
 
         uint256 totalSupplyFactorIncrease;
         uint256 totalTreasuryMintAmount;
@@ -412,11 +414,22 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
 
         newTotalDebt = $.debt + totalDebtIncrease;
         $.debt = newTotalDebt;
-        _setSupplyFactor(supplyFactor() + totalSupplyFactorIncrease);
+        _setSupplyFactor(supplyFactorUnaccrued() + totalSupplyFactorIncrease);
         _mintToTreasury(totalTreasuryMintAmount);
     }
 
-    function calculateRewardAndDebtDistribution() public view returns (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount, uint104[] memory rateIncreases, uint256 totalDebtIncrease, uint48[] memory timestampIncreases) {
+    function calculateRewardAndDebtDistribution()
+        public
+        view
+        override
+        returns (
+            uint256 totalSupplyFactorIncrease,
+            uint256 totalTreasuryMintAmount,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        )
+    {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         uint256 ilksLength = $.ilks.length;
@@ -424,7 +437,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         rateIncreases = new uint104[](ilksLength);
         timestampIncreases = new uint48[](ilksLength);
 
-        uint256 totalEthSupply = totalSupply();
+        uint256 totalEthSupply = totalSupplyUnaccrued();
 
         for (uint8 i = 0; i < ilksLength;) {
             (
@@ -456,14 +469,13 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * @return newRateIncrease the rate increase for the ilk.
      * @return timestampIncrease the timestamp increase for the ilk.
      */
-    function calculateRewardAndDebtDistributionForIlk(uint8 ilkIndex) external view returns (uint104 newRateIncrease, uint48 timestampIncrease) {
-        (
-            ,
-            ,
-            newRateIncrease,
-            ,
-            timestampIncrease
-        ) = _calculateRewardAndDebtDistributionForIlk(ilkIndex, totalSupply());
+    function calculateRewardAndDebtDistributionForIlk(uint8 ilkIndex)
+        public
+        view
+        returns (uint104 newRateIncrease, uint48 timestampIncrease)
+    {
+        (,, newRateIncrease,, timestampIncrease) =
+            _calculateRewardAndDebtDistributionForIlk(ilkIndex, totalSupplyUnaccrued());
     }
 
     function _calculateRewardAndDebtDistributionForIlk(
@@ -515,7 +527,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         newDebtIncrease = _totalNormalizedDebt * newRateIncrease; // [RAD]
 
         // Income distribution
-        uint256 _normalizedTotalSupply = normalizedTotalSupply(); // [WAD]
+        uint256 _normalizedTotalSupply = normalizedTotalSupplyUnaccrued(); // [WAD]
 
         // If there is no supply, then nothing is being lent out.
         supplyFactorIncrease = _normalizedTotalSupply == 0
@@ -949,12 +961,20 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         return $.ilks[ilkIndex].totalNormalizedDebt;
     }
 
+    function rateUnaccrued(uint8 ilkIndex) external view returns (uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.ilks[ilkIndex].rate;
+    }
+
     /**
      * @return The rate (debt accumulator) for collateral with index `ilkIndex`.
      */
     function rate(uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilks[ilkIndex].rate;
+
+        (uint256 newRateIncrease,) = calculateRewardAndDebtDistributionForIlk(ilkIndex);
+
+        return $.ilks[ilkIndex].rate + newRateIncrease;
     }
 
     /**
@@ -1048,13 +1068,21 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         return either(user == operator, $.isOperator[user][operator] == 1);
     }
 
+    function debtUnaccrued() external view returns (uint256) {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+        return $.debt;
+    }
+
     /**
      * @dev This includes unbacked debt.
      * @return The total amount of debt.
      */
     function debt() external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.debt;
+
+        (,,, uint256 totalDebtIncrease,) = calculateRewardAndDebtDistribution();
+
+        return $.debt + totalDebtIncrease;
     }
 
     /**
@@ -1095,7 +1123,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     function getCurrentBorrowRate(uint8 ilkIndex) public view returns (uint256 borrowRate, uint256 reserveFactor) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        uint256 totalEthSupply = totalSupply();
+        uint256 totalEthSupply = totalSupplyUnaccrued();
         uint256 _totalNormalizedDebt = $.ilks[ilkIndex].totalNormalizedDebt;
         uint256 _rate = $.ilks[ilkIndex].rate;
 

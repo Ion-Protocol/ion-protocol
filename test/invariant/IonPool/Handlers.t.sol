@@ -235,9 +235,8 @@ contract LenderHandler is Handler {
         amount = bound(amount, 0, type(uint128).max);
 
         _warpTime(warpTimeAmount);
-        (uint256 supplyFactorIncrease,,,,) = ionPool.calculateRewardAndDebtDistribution();
 
-        uint256 amountNormalized = amount.rayDivDown(ionPool.supplyFactor() + supplyFactorIncrease);
+        uint256 amountNormalized = amount.rayDivDown(ionPool.supplyFactor());
 
         if (amountNormalized == 0) return;
         totalHoldingsNormalized += amountNormalized;
@@ -256,9 +255,8 @@ contract LenderHandler is Handler {
         amount = bound(amount, 0, balance);
 
         _warpTime(warpTimeAmount);
-        (uint256 supplyFactorIncrease,,,,) = ionPool.calculateRewardAndDebtDistribution();
 
-        uint256 amountNormalized = amount.rayDivUp(ionPool.supplyFactor() + supplyFactorIncrease);
+        uint256 amountNormalized = amount.rayDivUp(ionPool.supplyFactor());
         if (amountNormalized == 0) return;
 
         totalHoldingsNormalized -= amountNormalized;
