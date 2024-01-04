@@ -371,41 +371,4 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         ionPool.addLiquidity(amount);
         underlying.mint(address(ionPool), amount);
     }
-
-    function _calculateRewardAndDebtDistribution()
-        internal
-        view
-        returns (
-            uint256 supplyFactorIncrease,
-            uint256 treasuryMintAmount,
-            uint104[] memory newRateIncreases,
-            uint256 newDebtIncrease,
-            uint48[] memory newTimestampIncreases
-        )
-    {
-        uint256 ilksLength = ionPool.ilkCount();
-        newRateIncreases = new uint104[](ilksLength);
-        newTimestampIncreases = new uint48[](ilksLength);
-        for (uint8 i = 0; i < ilksLength;) {
-            (
-                uint256 _supplyFactorIncrease,
-                uint256 _treasuryMintAmount,
-                uint104 _newRateIncrease,
-                uint256 _newDebtIncrease,
-                uint48 _timestampIncrease
-            ) = ionPool.calculateRewardAndDebtDistribution(i);
-
-            if (_timestampIncrease > 0) {
-                newRateIncreases[i] = _newRateIncrease;
-                newTimestampIncreases[i] = _timestampIncrease;
-                newDebtIncrease += _newDebtIncrease;
-
-                supplyFactorIncrease += _supplyFactorIncrease;
-                treasuryMintAmount += _treasuryMintAmount;
-            }
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
-    }
 }

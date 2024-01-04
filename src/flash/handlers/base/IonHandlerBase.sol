@@ -109,7 +109,7 @@ abstract contract IonHandlerBase {
         POOL.depositCollateral(ILK_INDEX, vaultHolder, address(this), amountCollateral, new bytes32[](0));
 
         uint256 currentRate = POOL.rate(ILK_INDEX);
-        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
+        (uint256 newRateIncrease,) = POOL.calculateRewardAndDebtDistributionForIlk(ILK_INDEX);
         uint256 rateAfterAccrual = currentRate + newRateIncrease;
 
         uint256 normalizedAmountToBorrow;
@@ -142,7 +142,7 @@ abstract contract IonHandlerBase {
         internal
     {
         uint256 currentRate = POOL.rate(ILK_INDEX);
-        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
+        (uint256 newRateIncrease,) = POOL.calculateRewardAndDebtDistributionForIlk(ILK_INDEX);
         uint256 rateAfterAccrual = currentRate + newRateIncrease;
 
         uint256 normalizedDebtToRepay = debtToRepay.rayDivDown(rateAfterAccrual);

@@ -75,7 +75,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
 
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), lender1, supplyAmount);
@@ -101,7 +101,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
 
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), address(this), supplyAmount);
@@ -134,7 +134,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
         uint256 withdrawAmount = 0.5e18;
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(lender1, address(0), withdrawAmount);
@@ -166,7 +166,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
         uint256 withdrawAmount = 0.5e18;
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(lender1, address(0), withdrawAmount);
@@ -1004,14 +1004,6 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
 }
 
 contract IonPool_InterestTest is IonPoolSharedSetup {
-    event Borrow(
-        uint8 indexed ilkIndex,
-        address indexed user,
-        address indexed recipient,
-        uint256 amountOfNormalizedDebt,
-        uint256 ilkRate
-    );
-
     function setUp() public override {
         super.setUp();
 
@@ -1034,6 +1026,69 @@ contract IonPool_InterestTest is IonPoolSharedSetup {
             collaterals[i].approve(address(gemJoins[i]), type(uint256).max);
             gemJoins[i].join(borrower1, INITIAL_BORROWER_COLLATERAL_BALANCE);
             vm.stopPrank();
+        }
+    }
+
+    function test_CalculateRewardAndDebtDistribution() external {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = ionPool.weth();
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+        }
+
+        vm.warp(block.timestamp + 1 hours);
+
+        (
+            uint256 totalSupplyFactorIncrease,
+            ,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        ) = ionPool.calculateRewardAndDebtDistribution();
+
+        uint256 supplyFactorBefore = ionPool.supplyFactor();
+        uint256[] memory ratesBefore = new uint256[](ionPool.ilkCount());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            ratesBefore[i] = ionPool.rate(i);
+        }
+        uint256 totalDebtBefore = ionPool.debt();
+        uint256[] memory timestampsBefore = new uint256[](ionPool.ilkCount());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            timestampsBefore[i] = ionPool.lastRateUpdate(i);
+        }
+
+        for (uint8 i = 0; i < 1; i++) {
+            (uint256 newRateIncrease, uint256 newTimestampIncrease) =
+                ionPool.calculateRewardAndDebtDistributionForIlk(i);
+            assertEq(rateIncreases[i], newRateIncrease);
+            assertEq(timestampIncreases[i], newTimestampIncrease);
+        }
+
+        ionPool.accrueInterest();
+
+        assertEq(supplyFactorBefore + totalSupplyFactorIncrease, ionPool.supplyFactor());
+        assertEq(totalDebtBefore + totalDebtIncrease, ionPool.debt());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            assertEq(ratesBefore[i] + rateIncreases[i], ionPool.rate(i));
+            assertEq(timestampsBefore[i] + timestampIncreases[i], ionPool.lastRateUpdate(i));
         }
     }
 
@@ -1360,6 +1415,11 @@ contract IonPool_PausedTest is IonPoolSharedSetup {
             abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
         );
         ionPool.transferGem(0, address(0), address(0), 0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
+        ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
     }
 
     function test_RevertWhen_CallingSafeFunctionsWhenPausedSafe() public {
@@ -1389,5 +1449,34 @@ contract IonPool_PausedTest is IonPoolSharedSetup {
             abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
         );
         ionPool.repayBadDebt(address(0), 0);
+    }
+
+    function test_RevertWhen_CallingUnsafeFunctionsWhenPausedSafe() public {
+        ionPool.pauseSafeActions();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
+        ionPool.withdraw(address(0), 0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
+        ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
+        ionPool.withdrawCollateral(0, address(0), address(0), 0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
+        ionPool.transferGem(0, address(0), address(0), 0);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+        );
+        ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
     }
 }

@@ -55,7 +55,7 @@ contract IonZapper {
         uint256 amount = msg.value;
 
         uint256 currentIlkRate = POOL.rate(ilkIndex);
-        (,, uint256 ilkRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ilkIndex);
+        (uint256 ilkRateIncrease,) = POOL.calculateRewardAndDebtDistributionForIlk(ilkIndex);
         uint256 newIlkRate = currentIlkRate + ilkRateIncrease;
 
         uint256 normalizedAmountToRepay = amount * RAY / newIlkRate;

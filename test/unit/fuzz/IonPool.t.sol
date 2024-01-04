@@ -54,7 +54,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         underlying.mint(lender1, supplyAmount);
 
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), lender1, supplyAmount);
@@ -87,7 +87,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         uint256 supplyAmountBeforeSupply = ionPool.weth();
 
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), address(this), supplyAmount);
@@ -142,7 +142,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
 
         locs.currentTotalDebt = ionPool.debt();
-        (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(lender1, address(0), locs.withdrawAmount);
@@ -197,7 +197,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
 
         locs.currentTotalDebt = ionPool.debt();
-        (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(lender1, address(0), locs.withdrawAmount);
@@ -801,7 +801,8 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             _warpTimeIfNeeded();
 
-            (,, uint256 newRateIncrease, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution(i);
+            (uint256 newRateIncrease,) = ionPool.calculateRewardAndDebtDistributionForIlk(i);
+            (,,, uint256 totalDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
             uint256 trueRepayAmount;
             {
@@ -823,7 +824,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     borrower1,
                     locs.normalizedRepayAmount,
                     rate + newRateIncrease,
-                    ionPool.debt() + newDebtIncrease - totalChangeInDebt
+                    ionPool.debt() + totalDebtIncrease - totalChangeInDebt
                 );
                 vm.prank(borrower1);
                 ionPool.repay(i, borrower1, borrower1, locs.normalizedRepayAmount);
@@ -887,7 +888,8 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             _warpTimeIfNeeded();
 
-            (,, uint256 newRateIncrease, uint256 newTotalDebt,) = ionPool.calculateRewardAndDebtDistribution(i);
+            (uint256 newRateIncrease,) = ionPool.calculateRewardAndDebtDistributionForIlk(i);
+            (,,, uint256 totalDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
             uint256 trueRepayAmount;
             {
@@ -906,7 +908,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     borrower2,
                     locs.normalizedRepayAmount,
                     rate + newRateIncrease,
-                    ionPool.debt() + newTotalDebt - totalChangeInDebt
+                    ionPool.debt() + totalDebtIncrease - totalChangeInDebt
                 );
                 vm.prank(borrower2);
                 ionPool.repay({
@@ -1029,7 +1031,8 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             _warpTimeIfNeeded();
 
-            (,, uint256 newRateIncrease, uint256 newTotalDebt,) = ionPool.calculateRewardAndDebtDistribution(i);
+            (uint256 newRateIncrease,) = ionPool.calculateRewardAndDebtDistributionForIlk(i);
+            (,,, uint256 totalDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
             uint256 trueRepayAmount;
             {
@@ -1051,7 +1054,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     borrower2,
                     locs.normalizedRepayAmount,
                     rate + newRateIncrease,
-                    ionPool.debt() + newTotalDebt - totalChangeInDebt
+                    ionPool.debt() + totalDebtIncrease - totalChangeInDebt
                 );
                 vm.prank(borrower1);
                 ionPool.repay({
