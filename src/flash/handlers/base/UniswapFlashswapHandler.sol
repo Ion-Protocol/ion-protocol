@@ -25,14 +25,11 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    error InvalidFactoryAddress();
     error InvalidUniswapPool();
     error InvalidZeroLiquidityRegionSwap();
 
-    error ExternalFlashswapNotAllowed();
     error FlashswapRepaymentTooExpensive(uint256 amountIn, uint256 maxAmountIn);
     error CallbackOnlyCallableByPool(address unauthorizedCaller);
-    error InsufficientBalance(uint256 necessaryBalance, uint256 currentBalance);
     error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
 
     /// @dev The minimum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MIN_TICK)
@@ -106,7 +103,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         uint256 amountIn =
             _initiateFlashSwap(zeroForOne, amountToLeverage, address(this), sqrtPriceLimitX96, flashswapData);
 
-        // This protects against a potential sandwhich attack
+        // This protects against a potential sandwich attack
         if (amountIn > maxResultingAdditionalDebt) {
             revert FlashswapRepaymentTooExpensive(amountIn, maxResultingAdditionalDebt);
         }

@@ -306,9 +306,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), false, "unsafe pause");
         assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), false, "safe pause");
 
-        uint256 addressesLength = ionPool.addressesLength();
-        assertEq(addressesLength, collaterals.length, "address length");
-        for (uint8 i = 0; i < addressesLength; i++) {
+        for (uint8 i = 0; i < collaterals.length; i++) {
             address collateralAddress = address(collaterals[i]);
             assertEq(ionPool.addressContains(collateralAddress), true, "address contains");
             assertEq(ionPool.getIlkAddress(i), collateralAddress, "ilk address");
