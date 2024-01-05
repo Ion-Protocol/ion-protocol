@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 // forgefmt: disable-start
 
@@ -77,7 +77,14 @@ contract InterestRate {
     error CollateralIndexOutOfBounds();
     error DistributionFactorsDoNotSumToOne(uint256 sum);
     error TotalDebtsLength(uint256 COLLATERAL_COUNT, uint256 totalIlkDebtsLength);
+
+    error InvalidMinimumKinkRate(uint256 minimumKinkRate, uint256 minimumBaseRate);
+    error InvalidIlkDataListLength(uint256 length);
+    error InvalidOptimalUtilizationRate(uint256 optimalUtilizationRate);
+    error InvalidReserveFactor(uint256 reserveFactor);
     error InvalidYieldOracleAddress();
+
+    uint256 private constant MAX_ILKS = 8;
 
     /**
      * @dev Packed collateral configs
@@ -112,6 +119,7 @@ contract InterestRate {
 
     constructor(IlkData[] memory ilkDataList, IYieldOracle _yieldOracle) {
         if (address(_yieldOracle) == address(0)) revert InvalidYieldOracleAddress();
+        if (ilkDataList.length > MAX_ILKS) revert InvalidIlkDataListLength(ilkDataList.length);
 
         COLLATERAL_COUNT = ilkDataList.length;
         YIELD_ORACLE = _yieldOracle;
@@ -119,6 +127,16 @@ contract InterestRate {
         uint256 distributionFactorSum = 0;
         for (uint256 i = 0; i < COLLATERAL_COUNT;) {
             distributionFactorSum += ilkDataList[i].distributionFactor;
+
+            if (ilkDataList[i].minimumKinkRate < ilkDataList[i].minimumBaseRate) {
+                revert InvalidMinimumKinkRate(ilkDataList[i].minimumKinkRate, ilkDataList[i].minimumBaseRate);
+            }
+            if (ilkDataList[i].optimalUtilizationRate == 0) {
+                revert InvalidOptimalUtilizationRate(ilkDataList[i].optimalUtilizationRate);
+            }
+            if (ilkDataList[i].reserveFactor > RAY) {
+                revert InvalidReserveFactor(ilkDataList[i].reserveFactor);
+            }
 
             // forgefmt: disable-next-line
             unchecked { ++i; }

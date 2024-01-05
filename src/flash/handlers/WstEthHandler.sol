@@ -27,7 +27,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
     )
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
         // token0 is wstEth
-        UniswapFlashswapHandler(_factory, _wstEthUniswapPool, _poolFee, false)
+        UniswapFlashswapHandler(_factory, _wstEthUniswapPool, _poolFee)
     { }
 
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {

@@ -11,6 +11,8 @@ import { WAD } from "src/libraries/math/WadRayMath.sol";
 contract SwEthSpotOracle is SpotOracle {
     using Math for uint256;
 
+    error InvalidSecondsAgo(uint32 invalidSecondsAgo);
+
     IUniswapV3Pool immutable POOL;
     uint32 immutable SECONDS_AGO;
 
@@ -22,6 +24,8 @@ contract SwEthSpotOracle is SpotOracle {
     )
         SpotOracle(_ltv, _reserveOracle)
     {
+        if (_secondsAgo == 0) revert InvalidSecondsAgo(_secondsAgo);
+
         POOL = IUniswapV3Pool(_uniswapPool);
         SECONDS_AGO = _secondsAgo;
     }

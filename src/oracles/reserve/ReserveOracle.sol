@@ -2,12 +2,13 @@
 pragma solidity 0.8.21;
 
 import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 // should equal to the number of feeds available in the contract
-uint8 constant MAX_FEED_COUNT = 3;
+uint8 constant FEED_COUNT = 3;
 
 abstract contract ReserveOracle {
     using SafeCast for *;
@@ -27,9 +28,11 @@ abstract contract ReserveOracle {
     event UpdateExchangeRate(uint256 exchangeRate);
 
     // --- Errors ---
-    error InvalidQuorum(uint8 quorum);
-    error InvalidFeedLength(uint256 length);
-    error InvalidInitialization(uint256 exchangeRate);
+    error InvalidQuorum(uint8 invalidQuorum);
+    error InvalidFeedLength(uint256 invalidLength);
+    error InvalidMaxChange(uint256 invalidMaxChange);
+    error InvalidMinMax(uint256 invalidMin, uint256 invalidMax);
+    error InvalidInitialization(uint256 invalidExchangeRate);
 
     // --- Override ---
     function _getProtocolExchangeRate() internal view virtual returns (uint256);
@@ -39,12 +42,9 @@ abstract contract ReserveOracle {
     }
 
     constructor(uint8 _ilkIndex, address[] memory _feeds, uint8 _quorum, uint256 _maxChange) {
-        if (_feeds.length > MAX_FEED_COUNT) {
-            revert InvalidFeedLength(_feeds.length);
-        }
-        if (_quorum > MAX_FEED_COUNT) {
-            revert InvalidQuorum(_quorum);
-        }
+        if (_feeds.length != FEED_COUNT) revert InvalidFeedLength(_feeds.length);
+        if (_quorum > FEED_COUNT) revert InvalidQuorum(_quorum);
+        if (_maxChange == 0 || _maxChange > RAY) revert InvalidMaxChange(_maxChange);
 
         ILK_INDEX = _ilkIndex;
         QUORUM = _quorum;
@@ -79,14 +79,15 @@ abstract contract ReserveOracle {
 
     // bound the final reported value between the min and the max
     function _bound(uint256 value, uint256 min, uint256 max) internal pure returns (uint256) {
+        if (min > max) revert InvalidMinMax(min, max);
+
         return Math.max(min, Math.min(max, value));
     }
 
     function _initializeExchangeRate() internal {
         currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ILK_INDEX));
-        if (currentExchangeRate == 0) {
-            revert InvalidInitialization(currentExchangeRate);
-        }
+
+        if (currentExchangeRate == 0) revert InvalidInitialization(currentExchangeRate);
     }
 
     // @dev Takes the minimum between the aggregated values and the protocol exchange rate,

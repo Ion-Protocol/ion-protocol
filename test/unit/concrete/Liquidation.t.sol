@@ -19,7 +19,73 @@ contract MockstEthReserveOracle {
 contract LiquidationTest is LiquidationSharedSetup {
     using WadRayMath for uint256;
 
-    function test_ExchangeRateCannotBeZero() public {
+    struct Locs {
+        uint256[] liquidationThresholds;
+        uint256[] maxDiscounts;
+        uint256 targetHealth;
+        uint256 reserveFactor;
+        uint256 invalidMaxDiscount;
+        uint256[] maxDiscountsInvalid;
+    } 
+
+    function test_RevertWhen_IncorrectConstruction() public {
+        Locs memory locs;
+
+        // deploy liquidations contract
+        uint256 liquidationThreshold = 0.75e27;
+        locs.liquidationThresholds = new uint256[](ionPool.ilkCount());
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            locs.liquidationThresholds[i] = liquidationThreshold;
+        }
+
+        uint256 maxDiscount = 0.2e27; 
+        locs.maxDiscounts = new uint256[](ionPool.ilkCount()); 
+        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
+            locs.maxDiscounts[i] = maxDiscount; 
+        }
+
+        locs.targetHealth = 1.25e27;
+        locs.reserveFactor = 0.02e27;
+
+        uint256[] memory maxDiscountsEmpty = new uint256[](0); 
+        vm.expectRevert(abi.encodeWithSelector(Liquidation.InvalidMaxDiscountsLength.selector, 0));
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, locs.liquidationThresholds, locs.targetHealth, locs.reserveFactor, maxDiscountsEmpty); 
+
+        uint256[] memory liquidationThresholdsEmpty = new uint256[](0);
+        vm.expectRevert(abi.encodeWithSelector(Liquidation.InvalidLiquidationThresholdsLength.selector, 0));
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholdsEmpty, locs.targetHealth, locs.reserveFactor, locs.maxDiscounts); 
+
+        address[] memory exchangeRateOraclesEmpty = new address[](0);
+        vm.expectRevert(abi.encodeWithSelector(Liquidation.InvalidReserveOraclesLength.selector, 0));
+        new Liquidation(address(ionPool), protocol, exchangeRateOraclesEmpty, locs.liquidationThresholds, locs.targetHealth, locs.reserveFactor, locs.maxDiscounts);  
+
+        locs.invalidMaxDiscount = RAY + 1;
+        locs.maxDiscountsInvalid = new uint256[](ionPool.ilkCount());
+        locs.maxDiscountsInvalid[0] = locs.invalidMaxDiscount;
+
+vm.expectRevert(abi.encodeWithSelector(Liquidation.InvalidMaxDiscount.selector, locs.invalidMaxDiscount));
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, locs.liquidationThresholds, locs.targetHealth, locs.reserveFactor, locs.maxDiscountsInvalid); 
+
+        uint256 invalidLiquidationThreshold = 0;
+        uint256[] memory liquidationThresholdsInvalid = new uint256[](ionPool.ilkCount());
+        liquidationThresholdsInvalid[0] = invalidLiquidationThreshold;
+
+vm.expectRevert(abi.encodeWithSelector(Liquidation.InvalidLiquidationThreshold.selector, invalidLiquidationThreshold));
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholdsInvalid, locs.targetHealth, locs.reserveFactor, locs.maxDiscounts); 
+
+        uint256 targetHealthIlkZeroMin = locs.liquidationThresholds[0].rayDivUp(RAY - locs.maxDiscounts[0]);
+        uint256 invalidTargetHealth = targetHealthIlkZeroMin - 1;
+
+        vm.expectRevert(abi.encodeWithSelector(Liquidation.InvalidTargetHealth.selector, invalidTargetHealth));
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, locs.liquidationThresholds, invalidTargetHealth, locs.reserveFactor, locs.maxDiscounts);
+
+        invalidTargetHealth = RAY - 1;
+
+vm.expectRevert(abi.encodeWithSelector(Liquidation.InvalidTargetHealth.selector, invalidTargetHealth));
+        new Liquidation(address(ionPool), protocol, exchangeRateOracles, locs.liquidationThresholds, invalidTargetHealth, locs.reserveFactor, locs.maxDiscounts);
+    }
+
+    function test_RevertWhen_ExchangeRateIsZero() public {
         // deploy liquidations contract
         uint256 liquidationThreshold = 0.75e27;
         uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
@@ -33,9 +99,8 @@ contract LiquidationTest is LiquidationSharedSetup {
             maxDiscounts[i] = maxDiscount; 
         }
 
-        uint256 _targetHealth = 1.25 ether;
-        uint256 _reserveFactor = 0.02 ether;
-        uint256 _maxDiscount = 0.2 ether;
+        uint256 _targetHealth = 1.25e27;
+        uint256 _reserveFactor = 0.02e27;
 
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, maxDiscounts);
@@ -74,7 +139,6 @@ contract LiquidationTest is LiquidationSharedSetup {
 
         uint256 _targetHealth = 1.25e27;
         uint256 _reserveFactor = 0.02e27;
-        uint256 _maxDiscount = 0.2e27;
 
         liquidation =
         new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, maxDiscounts);
