@@ -68,9 +68,7 @@ contract DeployInitialHandlersScript is BaseScript {
                 ionPool,
                 wstEthGemJoin,
                 whitelist,
-                FACTORY,
-                WSTETH_WETH_POOL,
-                WSTETH_WETH_POOL_FEE
+                WSTETH_WETH_POOL
             );
         ethXHandler = new EthXHandler(
                 ETHX_ILK_INDEX,
@@ -86,9 +84,7 @@ contract DeployInitialHandlersScript is BaseScript {
                 ionPool,
                 swEthGemJoin,
                 whitelist,
-                FACTORY,
-                SWETH_ETH_POOL,
-                SWETH_ETH_POOL_FEE
+                SWETH_ETH_POOL
             );
     }
 }
