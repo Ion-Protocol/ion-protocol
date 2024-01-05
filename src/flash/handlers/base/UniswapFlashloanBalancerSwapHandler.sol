@@ -30,8 +30,9 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
     bool immutable WETH_IS_TOKEN0_ON_UNISWAP;
     IUniswapV3Pool public immutable FLASHLOAN_POOL;
+    bytes32 public immutable BALANCER_POOL_ID;
 
-    constructor(IUniswapV3Pool _flashloanPool) {
+    constructor(IUniswapV3Pool _flashloanPool, bytes32 _balancerPoolId) {
         address weth = address(WETH);
         IERC20(weth).approve(address(VAULT), type(uint256).max);
         IERC20(address(LST_TOKEN)).approve(address(VAULT), type(uint256).max);
@@ -47,6 +48,8 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
         // Technically possible here for both tokens to be weth, but Uniswap does not allow for this
         WETH_IS_TOKEN0_ON_UNISWAP = _wethIsToken0;
+
+        BALANCER_POOL_ID = _balancerPoolId;
     }
 
     /**
@@ -189,7 +192,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             }
 
             IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
-                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+                poolId: bytes32(BALANCER_POOL_ID),
                 kind: IVault.SwapKind.GIVEN_OUT,
                 assetIn: IAsset(address(WETH)),
                 assetOut: IAsset(address(LST_TOKEN)),
@@ -229,7 +232,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             _repayAndWithdraw(flashCallbackData.user, address(this), collateralIn, flashCallbackData.wethFlashloaned);
 
             IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
-                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+                poolId: bytes32(BALANCER_POOL_ID),
                 kind: IVault.SwapKind.GIVEN_OUT,
                 assetIn: IAsset(address(LST_TOKEN)),
                 assetOut: IAsset(address(WETH)),
@@ -256,7 +259,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         uint256 assetOutIndex = 1;
 
         IVault.BatchSwapStep memory swapStep = IVault.BatchSwapStep({
-            poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+            poolId: bytes32(BALANCER_POOL_ID),
             assetInIndex: assetInIndex,
             assetOutIndex: assetOutIndex,
             amount: amountIn,

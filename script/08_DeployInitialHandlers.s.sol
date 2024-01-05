@@ -78,7 +78,8 @@ contract DeployInitialHandlersScript is BaseScript {
                 ethXGemJoin,
                 MAINNET_STADER,
                 whitelist,
-                WSTETH_WETH_POOL
+                WSTETH_WETH_POOL,
+                0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb
             );
         swEthHandler = new SwEthHandler(
                 SWETH_ILK_INDEX,
