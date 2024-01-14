@@ -6,7 +6,6 @@ import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { RewardModule } from "src/reward/RewardModule.sol";
 import { InterestRate } from "src/InterestRate.sol";
 import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
-import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -14,10 +13,11 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-contract IonPool is IonPausableUpgradeable, RewardModule {
+contract IonPool is PausableUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
     using WadRayMath for *;
@@ -305,52 +305,20 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     }
 
     /**
-     * @dev Pause actions that put the protocol into a further unsafe state.
-     * These are actions that take liquidity out of the system (e.g. borrowing,
-     * withdrawing base)
+     * @dev Pause actions but accrue interest as well.
      */
-    function pauseUnsafeActions() external onlyRole(ION) {
-        _pause(Pauses.UNSAFE);
-    }
-
-    /**
-     * @dev Unpause actions that put the protocol into a further unsafe state.
-     */
-    function unpauseUnsafeActions() external onlyRole(ION) {
-        _unpause(Pauses.UNSAFE);
-    }
-
-    /**
-     * @dev Pause actions that put the protocol into a further safe state.
-     * These are actions that put liquidity into the system (e.g. repaying,
-     * depositing base)
-     *
-     * This will also pause UNSAFE actions.
-     *
-     * Pausing accrual is also necessary with this since disabling repaying
-     * should not continue to accrue interest.
-     *
-     * Also accrues interest before the pause to update all debt at the time the
-     * pause takes place.
-     */
-    function pauseSafeActions() external onlyRole(ION) {
+    function pause() external onlyRole(ION) {
         _accrueInterest();
-        _pause(Pauses.SAFE);
-        _pause(Pauses.UNSAFE);
+        _pause();
     }
 
     /**
-     * @dev Unpause actions that put the protocol into a further safe state.
-     *
-     * This will also unpause UNSAFE actions.
-     *
-     * Will also update the `lastRateUpdate` to the unpause transaction
-     * timestamp. This essentially allows for a pausing and unpausing of the
-     * accrual of interest.
+     * @dev Unpause actions but this will also update the `lastRateUpdate` to
+     * the unpause transaction timestamp. This essentially allows for a pausing
+     * and unpausing of the accrual of interest.
      */
-    function unpauseSafeActions() external onlyRole(ION) {
-        _unpause(Pauses.SAFE);
-        _unpause(Pauses.UNSAFE);
+    function unpause() external onlyRole(ION) {
+        _unpause();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         uint256 ilksLength = $.ilks.length;
@@ -369,19 +337,13 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * @dev Updates accumulators for all `ilk`s based on current interest rates.
      * @return newTotalDebt the new total debt after interest accrual
      */
-    function accrueInterest() external whenNotPaused(Pauses.SAFE) returns (uint256 newTotalDebt) {
+    function accrueInterest() external whenNotPaused returns (uint256 newTotalDebt) {
         return _accrueInterest();
     }
 
     function _accrueInterest() internal returns (uint256 newTotalDebt) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        // Safe actions should really only be paused in conjunction with unsafe
-        // actions. However, if for some reason only safe actions were paused,
-        // it would still be possible to accrue interest by withdrawing and/or
-        // borrowing... so we prevent this outcome; but without reverting the tx
-        // altogether.
-        if (paused(Pauses.SAFE)) return ($.debt);
         uint256 totalEthSupply = totalSupplyUnaccrued();
 
         uint256 totalSupplyFactorIncrease;
@@ -548,7 +510,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * asset should be sent to.
      * @param amount of underlying to reedeem for.
      */
-    function withdraw(address receiverOfUnderlying, uint256 amount) external whenNotPaused(Pauses.UNSAFE) {
+    function withdraw(address receiverOfUnderlying, uint256 amount) external whenNotPaused {
         uint256 newTotalDebt = _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
@@ -573,7 +535,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         bytes32[] calldata proof
     )
         external
-        whenNotPaused(Pauses.SAFE)
+        whenNotPaused
         onlyWhitelistedLenders(proof)
     {
         uint256 newTotalDebt = _accrueInterest();
@@ -607,7 +569,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         bytes32[] calldata proof
     )
         external
-        whenNotPaused(Pauses.UNSAFE)
+        whenNotPaused
         onlyWhitelistedBorrowers(ilkIndex, proof)
     {
         _accrueInterest();
@@ -631,7 +593,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         uint256 amountOfNormalizedDebt
     )
         external
-        whenNotPaused(Pauses.SAFE)
+        whenNotPaused
     {
         _accrueInterest();
         (uint104 ilkRate, uint256 newDebt) =
@@ -654,7 +616,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         uint256 amount
     )
         external
-        whenNotPaused(Pauses.UNSAFE)
+        whenNotPaused
     {
         _accrueInterest();
         _modifyPosition(ilkIndex, user, recipient, address(0), -(amount.toInt256()), 0);
@@ -678,7 +640,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         bytes32[] calldata proof
     )
         external
-        whenNotPaused(Pauses.SAFE)
+        whenNotPaused
         onlyWhitelistedBorrowers(ilkIndex, proof)
     {
         _accrueInterest();
@@ -778,7 +740,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * @param user the address that owns the bad debt being paid off
      * @param rad amount of debt to be repaid (45 decimals)
      */
-    function repayBadDebt(address user, uint256 rad) external whenNotPaused(Pauses.SAFE) {
+    function repayBadDebt(address user, uint256 rad) external whenNotPaused {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.unbackedDebt[user] -= rad;
@@ -840,7 +802,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         int256 changeInNormalizedDebt
     )
         external
-        whenNotPaused(Pauses.UNSAFE)
+        whenNotPaused
         onlyRole(LIQUIDATOR_ROLE)
     {
         _accrueInterest();
@@ -874,14 +836,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * @param usr user
      * @param wad amount to add or remove
      */
-    function mintAndBurnGem(
-        uint8 ilkIndex,
-        address usr,
-        int256 wad
-    )
-        external
-        onlyRole(GEM_JOIN_ROLE)
-    {
+    function mintAndBurnGem(uint8 ilkIndex, address usr, int256 wad) external onlyRole(GEM_JOIN_ROLE) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.gem[ilkIndex][usr] = _add($.gem[ilkIndex][usr], wad);
@@ -896,7 +851,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
      * @param dst destination of the gem
      * @param wad amount of gem
      */
-    function transferGem(uint8 ilkIndex, address src, address dst, uint256 wad) external whenNotPaused(Pauses.UNSAFE) {
+    function transferGem(uint8 ilkIndex, address src, address dst, uint256 wad) external whenNotPaused {
         if (!isAllowed(src, _msgSender())) revert GemTransferWithoutConsent(ilkIndex, src, _msgSender());
 
         IonPoolStorage storage $ = _getIonPoolStorage();
