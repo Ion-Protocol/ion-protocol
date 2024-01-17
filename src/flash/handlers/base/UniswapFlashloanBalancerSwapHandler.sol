@@ -24,7 +24,6 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
     error WethNotInPoolPair(IUniswapV3Pool pool);
     error ReceiveCallerNotPool(address unauthorizedCaller);
-    error ExternalUniswapFlashloanNotAllowed();
 
     IVault internal constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -92,7 +91,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             fundManagement: fundManagement,
             assetIn: address(WETH),
             assetOut: address(LST_TOKEN),
-            amountIn: amountToLeverage
+            amountOut: amountToLeverage
         });
  
         flashCallbackData.user = msg.sender;
@@ -221,7 +220,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
                 fundManagement: fundManagement,
                 assetIn: address(LST_TOKEN),
                 assetOut: address(WETH),
-                amountIn: totalRepayment
+                amountOut: totalRepayment
             });
 
             uint256 maxCollateralToRemove = flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove;
@@ -250,7 +249,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         IVault.FundManagement memory fundManagement,
         address assetIn,
         address assetOut,
-        uint256 amountIn
+        uint256 amountOut
     )
         internal
         returns (uint256)
@@ -262,13 +261,13 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             poolId: bytes32(BALANCER_POOL_ID),
             assetInIndex: assetInIndex,
             assetOutIndex: assetOutIndex,
-            amount: amountIn,
+            amount: amountOut,
             userData: ""
         });
 
         IAsset[] memory assets = new IAsset[](2);
-        assets[assetInIndex] = IAsset(address(assetIn));
-        assets[assetOutIndex] = IAsset(address(assetOut));
+        assets[assetInIndex] = IAsset(assetIn);
+        assets[assetOutIndex] = IAsset(assetOut);
 
         IVault.BatchSwapStep[] memory swapSteps = new IVault.BatchSwapStep[](1);
         swapSteps[0] = swapStep;

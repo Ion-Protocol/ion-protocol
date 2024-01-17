@@ -34,7 +34,7 @@ contract SwEthHandler_ForkBase is IonHandler_ForkBase {
     function setUp() public virtual override {
         super.setUp();
         swEthHandler =
-            new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), FACTORY, SWETH_ETH_POOL, 500);
+            new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), SWETH_ETH_POOL);
 
         IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
 
