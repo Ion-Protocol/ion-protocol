@@ -450,10 +450,13 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         Ilk storage ilk = $.ilks[ilkIndex];
 
         uint256 _totalNormalizedDebt = ilk.totalNormalizedDebt;
-        // Unsafe cast OK
         if (_totalNormalizedDebt == 0 || block.timestamp == ilk.lastRateUpdate) {
-            return (0, 0, 0, 0, 0);
+            // Unsafe cast OK
+            // block.timestamp - ilk.lastRateUpdate will almost always be 0
+            // here. The exception is on first borrow.
+            return (0, 0, 0, 0, uint48(block.timestamp - ilk.lastRateUpdate));
         }
+
         uint256 totalDebt = _totalNormalizedDebt * ilk.rate; // [WAD] * [RAY] = [RAD]
 
         (uint256 borrowRate, uint256 reserveFactor) =
