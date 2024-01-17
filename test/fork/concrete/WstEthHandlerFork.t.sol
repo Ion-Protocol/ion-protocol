@@ -136,6 +136,10 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
+        (uint256 newRateIncrease,) = ionPool.calculateRewardAndDebtDistributionForIlk(0);
+
+        console2.log(newRateIncrease);
+
         uint256 gasBefore = gasleft();
         wstEthHandler.flashswapLeverage(
             initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
@@ -177,6 +181,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral);
         assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxmaxResultingDebt);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
+
+        vm.warp(block.timestamp + 3 hours);
 
         uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
         // Want to completely deleverage position and only leave initial capital

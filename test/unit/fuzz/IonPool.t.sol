@@ -10,6 +10,8 @@ import { ERC20PresetMinterPauser } from "test/helpers/ERC20PresetMinterPauser.so
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 uint256 constant COLLATERAL_COUNT = 3;
 
 using WadRayMath for uint256;
@@ -817,6 +819,8 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     underlying.mint(borrower1, interestToPay);
                 }
 
+                console.log(ionPool.debt(), ionPool.debtUnaccrued(), totalDebtIncrease, totalChangeInDebt);
+
                 vm.expectEmit(true, true, true, true);
                 emit Repay(
                     i,
@@ -824,7 +828,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     borrower1,
                     locs.normalizedRepayAmount,
                     rate + newRateIncrease,
-                    ionPool.debt() + totalDebtIncrease - totalChangeInDebt
+                    ionPool.debtUnaccrued() + totalDebtIncrease - totalChangeInDebt
                 );
                 vm.prank(borrower1);
                 ionPool.repay(i, borrower1, borrower1, locs.normalizedRepayAmount);
@@ -908,7 +912,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     borrower2,
                     locs.normalizedRepayAmount,
                     rate + newRateIncrease,
-                    ionPool.debt() + totalDebtIncrease - totalChangeInDebt
+                    ionPool.debtUnaccrued() + totalDebtIncrease - totalChangeInDebt
                 );
                 vm.prank(borrower2);
                 ionPool.repay({
@@ -1054,7 +1058,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     borrower2,
                     locs.normalizedRepayAmount,
                     rate + newRateIncrease,
-                    ionPool.debt() + totalDebtIncrease - totalChangeInDebt
+                    ionPool.debtUnaccrued() + totalDebtIncrease - totalChangeInDebt
                 );
                 vm.prank(borrower1);
                 ionPool.repay({

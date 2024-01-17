@@ -141,6 +141,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
 
+        vm.warp(block.timestamp + 3 hours);
+
         uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
         // Want to completely deleverage position and only leave initial capital
         // in vault

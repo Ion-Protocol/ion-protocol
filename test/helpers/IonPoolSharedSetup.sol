@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "src/IonPool.sol";
-import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 import { IonRegistry } from "src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "src/InterestRate.sol";
 import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
@@ -303,8 +302,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         assertEq(ionPool.ilkCount(), collaterals.length, "ilk count");
 
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), false, "unsafe pause");
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), false, "safe pause");
+        assertEq(ionPool.paused(), false, "pause");
 
         uint256 addressesLength = ionPool.addressesLength();
         assertEq(addressesLength, collaterals.length, "address length");
