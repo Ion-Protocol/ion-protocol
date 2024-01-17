@@ -1151,6 +1151,17 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         ionPool.initializeIlk(address(0));
     }
 
+    function test_RevertWhen_Initializing257ThIlk() public {
+        uint256 ilkCount = ionPool.ilkCount();
+        // Should lead to 256 total initialized ilks
+        for (uint256 i = 0; i < 256 - ilkCount; i++) {
+            ionPool.initializeIlk(vm.addr(i + 1));
+        }
+
+        vm.expectRevert(IonPool.MaxIlksReached.selector);
+        ionPool.initializeIlk(vm.addr(257));
+    }
+
     function test_UpdateIlkSpot() public {
         SpotOracle newSpotAddress = SpotOracle(vm.addr(12_451_234));
 
