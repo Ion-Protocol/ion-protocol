@@ -83,7 +83,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
-            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral, maxResultingDebt)
+            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral)
         );
 
         flashloanInitiated = 1;
@@ -140,7 +140,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
-            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral, maxResultingDebt)
+            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral)
         );
 
         flashloanInitiated = 1;
@@ -173,8 +173,8 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         if (flashloanInitiated != 2) revert ExternalBalancerFlashloanNotAllowed();
 
         IERC20Balancer token = tokens[0];
-        (address user, uint256 initialDeposit, uint256 resultingAdditionalCollateral, uint256 maxResultingDebt) =
-            abi.decode(userData, (address, uint256, uint256, uint256));
+        (address user, uint256 initialDeposit, uint256 resultingAdditionalCollateral) =
+            abi.decode(userData, (address, uint256, uint256));
 
         // Flashloaned WETH needs to be converted into collateral asset
         if (address(token) == address(WETH)) {
@@ -182,7 +182,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
             // Sanity checks
             assert(collateralFromDeposit + initialDeposit == resultingAdditionalCollateral);
-            assert(collateralFromDeposit <= maxResultingDebt);
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, amounts[0], AmountToBorrow.IS_MIN);
@@ -195,7 +194,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
             // Sanity checks
             assert(amounts[0] + initialDeposit == resultingAdditionalCollateral);
-            assert(wethToBorrow <= maxResultingDebt);
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, wethToBorrow, AmountToBorrow.IS_MIN);
