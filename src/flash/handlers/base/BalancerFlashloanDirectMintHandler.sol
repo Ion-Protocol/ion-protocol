@@ -104,7 +104,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256 maxResultingDebt
     )
         external
-        payable
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
