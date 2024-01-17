@@ -172,10 +172,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
             : (uint256(amount1Delta), uint256(-amount0Delta));
 
         // it's technically possible to not receive the full output amount,
-        // so if no price limit has been specified, require this possibility away
-        if (sqrtPriceLimitX96 == 0 && amountOutReceived != amountOut) {
-            revert OutputAmountNotReceived(amountOutReceived, amountOut);
-        }
+        if (amountOutReceived != amountOut) revert OutputAmountNotReceived(amountOutReceived, amountOut);
     }
 
     /**
