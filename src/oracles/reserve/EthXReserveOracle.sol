@@ -3,14 +3,9 @@ pragma solidity 0.8.21;
 
 import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-
-uint8 constant ethXDecimals = 18;
 
 contract EthXReserveOracle is ReserveOracle {
-    using WadRayMath for uint256;
-
-    address public protocolFeed;
+    address public PROTOCOL_FEED;
 
     // @param _quorum number of extra feeds to aggregate. If any of the feeds fail, pause the protocol.
     constructor(
@@ -22,12 +17,12 @@ contract EthXReserveOracle is ReserveOracle {
     )
         ReserveOracle(_ilkIndex, _feeds, _quorum, _maxChange)
     {
-        protocolFeed = _protocolFeed;
+        PROTOCOL_FEED = _protocolFeed;
         _initializeExchangeRate();
     }
 
     // @dev exchange rate is total LST supply divided by total underlying ETH
     function _getProtocolExchangeRate() internal view override returns (uint256) {
-        return IStaderStakePoolsManager(protocolFeed).getExchangeRate();
+        return IStaderStakePoolsManager(PROTOCOL_FEED).getExchangeRate();
     }
 }

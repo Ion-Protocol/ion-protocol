@@ -10,6 +10,7 @@ import {
 import { UniswapFlashloanBalancerSwapHandler } from "src/flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
 import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
 import { Whitelist } from "src/Whitelist.sol";
+import { IonHandlerBase } from "src/flash/handlers/base/IonHandlerBase.sol";
 
 import { IonHandler_ForkBase } from "test/helpers/IonHandlerForkBase.sol";
 
@@ -28,11 +29,12 @@ using StaderLibrary for IStaderStakePoolsManager;
 contract EthXHandler_ForkBase is IonHandler_ForkBase {
     uint8 internal constant ilkIndex = 1;
     EthXHandler ethXHandler;
+    bytes32[] borrowerWhitelistProof;
 
     function setUp() public virtual override {
         super.setUp();
         ethXHandler =
-        new EthXHandler(ilkIndex, ionPool, gemJoins[ilkIndex], MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL);
+        new EthXHandler(ilkIndex, ionPool, gemJoins[ilkIndex], MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL, 0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb);
 
         IERC20(address(MAINNET_ETHX)).approve(address(ethXHandler), type(uint256).max);
 
@@ -56,7 +58,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         uint256 gasBefore = gasleft();
-        ethXHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
+        ethXHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -78,7 +80,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         uint256 gasBefore = gasleft();
-        ethXHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
+        ethXHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -103,8 +105,12 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         weth.approve(address(ethXHandler), type(uint256).max);
         ionPool.addOperator(address(ethXHandler));
 
+        vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp, borrowerWhitelistProof);
+
         uint256 gasBefore = gasleft();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -126,7 +132,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         vm.recordLogs();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -151,8 +157,12 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
+        vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
+        ethXHandler.flashDeleverageWethAndSwap(
+            maxCollateralToRemove, debtToRemove, block.timestamp);
+
         uint256 gasBefore = gasleft();
-        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove);
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -166,6 +176,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
     }
 
     function testFork_RevertWhen_BalancerFlashloanNotInitiatedByHandler() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
 
@@ -177,6 +189,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
     }
 
     function testFork_RevertWhen_FlashloanedMoreThanOneToken() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](2);
         addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
         addresses[1] = IERC20Balancer(address(weth));
@@ -190,6 +204,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
     }
 
     function testFork_RevertWhen_UntrustedCallerCallsFlashloanCallback() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
 
@@ -203,6 +219,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
     }
 
     function testFork_RevertWhen_FlashloanedTokenIsNeitherWethNorCorrectLst() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
 
@@ -216,6 +234,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
     }
 
     function testFork_RevertWhen_UntrustedCallerCallsUniswapFlashloanCallback() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         vm.expectRevert(
             abi.encodeWithSelector(UniswapFlashloanBalancerSwapHandler.ReceiveCallerNotPool.selector, address(this))
         );
@@ -223,6 +243,8 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
     }
 
     function testFork_RevertWhen_FlashswapLeverageCreatesMoreDebtThanUserIsWilling() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         uint256 initialDeposit = 1e18;
         uint256 resultingCollateral = 5e18;
         uint256 maxResultingDebt = 3e18; // In weth
@@ -231,10 +253,12 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         vm.expectRevert();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
     }
 
     function testFork_RevertWhen_FlashswapDeleverageSellsMoreCollateralThanUserIsWilling() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         uint256 initialDeposit = 1e18;
         uint256 resultingCollateral = 5e18;
         uint256 maxResultingDebt = type(uint256).max;
@@ -242,7 +266,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         weth.approve(address(ethXHandler), type(uint256).max);
         ionPool.addOperator(address(ethXHandler));
 
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
 
         // No slippage tolerance
         uint256 slippageAndFeeTolerance = 1.0e18; // 0%
@@ -253,7 +277,37 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
         vm.expectRevert();
-        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove);
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
+    }
+}
+
+contract EthXHandlerWhitelist_ForkTest is EthXHandler_ForkTest {
+    // generate merkle root
+    // ["0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496"],
+    // ["0x2222222222222222222222222222222222222222"],
+    // => 0xb51a382d5bcb4cd5fe50a7d4d8abaf056ac1a6961cf654ec4f53a570ab75a30b
+
+    bytes32 borrowerWhitelistRoot = 0x846dfddafc70174f2089edda6408bf9dd643c19ee06ff11643b614f0e277d6e3;
+
+    bytes32[][] borrowerProofs = [
+        [bytes32(0x708e7cb9a75ffb24191120fba1c3001faa9078147150c6f2747569edbadee751)],
+        [bytes32(0xa6e6806303186f9c20e1af933c7efa83d98470acf93a10fb8da8b1d9c2873640)]
+    ];
+
+    Whitelist _whitelist;
+
+    function setUp() public override {
+        super.setUp();
+
+        bytes32[] memory borrowerRoots = new bytes32[](1);
+        borrowerRoots[0] = borrowerWhitelistRoot;
+
+        _whitelist = new Whitelist(borrowerRoots, bytes32(0)); 
+        _whitelist.approveProtocolWhitelist(address(ethXHandler));
+
+        ionPool.updateWhitelist(_whitelist);
+
+        borrowerWhitelistProof = borrowerProofs[0];
     }
 }
 

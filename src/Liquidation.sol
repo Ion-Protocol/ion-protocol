@@ -49,7 +49,7 @@ contract Liquidation {
     IERC20 public immutable UNDERLYING;
 
     // --- Events ---
-    event Liquidate(address indexed kpr, uint8 indexed ilkIndex, uint256 repay, uint256 gemOut);
+    event Liquidate(address indexed initiator, address indexed kpr, uint8 indexed ilkIndex, uint256 repay, uint256 gemOut);
 
     constructor(
         address _ionPool,
@@ -126,6 +126,7 @@ contract Liquidation {
         uint256 maxDiscount;
         address reserveOracle;
     }
+
     /**
      * @notice Returns the exchange rate and liquidation threshold for the given ilkIndex.
      */
@@ -134,7 +135,6 @@ contract Liquidation {
         view
         returns (Configs memory configs)
     {
-        address reserveOracle;
         if (ilkIndex == 0) {
             configs.reserveOracle = RESERVE_ORACLE_0;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
@@ -198,7 +198,7 @@ contract Liquidation {
         Configs memory configs = _getConfigs(ilkIndex);
 
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
-        uint256 exchangeRate = uint256(ReserveOracle(configs.reserveOracle).currentExchangeRate()).scaleUpToRay(18);
+        uint256 exchangeRate = ReserveOracle(configs.reserveOracle).currentExchangeRate().scaleUpToRay(18);
         (uint256 collateral, uint256 normalizedDebt) = POOL.vault(ilkIndex, vault);
         uint256 rate = POOL.rate(ilkIndex);
 
@@ -247,7 +247,7 @@ contract Liquidation {
             POOL.confiscateVault(
                 ilkIndex, vault, PROTOCOL, PROTOCOL, -int256(liquidateArgs.gemOut), -int256(liquidateArgs.dart)
             );
-            emit Liquidate(kpr, ilkIndex, liquidateArgs.dart, liquidateArgs.gemOut);
+            emit Liquidate(msg.sender, kpr, ilkIndex, liquidateArgs.dart, liquidateArgs.gemOut);
             return; // early return
         } else if (normalizedDebt * rate - liquidateArgs.repay < POOL.dust(ilkIndex)) {
             // [rad] - [rad] < [rad]
@@ -282,6 +282,6 @@ contract Liquidation {
         // pay off the unbacked debt
         POOL.repayBadDebt(address(this), liquidateArgs.repay);
 
-        emit Liquidate(kpr, ilkIndex, liquidateArgs.dart, liquidateArgs.gemOut);
+        emit Liquidate(msg.sender, kpr, ilkIndex, liquidateArgs.dart, liquidateArgs.gemOut);
     }
 }

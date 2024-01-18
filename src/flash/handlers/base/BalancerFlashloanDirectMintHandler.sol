@@ -51,25 +51,27 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     function flashLeverageCollateral(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
-        uint256 maxResultingDebt
+        uint256 maxResultingDebt,
+        bytes32[] memory proof
     )
         external
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in collateral terms
+
+        if (amountToLeverage == 0) {
+            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
+            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
+            return;
+        }
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(LST_TOKEN));
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = amountToLeverage;
-
-        if (amounts[0] == 0) {
-            // AmountToBorrow.IS_MAX because we don't want to create any new debt here
-            _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
-            return;
-        }
 
         uint256 wethRequiredForRepayment = _getEthAmountInForLstAmountOut(amountToLeverage);
         if (wethRequiredForRepayment > maxResultingDebt) {
@@ -101,9 +103,12 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     function flashLeverageWeth(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
-        uint256 maxResultingDebt
+        uint256 maxResultingDebt,
+        bytes32[] memory proof
     )
         external
+        payable
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 

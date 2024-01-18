@@ -12,7 +12,7 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
  * actions that put the protocol into a further unsafe state (e.g. borrows,
  * withdraws of base), one for pausing actions that put the protocol into a
  * safer state (e.g. repays, deposits of base), and one for pausing the accrual
- * of interest rates. Depnding on the situation, it may be desirable to pause
+ * of interest rates. Depending on the situation, it may be desirable to pause
  * one, two, or all of these, hence the reasoning for this design.
  */
 abstract contract IonPausableUpgradeable is ContextUpgradeable {
@@ -21,6 +21,7 @@ abstract contract IonPausableUpgradeable is ContextUpgradeable {
         SAFE
     }
 
+    /// @custom:storage-location erc7201:ion.storage.IonPausable
     struct IonPausableStorage {
         // Initialized to unpaused implicitly
         bool[2] _pausedStates;

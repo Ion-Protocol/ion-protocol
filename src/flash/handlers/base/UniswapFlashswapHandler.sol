@@ -25,15 +25,12 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    error InvalidFactoryAddress();
     error InvalidUniswapPool();
     error InvalidZeroLiquidityRegionSwap();
     error InvalidSqrtPriceLimitX96(uint160 sqrtPriceLimitX96);
 
-    error ExternalFlashswapNotAllowed();
     error FlashswapRepaymentTooExpensive(uint256 amountIn, uint256 maxAmountIn);
     error CallbackOnlyCallableByPool(address unauthorizedCaller);
-    error InsufficientBalance(uint256 necessaryBalance, uint256 currentBalance);
     error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
 
     /// @dev The minimum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MIN_TICK)
@@ -41,13 +38,10 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
     uint160 internal constant MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342;
 
-    IUniswapV3Factory immutable FACTORY;
-    IUniswapV3Pool immutable UNISWAP_POOL;
-    bool immutable WETH_IS_TOKEN0;
-    uint24 immutable POOL_FEE;
+    IUniswapV3Pool public immutable UNISWAP_POOL;
+    bool private immutable WETH_IS_TOKEN0;
 
-    constructor(IUniswapV3Factory _factory, IUniswapV3Pool _pool, uint24 _poolFee) {
-        if (address(_factory) == address(0)) revert InvalidFactoryAddress();
+    constructor(IUniswapV3Pool _pool, bool _wethIsToken0) {
         if (address(_pool) == address(0)) revert InvalidUniswapPool();
 
         address token0 = _pool.token0();
@@ -55,14 +49,9 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
 
         if (token0 != address(WETH) && token1 != address(WETH)) revert InvalidUniswapPool();
         if (token0 == address(WETH) && token1 == address(WETH)) revert InvalidUniswapPool();
-        if (_poolFee != _pool.fee()) revert InvalidUniswapPool();
 
-        FACTORY = _factory;
         UNISWAP_POOL = _pool;
-        POOL_FEE = _poolFee;
-
-        if (token0 == address(WETH)) WETH_IS_TOKEN0 = true;
-        else WETH_IS_TOKEN0 = false;
+        WETH_IS_TOKEN0 = _wethIsToken0;
     }
 
     struct FlashSwapData {
@@ -88,9 +77,13 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingAdditionalDebt,
-        uint160 sqrtPriceLimitX96
+        uint160 sqrtPriceLimitX96,
+        uint256 deadline,
+        bytes32[] memory proof
     )
         external
+        checkDeadline(deadline)
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
@@ -116,7 +109,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         uint256 amountIn =
             _initiateFlashSwap(zeroForOne, amountToLeverage, address(this), sqrtPriceLimitX96, flashswapData);
 
-        // This protects against a potential sandwhich attack
+        // This protects against a potential sandwich attack
         if (amountIn > maxResultingAdditionalDebt) {
             revert FlashswapRepaymentTooExpensive(amountIn, maxResultingAdditionalDebt);
         }
@@ -135,9 +128,11 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     function flashswapDeleverage(
         uint256 maxCollateralToRemove,
         uint256 debtToRemove,
-        uint160 sqrtPriceLimitX96
+        uint160 sqrtPriceLimitX96,
+        uint256 deadline
     )
         external
+        checkDeadline(deadline)
     {
         if (debtToRemove == 0) return;
 

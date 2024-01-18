@@ -89,30 +89,30 @@ contract InterestRate {
     /**
      * @dev Packed collateral configs
      */
-    uint256 internal immutable ILKCONFIG_0A;
-    uint256 internal immutable ILKCONFIG_0B;
-    uint256 internal immutable ILKCONFIG_0C;
-    uint256 internal immutable ILKCONFIG_1A;
-    uint256 internal immutable ILKCONFIG_1B;
-    uint256 internal immutable ILKCONFIG_1C;
-    uint256 internal immutable ILKCONFIG_2A;
-    uint256 internal immutable ILKCONFIG_2B;
-    uint256 internal immutable ILKCONFIG_2C;
-    uint256 internal immutable ILKCONFIG_3A;
-    uint256 internal immutable ILKCONFIG_3B;
-    uint256 internal immutable ILKCONFIG_3C;
-    uint256 internal immutable ILKCONFIG_4A;
-    uint256 internal immutable ILKCONFIG_4B;
-    uint256 internal immutable ILKCONFIG_4C;
-    uint256 internal immutable ILKCONFIG_5A;
-    uint256 internal immutable ILKCONFIG_5B;
-    uint256 internal immutable ILKCONFIG_5C;
-    uint256 internal immutable ILKCONFIG_6A;
-    uint256 internal immutable ILKCONFIG_6B;
-    uint256 internal immutable ILKCONFIG_6C;
-    uint256 internal immutable ILKCONFIG_7A;
-    uint256 internal immutable ILKCONFIG_7B;
-    uint256 internal immutable ILKCONFIG_7C;
+    uint256 private immutable ILKCONFIG_0A;
+    uint256 private immutable ILKCONFIG_0B;
+    uint256 private immutable ILKCONFIG_0C;
+    uint256 private immutable ILKCONFIG_1A;
+    uint256 private immutable ILKCONFIG_1B;
+    uint256 private immutable ILKCONFIG_1C;
+    uint256 private immutable ILKCONFIG_2A;
+    uint256 private immutable ILKCONFIG_2B;
+    uint256 private immutable ILKCONFIG_2C;
+    uint256 private immutable ILKCONFIG_3A;
+    uint256 private immutable ILKCONFIG_3B;
+    uint256 private immutable ILKCONFIG_3C;
+    uint256 private immutable ILKCONFIG_4A;
+    uint256 private immutable ILKCONFIG_4B;
+    uint256 private immutable ILKCONFIG_4C;
+    uint256 private immutable ILKCONFIG_5A;
+    uint256 private immutable ILKCONFIG_5B;
+    uint256 private immutable ILKCONFIG_5C;
+    uint256 private immutable ILKCONFIG_6A;
+    uint256 private immutable ILKCONFIG_6B;
+    uint256 private immutable ILKCONFIG_6C;
+    uint256 private immutable ILKCONFIG_7A;
+    uint256 private immutable ILKCONFIG_7B;
+    uint256 private immutable ILKCONFIG_7C;
 
     uint256 public immutable COLLATERAL_COUNT;
     IYieldOracle public immutable YIELD_ORACLE;
@@ -158,7 +158,7 @@ contract InterestRate {
         IlkData[] memory ilkDataList,
         uint256 index
     )
-        internal
+        private
         view
         returns (uint256 packedConfig_a, uint256 packedConfig_b, uint256 packedConfig_c)
     {
