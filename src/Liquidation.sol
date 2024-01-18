@@ -45,7 +45,9 @@ contract Liquidation {
     IERC20 public immutable UNDERLYING;
 
     // --- Events ---
-    event Liquidate(address indexed initiator, address indexed kpr, uint8 indexed ilkIndex, uint256 repay, uint256 gemOut);
+    event Liquidate(
+        address indexed initiator, address indexed kpr, uint8 indexed ilkIndex, uint256 repay, uint256 gemOut
+    );
 
     constructor(
         address _ionPool,
@@ -97,11 +99,7 @@ contract Liquidation {
     /**
      * @notice Returns the exchange rate and liquidation threshold for the given ilkIndex.
      */
-    function _getConfigs(uint8 ilkIndex)
-        internal
-        view
-        returns (Configs memory configs)
-    {
+    function _getConfigs(uint8 ilkIndex) internal view returns (Configs memory configs) {
         if (ilkIndex == 0) {
             configs.reserveOracle = RESERVE_ORACLE_0;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;

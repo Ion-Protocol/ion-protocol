@@ -84,7 +84,14 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         weth.approve(address(swEthHandler), type(uint256).max);
         ionPool.addOperator(address(swEthHandler));
 
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -105,7 +112,14 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         ionPool.addOperator(address(swEthHandler));
 
         vm.recordLogs();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -141,7 +155,12 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         assertLe(weth.balanceOf(address(swEthHandler)), roundingError);
     }
 
-    function testForkFuzz_FlashSwapDeleverageFull(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
+    function testForkFuzz_FlashSwapDeleverageFull(
+        uint256 initialDeposit,
+        uint256 resultingCollateralMultiplier
+    )
+        public
+    {
         initialDeposit = bound(initialDeposit, 1e13, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
         uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
@@ -151,7 +170,14 @@ abstract contract SwEthHandler_ForkFuzzTest is SwEthHandler_ForkBase {
         ionPool.addOperator(address(swEthHandler));
 
         vm.recordLogs();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 

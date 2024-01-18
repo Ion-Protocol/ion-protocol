@@ -1059,9 +1059,9 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
         }
     }
 
-    // function test_AccrueInterest() public {
-    //     uint256 collateralDepositAmount = 10e18;
-    //     uint256 normalizedBorrowAmount = 5e18;
+    function test_AccrueInterest() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
 
         uint256 borrowedSoFar;
         uint256[] memory previousRates = new uint256[](ionPool.ilkCount());
@@ -1476,11 +1476,7 @@ contract IonPool_WhitelistTest is IonPoolSharedSetup {
             0xa7409058568815d08a7ad3c7d4fd44cf1dec90c620cb31e55ad24c654f7ba34f,
             0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192
         ),
-        abi.encode(
-            32,
-            1,
-            0xc6ce8ae383124b268df66d71f0af2206e6dafb13eba0b03806eed8a4e7991329
-        )
+        abi.encode(32, 1, 0xc6ce8ae383124b268df66d71f0af2206e6dafb13eba0b03806eed8a4e7991329)
     ];
 
     bytes[] lenderProofs = [

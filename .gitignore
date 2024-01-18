@@ -5,8 +5,12 @@ coverage/
 
 # Ignores development broadcast logs
 !/broadcast
-/broadcast/*/31337/
+!/broadcast/*/
+!/broadcast/*/1/
+
 /broadcast/**/dry-run/
+/broadcast/*
+/broadcast/*/*
 
 # Dependency directories
 

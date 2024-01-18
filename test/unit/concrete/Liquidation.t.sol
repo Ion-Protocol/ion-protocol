@@ -37,8 +37,15 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 _targetHealth = 1.25 ether;
         uint256 _reserveFactor = 0.02 ether;
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            _targetHealth,
+            _reserveFactor,
+            maxDiscounts
+        );
 
         // set exchange rate to zero
         reserveOracle1.setExchangeRate(0);
@@ -75,8 +82,15 @@ contract LiquidationTest is LiquidationSharedSetup {
         uint256 _targetHealth = 1.25e27;
         uint256 _reserveFactor = 0.02e27;
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            _targetHealth,
+            _reserveFactor,
+            maxDiscounts
+        );
 
         // set exchange rate
         reserveOracle1.setExchangeRate(1e18);
@@ -112,8 +126,15 @@ contract LiquidationTest is LiquidationSharedSetup {
             maxDiscounts[i] = _maxDiscount;
         }
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, _targetHealth, _reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            _targetHealth,
+            _reserveFactor,
+            maxDiscounts
+        );
 
         // set exchange rate
         uint72 exchangeRate = 0.5e18;
@@ -178,8 +199,15 @@ contract LiquidationTest is LiquidationSharedSetup {
             maxDiscounts[i] = dArgs.maxDiscount;
         }
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            dArgs.targetHealth,
+            dArgs.reserveFactor,
+            maxDiscounts
+        );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -260,8 +288,15 @@ contract LiquidationTest is LiquidationSharedSetup {
             maxDiscounts[i] = dArgs.maxDiscount;
         }
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            dArgs.targetHealth,
+            dArgs.reserveFactor,
+            maxDiscounts
+        );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -339,8 +374,15 @@ contract LiquidationTest is LiquidationSharedSetup {
             maxDiscounts[i] = dArgs.maxDiscount;
         }
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            dArgs.targetHealth,
+            dArgs.reserveFactor,
+            maxDiscounts
+        );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -432,8 +474,15 @@ contract LiquidationTest is LiquidationSharedSetup {
             maxDiscounts[i] = dArgs.maxDiscount;
         }
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            dArgs.targetHealth,
+            dArgs.reserveFactor,
+            maxDiscounts
+        );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position
@@ -498,8 +547,15 @@ contract LiquidationTest is LiquidationSharedSetup {
             maxDiscounts[i] = dArgs.maxDiscount;
         }
 
-        liquidation =
-        new Liquidation(address(ionPool), protocol, exchangeRateOracles, liquidationThresholds, dArgs.targetHealth, dArgs.reserveFactor, maxDiscounts);
+        liquidation = new Liquidation(
+            address(ionPool),
+            protocol,
+            exchangeRateOracles,
+            liquidationThresholds,
+            dArgs.targetHealth,
+            dArgs.reserveFactor,
+            maxDiscounts
+        );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
         // create position

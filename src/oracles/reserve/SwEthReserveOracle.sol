@@ -22,7 +22,7 @@ contract SwEthReserveOracle is ReserveOracle {
         _initializeExchangeRate();
     }
 
-    // @notice returns the exchange rate between swETH to ETH that is supported by Swell. 
+    // @notice returns the exchange rate between swETH to ETH that is supported by Swell.
     function _getProtocolExchangeRate() internal view override returns (uint256 protocolExchangeRate) {
         protocolExchangeRate = ISwEth(PROTOCOL_FEED).getRate();
     }

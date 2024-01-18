@@ -38,8 +38,9 @@ contract WstEthHandler_Test is IonPoolSharedSetup {
         mockPool.setUnderlying(address(underlying));
 
         // Ignore Uniswap args since they will be tested through forks
-        wstEthHandler =
-        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Pool(address(mockPool)));
+        wstEthHandler = new WstEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Pool(address(mockPool))
+        );
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {

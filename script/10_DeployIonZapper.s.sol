@@ -32,13 +32,6 @@ contract DeployIonZapperScript is BaseScript {
         GemJoin wstEthJoin = GemJoin(vm.parseJsonAddress(config, ".wstEthJoin"));
         Whitelist whitelist = Whitelist(vm.parseJsonAddress(config, ".whitelist"));
 
-        ionZapper = new IonZapper(
-            ionPool,
-            weth,
-            stEth,
-            wstEth,
-            wstEthJoin,
-            whitelist
-        );
+        ionZapper = new IonZapper(ionPool, weth, stEth, wstEth, wstEthJoin, whitelist);
     }
 }

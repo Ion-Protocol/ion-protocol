@@ -15,13 +15,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
-        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
-            SWETH,
-            SWETH_ILK_INDEX, 
-            feeds, 
-            quorum,
-            maxChange
-        );
+        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, maxChange);
 
         swEthReserveOracle.updateExchangeRate();
 
@@ -34,13 +28,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         address[] memory feeds = new address[](3);
-        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
-            SWETH,
-            SWETH_ILK_INDEX, 
-            feeds, 
-            quorum,
-            maxChange
-        );
+        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 protocolExchangeRate = swEthReserveOracle.getProtocolExchangeRate();
         assertEq(protocolExchangeRate, 1_039_088_295_006_509_594, "protocol exchange rate");
@@ -122,8 +110,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets currentExchangeRate to be the current exchangeRate in constructor
-        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum,
-    maxChange);
+        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 exchangeRate = swEthReserveOracle.currentExchangeRate();
 
@@ -145,8 +132,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         uint8 quorum = 0;
 
         // sets currentExchangeRate to be the current exchangeRate in constructor
-        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum,
-    maxChange);
+        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 currentExchangeRate = swEthReserveOracle.currentExchangeRate();
 
@@ -172,13 +158,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         address[] memory feeds = new address[](3);
         feeds[0] = address(reserveFeed);
         uint8 quorum = 1;
-        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
-            SWETH,
-            SWETH_ILK_INDEX,
-            feeds,
-            quorum,
-            MAX_CHANGE
-        );
+        SwEthReserveOracle swEthReserveOracle =
+            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, MAX_CHANGE);
 
         swEthReserveOracle.updateExchangeRate();
 
@@ -199,13 +180,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[0] = address(reserveFeed1);
         feeds[1] = address(reserveFeed2);
         uint8 quorum = 2;
-        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
-            SWETH,
-            SWETH_ILK_INDEX,
-            feeds,
-            quorum,
-            MAX_CHANGE
-        );
+        SwEthReserveOracle swEthReserveOracle =
+            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, MAX_CHANGE);
 
         swEthReserveOracle.updateExchangeRate();
 
@@ -231,13 +207,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[0] = address(reserveFeed1);
         feeds[1] = address(reserveFeed2);
         uint8 quorum = 2;
-        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
-            SWETH,
-            SWETH_ILK_INDEX,
-            feeds,
-            quorum,
-            MAX_CHANGE
-        );
+        SwEthReserveOracle swEthReserveOracle =
+            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, MAX_CHANGE);
 
         swEthReserveOracle.updateExchangeRate();
 

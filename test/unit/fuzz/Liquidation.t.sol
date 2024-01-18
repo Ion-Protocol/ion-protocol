@@ -104,12 +104,12 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         }
 
         liquidation = new Liquidation(
-            address(ionPool),  
+            address(ionPool),
             protocol,
-            exchangeRateOracles, 
-            liquidationThresholds, 
-            deploymentArgs.targetHealth, 
-            deploymentArgs.reserveFactor, 
+            exchangeRateOracles,
+            liquidationThresholds,
+            deploymentArgs.targetHealth,
+            deploymentArgs.reserveFactor,
             maxDiscounts
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
@@ -211,12 +211,12 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         }
 
         liquidation = new Liquidation(
-            address(ionPool), 
+            address(ionPool),
             protocol,
-            exchangeRateOracles, 
-            liquidationThresholds, 
-            deploymentArgs.targetHealth, 
-            deploymentArgs.reserveFactor, 
+            exchangeRateOracles,
+            liquidationThresholds,
+            deploymentArgs.targetHealth,
+            deploymentArgs.reserveFactor,
             maxDiscounts
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));

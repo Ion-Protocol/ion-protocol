@@ -100,8 +100,13 @@ contract YieldOracle_ForkTest is Test {
 
         console2.log(staderExchangeRateAddress);
 
-        apyOracle =
-        new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));
+        apyOracle = new YieldOracleExposed(
+            historicalExchangeRates,
+            lidoExchangeRateAddress,
+            staderExchangeRateAddress,
+            swellExchangeRateAddress,
+            address(this)
+        );
         apyOracle.updateIonPool(mockIonPool);
         vm.makePersistent(address(apyOracle));
         vm.makePersistent(address(mockIonPool));

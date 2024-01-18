@@ -31,13 +31,7 @@ contract DeployLiquidationScript is BaseScript {
         // assert(maxDiscounts.length == ILK_COUNT);
 
         liquidation = new Liquidation(
-            ionPool,
-            protocol,
-            reserveOracles,
-            liquidationThresholds,
-            targetHealth,
-            reserveFactor,
-            maxDiscounts
+            ionPool, protocol, reserveOracles, liquidationThresholds, targetHealth, reserveFactor, maxDiscounts
         );
     }
 }

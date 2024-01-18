@@ -36,8 +36,7 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
 
     function setUp() public virtual override {
         super.setUp();
-        wstEthHandler =
-        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
+        wstEthHandler = new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
 
         IERC20(address(MAINNET_WSTETH)).approve(address(wstEthHandler), type(uint256).max);
 
@@ -67,7 +66,9 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof);
+        wstEthHandler.flashLeverageCollateral(
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof
+        );
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -93,7 +94,9 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof);
+        wstEthHandler.flashLeverageCollateral(
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof
+        );
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -116,7 +119,9 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashLeverageWeth(initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof);
+        wstEthHandler.flashLeverageWeth(
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof
+        );
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -143,11 +148,23 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp, borrowerWhitelistProof);
+            initialDeposit,
+            resultingAdditionalCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp,
+            borrowerWhitelistProof
+        );
 
         uint256 gasBefore = gasleft();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof);
+            initialDeposit,
+            resultingAdditionalCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            borrowerWhitelistProof
+        );
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -170,7 +187,13 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         vm.recordLogs();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof);
+            initialDeposit,
+            resultingAdditionalCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            borrowerWhitelistProof
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -219,7 +242,12 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         vm.recordLogs();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof
+            initialDeposit,
+            resultingAdditionalCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            borrowerWhitelistProof
         );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -346,7 +374,13 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         vm.expectRevert();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof);
+            initialDeposit,
+            resultingAdditionalCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            borrowerWhitelistProof
+        );
     }
 
     function testFork_RevertWhen_FlashswapDeleverageSellsMoreCollateralThanUserIsWilling() external {
@@ -360,7 +394,13 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof) ;
+            initialDeposit,
+            resultingAdditionalCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            borrowerWhitelistProof
+        );
 
         uint256 slippageAndFeeTolerance = 1.0e18; // 0%
         // Want to completely deleverage position and only leave initial capital
@@ -398,7 +438,7 @@ contract WstEthHandlerWhitelist_ForkTest is WstEthHandler_ForkTest {
         bytes32[] memory borrowerRoots = new bytes32[](1);
         borrowerRoots[0] = borrowerWhitelistRoot;
 
-        _whitelist = new Whitelist(borrowerRoots, bytes32(0)); 
+        _whitelist = new Whitelist(borrowerRoots, bytes32(0));
         _whitelist.approveProtocolWhitelist(address(wstEthHandler));
 
         ionPool.updateWhitelist(_whitelist);
