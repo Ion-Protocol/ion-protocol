@@ -235,9 +235,8 @@ contract LenderHandler is Handler {
         amount = bound(amount, 0, type(uint128).max);
 
         _warpTime(warpTimeAmount);
-        (uint256 supplyFactorIncrease,,,,) = _calculateRewardAndDebtDistribution();
 
-        uint256 amountNormalized = amount.rayDivDown(ionPool.supplyFactor() + supplyFactorIncrease);
+        uint256 amountNormalized = amount.rayDivDown(ionPool.supplyFactor());
 
         if (amountNormalized == 0) return;
         totalHoldingsNormalized += amountNormalized;
@@ -256,9 +255,8 @@ contract LenderHandler is Handler {
         amount = bound(amount, 0, balance);
 
         _warpTime(warpTimeAmount);
-        (uint256 supplyFactorIncrease,,,,) = _calculateRewardAndDebtDistribution();
 
-        uint256 amountNormalized = amount.rayDivUp(ionPool.supplyFactor() + supplyFactorIncrease);
+        uint256 amountNormalized = amount.rayDivUp(ionPool.supplyFactor());
         if (amountNormalized == 0) return;
 
         totalHoldingsNormalized -= amountNormalized;
@@ -270,42 +268,6 @@ contract LenderHandler is Handler {
         if (REPORT) reportAction(Actions.WITHDRAW, 0, amount);
     }
 
-    function _calculateRewardAndDebtDistribution()
-        internal
-        view
-        returns (
-            uint256 supplyFactorIncrease,
-            uint256 treasuryMintAmount,
-            uint104[] memory newRateIncreases,
-            uint256 newDebtIncrease,
-            uint48[] memory newTimestampIncreases
-        )
-    {
-        uint256 ilksLength = ionPool.ilkCount();
-        newRateIncreases = new uint104[](ilksLength);
-        newTimestampIncreases = new uint48[](ilksLength);
-        for (uint8 i = 0; i < ilksLength;) {
-            (
-                uint256 _supplyFactorIncrease,
-                uint256 _treasuryMintAmount,
-                uint104 _newRateIncrease,
-                uint256 _newDebtIncrease,
-                uint48 _timestampIncrease
-            ) = ionPool.calculateRewardAndDebtDistribution(i);
-
-            if (_timestampIncrease > 0) {
-                newRateIncreases[i] = _newRateIncrease;
-                newTimestampIncreases[i] = _timestampIncrease;
-                newDebtIncrease += _newDebtIncrease;
-
-                supplyFactorIncrease += _supplyFactorIncrease;
-                treasuryMintAmount += _treasuryMintAmount;
-            }
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
-    }
 }
 
 contract BorrowerHandler is Handler {
