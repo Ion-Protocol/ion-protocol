@@ -27,6 +27,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
 
     error InvalidUniswapPool();
     error InvalidZeroLiquidityRegionSwap();
+    error InvalidSqrtPriceLimitX96(uint160 sqrtPriceLimitX96);
 
     error FlashswapRepaymentTooExpensive(uint256 amountIn, uint256 maxAmountIn);
     error CallbackOnlyCallableByPool(address unauthorizedCaller);
@@ -47,6 +48,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         address token1 = _pool.token1();
 
         if (token0 != address(WETH) && token1 != address(WETH)) revert InvalidUniswapPool();
+        if (token0 == address(WETH) && token1 == address(WETH)) revert InvalidUniswapPool();
 
         UNISWAP_POOL = _pool;
         WETH_IS_TOKEN0 = _wethIsToken0;
@@ -114,8 +116,12 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     }
 
     /**
-     * @dev The two function parameters must be chosen carefully. If `maxCollateralToRemove` were higher then
-     * `debtToRemove`, it would theoretically be possible TODO: to do what?
+     * @dev The two function parameters must be chosen carefully. If
+     * `maxCollateralToRemove`'s ETH valuation were higher then `debtToRemove`,
+     * it would theoretically be possible to sell more collateral then was
+     * required for `debtToRemove` to be repaid (even if `debtToRemove` is worth
+     * nowhere near that valuation) due to the slippage of the sell.
+     * `maxCollateralToRemove` is essentially a slippage guard here.
      * @param maxCollateralToRemove in terms of swEth
      * @param debtToRemove in terms of WETH [wad]
      * @param sqrtPriceLimitX96 for the swap
@@ -157,6 +163,8 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         private
         returns (uint256 amountIn)
     {
+        if ((sqrtPriceLimitX96 < MIN_SQRT_RATIO || sqrtPriceLimitX96 > MAX_SQRT_RATIO) && sqrtPriceLimitX96 != 0) revert InvalidSqrtPriceLimitX96(sqrtPriceLimitX96);
+
         (int256 amount0Delta, int256 amount1Delta) = UNISWAP_POOL.swap(
             recipient,
             zeroForOne,

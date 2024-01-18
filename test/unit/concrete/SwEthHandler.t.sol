@@ -24,6 +24,10 @@ contract MockUniswapPool {
     function setUnderlying(address _underlying) external {
         underlying = _underlying;
     }
+
+    function fee() external pure returns (uint24) {
+        return 500;
+    }   
 }
 
 contract SwEthHandler_Test is IonPoolSharedSetup {
