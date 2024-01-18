@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { IonPool } from "src/IonPool.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -29,25 +29,32 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
  */
 abstract contract IonHandlerBase {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH9;
     using WadRayMath for uint256;
 
     error CannotSendEthToContract();
     error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
+    error TransactionDeadlineReached(uint256 deadline);
+
+    modifier checkDeadline(uint256 deadline) {
+        if (deadline <= block.timestamp) revert TransactionDeadlineReached(deadline);
+        _;
+    }
 
     enum AmountToBorrow {
         IS_MIN,
         IS_MAX
     }
 
-    IWETH9 immutable WETH;
-    uint8 immutable ILK_INDEX;
-    IonPool immutable POOL;
-    GemJoin immutable JOIN;
-    IERC20 immutable LST_TOKEN;
-    Whitelist immutable WHITELIST;
+    IWETH9 public immutable WETH;
+    uint8 public immutable ILK_INDEX;
+    IonPool public immutable POOL;
+    GemJoin public immutable JOIN;
+    IERC20 public immutable LST_TOKEN;
+    Whitelist public immutable WHITELIST;
 
-    modifier onlyWhitelistedBorrowers(uint8, bytes32[] memory proof) {
-        WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, proof);
+    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
+        WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, msg.sender, proof);
         _;
     }
 
@@ -81,7 +88,7 @@ abstract contract IonHandlerBase {
         bytes32[] calldata proof
     )
         external
-        onlyWhitelistedBorrowers(ILK_INDEX, proof)
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), amountCollateral);
         _depositAndBorrow(msg.sender, msg.sender, amountCollateral, amountToBorrow, AmountToBorrow.IS_MAX);
@@ -110,6 +117,8 @@ abstract contract IonHandlerBase {
 
         POOL.depositCollateral(ILK_INDEX, vaultHolder, address(this), amountCollateral, new bytes32[](0));
 
+        if (amountToBorrow == 0) return;
+
         uint256 rate = POOL.rate(ILK_INDEX);
 
         uint256 normalizedAmountToBorrow;
@@ -119,9 +128,41 @@ abstract contract IonHandlerBase {
             normalizedAmountToBorrow = amountToBorrow.rayDivDown(rate);
         }
 
-        if (amountToBorrow != 0) {
-            POOL.borrow(ILK_INDEX, vaultHolder, receiver, normalizedAmountToBorrow, new bytes32[](0));
-        }
+        POOL.borrow(ILK_INDEX, vaultHolder, receiver, normalizedAmountToBorrow, new bytes32[](0));
+    }
+
+    /**
+     * @notice Will repay all debt and withdraw desired collateral amount
+     * @dev Will repay the debt belonging to `msg.sender`
+     * @param collateralToWithdraw in collateral terms
+     */
+    function repayFullAndWithdraw(uint256 collateralToWithdraw) external {
+        (uint256 repayAmount, uint256 normalizedDebtToRepay) = _getFullRepayAmount(msg.sender);
+
+        WETH.safeTransferFrom(msg.sender, address(this), repayAmount);
+
+        POOL.repay(ILK_INDEX, msg.sender, address(this), normalizedDebtToRepay);
+
+        POOL.withdrawCollateral(ILK_INDEX, msg.sender, address(this), collateralToWithdraw);
+
+        JOIN.exit(msg.sender, collateralToWithdraw);
+    }
+
+    /**
+     * @dev Helper function to get the repayment amount for all the debt of a `user`.
+     * @param user address of the user
+     * @return repayAmount amount of WETH required to repay all debt (this mimics IonPool's behavior)
+     * @return normalizedDebt total normalized debt held by user's vault
+     */
+    function _getFullRepayAmount(address user) internal view returns (uint256 repayAmount, uint256 normalizedDebt) {
+        uint256 currentRate = POOL.rate(ILK_INDEX);
+
+        normalizedDebt = POOL.normalizedDebt(ILK_INDEX, user);
+
+        // This is exactly how IonPool calculates the amount of weth required
+        uint256 amountRad = normalizedDebt * currentRate;
+        repayAmount = amountRad / RAY;
+        if (amountRad % RAY > 0) ++repayAmount;
     }
 
     /**
@@ -129,7 +170,7 @@ abstract contract IonHandlerBase {
      * @param collateralToWithdraw in collateral terms
      */
     function repayAndWithdraw(uint256 debtToRepay, uint256 collateralToWithdraw) external {
-        WETH.transferFrom(msg.sender, address(this), debtToRepay);
+        WETH.safeTransferFrom(msg.sender, address(this), debtToRepay);
         _repayAndWithdraw(msg.sender, msg.sender, collateralToWithdraw, debtToRepay);
     }
 

@@ -13,6 +13,19 @@ import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.
 contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- stETH Reserve Oracle Test ---
 
+    function test_RevertWhen_UpdateIsOnCooldown() public {
+        uint256 maxChange = 3e25; // 0.03 3%
+        address[] memory feeds = new address[](3);
+        uint8 quorum = 0;
+        WstEthReserveOracle wstEthReserveOracle =
+            new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+
+        wstEthReserveOracle.updateExchangeRate();
+
+        vm.expectRevert(abi.encodeWithSelector(ReserveOracle.UpdateCooldown.selector, block.timestamp));
+        wstEthReserveOracle.updateExchangeRate();
+    }
+
     function test_WstEthReserveOracleGetProtocolExchangeRate() public {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
@@ -27,9 +40,9 @@ contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     function test_WstEthReserveOracleAggregation() public {
         uint256 maxChange = 3e25; // 0.03 3%
 
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint72 reserveFeed1ExchangeRate = 1.1 ether;
         uint72 reserveFeed2ExchangeRate = 1.12 ether;
@@ -61,9 +74,9 @@ contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
     // --- Errors ---
     function test_RevertWhen_StEthInvalidInitialization() public {
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
