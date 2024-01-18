@@ -48,9 +48,9 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleAggregation() public {
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint256 reserveFeed1ExchangeRate = 0.9 ether;
         uint256 reserveFeed2ExchangeRate = 0.95 ether;
@@ -166,7 +166,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- Reserve Oracle Aggregation Test ---
 
     function test_SwEthReserveOracleGetAggregateExchangeRateMin() public {
-        ReserveFeed reserveFeed = new ReserveFeed();
+        ReserveFeed reserveFeed = new ReserveFeed(address(this));
         reserveFeed.setExchangeRate(SWETH_ILK_INDEX, 1.01 ether);
 
         // reserve oracle
@@ -191,8 +191,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleTwoFeeds() public {
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
         reserveFeed1.setExchangeRate(SWETH_ILK_INDEX, 0.9 ether);
         reserveFeed2.setExchangeRate(SWETH_ILK_INDEX, 0.8 ether);
 
@@ -216,9 +216,9 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleThreeFeeds() public {
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint256 reserveFeed1ExchangeRate = 1 ether;
         uint256 reserveFeed2ExchangeRate = 1.4 ether;

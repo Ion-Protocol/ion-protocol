@@ -95,15 +95,15 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     address private immutable ADDRESS_THIS = address(this);
 
     // --- Modifiers ---
-    modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
+    modifier onlyWhitelistedBorrowers(uint8 ilkIndex, address user, bytes32[] memory proof) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedBorrower(ilkIndex, _msgSender(), proof);
+        $.whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, user, proof);
         _;
     }
 
-    modifier onlyWhitelistedLenders(bytes32[] memory proof) {
+    modifier onlyWhitelistedLenders(address user, bytes32[] memory proof) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedLender(_msgSender(), proof);
+        $.whitelist.isWhitelistedLender(msg.sender, user, proof);
         _;
     }
 
@@ -537,7 +537,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     )
         external
         whenNotPaused(Pauses.SAFE)
-        onlyWhitelistedLenders(proof)
+        onlyWhitelistedLenders(user, proof)
     {
         uint256 newTotalDebt = _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
@@ -567,11 +567,11 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
         address user,
         address recipient,
         uint256 amountOfNormalizedDebt,
-        bytes32[] calldata proof
+        bytes32[] memory proof
     )
         external
         whenNotPaused(Pauses.UNSAFE)
-        onlyWhitelistedBorrowers(ilkIndex, proof)
+        onlyWhitelistedBorrowers(ilkIndex, user, proof)
     {
         _accrueInterestForIlk(ilkIndex);
         (uint104 ilkRate, uint256 newDebt) =
@@ -641,7 +641,7 @@ contract IonPool is IonPausableUpgradeable, RewardModule {
     )
         external
         whenNotPaused(Pauses.SAFE)
-        onlyWhitelistedBorrowers(ilkIndex, proof)
+        onlyWhitelistedBorrowers(ilkIndex, user, proof)
     {
         _modifyPosition(ilkIndex, user, depositor, address(0), amount.toInt256(), 0);
 

@@ -75,9 +75,13 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingAdditionalDebt,
-        uint160 sqrtPriceLimitX96
+        uint160 sqrtPriceLimitX96,
+        uint256 deadline,
+        bytes32[] memory proof
     )
         external
+        checkDeadline(deadline)
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
@@ -119,9 +123,11 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     function flashswapDeleverage(
         uint256 maxCollateralToRemove,
         uint256 debtToRemove,
-        uint160 sqrtPriceLimitX96
+        uint160 sqrtPriceLimitX96,
+        uint256 deadline
     )
         external
+        checkDeadline(deadline)
     {
         if (debtToRemove == 0) return;
 

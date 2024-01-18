@@ -51,9 +51,11 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     function flashLeverageCollateral(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
-        uint256 maxResultingDebt
+        uint256 maxResultingDebt,
+        bytes32[] memory proof
     )
         external
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
@@ -101,9 +103,12 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     function flashLeverageWeth(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
-        uint256 maxResultingDebt
+        uint256 maxResultingDebt,
+        bytes32[] memory proof
     )
         external
+        payable
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 

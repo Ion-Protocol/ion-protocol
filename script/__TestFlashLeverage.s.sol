@@ -59,18 +59,22 @@ contract FlashLeverageScript is BaseScript {
         WSTETH_HANDLER.flashLeverageCollateral({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
-            maxResultingDebt: maxResultingDebt
+            maxResultingDebt: maxResultingDebt,
+            proof: new bytes32[](0)
         });
         WSTETH_HANDLER.flashLeverageWeth({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
-            maxResultingDebt: maxResultingDebt
+            maxResultingDebt: maxResultingDebt,
+            proof: new bytes32[](0)
         });
         WSTETH_HANDLER.flashswapLeverage({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
             maxResultingAdditionalDebt: type(uint256).max,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            deadline: block.timestamp,
+            proof: new bytes32[](0)
         });
 
         maxResultingDebt = MAINNET_STADER.getEthAmountInForLstAmountOut(resultingAdditionalCollateral - initialDeposit);
@@ -78,17 +82,21 @@ contract FlashLeverageScript is BaseScript {
         ETHX_HANDLER.flashLeverageCollateral({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
-            maxResultingDebt: maxResultingDebt
+            maxResultingDebt: maxResultingDebt,
+            proof: new bytes32[](0)
         });
         ETHX_HANDLER.flashLeverageWeth({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
-            maxResultingDebt: maxResultingDebt
+            maxResultingDebt: maxResultingDebt,
+            proof: new bytes32[](0)
         });
         ETHX_HANDLER.flashLeverageWethAndSwap({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
-            maxResultingAdditionalDebt: type(uint256).max
+            maxResultingAdditionalDebt: type(uint256).max,
+            deadline: block.timestamp,
+            proof: new bytes32[](0)
         });
 
         maxResultingDebt = MAINNET_SWELL.getEthAmountInForLstAmountOut(resultingAdditionalCollateral - initialDeposit);
@@ -96,18 +104,22 @@ contract FlashLeverageScript is BaseScript {
         SWETH_HANDLER.flashLeverageCollateral({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
-            maxResultingDebt: maxResultingDebt
+            maxResultingDebt: maxResultingDebt,
+            proof: new bytes32[](0)
         });
         SWETH_HANDLER.flashLeverageWeth({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
-            maxResultingDebt: maxResultingDebt
+            maxResultingDebt: maxResultingDebt,
+            proof: new bytes32[](0)
         });
         SWETH_HANDLER.flashswapLeverage({
             initialDeposit: initialDeposit,
             resultingAdditionalCollateral: resultingAdditionalCollateral,
             maxResultingAdditionalDebt: type(uint256).max,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            deadline: block.timestamp,
+            proof: new bytes32[](0)
         });
 
         uint256 maxCollateralToRemove = 1 ether;
@@ -116,16 +128,19 @@ contract FlashLeverageScript is BaseScript {
         WSTETH_HANDLER.flashswapDeleverage({
             maxCollateralToRemove: maxCollateralToRemove,
             debtToRemove: debtToRemove,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            deadline: block.timestamp
         });
         ETHX_HANDLER.flashDeleverageWethAndSwap({
             maxCollateralToRemove: maxCollateralToRemove,
-            debtToRemove: debtToRemove
+            debtToRemove: debtToRemove,
+            deadline: block.timestamp
         });
         SWETH_HANDLER.flashswapDeleverage({
             maxCollateralToRemove: maxCollateralToRemove,
             debtToRemove: debtToRemove,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            deadline: block.timestamp
         });
     }
 }

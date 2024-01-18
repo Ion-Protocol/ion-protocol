@@ -52,9 +52,9 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 1e27; // 1 100%
         uint8 quorum = 3;
 
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint256 reserveFeed1ExchangeRate = 0.9 ether;
         uint256 reserveFeed2ExchangeRate = 0.95 ether;
