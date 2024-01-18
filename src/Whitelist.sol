@@ -6,16 +6,14 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract Whitelist is Ownable2Step {
-    mapping(address => bool) public protocolWhitelist; // peripheral addresses that can bypass the merkle proof check
+    mapping(address protocolControlledAddress => bool) public protocolWhitelist; // peripheral addresses that can bypass the merkle proof check
 
-    mapping(uint8 => bytes32) public borrowersRoot; // root of the merkle tree of borrowers for each ilk
+    mapping(uint8 ilkIndex => bytes32) public borrowersRoot; // root of the merkle tree of borrowers for each ilk
 
     bytes32 public lendersRoot; // root of the merkle tree of lenders for each ilk
 
     // --- Errors ---
 
-    error InvalidConstructorArguments();
-    error InvalidWhitelistMerkleProof();
     error NotWhitelistedBorrower(uint8 ilkIndex, address addr);
     error NotWhitelistedLender(address addr);
 
@@ -50,6 +48,7 @@ contract Whitelist is Ownable2Step {
      */
     function isWhitelistedBorrower(
         uint8 ilkIndex,
+        address poolCaller,
         address addr,
         bytes32[] calldata proof
     )
@@ -57,7 +56,7 @@ contract Whitelist is Ownable2Step {
         view
         returns (bool)
     {
-        if (protocolWhitelist[addr]) return true;
+        if (protocolWhitelist[poolCaller]) return true;
         bytes32 root = borrowersRoot[ilkIndex];
         if (root == 0) return true;
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));
@@ -74,8 +73,8 @@ contract Whitelist is Ownable2Step {
      * will be allowed.
      * @return true if the addr is part of the lender whitelist or the protocol whitelist. False otherwise
      */
-    function isWhitelistedLender(address addr, bytes32[] calldata proof) external view returns (bool) {
-        if (protocolWhitelist[addr]) return true;
+    function isWhitelistedLender(address poolCaller, address addr, bytes32[] calldata proof) external view returns (bool) {
+        if (protocolWhitelist[poolCaller]) return true;
         bytes32 root = lendersRoot;
         if (root == bytes32(0)) return true;
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));

@@ -24,13 +24,10 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         IonPool _ionPool,
         GemJoin _gemJoin,
         Whitelist _whitelist,
-        IUniswapV3Factory _factory,
-        IUniswapV3Pool _wstEthUniswapPool,
-        uint24 _poolFee
+        IUniswapV3Pool _wstEthUniswapPool
     )
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
-        // token0 is wstEth
-        UniswapFlashswapHandler(_factory, _wstEthUniswapPool, _poolFee, false)
+        UniswapFlashswapHandler(_wstEthUniswapPool, false)
     {
         // NOTE: approves wstEth contract infinite approval to move this contract's stEth
         STETH.approve(address(LST_TOKEN), type(uint256).max);

@@ -74,17 +74,6 @@ contract IonPoolExposed is IonPool {
     }
 }
 
-// for bypassing whitelist checks during tests
-contract MockWhitelist {
-    function isWhitelistedBorrower(uint8, address, bytes32[] calldata) external pure returns (bool) {
-        return true;
-    }
-
-    function isWhitelistedLender(address, bytes32[] calldata) external pure returns (bool) {
-        return true;
-    }
-}
-
 contract MockSpotOracle is SpotOracle {
     uint256 price;
 
@@ -235,7 +224,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
         // whitelist
-        whitelist = address(new MockWhitelist());
+        whitelist = address(new Whitelist(new bytes32[](0), bytes32(0)));
 
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
@@ -306,9 +295,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), false, "unsafe pause");
         assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), false, "safe pause");
 
-        uint256 addressesLength = ionPool.addressesLength();
-        assertEq(addressesLength, collaterals.length, "address length");
-        for (uint8 i = 0; i < addressesLength; i++) {
+        for (uint8 i = 0; i < collaterals.length; i++) {
             address collateralAddress = address(collaterals[i]);
             assertEq(ionPool.addressContains(collateralAddress), true, "address contains");
             assertEq(ionPool.getIlkAddress(i), collateralAddress, "ilk address");

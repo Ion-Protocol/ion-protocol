@@ -13,8 +13,8 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 contract SwEthSpotOracle is SpotOracle {
     using Math for uint256;
 
-    IUniswapV3Pool immutable POOL;
-    uint32 immutable SECONDS_AGO;
+    IUniswapV3Pool public immutable POOL;
+    uint32 public immutable SECONDS_AGO;
 
     constructor(
         uint256 _ltv,
@@ -35,11 +35,11 @@ contract SwEthSpotOracle is SpotOracle {
         (int24 arithmeticMeanTick,) = UniswapOracleLibrary.consult(address(POOL), SECONDS_AGO);
         uint256 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
         // swETH per ETH
-        uint256 swEthPerEth = _getPriceX96FromSqrtPriceX96(sqrtPriceX96); // [wad]
+        uint256 swEthPerEth = _getPriceInWadFromSqrtPriceX96(sqrtPriceX96); // [wad]
         ethPerSwEth = WAD * WAD / swEthPerEth; // [wad] * [wad] / [wad]
     }
 
-    function _getPriceX96FromSqrtPriceX96(uint256 sqrtPriceX96) internal pure returns (uint256 priceX96) {
+    function _getPriceInWadFromSqrtPriceX96(uint256 sqrtPriceX96) internal pure returns (uint256) {
         return (sqrtPriceX96 * sqrtPriceX96).mulDiv(WAD, 2 ** 192); // [wad]
     }
 }

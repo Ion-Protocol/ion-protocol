@@ -4,17 +4,14 @@ pragma solidity 0.8.21;
 
 import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
 import { IChainlink } from "../../interfaces/IChainlink.sol";
+import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-interface IWstEth {
-    function getStETHByWstETH(uint256 stEthAmount) external view returns (uint256 wstEthAmount);
-}
-
 contract WstEthSpotOracle is SpotOracle {
-    using SafeCast for int256;
-
-    IChainlink immutable ST_ETH_TO_ETH_CHAINLINK;
-    IWstEth immutable WST_ETH;
+    using SafeCast for int256; 
+    IChainlink public immutable ST_ETH_TO_ETH_CHAINLINK;
+    IWstEth public immutable WST_ETH;
 
     constructor(
         uint256 _ltv,
@@ -39,6 +36,6 @@ contract WstEthSpotOracle is SpotOracle {
         (, int256 _ethPerStEth,,,) = ST_ETH_TO_ETH_CHAINLINK.latestRoundData(); // price of stETH denominated in ETH
         uint256 ethPerStEth = _ethPerStEth.toUint256();
         // collateral * wstEthInEth = collateralInEth
-        ethPerWstEth = WST_ETH.getStETHByWstETH(uint256(ethPerStEth)); // stEth per wstEth
+        ethPerWstEth = WST_ETH.getStETHByWstETH(ethPerStEth); // stEth per wstEth
     }
 }

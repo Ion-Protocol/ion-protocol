@@ -89,12 +89,13 @@ contract YieldOracle_UnitTest is YieldOracleSharedSetup {
         oracle.updateAll();
     }
 
-    function test_RevertWhen_NewExchangeRateIsLessThanPrevious() external {
+    function test_ApyIsZeroWhenNewExchangeRateIsLessThanPrevious() external {
         vm.warp(block.timestamp + 1 days);
 
         lidoOracle.setNewRate(2 wei);
-        vm.expectRevert(abi.encodeWithSelector(YieldOracle.InvalidExchangeRate.selector, 0));
         oracle.updateAll();
+
+        assertEq(oracle.apys(0), 0);
     }
 
     function test_RevertWhen_UpdatingMoreThanOnceADay() external {

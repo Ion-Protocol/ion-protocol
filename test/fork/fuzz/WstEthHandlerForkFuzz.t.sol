@@ -33,7 +33,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
-        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
+        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -60,7 +60,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 
         vm.assume(!unsafePositionChange);
 
-        wstEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
+        wstEthHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -84,7 +84,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
-        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -105,7 +105,7 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         vm.recordLogs();
-        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96);
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -130,7 +130,52 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
-        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
+    }
+
+    function testForkFuzz_FlashSwapDeleverageFull(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
+        initialDeposit = bound(initialDeposit, 1e13, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
+        uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
+            // skip protecting for this in the test
+
+        weth.approve(address(wstEthHandler), type(uint256).max);
+        ionPool.addOperator(address(wstEthHandler));
+
+        vm.recordLogs();
+        wstEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        uint256 normalizedDebtCreated;
+        for (uint256 i = 0; i < entries.length; i++) {
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
+            normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
+        }
+
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
+
+        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        // Want to completely deleverage position and only leave initial capital
+        // in vault
+        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        uint256 normalizedDebtCurrent = ionPool.normalizedDebt(ilkIndex, address(this));
+
+        // Remove all debt if any
+        uint256 debtToRemove = normalizedDebtCurrent == 0 ? 0 : type(uint256).max;
+
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;

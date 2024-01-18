@@ -23,12 +23,10 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
         IonPool _ionPool,
         GemJoin _gemJoin,
         Whitelist _whitelist,
-        IUniswapV3Factory _factory,
-        IUniswapV3Pool _swEthPool,
-        uint24 _poolFee
+        IUniswapV3Pool _swEthPool
     )
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
-        UniswapFlashswapHandler(_factory, _swEthPool, _poolFee, true)
+        UniswapFlashswapHandler(_swEthPool, true)
     { }
 
     function _depositWethForLst(uint256 wethAmount) internal override returns (uint256) {
