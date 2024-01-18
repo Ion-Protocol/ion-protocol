@@ -37,7 +37,7 @@ abstract contract ReserveOracle {
 
     constructor(uint8 _ilkIndex, address[] memory _feeds, uint8 _quorum, uint256 _maxChange) {
         if (_feeds.length != FEED_COUNT) revert InvalidFeedLength(_feeds.length);
-        if (_quorum > FEED_COUNT) revert InvalidQuorum(_quorum);
+        if (_quorum != FEED_COUNT) revert InvalidQuorum(_quorum);
         if (_maxChange == 0 || _maxChange > RAY) revert InvalidMaxChange(_maxChange);
 
         ILK_INDEX = _ilkIndex;
