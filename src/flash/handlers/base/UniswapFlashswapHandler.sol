@@ -117,10 +117,11 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
 
     /**
      * @dev The two function parameters must be chosen carefully. If
-     * `maxCollateralToRemove` were higher then `debtToRemove`, it would
-     * theoretically be possible to sell all of the vault's collateral for
-     * `debtToRemove` (even if `debtToRemove` is worth nowhere near that much)
-     * due to slippage of the sell.
+     * `maxCollateralToRemove`'s ETH valuation were higher then `debtToRemove`,
+     * it would theoretically be possible to sell more collateral then was
+     * required for `debtToRemove` to be repaid (even if `debtToRemove` is worth
+     * nowhere near that valuation) due to the slippage of the sell.
+     * `maxCollateralToRemove` is essentially a slippage gaurd here.
      * @param maxCollateralToRemove in terms of swEth
      * @param debtToRemove in terms of WETH [wad]
      * @param sqrtPriceLimitX96 for the swap
