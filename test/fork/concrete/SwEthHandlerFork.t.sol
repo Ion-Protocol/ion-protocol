@@ -36,7 +36,7 @@ contract SwEthHandler_ForkBase is IonHandler_ForkBase {
     function setUp() public virtual override {
         super.setUp();
         swEthHandler =
-            new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), FACTORY, SWETH_ETH_POOL, 500);
+            new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), SWETH_ETH_POOL);
 
         IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
 
@@ -166,6 +166,49 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
 
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         swEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp);
+
+        swEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(swEthHandler)), 0);
+        assertLe(weth.balanceOf(address(swEthHandler)), roundingError);
+    }
+
+    function testFork_FlashswapDeleverageFull() external {
+        uint256 initialDeposit = 1e18;
+        uint256 resultingCollateral = 5e18;
+        uint256 maxResultingDebt = type(uint256).max;
+
+        weth.approve(address(swEthHandler), type(uint256).max);
+        ionPool.addOperator(address(swEthHandler));
+
+        vm.recordLogs();
+        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        uint256 normalizedDebtCreated;
+        for (uint256 i = 0; i < entries.length; i++) {
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
+            normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
+        }
+
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
+
+        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        // Want to completely deleverage position and only leave initial capital
+        // in vault
+        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+
+        // Remove all debt
+        uint256 debtToRemove = type(uint256).max;
 
         swEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
 

@@ -76,7 +76,7 @@ contract TransparentUpgradeableProxy is ERC1967Proxy {
      * backed by the implementation at `_logic`, and optionally initialized with `_data` as explained in
      * {ERC1967Proxy-constructor}.
      */
-    constructor(address _logic, address initialOwner, bytes memory _data) payable ERC1967Proxy(_logic, _data) {
+    constructor(address _logic, address initialOwner, bytes memory _data) ERC1967Proxy(_logic, _data) {
         ADMIN = address(new ProxyAdmin(initialOwner));
         // Set the storage value and emit an event for ERC-1967 compatibility
         ERC1967Utils.changeAdmin(_proxyAdmin());
