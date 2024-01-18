@@ -1038,6 +1038,35 @@ contract IonPool_InterestTest is IonPoolSharedSetup {
         }
     }
 
+    function test_LastRateUpdatesOnFirstBorrow() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        vm.warp(block.timestamp + 1 days);
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = ionPool.weth();
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+
+            assertEq(ionPool.lastRateUpdate(i), block.timestamp);
+        }
+    }
+
     // function test_AccrueInterest() public {
     //     uint256 collateralDepositAmount = 10e18;
     //     uint256 normalizedBorrowAmount = 5e18;
@@ -1121,6 +1150,17 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
 
         vm.expectRevert(IonPool.InvalidIlkAddress.selector);
         ionPool.initializeIlk(address(0));
+    }
+
+    function test_RevertWhen_Initializing257ThIlk() public {
+        uint256 ilkCount = ionPool.ilkCount();
+        // Should lead to 256 total initialized ilks
+        for (uint256 i = 0; i < 256 - ilkCount; i++) {
+            ionPool.initializeIlk(vm.addr(i + 1));
+        }
+
+        vm.expectRevert(IonPool.MaxIlksReached.selector);
+        ionPool.initializeIlk(vm.addr(257));
     }
 
     function test_UpdateIlkSpot() public {

@@ -13,6 +13,19 @@ import { ReserveOracleSharedSetup } from "test/helpers/ReserveOracleSharedSetup.
 contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- stETH Reserve Oracle Test ---
 
+    function test_RevertWhen_UpdateIsOnCooldown() public {
+        uint256 maxChange = 3e25; // 0.03 3%
+        address[] memory feeds = new address[](3);
+        uint8 quorum = 0;
+        WstEthReserveOracle wstEthReserveOracle =
+            new WstEthReserveOracle(WSTETH, STETH_ILK_INDEX, feeds, quorum, maxChange);
+
+        wstEthReserveOracle.updateExchangeRate();
+
+        vm.expectRevert(abi.encodeWithSelector(ReserveOracle.UpdateCooldown.selector, block.timestamp));
+        wstEthReserveOracle.updateExchangeRate();
+    }
+
     function test_WstEthReserveOracleGetProtocolExchangeRate() public {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);

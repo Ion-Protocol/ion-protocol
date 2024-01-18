@@ -9,6 +9,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // should equal to the number of feeds available in the contract
 uint8 constant FEED_COUNT = 3;
+uint256 constant UPDATE_COOLDOWN = 1 hours;
 
 abstract contract ReserveOracle {
     using SafeCast for *;
@@ -23,6 +24,7 @@ abstract contract ReserveOracle {
     IReserveFeed public immutable FEED2;
 
     uint256 public currentExchangeRate; // [wad] the bounded queried last time
+    uint256 public lastUpdated; // [wad] the bounded queried last time
 
     // --- Events ---
     event UpdateExchangeRate(uint256 exchangeRate);
@@ -33,6 +35,7 @@ abstract contract ReserveOracle {
     error InvalidMaxChange(uint256 invalidMaxChange);
     error InvalidMinMax(uint256 invalidMin, uint256 invalidMax);
     error InvalidInitialization(uint256 invalidExchangeRate);
+    error UpdateCooldown(uint256 lastUpdated);
 
     // --- Override ---
     function _getProtocolExchangeRate() internal view virtual returns (uint256);
@@ -94,6 +97,8 @@ abstract contract ReserveOracle {
     // then bounds it up to the maximum change and writes the bounded value to the state.
     // NOTE: keepers should call this update to reflect recent values
     function updateExchangeRate() public {
+        if (block.timestamp - lastUpdated < UPDATE_COOLDOWN) revert UpdateCooldown(lastUpdated);
+
         uint256 _currentExchangeRate = currentExchangeRate;
 
         uint256 minimum = Math.min(_getProtocolExchangeRate(), _aggregate(ILK_INDEX));
@@ -101,6 +106,8 @@ abstract contract ReserveOracle {
 
         uint256 bounded = _bound(minimum, _currentExchangeRate - diff, _currentExchangeRate + diff);
         currentExchangeRate = bounded;
+
+        lastUpdated = block.timestamp;
 
         emit UpdateExchangeRate(bounded);
     }
