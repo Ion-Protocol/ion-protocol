@@ -7,6 +7,7 @@ import { InterestRate, IlkData } from "src/InterestRate.sol";
 import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
 import { IonPausableUpgradeable } from "src/admin/IonPausableUpgradeable.sol";
 import { Whitelist } from "src/Whitelist.sol";
+import { RewardModule } from "../../../src/reward/RewardModule.sol";
 
 import { IIonPoolEvents } from "test/helpers/IIonPoolEvents.sol";
 import { IonPoolSharedSetup } from "test/helpers/IonPoolSharedSetup.sol";
@@ -1329,13 +1330,16 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
         );
         vm.prank(NON_ADMIN);
-        ionPool.updateTreasury(address(0));
+        ionPool.updateTreasury(address(1));
 
         vm.expectEmit(true, true, true, true);
-        emit TreasuryUpdate(address(0));
+        emit TreasuryUpdate(address(1));
+        ionPool.updateTreasury(address(1));
+
+        vm.expectRevert(RewardModule.InvalidTreasuryAddress.selector);
         ionPool.updateTreasury(address(0));
 
-        assertEq(ionPool.treasury(), address(0));
+        assertEq(ionPool.treasury(), address(1));
     }
 }
 
