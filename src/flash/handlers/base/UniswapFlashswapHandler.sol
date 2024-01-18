@@ -135,11 +135,12 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         external
         checkDeadline(deadline)
     {
-        if (debtToRemove == 0) return;
 
         if (debtToRemove == type(uint256).max) {
             (debtToRemove,) = _getFullRepayAmount(msg.sender);
         }
+
+        if (debtToRemove == 0) return;
 
         // collateral -> WETH
         bool zeroForOne = !WETH_IS_TOKEN0;
