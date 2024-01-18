@@ -43,11 +43,11 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
 
     /**
      * @dev Indicates an error related to the current `balance` of a `sender`. Used in transfers.
-     * @param sender Address whose tokens are being transferred.
+     * @param account Address whose token balance is insufficient.
      * @param balance Current balance for the interacting account.
      * @param needed Minimum amount required to perform a transfer.
      */
-    error InsufficientBalance(address sender, uint256 balance, uint256 needed);
+    error InsufficientBalance(address account, uint256 balance, uint256 needed);
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
@@ -60,7 +60,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     event MintToTreasury(address indexed treasury, uint256 amount, uint256 supplyFactor);
 
     event TreasuryUpdate(address treasury);
-
+ 
+    /// @custom:storage-location erc7201:ion.storage.RewardModule
     struct RewardModuleStorage {
         IERC20 underlying;
         uint8 decimals;

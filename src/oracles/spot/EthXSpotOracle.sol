@@ -19,8 +19,8 @@ uint8 constant CHAINLINK_DECIMALS = 8;
 contract EthXSpotOracle is SpotOracle {
     using WadRayMath for uint256;
 
-    IRedstonePriceFeed immutable REDSTONE_ETHX_PRICE_FEED;
-    IChainlink immutable USD_PER_ETH_CHAINLINK;
+    IRedstonePriceFeed public immutable REDSTONE_ETHX_PRICE_FEED;
+    IChainlink public immutable USD_PER_ETH_CHAINLINK;
 
     constructor(
         uint256 _ltv,

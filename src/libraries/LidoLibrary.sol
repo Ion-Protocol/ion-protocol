@@ -17,7 +17,7 @@ library LidoLibrary {
 
     function getLstAmountOutForEthAmountIn(IWstEth wstEth, uint256 ethAmount) internal view returns (uint256) {
         // lstToken and depositContract are same
-        return IWstEth(address(wstEth)).getWstETHByStETH(ethAmount);
+        return wstEth.getWstETHByStETH(ethAmount);
     }
 
     function depositForLst(IWstEth wstEth, uint256 ethAmount) internal returns (uint256) {

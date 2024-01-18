@@ -1265,7 +1265,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
     }
 
     function test_UpdateWhitelist() public {
-        vm.expectRevert(abi.encodeWithSelector(IonPool.InvalidWhitelist.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IonPool.InvalidWhitelist.selector));
         ionPool.updateWhitelist(Whitelist(address(0)));
 
         // Random address
