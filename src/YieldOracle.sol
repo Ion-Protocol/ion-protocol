@@ -115,16 +115,32 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
             uint64 newExchangeRate = _getExchangeRate(i);
             uint64 previousExchangeRate = previousExchangeRates[i];
 
-            // Enforce that the exchange rate is not 0 and that it is greater
-            // than the previous exchange rate
-            if (newExchangeRate == 0 || newExchangeRate < previousExchangeRate) revert InvalidExchangeRate(i);
+            // Enforce that the exchange rate is not 0 
+            if (newExchangeRate == 0) revert InvalidExchangeRate(i);
 
-            uint256 exchangeRateIncrease = newExchangeRate - previousExchangeRate;
+            // If there is a slashing event, the new exchange rate could be
+            // lower than the previous exchange rate. In this case, we will set
+            // the APY to 0 (and trigger the minimum borrow rate on the
+            // protocol). We will not deal with negative APYs here. The
+            // potential of a negative APY from a slashing event will last for
+            // at most LOOK_BACK days. For that time period, we continue
+            // populating the historicalExchangeRates buffer. After LOOK_BACK
+            // days, the APY will return to normal.
+            uint32 newApy;
+            if (newExchangeRate >= previousExchangeRate) {
+                uint256 exchangeRateIncrease;
 
-            // It should be noted that if this exchange rate increase were too
-            // large, it could overflow the uint32.
-            // [WAD] * [APY_PRECISION] / [WAD] = [APY_PRECISION]
-            uint32 newApy = exchangeRateIncrease.mulDiv(PERIODS, previousExchangeRate).toUint32();
+                // Overflow impossible
+                unchecked {
+                    exchangeRateIncrease = newExchangeRate - previousExchangeRate;
+                }
+
+                // It should be noted that if this exchange rate increase were too
+                // large, it could overflow the uint32.
+                // [WAD] * [APY_PRECISION] / [WAD] = [APY_PRECISION]
+                newApy = exchangeRateIncrease.mulDiv(PERIODS, previousExchangeRate).toUint32();
+            }
+
             apys[i] = newApy;
 
             // Replace previous exchange rates with new exchange rates

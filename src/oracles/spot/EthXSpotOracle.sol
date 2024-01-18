@@ -7,7 +7,10 @@ import { IChainlink } from "src/interfaces/IChainlink.sol";
 import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 
 interface IRedstonePriceFeed {
-    function latestAnswer() external view returns (int256 answer);
+    function latestRoundData()
+        external
+        view
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }
 
 uint8 constant REDSTONE_DECIMALS = 8;
@@ -31,15 +34,16 @@ contract EthXSpotOracle is SpotOracle {
         USD_PER_ETH_CHAINLINK = IChainlink(_usdPerEthChainlink);
     }
 
-    // @notice Gets the price of ETHx in ETH. 
+    // @notice Gets the price of ETHx in ETH.
     // @dev redstone oracle returns dollar value per ETHx with 6 decimals.
     // This needs to be converted to [wad] and to ETH denomination.
-    // @return ethPerEthX price of ETHx in ETH [wad] 
+    // @return ethPerEthX price of ETHx in ETH [wad]
     function getPrice() public view override returns (uint256 ethPerEthX) {
         // get price from the protocol feed
         // usd per ETHx
+        (, int256 answer,,,) = REDSTONE_ETHX_PRICE_FEED.latestRoundData();
 
-        uint256 usdPerEthX = uint256(REDSTONE_ETHX_PRICE_FEED.latestAnswer()).scaleUpToWad(REDSTONE_DECIMALS); //
+        uint256 usdPerEthX = uint256(answer).scaleUpToWad(REDSTONE_DECIMALS); //
 
         // usd per ETH
         (, int256 _usdPerEth,,,) = USD_PER_ETH_CHAINLINK.latestRoundData(); // price of stETH denominated in ETH

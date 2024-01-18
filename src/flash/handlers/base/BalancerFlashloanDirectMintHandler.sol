@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
+import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 
 import { IVault, IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
@@ -29,6 +30,7 @@ IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
  */
 abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLoanRecipient {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH9;
 
     error ReceiveCallerNotVault(address unauthorizedCaller);
     error FlashLoanedTooManyTokens(uint256 amountTokens);
@@ -81,7 +83,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
-            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral, maxResultingDebt)
+            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral)
         );
 
         flashloanInitiated = 1;
@@ -102,7 +104,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256 maxResultingDebt
     )
         external
-        payable
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
@@ -139,7 +140,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
             IFlashLoanRecipient(address(this)),
             addresses,
             amounts,
-            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral, maxResultingDebt)
+            abi.encode(msg.sender, initialDeposit, resultingAdditionalCollateral)
         );
 
         flashloanInitiated = 1;
@@ -172,8 +173,8 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         if (flashloanInitiated != 2) revert ExternalBalancerFlashloanNotAllowed();
 
         IERC20Balancer token = tokens[0];
-        (address user, uint256 initialDeposit, uint256 resultingAdditionalCollateral, uint256 maxResultingDebt) =
-            abi.decode(userData, (address, uint256, uint256, uint256));
+        (address user, uint256 initialDeposit, uint256 resultingAdditionalCollateral) =
+            abi.decode(userData, (address, uint256, uint256));
 
         // Flashloaned WETH needs to be converted into collateral asset
         if (address(token) == address(WETH)) {
@@ -181,12 +182,11 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
             // Sanity checks
             assert(collateralFromDeposit + initialDeposit == resultingAdditionalCollateral);
-            assert(collateralFromDeposit <= maxResultingDebt);
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, amounts[0], AmountToBorrow.IS_MIN);
 
-            WETH.transfer(address(VAULT), amounts[0]);
+            WETH.safeTransfer(address(VAULT), amounts[0]);
         } else {
             if (address(LST_TOKEN) != address(token)) revert FlashloanedInvalidToken(address(token));
 
@@ -194,7 +194,6 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
             // Sanity checks
             assert(amounts[0] + initialDeposit == resultingAdditionalCollateral);
-            assert(wethToBorrow <= maxResultingDebt);
 
             // AmountToBorrow.IS_MIN because we want to make sure enough is borrowed to cover flashloan
             _depositAndBorrow(user, address(this), resultingAdditionalCollateral, wethToBorrow, AmountToBorrow.IS_MIN);

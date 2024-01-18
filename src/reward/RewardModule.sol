@@ -222,6 +222,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param newTreasury address of new treasury
      */
     function updateTreasury(address newTreasury) external onlyRole(ION) {
+        if (newTreasury == address(0)) revert InvalidTreasuryAddress();        
+
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         $.treasury = newTreasury;
 

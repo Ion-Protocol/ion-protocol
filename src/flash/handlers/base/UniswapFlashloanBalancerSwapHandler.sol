@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { RAY } from "../../../libraries/math/WadRayMath.sol";
+import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 import { IonHandlerBase } from "./IonHandlerBase.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -21,6 +23,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  */
 abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback, IonHandlerBase {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH9;
 
     error WethNotInPoolPair(IUniswapV3Pool pool);
     error ReceiveCallerNotPool(address unauthorizedCaller);
@@ -93,7 +96,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             assetOut: address(LST_TOKEN),
             amountOut: amountToLeverage
         });
- 
+
         flashCallbackData.user = msg.sender;
         flashCallbackData.initialDeposit = initialDeposit;
         flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove = maxResultingAdditionalDebt;
@@ -116,6 +119,10 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
      */
     function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove) external {
         if (debtToRemove == 0) return;
+
+        if (debtToRemove == type(uint256).max) {
+            (debtToRemove,) = _getFullRepayAmount(msg.sender);
+        }
 
         uint256 amount0ToFlash;
         uint256 amount1ToFlash;
@@ -211,7 +218,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             uint256 totalCollateral = flashCallbackData.initialDeposit + amountToLeverage;
             _depositAndBorrow(user, address(this), totalCollateral, wethToRepay, AmountToBorrow.IS_MIN);
 
-            WETH.transfer(msg.sender, wethToRepay);
+            WETH.safeTransfer(msg.sender, wethToRepay);
         } else {
             // When deleveraging
             uint256 totalRepayment = flashCallbackData.wethFlashloaned + fee;
@@ -241,7 +248,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
             VAULT.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
 
-            WETH.transfer(msg.sender, totalRepayment);
+            WETH.safeTransfer(msg.sender, totalRepayment);
         }
     }
 

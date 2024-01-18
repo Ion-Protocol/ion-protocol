@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { IonPool } from "src/IonPool.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { GemJoin } from "src/join/GemJoin.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "src/Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -27,6 +27,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  */
 abstract contract IonHandlerBase {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH9;
     using WadRayMath for uint256;
 
     error CannotSendEthToContract();
@@ -125,11 +126,47 @@ abstract contract IonHandlerBase {
     }
 
     /**
+     * @notice Will repay all debt and withdraw desired collateral amount
+     * @dev Will repay the debt belonging to `msg.sender`
+     * @param collateralToWithdraw in collateral terms
+     */
+    function repayFullAndWithdraw(uint256 collateralToWithdraw) external {
+        (uint256 repayAmount, uint256 normalizedDebtToRepay) = _getFullRepayAmount(msg.sender);
+
+        WETH.safeTransferFrom(msg.sender, address(this), repayAmount);
+
+        POOL.repay(ILK_INDEX, msg.sender, address(this), normalizedDebtToRepay);
+
+        POOL.withdrawCollateral(ILK_INDEX, msg.sender, address(this), collateralToWithdraw);
+
+        JOIN.exit(msg.sender, collateralToWithdraw);
+    }
+
+    /**
+     * @dev Helper function to get the repayment amount for all the debt of a `user`.
+     * @param user address of the user
+     * @return repayAmount amount of WETH required to repay all debt (this mimics IonPool's behavior)
+     * @return normalizedDebt total normalized debt held by user's vault
+     */
+    function _getFullRepayAmount(address user) internal view returns (uint256 repayAmount, uint256 normalizedDebt) {
+        uint256 currentRate = POOL.rate(ILK_INDEX);
+        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
+        uint256 rateAfterAccrual = currentRate + newRateIncrease;
+
+        normalizedDebt = POOL.normalizedDebt(ILK_INDEX, user);
+
+        // This is exactly how IonPool calculates the amount of weth required
+        uint256 amountRad = normalizedDebt * rateAfterAccrual;
+        repayAmount = amountRad / RAY;
+        if (amountRad % RAY > 0) ++repayAmount;
+    }
+
+    /**
      * @param debtToRepay in eth terms
      * @param collateralToWithdraw in collateral terms
      */
     function repayAndWithdraw(uint256 debtToRepay, uint256 collateralToWithdraw) external {
-        WETH.transferFrom(msg.sender, address(this), debtToRepay);
+        WETH.safeTransferFrom(msg.sender, address(this), debtToRepay);
         _repayAndWithdraw(msg.sender, msg.sender, collateralToWithdraw, debtToRepay);
     }
 

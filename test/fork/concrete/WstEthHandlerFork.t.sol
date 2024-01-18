@@ -131,14 +131,14 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     function testFork_FlashswapLeverage() external {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = 4.9e18; // In weth
+        uint256 maxResultingDebt = 4.9e18; // In weth
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96
         );
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
@@ -149,20 +149,20 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
         assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxmaxResultingDebt);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
     function testFork_FlashswapDeleverage() external {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = type(uint256).max;
+        uint256 maxResultingDebt = type(uint256).max;
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
         vm.recordLogs();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96
         );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -175,7 +175,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         }
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral);
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxmaxResultingDebt);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
 
         uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
@@ -187,6 +187,52 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
+
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral - maxCollateralToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
+    }
+
+    function testFork_FlashswapDeleverageFull() external {
+        uint256 initialDeposit = 1e18;
+        uint256 resultingAdditionalCollateral = 5e18;
+        uint256 maxResultingDebt = type(uint256).max;
+
+        weth.approve(address(wstEthHandler), type(uint256).max);
+        ionPool.addOperator(address(wstEthHandler));
+
+        vm.recordLogs();
+        wstEthHandler.flashswapLeverage(
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96
+        );
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        uint256 normalizedDebtCreated;
+        for (uint256 i = 0; i < entries.length; i++) {
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
+            normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
+        }
+
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
+
+        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        // Want to completely deleverage position and only leave initial capital
+        // in vault
+        uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        // Remove all debt
+
+        // Round up otherwise can leave 1 wei of dust in debt left
+        uint256 debtToRemove = type(uint256).max;
 
         wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
 
@@ -269,27 +315,27 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     function testFork_RevertWhen_FlashswapLeverageCreatesMoreDebtThanUserIsWilling() external {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = 3e18; // In weth
+        uint256 maxResultingDebt = 3e18; // In weth
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
         vm.expectRevert();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96
         );
     }
 
     function testFork_RevertWhen_FlashswapDeleverageSellsMoreCollateralThanUserIsWilling() external {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = type(uint256).max;
+        uint256 maxResultingDebt = type(uint256).max;
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96
         );
 
         uint256 slippageAndFeeTolerance = 1.0e18; // 0%
