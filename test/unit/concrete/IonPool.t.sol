@@ -1130,6 +1130,35 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
         }
     }
 
+    function test_AccrueInterest() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        vm.warp(block.timestamp + 1 days);
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = ionPool.weth();
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+
+            assertEq(ionPool.lastRateUpdate(i), block.timestamp);
+        }
+    }
+
     function test_AccrueInterestForAll() public {
         uint256 collateralDepositAmount = 10e18;
         uint256 normalizedBorrowAmount = 5e18;

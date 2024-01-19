@@ -4,7 +4,6 @@ pragma solidity 0.8.21;
 import { IReserveFeed } from "src/interfaces/IReserveFeed.sol";
 import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // should equal to the number of feeds available in the contract

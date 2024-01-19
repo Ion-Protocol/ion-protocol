@@ -5,8 +5,9 @@ import { SwEthReserveOracle } from "../../../src/oracles/reserve/SwEthReserveOra
 import { ReserveFeed } from "../../../src/oracles/reserve/ReserveFeed.sol";
 import { ISwEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 import { RAY } from "../../../src/libraries/math/WadRayMath.sol";
-import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
+
+import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
 contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- swETH Reserve Oracle Test ---
