@@ -145,7 +145,6 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         external
         checkDeadline(deadline)
     {
-
         if (debtToRemove == type(uint256).max) {
             (debtToRemove,) = _getFullRepayAmount(msg.sender);
         }
@@ -173,7 +172,9 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         private
         returns (uint256 amountIn)
     {
-        if ((sqrtPriceLimitX96 < MIN_SQRT_RATIO || sqrtPriceLimitX96 > MAX_SQRT_RATIO) && sqrtPriceLimitX96 != 0) revert InvalidSqrtPriceLimitX96(sqrtPriceLimitX96);
+        if ((sqrtPriceLimitX96 < MIN_SQRT_RATIO || sqrtPriceLimitX96 > MAX_SQRT_RATIO) && sqrtPriceLimitX96 != 0) {
+            revert InvalidSqrtPriceLimitX96(sqrtPriceLimitX96);
+        }
 
         (int256 amount0Delta, int256 amount1Delta) = UNISWAP_POOL.swap(
             recipient,

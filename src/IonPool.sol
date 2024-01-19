@@ -7,7 +7,6 @@ import { RewardModule } from "./reward/RewardModule.sol";
 import { InterestRate } from "./InterestRate.sol";
 import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
 
-
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -15,7 +14,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-
 
 contract IonPool is PausableUpgradeable, RewardModule {
     using SafeERC20 for IERC20;

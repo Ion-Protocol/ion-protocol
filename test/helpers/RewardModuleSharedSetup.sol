@@ -50,8 +50,8 @@ contract RewardModuleExposed is RewardModule {
             uint104[] memory rateIncreases,
             uint256 totalDebtIncrease,
             uint48[] memory timestampIncreases
-        ) {}
-
+        )
+    { }
 }
 
 abstract contract RewardModuleSharedSetup is BaseTestSetup {

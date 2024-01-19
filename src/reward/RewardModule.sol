@@ -335,7 +335,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
 
         (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();
 
-        uint256 normalizedTreasuryMintAmount = totalTreasuryMintAmount.rayDivDown($.supplyFactor + totalSupplyFactorIncrease);
+        uint256 normalizedTreasuryMintAmount =
+            totalTreasuryMintAmount.rayDivDown($.supplyFactor + totalSupplyFactorIncrease);
 
         return $.normalizedTotalSupply + normalizedTreasuryMintAmount;
     }

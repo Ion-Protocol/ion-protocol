@@ -1407,79 +1407,49 @@ contract IonPool_PausedTest is IonPoolSharedSetup {
     function test_RevertWhen_CallingFunctionsWhenPaused() public {
         ionPool.pause();
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdraw(address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdrawCollateral(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.transferGem(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.accrueInterest();
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.supply(address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.repay(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.depositCollateral(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.repayBadDebt(address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdraw(address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdrawCollateral(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.transferGem(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
     }
 }

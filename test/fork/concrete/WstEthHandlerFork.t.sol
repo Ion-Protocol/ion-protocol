@@ -66,6 +66,13 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.flashLeverageCollateral(
+                initialDeposit, resultingAdditionalCollateral, maxResultingDebt, new bytes32[](0)
+            );
+        }
+
         uint256 gasBefore = gasleft();
         wstEthHandler.flashLeverageCollateral(
             initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof
@@ -94,6 +101,13 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.flashLeverageCollateral(
+                initialDeposit, resultingAdditionalCollateral, maxResultingDebt, new bytes32[](0)
+            );
+        }
+
         uint256 gasBefore = gasleft();
         wstEthHandler.flashLeverageCollateral(
             initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof
@@ -118,6 +132,13 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
+
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.flashLeverageWeth(
+                initialDeposit, resultingAdditionalCollateral, maxResultingDebt, new bytes32[](0)
+            );
+        }
 
         uint256 gasBefore = gasleft();
         wstEthHandler.flashLeverageWeth(
@@ -146,6 +167,18 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
+
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.flashswapLeverage(
+                initialDeposit,
+                resultingAdditionalCollateral,
+                maxResultingDebt,
+                sqrtPriceLimitX96,
+                block.timestamp + 1,
+                new bytes32[](0)
+            );
+        }
 
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         wstEthHandler.flashswapLeverage(
@@ -439,6 +472,15 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
         ionPool.addOperator(address(wstEthHandler));
 
+        // if whitelist root is not zero, check that incorrect merkle proof fails
+        // console2.log("borrowersRoot: ", Whitelist(whitelist).borrowersRoot(0));
+        console2.log("borrowersRoot");
+        console2.logBytes32(Whitelist(whitelist).borrowersRoot(0));
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.zapDepositAndBorrow(stEthDepositAmount, borrowAmount, new bytes32[](0));
+        }
+
         wstEthHandler.zapDepositAndBorrow(stEthDepositAmount, borrowAmount, borrowerWhitelistProof);
 
         uint256 currentRate = ionPool.rate(ilkIndex);
@@ -479,6 +521,13 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
             MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingAdditionalWstEthCollateral - wstEthDepositAmount);
 
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
+
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.zapFlashLeverageCollateral(
+                stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt, new bytes32[](0)
+            );
+        }
 
         wstEthHandler.zapFlashLeverageCollateral(
             stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt, borrowerWhitelistProof
@@ -522,6 +571,13 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
 
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
         ionPool.addOperator(address(wstEthHandler));
+
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.zapFlashLeverageCollateral(
+                stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt, new bytes32[](0)
+            );
+        }
 
         wstEthHandler.zapFlashLeverageCollateral(
             stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt, borrowerWhitelistProof
@@ -567,6 +623,7 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
             MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingAdditionalWstEthCollateral - wstEthDepositAmount);
 
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
+
         wstEthHandler.zapFlashLeverageWeth(
             stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt, borrowerWhitelistProof
         );
@@ -605,6 +662,14 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
 
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
         ionPool.addOperator(address(wstEthHandler));
+
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.zapFlashLeverageWeth(
+                stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt, new bytes32[](0)
+            );
+        }
+
         wstEthHandler.zapFlashLeverageWeth(
             stEthDepositAmount, resultingAdditionalStEthCollateral, maxResultingDebt, borrowerWhitelistProof
         );
@@ -706,6 +771,18 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
         ionPool.addOperator(address(wstEthHandler));
 
+        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
+            wstEthHandler.zapFlashswapLeverage(
+                stEthDepositAmount,
+                resultingAdditionalStEthCollateral,
+                maxResultingDebt,
+                sqrtPriceLimitX96,
+                block.timestamp + 1,
+                new bytes32[](0)
+            );
+        }
+
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         wstEthHandler.zapFlashswapLeverage(
             stEthDepositAmount,
@@ -752,18 +829,16 @@ contract WstEthHandlerWhitelist_ForkTest is WstEthHandler_ForkTest, WstEthHandle
         [bytes32(0xa6e6806303186f9c20e1af933c7efa83d98470acf93a10fb8da8b1d9c2873640)]
     ];
 
-    Whitelist _whitelist;
-
     function setUp() public override {
         super.setUp();
 
         bytes32[] memory borrowerRoots = new bytes32[](1);
         borrowerRoots[0] = borrowerWhitelistRoot;
 
-        _whitelist = new Whitelist(borrowerRoots, bytes32(0));
+        // update current whitelist with a new borrower root
+        Whitelist _whitelist = Whitelist(ionPool.whitelist());
+        _whitelist.updateBorrowersRoot(0, borrowerWhitelistRoot);
         _whitelist.approveProtocolWhitelist(address(wstEthHandler));
-
-        ionPool.updateWhitelist(_whitelist);
 
         borrowerWhitelistProof = borrowerProofs[0];
     }

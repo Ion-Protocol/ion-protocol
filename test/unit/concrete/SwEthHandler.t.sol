@@ -27,7 +27,7 @@ contract MockUniswapPool {
 
     function fee() external pure returns (uint24) {
         return 500;
-    }   
+    }
 }
 
 contract SwEthHandler_Test is IonPoolSharedSetup {

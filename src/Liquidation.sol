@@ -95,7 +95,9 @@ contract Liquidation {
             // This invariant must hold otherwise all liquidations will revert
             // when discount == configs.maxDiscount within the _getRepayAmt
             // function.
-            if (_targetHealth < _liquidationThresholds[i].rayDivUp(RAY - _maxDiscounts[i])) revert InvalidTargetHealth(_targetHealth);
+            if (_targetHealth < _liquidationThresholds[i].rayDivUp(RAY - _maxDiscounts[i])) {
+                revert InvalidTargetHealth(_targetHealth);
+            }
 
             // forgefmt: disable-next-line
             unchecked { ++i; }
