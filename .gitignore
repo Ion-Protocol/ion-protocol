@@ -13,12 +13,10 @@ coverage/
 /broadcast/*/*
 
 # Dependency directories
-
 node_modules/
 package-lock.json
 
 # dotenv environment variable files
-
 .env
 .env.development.local
 .env.test.local
@@ -31,7 +29,7 @@ crytic-export/
 
 # logs
 /.txt
-
 diagrams/
 
-deployment-config/
+# test scripts 
+/script/test
