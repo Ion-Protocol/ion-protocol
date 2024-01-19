@@ -5,8 +5,6 @@
 # 3. Run `bash node.sh` 
 # 4. forge script script/__TestFlashLeverage.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY 
 
-# TODO: Can we fund wallet with faucet through the cli 
-
 source .env 
 
 # Env Variables
