@@ -4,13 +4,18 @@ out/
 coverage/
 
 # Ignores development broadcast logs
-!/broadcast
-!/broadcast/*/
-!/broadcast/*/1/
+# !/broadcast
+# !/broadcast/*/
+# !/broadcast/*/1/
 
-/broadcast/**/dry-run/
-/broadcast/*
-/broadcast/*/*
+# /broadcast/**/dry-run/
+# /broadcast/*
+# /broadcast/*/*
+
+/broadcast/
+!/broadcast/*/1/  # Include directories named '1' that are two levels deep
+!/broadcast/**/dry-run/  # Include any 'dry-run' directories at any level
+
 
 # Dependency directories
 node_modules/
