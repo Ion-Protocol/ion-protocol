@@ -52,6 +52,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     // --- Errors ---
 
     error InvalidExchangeRate(uint256 ilkIndex);
+    error InvalidIlkIndex(uint256 ilkIndex);
     error AlreadyUpdated();
 
     // --- Events ---
@@ -79,7 +80,19 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     )
         Ownable(owner)
     {
-        historicalExchangeRates = _historicalExchangeRates;
+        for (uint256 i = 0; i < LOOK_BACK;) {
+            for (uint256 j = 0; j < ILK_COUNT;) {
+                if (_historicalExchangeRates[i][j] == 0) revert InvalidExchangeRate(j);
+
+                historicalExchangeRates[i][j] = _historicalExchangeRates[i][j];
+
+                // forgefmt: disable-next-line
+                unchecked { ++j; }
+            }
+
+            // forgefmt: disable-next-line
+            unchecked { ++i; }
+        }
 
         ADDRESS0 = _wstEth;
         ADDRESS1 = _stader;
@@ -165,9 +178,11 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
         } else if (ilkIndex == 1) {
             IStaderStakePoolsManager stader = IStaderStakePoolsManager(ADDRESS1);
             exchangeRate = stader.getExchangeRate().toUint64();
-        } else {
+        } else if (ilkIndex == 2) {
             ISwEth swell = ISwEth(ADDRESS2);
             exchangeRate = swell.swETHToETHRate().toUint64();
+        } else {
+            revert InvalidIlkIndex(ilkIndex);
         }
     }
 }

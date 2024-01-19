@@ -39,6 +39,19 @@ contract RewardModuleExposed is RewardModule {
     function mintToTreasury(uint256 amount) external {
         _mintToTreasury(amount);
     }
+
+    function calculateRewardAndDebtDistribution()
+        public
+        view
+        override
+        returns (
+            uint256 totalSupplyFactorIncrease,
+            uint256 totalTreasuryMintAmount,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        ) {}
+
 }
 
 abstract contract RewardModuleSharedSetup is BaseTestSetup {

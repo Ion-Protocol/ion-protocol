@@ -232,7 +232,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         for (uint256 i = 0; i < lenders.length; i++) {
             totalLenderNormalizedBalances += ionPool.normalizedBalanceOf(address(lenders[i]));
         }
-        assertEq(totalLenderNormalizedBalances + ionPool.normalizedBalanceOf(TREASURY), ionPool.normalizedTotalSupply());
+        assertEq(totalLenderNormalizedBalances + ionPool.normalizedBalanceOf(TREASURY), ionPool.normalizedTotalSupplyUnaccrued());
 
         return !failed();
     }
@@ -244,12 +244,12 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
             for (uint256 j = 0; j < borrowers.length; j++) {
                 totalNormalizedDebts += ionPool.normalizedDebt(i, address(borrowers[j]));
             }
-            uint256 ilkRate = ionPool.rate(i);
+            uint256 ilkRate = ionPool.rateUnaccrued(i);
             totalDebt += totalNormalizedDebts.rayMulDown(ilkRate);
         }
-        assertGe(ionPool.weth() + totalDebt, ionPool.totalSupply());
+        assertGe(ionPool.weth() + totalDebt, ionPool.totalSupplyUnaccrued());
         assertGe(
-            ionPool.weth().scaleUpToRad(18) + ionPool.debt(), ionPool.normalizedTotalSupply() * ionPool.supplyFactor()
+            ionPool.weth().scaleUpToRad(18) + ionPool.debtUnaccrued(), ionPool.normalizedTotalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
         );
 
         return !failed();
@@ -290,10 +290,10 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         uint256 totalDebt;
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             uint256 totalNormalizedDebt = ionPool.totalNormalizedDebt(i);
-            uint256 ilkRate = ionPool.rate(i);
+            uint256 ilkRate = ionPool.rateUnaccrued(i);
             totalDebt += totalNormalizedDebt * ilkRate;
         }
-        assertEq(totalDebt + ionPool.totalUnbackedDebt(), ionPool.debt());
+        assertEq(totalDebt + ionPool.totalUnbackedDebt(), ionPool.debtUnaccrued());
 
         return !failed();
     }

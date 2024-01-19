@@ -10,6 +10,8 @@ import { Whitelist } from "../../../Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 /**
  * @dev There a couple things to consider here from a security perspective. The
  * first one is that the flashloan callback must only be callable from the
@@ -118,15 +120,13 @@ abstract contract IonHandlerBase {
 
         if (amountToBorrow == 0) return;
 
-        uint256 currentRate = POOL.rate(ILK_INDEX);
-        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
-        uint256 rateAfterAccrual = currentRate + newRateIncrease;
+        uint256 rate = POOL.rate(ILK_INDEX);
 
         uint256 normalizedAmountToBorrow;
         if (amountToBorrowType == AmountToBorrow.IS_MIN) {
-            normalizedAmountToBorrow = amountToBorrow.rayDivUp(rateAfterAccrual);
+            normalizedAmountToBorrow = amountToBorrow.rayDivUp(rate);
         } else {
-            normalizedAmountToBorrow = amountToBorrow.rayDivDown(rateAfterAccrual);
+            normalizedAmountToBorrow = amountToBorrow.rayDivDown(rate);
         }
 
         POOL.borrow(ILK_INDEX, vaultHolder, receiver, normalizedAmountToBorrow, new bytes32[](0));
@@ -157,13 +157,11 @@ abstract contract IonHandlerBase {
      */
     function _getFullRepayAmount(address user) internal view returns (uint256 repayAmount, uint256 normalizedDebt) {
         uint256 currentRate = POOL.rate(ILK_INDEX);
-        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
-        uint256 rateAfterAccrual = currentRate + newRateIncrease;
 
         normalizedDebt = POOL.normalizedDebt(ILK_INDEX, user);
 
         // This is exactly how IonPool calculates the amount of weth required
-        uint256 amountRad = normalizedDebt * rateAfterAccrual;
+        uint256 amountRad = normalizedDebt * currentRate;
         repayAmount = amountRad / RAY;
         if (amountRad % RAY > 0) ++repayAmount;
     }
@@ -186,10 +184,8 @@ abstract contract IonHandlerBase {
         internal
     {
         uint256 currentRate = POOL.rate(ILK_INDEX);
-        (,, uint256 newRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ILK_INDEX);
-        uint256 rateAfterAccrual = currentRate + newRateIncrease;
 
-        uint256 normalizedDebtToRepay = debtToRepay.rayDivDown(rateAfterAccrual);
+        uint256 normalizedDebtToRepay = debtToRepay.rayDivDown(currentRate);
 
         POOL.repay(ILK_INDEX, vaultHolder, address(this), normalizedDebtToRepay);
 
