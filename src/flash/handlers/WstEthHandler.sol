@@ -42,39 +42,79 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         return IWstEth(address(LST_TOKEN)).getEthAmountInForLstAmountOut(amountLst);
     }
 
-    function zapDepositAndBorrow(uint256 stEthAmount, uint256 amountToBorrow) external {
+    function zapDepositAndBorrow(
+        uint256 stEthAmount,
+        uint256 amountToBorrow,
+        bytes32[] memory proof
+    )
+        external
+        onlyWhitelistedBorrowers(proof)
+    {
         STETH.transferFrom(msg.sender, address(this), stEthAmount);
         uint256 outputWstEthAmount = IWstEth(address(LST_TOKEN)).wrap(stEthAmount);
         _depositAndBorrow(msg.sender, msg.sender, outputWstEthAmount, amountToBorrow, AmountToBorrow.IS_MAX);
     }
 
     function zapFlashLeverageCollateral(
-        uint256 initialStEthDeposit,
+        uint256 initialDeposit,
         uint256 resultingAdditionalStEthCollateral,
-        uint256 maxResultingDebt
+        uint256 maxResultingAdditionalDebt,
+        bytes32[] memory proof
     )
         external
+        onlyWhitelistedBorrowers(proof)
     {
-        STETH.transferFrom(msg.sender, address(this), initialStEthDeposit);
-        uint256 initialDepositWstEthAmount = IWstEth(address(LST_TOKEN)).wrap(initialStEthDeposit);
+        if (initialDeposit != 0) {
+            STETH.transferFrom(msg.sender, address(this), initialDeposit);
+            initialDeposit = IWstEth(address(LST_TOKEN)).wrap(initialDeposit);
+        }
+
         uint256 resultingAdditionalWstEthCollateral =
             IWstEth(address(LST_TOKEN)).getWstETHByStETH(resultingAdditionalStEthCollateral);
-        _flashLeverageCollateral(initialDepositWstEthAmount, resultingAdditionalWstEthCollateral, maxResultingDebt);
+        _flashLeverageCollateral(initialDeposit, resultingAdditionalWstEthCollateral, maxResultingAdditionalDebt);
     }
 
     function zapFlashLeverageWeth(
-        uint256 initialStEthDeposit,
+        uint256 initialDeposit,
         uint256 resultingAdditionalStEthCollateral,
-        uint256 maxResultingDebt
+        uint256 maxResultingAdditionalDebt,
+        bytes32[] memory proof
     )
         external
+        onlyWhitelistedBorrowers(proof)
     {
-        STETH.transferFrom(msg.sender, address(this), initialStEthDeposit);
-        uint256 initialDepositWstEthAmount = IWstEth(address(LST_TOKEN)).wrap(initialStEthDeposit);
+        if (initialDeposit != 0) {
+            STETH.transferFrom(msg.sender, address(this), initialDeposit);
+            initialDeposit = IWstEth(address(LST_TOKEN)).wrap(initialDeposit);
+        }
+
         uint256 resultingAdditionalWstEthCollateral =
             IWstEth(address(LST_TOKEN)).getWstETHByStETH(resultingAdditionalStEthCollateral);
-        _flashLeverageWeth(initialDepositWstEthAmount, resultingAdditionalWstEthCollateral, maxResultingDebt);
+        _flashLeverageWeth(initialDeposit, resultingAdditionalWstEthCollateral, maxResultingAdditionalDebt);
     }
 
-    function zapFlashswapLeverage() external { }
+    function zapFlashswapLeverage(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalStEthCollateral,
+        uint256 maxResultingAdditionalDebt,
+        uint160 sqrtPriceLimitX96,
+        uint256 deadline,
+        bytes32[] memory proof
+    )
+        external
+        checkDeadline(deadline)
+        onlyWhitelistedBorrowers(proof)
+    {
+        if (initialDeposit != 0) {
+            STETH.transferFrom(msg.sender, address(this), initialDeposit);
+            initialDeposit = IWstEth(address(LST_TOKEN)).wrap(initialDeposit);
+        }
+
+        uint256 resultingAdditionalWstEthCollateral =
+            IWstEth(address(LST_TOKEN)).getWstETHByStETH(resultingAdditionalStEthCollateral);
+
+        _flashswapLeverage(
+            initialDeposit, resultingAdditionalWstEthCollateral, maxResultingAdditionalDebt, sqrtPriceLimitX96
+        );
+    }
 }

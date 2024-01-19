@@ -60,17 +60,6 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         bool zeroForOne;
     }
 
-    /**
-     *
-     * @param initialDeposit in terms of swEth
-     * @param resultingAdditionalCollateral in terms of swEth. How much
-     * collateral to add to the position in the vault.
-     * @param maxResultingAdditionalDebt in terms of WETH. How much debt to add
-     * to the position in the vault.
-     * @param sqrtPriceLimitX96 for the swap. Recommended value is the current
-     * exchange rate to ensure the swap never costs more than a direct mint
-     * would.
-     */
     function flashswapLeverage(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
@@ -84,7 +73,28 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        _flashswapLeverage(initialDeposit, resultingAdditionalCollateral, maxResultingAdditionalDebt, sqrtPriceLimitX96);
+    }
 
+    /**
+     *
+     * @param initialDeposit in terms of swEth
+     * @param resultingAdditionalCollateral in terms of swEth. How much
+     * collateral to add to the position in the vault.
+     * @param maxResultingAdditionalDebt in terms of WETH. How much debt to add
+     * to the position in the vault.
+     * @param sqrtPriceLimitX96 for the swap. Recommended value is the current
+     * exchange rate to ensure the swap never costs more than a direct mint
+     * would.
+     */
+    function _flashswapLeverage(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingAdditionalDebt,
+        uint160 sqrtPriceLimitX96
+    )
+        internal
+    {
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in swEth
 
         if (amountToLeverage == 0) {

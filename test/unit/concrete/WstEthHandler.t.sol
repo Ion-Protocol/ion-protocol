@@ -31,6 +31,8 @@ contract WstEthHandler_Test is IonPoolSharedSetup {
 
     uint8 ilkIndex = 0;
 
+    address constant STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+
     function setUp() public override {
         super.setUp();
 
@@ -38,6 +40,10 @@ contract WstEthHandler_Test is IonPoolSharedSetup {
         mockPool.setUnderlying(address(underlying));
 
         // Ignore Uniswap args since they will be tested through forks
+
+        // Deploy preset ERC20 code to STETH constant address to be compatible with constructor
+        vm.etch(STETH, address(wstEth).code);
+
         wstEthHandler = new WstEthHandler(
             ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Pool(address(mockPool))
         );
