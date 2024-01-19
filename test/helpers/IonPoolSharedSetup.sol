@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "../../src/IonPool.sol";
-import { IonPausableUpgradeable } from "../../src/admin/IonPausableUpgradeable.sol";
 import { IonRegistry } from "../../src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
@@ -71,17 +70,6 @@ contract IonPoolExposed is IonPool {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.weth += amount;
-    }
-}
-
-// for bypassing whitelist checks during tests
-contract MockWhitelist {
-    function isWhitelistedBorrower(uint8, address, bytes32[] calldata) external pure returns (bool) {
-        return true;
-    }
-
-    function isWhitelistedLender(address, bytes32[] calldata) external pure returns (bool) {
-        return true;
     }
 }
 
@@ -235,7 +223,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
         // whitelist
-        whitelist = address(new MockWhitelist());
+        whitelist = address(new Whitelist(new bytes32[](0), bytes32(0)));
 
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
@@ -303,12 +291,9 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         assertEq(ionPool.ilkCount(), collaterals.length, "ilk count");
 
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), false, "unsafe pause");
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), false, "safe pause");
+        assertEq(ionPool.paused(), false, "pause");
 
-        uint256 addressesLength = ionPool.addressesLength();
-        assertEq(addressesLength, collaterals.length, "address length");
-        for (uint8 i = 0; i < addressesLength; i++) {
+        for (uint8 i = 0; i < collaterals.length; i++) {
             address collateralAddress = address(collaterals[i]);
             assertEq(ionPool.addressContains(collateralAddress), true, "address contains");
             assertEq(ionPool.getIlkAddress(i), collateralAddress, "ilk address");
@@ -370,42 +355,5 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     function _depositInterestGains(uint256 amount) public {
         ionPool.addLiquidity(amount);
         underlying.mint(address(ionPool), amount);
-    }
-
-    function _calculateRewardAndDebtDistribution()
-        internal
-        view
-        returns (
-            uint256 supplyFactorIncrease,
-            uint256 treasuryMintAmount,
-            uint104[] memory newRateIncreases,
-            uint256 newDebtIncrease,
-            uint48[] memory newTimestampIncreases
-        )
-    {
-        uint256 ilksLength = ionPool.ilkCount();
-        newRateIncreases = new uint104[](ilksLength);
-        newTimestampIncreases = new uint48[](ilksLength);
-        for (uint8 i = 0; i < ilksLength;) {
-            (
-                uint256 _supplyFactorIncrease,
-                uint256 _treasuryMintAmount,
-                uint104 _newRateIncrease,
-                uint256 _newDebtIncrease,
-                uint48 _timestampIncrease
-            ) = ionPool.calculateRewardAndDebtDistribution(i);
-
-            if (_timestampIncrease > 0) {
-                newRateIncreases[i] = _newRateIncrease;
-                newTimestampIncreases[i] = _timestampIncrease;
-                newDebtIncrease += _newDebtIncrease;
-
-                supplyFactorIncrease += _supplyFactorIncrease;
-                treasuryMintAmount += _treasuryMintAmount;
-            }
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
     }
 }

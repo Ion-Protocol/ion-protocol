@@ -5,8 +5,8 @@ import { IonPool } from "../../../src/IonPool.sol";
 import { RAY, WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 import { InterestRate, IlkData } from "../../../src/InterestRate.sol";
 import { SpotOracle } from "../../../src/oracles/spot/SpotOracle.sol";
-import { IonPausableUpgradeable } from "../../../src/admin/IonPausableUpgradeable.sol";
 import { Whitelist } from "../../../src/Whitelist.sol";
+import { RewardModule } from "../../../src/reward/RewardModule.sol";
 
 import { IIonPoolEvents } from "../../helpers/IIonPoolEvents.sol";
 import { IonPoolSharedSetup } from "../../helpers/IonPoolSharedSetup.sol";
@@ -14,6 +14,9 @@ import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.s
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+
+import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 using Strings for uint256;
 using WadRayMath for uint256;
@@ -75,7 +78,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
 
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), lender1, supplyAmount);
@@ -101,7 +104,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
 
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), address(this), supplyAmount);
@@ -134,7 +137,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
         uint256 withdrawAmount = 0.5e18;
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(lender1, address(0), withdrawAmount);
@@ -166,7 +169,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
         uint256 withdrawAmount = 0.5e18;
         uint256 currentSupplyFactor = ionPool.supplyFactor();
         uint256 currentTotalDebt = ionPool.debt();
-        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = _calculateRewardAndDebtDistribution();
+        (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
 
         vm.expectEmit(true, true, true, true);
         emit Transfer(lender1, address(0), withdrawAmount);
@@ -1029,6 +1032,104 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
         }
     }
 
+    function test_LastRateUpdatesOnFirstBorrow() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        vm.warp(block.timestamp + 1 days);
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = ionPool.weth();
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+
+            assertEq(ionPool.lastRateUpdate(i), block.timestamp);
+        }
+    }
+
+    function test_CalculateRewardAndDebtDistribution() external {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = ionPool.weth();
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+        }
+
+        vm.warp(block.timestamp + 1 hours);
+
+        (
+            uint256 totalSupplyFactorIncrease,
+            ,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        ) = ionPool.calculateRewardAndDebtDistribution();
+
+        uint256 supplyFactorBefore = ionPool.supplyFactorUnaccrued();
+        uint256[] memory ratesBefore = new uint256[](ionPool.ilkCount());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            ratesBefore[i] = ionPool.rateUnaccrued(i);
+        }
+        uint256 totalDebtBefore = ionPool.debtUnaccrued();
+        uint256[] memory timestampsBefore = new uint256[](ionPool.ilkCount());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            timestampsBefore[i] = ionPool.lastRateUpdate(i);
+        }
+
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            (uint256 newRateIncrease, uint256 newTimestampIncrease) =
+                ionPool.calculateRewardAndDebtDistributionForIlk(i);
+            assertEq(rateIncreases[i], newRateIncrease);
+            assertEq(timestampIncreases[i], newTimestampIncrease);
+        }
+
+        assertEq(supplyFactorBefore + totalSupplyFactorIncrease, ionPool.supplyFactor());
+        assertEq(totalDebtBefore + totalDebtIncrease, ionPool.debt());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            assertEq(ratesBefore[i] + rateIncreases[i], ionPool.rate(i));
+        }
+
+        ionPool.accrueInterest();
+
+        assertEq(ionPool.supplyFactorUnaccrued(), ionPool.supplyFactor());
+        assertEq(ionPool.debtUnaccrued(), ionPool.debt());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            assertEq(ionPool.rateUnaccrued(i), ionPool.rate(i));
+            assertEq(timestampsBefore[i] + timestampIncreases[i], ionPool.lastRateUpdate(i));
+        }
+    }
+
     function test_AccrueInterestForAll() public {
         uint256 collateralDepositAmount = 10e18;
         uint256 normalizedBorrowAmount = 5e18;
@@ -1071,17 +1172,17 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
     event InterestRateModuleUpdated(address newModule);
     event WhitelistUpdated(address newWhitelist);
 
-    event IlkSpotUpdated(address newSpot);
-    event IlkDebtCeilingUpdated(uint256 newDebtCeiling);
-    event IlkDustUpdated(uint256 newDust);
+    event IlkSpotUpdated(uint8 indexed ilkIndex, address newSpot);
+    event IlkDebtCeilingUpdated(uint8 indexed ilkIndex, uint256 newDebtCeiling);
+    event IlkDustUpdated(uint8 indexed ilkIndex, uint256 newDust);
 
     event AddOperator(address indexed from, address indexed to);
     event RemoveOperator(address indexed from, address indexed to);
     event MintAndBurnGem(uint8 indexed ilkIndex, address indexed usr, int256 wad);
     event TransferGem(uint8 indexed ilkIndex, address indexed src, address indexed dst, uint256 wad);
 
-    event Paused(IonPausableUpgradeable.Pauses indexed pauseIndex, address account);
-    event Unpaused(IonPausableUpgradeable.Pauses indexed pauseIndex, address account);
+    event Paused(address account);
+    event Unpaused(address account);
 
     event TreasuryUpdate(address treasury);
 
@@ -1118,6 +1219,17 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         ionPool.initializeIlk(address(0));
     }
 
+    function test_RevertWhen_Initializing257ThIlk() public {
+        uint256 ilkCount = ionPool.ilkCount();
+        // Should lead to 256 total initialized ilks
+        for (uint256 i = 0; i < 256 - ilkCount; i++) {
+            ionPool.initializeIlk(vm.addr(i + 1));
+        }
+
+        vm.expectRevert(IonPool.MaxIlksReached.selector);
+        ionPool.initializeIlk(vm.addr(257));
+    }
+
     function test_UpdateIlkSpot() public {
         SpotOracle newSpotAddress = SpotOracle(vm.addr(12_451_234));
 
@@ -1131,7 +1243,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             ionPool.updateIlkSpot(i, newSpotAddress);
 
             vm.expectEmit(true, true, true, true);
-            emit IlkSpotUpdated(address(newSpotAddress));
+            emit IlkSpotUpdated(i, address(newSpotAddress));
             ionPool.updateIlkSpot(i, newSpotAddress);
 
             assertEq(address(ionPool.spot(i)), address(newSpotAddress));
@@ -1151,7 +1263,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             ionPool.updateIlkDebtCeiling(i, newIlkDebtCeiling);
 
             vm.expectEmit(true, true, true, true);
-            emit IlkDebtCeilingUpdated(newIlkDebtCeiling);
+            emit IlkDebtCeilingUpdated(i, newIlkDebtCeiling);
             ionPool.updateIlkDebtCeiling(i, newIlkDebtCeiling);
 
             assertEq(ionPool.debtCeiling(i), newIlkDebtCeiling);
@@ -1171,7 +1283,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             ionPool.updateIlkDust(i, newIlkDust);
 
             vm.expectEmit(true, true, true, true);
-            emit IlkDustUpdated(newIlkDust);
+            emit IlkDustUpdated(i, newIlkDust);
             ionPool.updateIlkDust(i, newIlkDust);
 
             assertEq(ionPool.dust(i), newIlkDust);
@@ -1221,7 +1333,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
     }
 
     function test_UpdateWhitelist() public {
-        vm.expectRevert(abi.encodeWithSelector(IonPool.InvalidWhitelist.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IonPool.InvalidWhitelist.selector));
         ionPool.updateWhitelist(Whitelist(address(0)));
 
         // Random address
@@ -1240,82 +1352,39 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
         assertEq(ionPool.whitelist(), newWhitelist);
     }
 
-    function test_PauseUnsafeActions() public {
+    function test_Pause() public {
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
         );
         vm.prank(NON_ADMIN);
-        ionPool.pauseUnsafeActions();
+        ionPool.pause();
 
         vm.expectEmit(true, true, true, true);
-        emit Paused(IonPausableUpgradeable.Pauses.UNSAFE, address(this));
-        ionPool.pauseUnsafeActions();
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), true);
+        emit Paused(address(this));
+        ionPool.pause();
+        assertEq(ionPool.paused(), true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
-        );
-        ionPool.pauseUnsafeActions();
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        ionPool.pause();
     }
 
-    function test_UnpauseUnsafeActions() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.ExpectedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
-        );
-        ionPool.unpauseUnsafeActions();
+    function test_Unpause() public {
+        vm.expectRevert(PausableUpgradeable.ExpectedPause.selector);
+        ionPool.unpause();
 
-        ionPool.pauseUnsafeActions();
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), true);
+        ionPool.pause();
+        assertEq(ionPool.paused(), true);
 
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
         );
         vm.prank(NON_ADMIN);
-        ionPool.unpauseUnsafeActions();
+        ionPool.unpause();
 
         vm.expectEmit(true, true, true, true);
-        emit Unpaused(IonPausableUpgradeable.Pauses.UNSAFE, address(this));
-        ionPool.unpauseUnsafeActions();
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.UNSAFE), false);
-    }
-
-    function test_PauseSafeActions() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
-        );
-        vm.prank(NON_ADMIN);
-        ionPool.pauseSafeActions();
-
-        vm.expectEmit(true, true, true, true);
-        emit Paused(IonPausableUpgradeable.Pauses.SAFE, address(this));
-        ionPool.pauseSafeActions();
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), true);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
-        );
-        ionPool.pauseSafeActions();
-    }
-
-    function test_UnpauseSafeActions() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.ExpectedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
-        );
-        ionPool.unpauseSafeActions();
-
-        ionPool.pauseSafeActions();
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), true);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
-        );
-        vm.prank(NON_ADMIN);
-        ionPool.unpauseSafeActions();
-
-        vm.expectEmit(true, true, true, true);
-        emit Unpaused(IonPausableUpgradeable.Pauses.SAFE, address(this));
-        ionPool.unpauseSafeActions();
-        assertEq(ionPool.paused(IonPausableUpgradeable.Pauses.SAFE), false);
+        emit Unpaused(address(this));
+        ionPool.unpause();
+        assertEq(ionPool.paused(), false);
     }
 
     function test_UpdateTreasury() public {
@@ -1323,67 +1392,349 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
         );
         vm.prank(NON_ADMIN);
-        ionPool.updateTreasury(address(0));
+        ionPool.updateTreasury(address(1));
 
         vm.expectEmit(true, true, true, true);
-        emit TreasuryUpdate(address(0));
+        emit TreasuryUpdate(address(1));
+        ionPool.updateTreasury(address(1));
+
+        vm.expectRevert(RewardModule.InvalidTreasuryAddress.selector);
         ionPool.updateTreasury(address(0));
 
-        assertEq(ionPool.treasury(), address(0));
+        assertEq(ionPool.treasury(), address(1));
     }
 }
 
 contract IonPool_PausedTest is IonPoolSharedSetup {
-    function test_RevertWhen_CallingUnsafeFunctionsWhenPausedUnsafe() public {
-        ionPool.pauseUnsafeActions();
+    function test_RevertWhen_CallingFunctionsWhenPaused() public {
+        ionPool.pause();
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.withdraw(address(0), 0);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.withdrawCollateral(0, address(0), address(0), 0);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.UNSAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.transferGem(0, address(0), address(0), 0);
-    }
-
-    function test_RevertWhen_CallingSafeFunctionsWhenPausedSafe() public {
-        ionPool.pauseSafeActions();
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+            PausableUpgradeable.EnforcedPause.selector
+        );
+        ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
+
+        vm.expectRevert(
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.accrueInterest();
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.supply(address(0), 0, new bytes32[](0));
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.repay(0, address(0), address(0), 0);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.depositCollateral(0, address(0), address(0), 0, new bytes32[](0));
 
         vm.expectRevert(
-            abi.encodeWithSelector(IonPausableUpgradeable.EnforcedPause.selector, IonPausableUpgradeable.Pauses.SAFE)
+            PausableUpgradeable.EnforcedPause.selector
         );
         ionPool.repayBadDebt(address(0), 0);
+
+        vm.expectRevert(
+            PausableUpgradeable.EnforcedPause.selector
+        );
+        ionPool.withdraw(address(0), 0);
+
+        vm.expectRevert(
+            PausableUpgradeable.EnforcedPause.selector
+        );
+        ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
+
+        vm.expectRevert(
+            PausableUpgradeable.EnforcedPause.selector
+        );
+        ionPool.withdrawCollateral(0, address(0), address(0), 0);
+
+        vm.expectRevert(
+            PausableUpgradeable.EnforcedPause.selector
+        );
+        ionPool.transferGem(0, address(0), address(0), 0);
+
+        vm.expectRevert(
+            PausableUpgradeable.EnforcedPause.selector
+        );
+        ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
+    }
+}
+
+contract IonPool_WhitelistTest is IonPoolSharedSetup {
+    address[3] borrowers = [
+        0x1111111111111111111111111111111111111111,
+        0x2222222222222222222222222222222222222222,
+        0x3333333333333333333333333333333333333333
+    ];
+
+    address[5] lenders = [
+        0x0000000000000000000000000000000000000001,
+        0x0000000000000000000000000000000000000002,
+        0x0000000000000000000000000000000000000003,
+        0x0000000000000000000000000000000000000004,
+        0x0000000000000000000000000000000000000005
+    ];
+
+    // generate merkle root
+    // [["0x1111111111111111111111111111111111111111"],
+    // ["0x2222222222222222222222222222222222222222"],
+    // ["0x3333333333333333333333333333333333333333"]];
+    // => 0xae6afff7b7c4d883d5efd44afa0b98e80317697e8984b4c2de7c54b49c1c4dd4
+    bytes32 borrowersRoot = 0xae6afff7b7c4d883d5efd44afa0b98e80317697e8984b4c2de7c54b49c1c4dd4;
+
+    // generate merkle root
+    // ["0x0000000000000000000000000000000000000001"],
+    // ["0x0000000000000000000000000000000000000002"],
+    // ["0x0000000000000000000000000000000000000003"],
+    // ["0x0000000000000000000000000000000000000004"],
+    // ["0x0000000000000000000000000000000000000005"],
+    // => 0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094
+    bytes32 lendersRoot = 0x21abd2f655ded75d91fbd5e0b1ad35171a675fd315a077efa7f2d555a26e7094;
+
+    bytes[] borrowerProofs = [
+        abi.encode(
+            32,
+            2,
+            0x708e7cb9a75ffb24191120fba1c3001faa9078147150c6f2747569edbadee751,
+            0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192
+        ),
+        abi.encode(
+            32,
+            2,
+            0xa7409058568815d08a7ad3c7d4fd44cf1dec90c620cb31e55ad24c654f7ba34f,
+            0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192
+        ),
+        abi.encode(
+            32,
+            1,
+            0xc6ce8ae383124b268df66d71f0af2206e6dafb13eba0b03806eed8a4e7991329
+        )
+    ];
+
+    bytes[] lenderProofs = [
+        abi.encode(
+            32,
+            2,
+            0x2584db4a68aa8b172f70bc04e2e74541617c003374de6eb4b295e823e5beab01,
+            0xc949c2dc5da2bd9a4f5ae27532dfbb3551487bed50825cd099ff5d0a8d613ab5
+        ),
+        abi.encode(
+            32,
+            3,
+            0x16db2e4b9f8dc120de98f8491964203ba76de27b27b29c2d25f85a325cd37477,
+            0xc167b0e3c82238f4f2d1a50a8b3a44f96311d77b148c30dc0ef863e1a060dcb6,
+            0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7
+        ),
+        abi.encode(
+            32,
+            2,
+            0xb5d9d894133a730aa651ef62d26b0ffa846233c74177a591a4a896adfda97d22,
+            0xc949c2dc5da2bd9a4f5ae27532dfbb3551487bed50825cd099ff5d0a8d613ab5
+        ),
+        abi.encode(
+            32,
+            2,
+            0x161691c7185a37ff918e70bebef716ddd87844ac47f419ea23eaf4fe983fbf2c,
+            0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7
+        ),
+        abi.encode(
+            32,
+            3,
+            0x1ab0c6948a275349ae45a06aad66a8bd65ac18074615d53676c09b67809099e0,
+            0xc167b0e3c82238f4f2d1a50a8b3a44f96311d77b148c30dc0ef863e1a060dcb6,
+            0x1a6dbeb0d179031e5261494ac4b6ee4e284665e8d2ea3ff44f7a2ddf5ca07bb7
+        )
+    ];
+
+    Whitelist _whitelist;
+
+    function setUp() public override {
+        super.setUp();
+        bytes32[] memory borrowersRoots = new bytes32[](3);
+        for (uint256 i = 0; i < borrowers.length; ++i) {
+            borrowersRoots[i] = borrowersRoot;
+        }
+
+        _whitelist = new Whitelist(borrowersRoots, lendersRoot);
+        ionPool.updateWhitelist(_whitelist);
+    }
+
+    function test_SupplyWorksWhenLenderWhitelisted() external {
+        for (uint256 i = 0; i < lenders.length; ++i) {
+            uint256 supplyAmount = 1e18;
+
+            underlying.mint(lenders[i], supplyAmount);
+
+            vm.startPrank(lenders[i]);
+            underlying.approve(address(ionPool), type(uint256).max);
+
+            bytes32[] memory lenderProof = abi.decode(lenderProofs[i], (bytes32[]));
+            ionPool.supply(lenders[i], 1e18, lenderProof);
+            vm.stopPrank();
+        }
+    }
+
+    function test_DepositCollateralWorksWhenBorrowerWhitelisted() external {
+        for (uint256 i = 0; i < borrowers.length; ++i) {
+            uint256 collateralDepositAmount = 1e18;
+
+            for (uint8 j = 0; j < collaterals.length; ++j) {
+                ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[i], collateralDepositAmount);
+
+                vm.startPrank(borrowers[i]);
+                collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+                gemJoins[j].join(borrowers[i], collateralDepositAmount);
+
+                bytes32[] memory borrowerProof = abi.decode(borrowerProofs[i], (bytes32[]));
+                ionPool.depositCollateral(j, borrowers[i], borrowers[i], collateralDepositAmount, borrowerProof);
+                vm.stopPrank();
+            }
+        }
+    }
+
+    function test_BorrowWorksWhenBorrowerWhitelisted() external {
+        for (uint256 i = 0; i < borrowers.length; ++i) {
+            underlying.mint(address(this), 4e18);
+            bytes32[] memory lenderProof = abi.decode(lenderProofs[0], (bytes32[]));
+
+            underlying.approve(address(ionPool), type(uint256).max);
+            ionPool.supply(lenders[0], 4e18, lenderProof);
+
+            uint256 borrowAmount = 1e18;
+            uint256 collateralDepositAmount = 5e18;
+
+            for (uint8 j = 0; j < collaterals.length; ++j) {
+                ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[i], collateralDepositAmount);
+
+                vm.startPrank(borrowers[i]);
+                collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+                gemJoins[j].join(borrowers[i], collateralDepositAmount);
+
+                bytes32[] memory borrowerProof = abi.decode(borrowerProofs[i], (bytes32[]));
+                ionPool.depositCollateral(j, borrowers[i], borrowers[i], collateralDepositAmount, borrowerProof);
+
+                ionPool.borrow(j, borrowers[i], borrowers[i], borrowAmount, borrowerProof);
+                vm.stopPrank();
+            }
+        }
+    }
+
+    function test_RevertWhen_SupplyingLenderNotWhitelisted() external {
+        uint256 supplyAmount = 1e18;
+
+        underlying.mint(lenders[0], supplyAmount);
+
+        underlying.approve(address(ionPool), type(uint256).max);
+
+        vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedLender.selector, address(this)));
+        ionPool.supply(address(this), 1e18, new bytes32[](0));
+    }
+
+    function test_SupplyForWhitelistedUser() external {
+        uint256 supplyAmount = 1e18;
+
+        underlying.mint(address(this), supplyAmount);
+
+        underlying.approve(address(ionPool), type(uint256).max);
+
+        bytes32[] memory lenderProof = abi.decode(lenderProofs[0], (bytes32[]));
+        ionPool.supply(lenders[0], 1e18, lenderProof);
+    }
+
+    function test_RevertWhen_DepositingCollateralBorrowerNotWhitelisted() external {
+        uint256 collateralDepositAmount = 1e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[0], collateralDepositAmount);
+
+            vm.startPrank(borrowers[0]);
+            collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+            gemJoins[j].join(borrowers[0], collateralDepositAmount);
+
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, j, address(this)));
+            ionPool.depositCollateral(j, address(this), address(this), collateralDepositAmount, new bytes32[](0));
+            vm.stopPrank();
+        }
+    }
+
+    function test_DepositingCollateralForWhitelistedUser() external {
+        uint256 collateralDepositAmount = 1e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            ERC20PresetMinterPauser(address(collaterals[j])).mint(address(this), collateralDepositAmount);
+
+            collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+            gemJoins[j].join(address(this), collateralDepositAmount);
+
+            bytes32[] memory borrowerProof = abi.decode(borrowerProofs[0], (bytes32[]));
+            ionPool.depositCollateral(j, borrowers[0], address(this), collateralDepositAmount, borrowerProof);
+        }
+    }
+
+    function test_RevertWhen_BorrowingBorrowerNotWhitelisted() external {
+        uint256 borrowAmount = 1e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, j, address(this)));
+            ionPool.borrow(j, address(this), address(this), borrowAmount, new bytes32[](0));
+        }
+    }
+
+    function test_OperatorCreatesBorrowForWhitelistedUser() external {
+        underlying.mint(address(this), 4e18);
+        bytes32[] memory lenderProof = abi.decode(lenderProofs[0], (bytes32[]));
+
+        underlying.approve(address(ionPool), type(uint256).max);
+        ionPool.supply(lenders[0], 4e18, lenderProof);
+
+        uint256 borrowAmount = 1e18;
+        uint256 collateralDepositAmount = 5e18;
+
+        for (uint8 j = 0; j < collaterals.length; ++j) {
+            ERC20PresetMinterPauser(address(collaterals[j])).mint(borrowers[0], collateralDepositAmount);
+
+            vm.startPrank(borrowers[0]);
+            collaterals[j].approve(address(gemJoins[j]), type(uint256).max);
+
+            gemJoins[j].join(borrowers[0], collateralDepositAmount);
+
+            bytes32[] memory borrowerProof = abi.decode(borrowerProofs[0], (bytes32[]));
+            ionPool.depositCollateral(j, borrowers[0], borrowers[0], collateralDepositAmount, borrowerProof);
+
+            ionPool.addOperator(address(this));
+            vm.stopPrank();
+
+            ionPool.borrow(j, borrowers[0], borrowers[0], borrowAmount, borrowerProof);
+        }
     }
 }

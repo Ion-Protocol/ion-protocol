@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { RAY } from "../../../libraries/math/WadRayMath.sol";
+import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 import { IonHandlerBase } from "./IonHandlerBase.sol";
 import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 
@@ -22,17 +24,18 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  */
 abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback, IonHandlerBase {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH9;
 
     error WethNotInPoolPair(IUniswapV3Pool pool);
     error ReceiveCallerNotPool(address unauthorizedCaller);
-    error ExternalUniswapFlashloanNotAllowed();
 
     IVault internal constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     bool immutable WETH_IS_TOKEN0_ON_UNISWAP;
     IUniswapV3Pool public immutable FLASHLOAN_POOL;
+    bytes32 public immutable BALANCER_POOL_ID;
 
-    constructor(IUniswapV3Pool _flashloanPool) {
+    constructor(IUniswapV3Pool _flashloanPool, bytes32 _balancerPoolId) {
         address weth = address(WETH);
         IERC20(weth).approve(address(VAULT), type(uint256).max);
         IERC20(address(LST_TOKEN)).approve(address(VAULT), type(uint256).max);
@@ -48,6 +51,8 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
         // Technically possible here for both tokens to be weth, but Uniswap does not allow for this
         WETH_IS_TOKEN0_ON_UNISWAP = _wethIsToken0;
+
+        BALANCER_POOL_ID = _balancerPoolId;
     }
 
     /**
@@ -60,10 +65,14 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     function flashLeverageWethAndSwap(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
-        uint256 maxResultingAdditionalDebt
+        uint256 maxResultingAdditionalDebt,
+        uint256 deadline,
+        bytes32[] calldata proof
     )
         external
         payable
+        checkDeadline(deadline)
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit;
@@ -90,9 +99,9 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             fundManagement: fundManagement,
             assetIn: address(WETH),
             assetOut: address(LST_TOKEN),
-            amountIn: amountToLeverage
+            amountOut: amountToLeverage
         });
- 
+
         flashCallbackData.user = msg.sender;
         flashCallbackData.initialDeposit = initialDeposit;
         flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove = maxResultingAdditionalDebt;
@@ -113,8 +122,12 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
      * to repay `debtToRemove` debt.
      * @param debtToRemove The desired amount of debt to remove.
      */
-    function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove) external {
+    function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove, uint256 deadline) external checkDeadline(deadline) {
         if (debtToRemove == 0) return;
+
+        if (debtToRemove == type(uint256).max) {
+            (debtToRemove,) = _getFullRepayAmount(msg.sender);
+        }
 
         uint256 amount0ToFlash;
         uint256 amount1ToFlash;
@@ -190,7 +203,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             }
 
             IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
-                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+                poolId: bytes32(BALANCER_POOL_ID),
                 kind: IVault.SwapKind.GIVEN_OUT,
                 assetIn: IAsset(address(WETH)),
                 assetOut: IAsset(address(LST_TOKEN)),
@@ -210,7 +223,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             uint256 totalCollateral = flashCallbackData.initialDeposit + amountToLeverage;
             _depositAndBorrow(user, address(this), totalCollateral, wethToRepay, AmountToBorrow.IS_MIN);
 
-            WETH.transfer(msg.sender, wethToRepay);
+            WETH.safeTransfer(msg.sender, wethToRepay);
         } else {
             // When deleveraging
             uint256 totalRepayment = flashCallbackData.wethFlashloaned + fee;
@@ -219,7 +232,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
                 fundManagement: fundManagement,
                 assetIn: address(LST_TOKEN),
                 assetOut: address(WETH),
-                amountIn: totalRepayment
+                amountOut: totalRepayment
             });
 
             uint256 maxCollateralToRemove = flashCallbackData.maxResultingAdditionalDebtOrCollateralToRemove;
@@ -230,7 +243,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
             _repayAndWithdraw(flashCallbackData.user, address(this), collateralIn, flashCallbackData.wethFlashloaned);
 
             IVault.SingleSwap memory balancerSwap = IVault.SingleSwap({
-                poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+                poolId: bytes32(BALANCER_POOL_ID),
                 kind: IVault.SwapKind.GIVEN_OUT,
                 assetIn: IAsset(address(LST_TOKEN)),
                 assetOut: IAsset(address(WETH)),
@@ -240,7 +253,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
 
             VAULT.swap(balancerSwap, fundManagement, type(uint256).max, block.timestamp + 1);
 
-            WETH.transfer(msg.sender, totalRepayment);
+            WETH.safeTransfer(msg.sender, totalRepayment);
         }
     }
 
@@ -248,7 +261,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         IVault.FundManagement memory fundManagement,
         address assetIn,
         address assetOut,
-        uint256 amountIn
+        uint256 amountOut
     )
         internal
         returns (uint256)
@@ -257,16 +270,16 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         uint256 assetOutIndex = 1;
 
         IVault.BatchSwapStep memory swapStep = IVault.BatchSwapStep({
-            poolId: bytes32(0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb),
+            poolId: bytes32(BALANCER_POOL_ID),
             assetInIndex: assetInIndex,
             assetOutIndex: assetOutIndex,
-            amount: amountIn,
+            amount: amountOut,
             userData: ""
         });
 
         IAsset[] memory assets = new IAsset[](2);
-        assets[assetInIndex] = IAsset(address(assetIn));
-        assets[assetOutIndex] = IAsset(address(assetOut));
+        assets[assetInIndex] = IAsset(assetIn);
+        assets[assetOutIndex] = IAsset(assetOut);
 
         IVault.BatchSwapStep[] memory swapSteps = new IVault.BatchSwapStep[](1);
         swapSteps[0] = swapStep;

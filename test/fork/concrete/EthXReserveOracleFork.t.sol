@@ -5,6 +5,7 @@ import { EthXReserveOracle } from "../../../src/oracles/reserve/EthXReserveOracl
 import { ReserveFeed } from "../../../src/oracles/reserve/ReserveFeed.sol";
 import { IStaderStakePoolsManager } from "../../../src/interfaces/ProviderInterfaces.sol";
 import { WadRayMath, RAY } from "../../../src/libraries/math/WadRayMath.sol";
+import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
 
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
@@ -12,6 +13,24 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
     using WadRayMath for *;
 
     // --- ETHx Reserve Oracle Test ---
+
+    function test_RevertWhen_UpdateIsOnCooldown() public {
+        uint256 maxChange = 3e25; // 0.03 3%
+        address[] memory feeds = new address[](3);
+        uint8 quorum = 0;
+        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
+            STADER_STAKE_POOLS_MANAGER,
+            ETHX_ILK_INDEX,
+            feeds,
+            quorum,
+            maxChange
+        );
+
+        ethXReserveOracle.updateExchangeRate();
+
+        vm.expectRevert(abi.encodeWithSelector(ReserveOracle.UpdateCooldown.selector, block.timestamp));
+        ethXReserveOracle.updateExchangeRate();
+    }
 
     function test_EthXReserveOracleGetProtocolExchangeRate() public {
         uint256 maxChange = 3e25; // 0.03 3%
@@ -33,9 +52,9 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 1e27; // 1 100%
         uint8 quorum = 3;
 
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint256 reserveFeed1ExchangeRate = 0.9 ether;
         uint256 reserveFeed2ExchangeRate = 0.95 ether;

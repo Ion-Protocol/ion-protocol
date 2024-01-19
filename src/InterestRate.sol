@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
-import { WadRayMath } from "./libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
 
 // forgefmt: disable-start
 
@@ -77,41 +77,49 @@ contract InterestRate {
     error CollateralIndexOutOfBounds();
     error DistributionFactorsDoNotSumToOne(uint256 sum);
     error TotalDebtsLength(uint256 COLLATERAL_COUNT, uint256 totalIlkDebtsLength);
+
+    error InvalidMinimumKinkRate(uint256 minimumKinkRate, uint256 minimumBaseRate);
+    error InvalidIlkDataListLength(uint256 length);
+    error InvalidOptimalUtilizationRate(uint256 optimalUtilizationRate);
+    error InvalidReserveFactor(uint256 reserveFactor);
     error InvalidYieldOracleAddress();
+
+    uint256 private constant MAX_ILKS = 8;
 
     /**
      * @dev Packed collateral configs
      */
-    uint256 internal immutable ILKCONFIG_0A;
-    uint256 internal immutable ILKCONFIG_0B;
-    uint256 internal immutable ILKCONFIG_0C;
-    uint256 internal immutable ILKCONFIG_1A;
-    uint256 internal immutable ILKCONFIG_1B;
-    uint256 internal immutable ILKCONFIG_1C;
-    uint256 internal immutable ILKCONFIG_2A;
-    uint256 internal immutable ILKCONFIG_2B;
-    uint256 internal immutable ILKCONFIG_2C;
-    uint256 internal immutable ILKCONFIG_3A;
-    uint256 internal immutable ILKCONFIG_3B;
-    uint256 internal immutable ILKCONFIG_3C;
-    uint256 internal immutable ILKCONFIG_4A;
-    uint256 internal immutable ILKCONFIG_4B;
-    uint256 internal immutable ILKCONFIG_4C;
-    uint256 internal immutable ILKCONFIG_5A;
-    uint256 internal immutable ILKCONFIG_5B;
-    uint256 internal immutable ILKCONFIG_5C;
-    uint256 internal immutable ILKCONFIG_6A;
-    uint256 internal immutable ILKCONFIG_6B;
-    uint256 internal immutable ILKCONFIG_6C;
-    uint256 internal immutable ILKCONFIG_7A;
-    uint256 internal immutable ILKCONFIG_7B;
-    uint256 internal immutable ILKCONFIG_7C;
+    uint256 private immutable ILKCONFIG_0A;
+    uint256 private immutable ILKCONFIG_0B;
+    uint256 private immutable ILKCONFIG_0C;
+    uint256 private immutable ILKCONFIG_1A;
+    uint256 private immutable ILKCONFIG_1B;
+    uint256 private immutable ILKCONFIG_1C;
+    uint256 private immutable ILKCONFIG_2A;
+    uint256 private immutable ILKCONFIG_2B;
+    uint256 private immutable ILKCONFIG_2C;
+    uint256 private immutable ILKCONFIG_3A;
+    uint256 private immutable ILKCONFIG_3B;
+    uint256 private immutable ILKCONFIG_3C;
+    uint256 private immutable ILKCONFIG_4A;
+    uint256 private immutable ILKCONFIG_4B;
+    uint256 private immutable ILKCONFIG_4C;
+    uint256 private immutable ILKCONFIG_5A;
+    uint256 private immutable ILKCONFIG_5B;
+    uint256 private immutable ILKCONFIG_5C;
+    uint256 private immutable ILKCONFIG_6A;
+    uint256 private immutable ILKCONFIG_6B;
+    uint256 private immutable ILKCONFIG_6C;
+    uint256 private immutable ILKCONFIG_7A;
+    uint256 private immutable ILKCONFIG_7B;
+    uint256 private immutable ILKCONFIG_7C;
 
     uint256 public immutable COLLATERAL_COUNT;
     IYieldOracle public immutable YIELD_ORACLE;
 
     constructor(IlkData[] memory ilkDataList, IYieldOracle _yieldOracle) {
         if (address(_yieldOracle) == address(0)) revert InvalidYieldOracleAddress();
+        if (ilkDataList.length > MAX_ILKS) revert InvalidIlkDataListLength(ilkDataList.length);
 
         COLLATERAL_COUNT = ilkDataList.length;
         YIELD_ORACLE = _yieldOracle;
@@ -119,6 +127,16 @@ contract InterestRate {
         uint256 distributionFactorSum = 0;
         for (uint256 i = 0; i < COLLATERAL_COUNT;) {
             distributionFactorSum += ilkDataList[i].distributionFactor;
+
+            if (ilkDataList[i].minimumKinkRate < ilkDataList[i].minimumBaseRate) {
+                revert InvalidMinimumKinkRate(ilkDataList[i].minimumKinkRate, ilkDataList[i].minimumBaseRate);
+            }
+            if (ilkDataList[i].optimalUtilizationRate == 0) {
+                revert InvalidOptimalUtilizationRate(ilkDataList[i].optimalUtilizationRate);
+            }
+            if (ilkDataList[i].reserveFactor > RAY) {
+                revert InvalidReserveFactor(ilkDataList[i].reserveFactor);
+            }
 
             // forgefmt: disable-next-line
             unchecked { ++i; }
@@ -140,7 +158,7 @@ contract InterestRate {
         IlkData[] memory ilkDataList,
         uint256 index
     )
-        internal
+        private
         view
         returns (uint256 packedConfig_a, uint256 packedConfig_b, uint256 packedConfig_c)
     {

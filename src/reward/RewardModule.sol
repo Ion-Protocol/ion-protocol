@@ -43,11 +43,11 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
 
     /**
      * @dev Indicates an error related to the current `balance` of a `sender`. Used in transfers.
-     * @param sender Address whose tokens are being transferred.
+     * @param account Address whose token balance is insufficient.
      * @param balance Current balance for the interacting account.
      * @param needed Minimum amount required to perform a transfer.
      */
-    error InsufficientBalance(address sender, uint256 balance, uint256 needed);
+    error InsufficientBalance(address account, uint256 balance, uint256 needed);
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
@@ -60,7 +60,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     event MintToTreasury(address indexed treasury, uint256 amount, uint256 supplyFactor);
 
     event TreasuryUpdate(address treasury);
-
+ 
+    /// @custom:storage-location erc7201:ion.storage.RewardModule
     struct RewardModuleStorage {
         IERC20 underlying;
         uint8 decimals;
@@ -221,6 +222,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param newTreasury address of new treasury
      */
     function updateTreasury(address newTreasury) external onlyRole(ION) {
+        if (newTreasury == address(0)) revert InvalidTreasuryAddress();        
+
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         $.treasury = newTreasury;
 
@@ -251,7 +254,10 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      */
     function balanceOf(address user) public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
-        return $._normalizedBalances[user].rayMulDown($.supplyFactor);
+
+        (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
+
+        return $._normalizedBalances[user].rayMulDown($.supplyFactor + totalSupplyFactorIncrease);
     }
 
     /**
@@ -287,10 +293,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         return $.treasury;
     }
 
-    /**
-     * @dev Current total supply
-     */
-    function totalSupply() public view returns (uint256) {
+    function totalSupplyUnaccrued() public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
 
         uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
@@ -303,11 +306,43 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     }
 
     /**
+     * @dev Current total supply
+     */
+    function totalSupply() public view returns (uint256) {
+        RewardModuleStorage storage $ = _getRewardModuleStorage();
+
+        uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
+
+        if (_normalizedTotalSupply == 0) {
+            return 0;
+        }
+
+        (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
+
+        return _normalizedTotalSupply.rayMulDown($.supplyFactor + totalSupplyFactorIncrease);
+    }
+
+    function normalizedTotalSupplyUnaccrued() public view returns (uint256) {
+        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        return $.normalizedTotalSupply;
+    }
+
+    /**
      * @dev Current normalized total supply
      */
     function normalizedTotalSupply() public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
-        return $.normalizedTotalSupply;
+
+        (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();
+
+        uint256 normalizedTreasuryMintAmount = totalTreasuryMintAmount.rayDivDown($.supplyFactor + totalSupplyFactorIncrease);
+
+        return $.normalizedTotalSupply + normalizedTreasuryMintAmount;
+    }
+
+    function supplyFactorUnaccrued() public view returns (uint256) {
+        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        return $.supplyFactor;
     }
 
     /**
@@ -315,6 +350,21 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      */
     function supplyFactor() public view returns (uint256) {
         RewardModuleStorage storage $ = _getRewardModuleStorage();
-        return $.supplyFactor;
+
+        (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
+
+        return $.supplyFactor + totalSupplyFactorIncrease;
     }
+
+    function calculateRewardAndDebtDistribution()
+        public
+        view
+        virtual
+        returns (
+            uint256 totalSupplyFactorIncrease,
+            uint256 totalTreasuryMintAmount,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        );
 }

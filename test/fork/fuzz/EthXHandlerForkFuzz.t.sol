@@ -43,7 +43,7 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         weth.approve(address(ethXHandler), type(uint256).max);
         ionPool.addOperator(address(ethXHandler));
 
-        ethXHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt);
+        ethXHandler.flashLeverageCollateral(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -70,7 +70,7 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
 
         vm.assume(!unsafePositionChange);
 
-        ethXHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt);
+        ethXHandler.flashLeverageWeth(initialDeposit, resultingCollateral, resultingDebt, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -94,7 +94,7 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         weth.approve(address(ethXHandler), type(uint256).max);
         ionPool.addOperator(address(ethXHandler));
 
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -115,7 +115,7 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         vm.recordLogs();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt);
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -130,6 +130,8 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
 
+        vm.warp(block.timestamp + 3 hours);
+
         uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
         // Want to completely deleverage position and only leave initial capital
         // in vault
@@ -140,7 +142,7 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
-        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove);
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;

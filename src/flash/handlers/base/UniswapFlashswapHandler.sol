@@ -25,14 +25,12 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    error InvalidFactoryAddress();
     error InvalidUniswapPool();
     error InvalidZeroLiquidityRegionSwap();
+    error InvalidSqrtPriceLimitX96(uint160 sqrtPriceLimitX96);
 
-    error ExternalFlashswapNotAllowed();
     error FlashswapRepaymentTooExpensive(uint256 amountIn, uint256 maxAmountIn);
     error CallbackOnlyCallableByPool(address unauthorizedCaller);
-    error InsufficientBalance(uint256 necessaryBalance, uint256 currentBalance);
     error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
 
     /// @dev The minimum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MIN_TICK)
@@ -40,24 +38,20 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
     uint160 internal constant MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342;
 
-    IUniswapV3Factory immutable FACTORY;
-    IUniswapV3Pool immutable UNISWAP_POOL;
-    bool immutable WETH_IS_TOKEN0;
-    uint24 immutable POOL_FEE;
+    IUniswapV3Pool public immutable UNISWAP_POOL;
+    bool private immutable WETH_IS_TOKEN0;
 
-    constructor(IUniswapV3Factory _factory, IUniswapV3Pool _pool, uint24 _poolFee, bool _wethIsToken0) {
-        if (address(_factory) == address(0)) revert InvalidFactoryAddress();
+    constructor(IUniswapV3Pool _pool, bool _wethIsToken0) {
         if (address(_pool) == address(0)) revert InvalidUniswapPool();
 
         address token0 = _pool.token0();
         address token1 = _pool.token1();
 
         if (token0 != address(WETH) && token1 != address(WETH)) revert InvalidUniswapPool();
+        if (token0 == address(WETH) && token1 == address(WETH)) revert InvalidUniswapPool();
 
-        FACTORY = _factory;
         UNISWAP_POOL = _pool;
         WETH_IS_TOKEN0 = _wethIsToken0;
-        POOL_FEE = _poolFee;
     }
 
     struct FlashSwapData {
@@ -83,9 +77,13 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingAdditionalDebt,
-        uint160 sqrtPriceLimitX96
+        uint160 sqrtPriceLimitX96,
+        uint256 deadline,
+        bytes32[] memory proof
     )
         external
+        checkDeadline(deadline)
+        onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
 
@@ -111,15 +109,19 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         uint256 amountIn =
             _initiateFlashSwap(zeroForOne, amountToLeverage, address(this), sqrtPriceLimitX96, flashswapData);
 
-        // This protects against a potential sandwhich attack
+        // This protects against a potential sandwich attack
         if (amountIn > maxResultingAdditionalDebt) {
             revert FlashswapRepaymentTooExpensive(amountIn, maxResultingAdditionalDebt);
         }
     }
 
     /**
-     * @dev The two function parameters must be chosen carefully. If `maxCollateralToRemove` were higher then
-     * `debtToRemove`, it would theoretically be possible TODO: to do what?
+     * @dev The two function parameters must be chosen carefully. If
+     * `maxCollateralToRemove`'s ETH valuation were higher then `debtToRemove`,
+     * it would theoretically be possible to sell more collateral then was
+     * required for `debtToRemove` to be repaid (even if `debtToRemove` is worth
+     * nowhere near that valuation) due to the slippage of the sell.
+     * `maxCollateralToRemove` is essentially a slippage guard here.
      * @param maxCollateralToRemove in terms of swEth
      * @param debtToRemove in terms of WETH [wad]
      * @param sqrtPriceLimitX96 for the swap
@@ -127,10 +129,17 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     function flashswapDeleverage(
         uint256 maxCollateralToRemove,
         uint256 debtToRemove,
-        uint160 sqrtPriceLimitX96
+        uint160 sqrtPriceLimitX96,
+        uint256 deadline
     )
         external
+        checkDeadline(deadline)
     {
+
+        if (debtToRemove == type(uint256).max) {
+            (debtToRemove,) = _getFullRepayAmount(msg.sender);
+        }
+
         if (debtToRemove == 0) return;
 
         // collateral -> WETH
@@ -154,6 +163,8 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         private
         returns (uint256 amountIn)
     {
+        if ((sqrtPriceLimitX96 < MIN_SQRT_RATIO || sqrtPriceLimitX96 > MAX_SQRT_RATIO) && sqrtPriceLimitX96 != 0) revert InvalidSqrtPriceLimitX96(sqrtPriceLimitX96);
+
         (int256 amount0Delta, int256 amount1Delta) = UNISWAP_POOL.swap(
             recipient,
             zeroForOne,
@@ -168,10 +179,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
             : (uint256(amount1Delta), uint256(-amount0Delta));
 
         // it's technically possible to not receive the full output amount,
-        // so if no price limit has been specified, require this possibility away
-        if (sqrtPriceLimitX96 == 0 && amountOutReceived != amountOut) {
-            revert OutputAmountNotReceived(amountOutReceived, amountOut);
-        }
+        if (amountOutReceived != amountOut) revert OutputAmountNotReceived(amountOutReceived, amountOut);
     }
 
     /**

@@ -16,12 +16,12 @@ contract MockModifiers {
     }
 
     modifier onlyWhitelistedBorrowers(uint8 ilkIndex, bytes32[] memory proof) {
-        whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, proof); // error from whitelist
+        whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, msg.sender, proof); // error from whitelist
         _;
     }
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
-        whitelist.isWhitelistedLender(msg.sender, proof); // error from whitelist
+        whitelist.isWhitelistedLender(msg.sender, msg.sender, proof); // error from whitelist
         _;
     }
 

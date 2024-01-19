@@ -11,6 +11,7 @@ import {
 import { UniswapFlashswapHandler } from "../../../src/flash/handlers/base/UniswapFlashswapHandler.sol";
 import { LidoLibrary } from "../../../src/libraries/LidoLibrary.sol";
 import { Whitelist } from "../../../src/Whitelist.sol";
+import { IonHandlerBase } from "../../../src/flash/handlers/base/IonHandlerBase.sol";
 
 import { IonHandler_ForkBase } from "../../helpers/IonHandlerForkBase.sol";
 
@@ -31,11 +32,12 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
     uint8 internal constant ilkIndex = 0;
     WstEthHandler wstEthHandler;
     uint160 sqrtPriceLimitX96;
+    bytes32[] borrowerWhitelistProof;
 
     function setUp() public virtual override {
         super.setUp();
         wstEthHandler =
-        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), FACTORY, WSTETH_WETH_POOL, 100);
+        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
 
         IERC20(address(MAINNET_WSTETH)).approve(address(wstEthHandler), type(uint256).max);
 
@@ -65,7 +67,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -79,6 +81,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     }
 
     function testFork_FlashloanCollateralPositionRequiresZeroDebtButMaxAllowsMore() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         uint256 initialDeposit = 1e18; // in wstEth
         uint256 resultingAdditionalCollateral = 1e18 + 1; // in wstEth
         uint256 resultingDebt =
@@ -89,7 +93,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+        wstEthHandler.flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -112,7 +116,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         uint256 gasBefore = gasleft();
-        wstEthHandler.flashLeverageWeth(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+        wstEthHandler.flashLeverageWeth(initialDeposit, resultingAdditionalCollateral, maxResultingDebt, borrowerWhitelistProof);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -132,15 +136,18 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     function testFork_FlashswapLeverage() external {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = 4.9e18; // In weth
+        uint256 maxResultingDebt = 4.9e18; // In weth
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
+        vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
+        wstEthHandler.flashswapLeverage(
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp, borrowerWhitelistProof);
+
         uint256 gasBefore = gasleft();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
-        );
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof);
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -150,20 +157,71 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral);
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
         assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxmaxResultingDebt);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
     }
 
     function testFork_FlashswapDeleverage() external {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = type(uint256).max;
+        uint256 maxResultingDebt = type(uint256).max;
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
         vm.recordLogs();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        uint256 normalizedDebtCreated;
+        for (uint256 i = 0; i < entries.length; i++) {
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
+            normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
+        }
+
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
+
+        vm.warp(block.timestamp + 3 hours);
+
+        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        // Want to completely deleverage position and only leave initial capital
+        // in vault
+        uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        // Remove all debt
+        uint256 normalizedDebtToRemove = ionPool.normalizedDebt(ilkIndex, address(this));
+
+        // Round up otherwise can leave 1 wei of dust in debt left
+        uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
+
+        vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp);
+
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral - maxCollateralToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
+        assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
+    }
+
+    function testFork_FlashswapDeleverageFull() external {
+        uint256 initialDeposit = 1e18;
+        uint256 resultingAdditionalCollateral = 5e18;
+        uint256 maxResultingDebt = type(uint256).max;
+
+        weth.approve(address(wstEthHandler), type(uint256).max);
+        ionPool.addOperator(address(wstEthHandler));
+
+        vm.recordLogs();
+        wstEthHandler.flashswapLeverage(
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof
         );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -176,7 +234,7 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         }
 
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingAdditionalCollateral);
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxmaxResultingDebt);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
         assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
 
         uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
@@ -184,12 +242,11 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         // in vault
         uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
         // Remove all debt
-        uint256 normalizedDebtToRemove = ionPool.normalizedDebt(ilkIndex, address(this));
 
         // Round up otherwise can leave 1 wei of dust in debt left
-        uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
+        uint256 debtToRemove = type(uint256).max;
 
-        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -201,6 +258,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     }
 
     function testFork_RevertWhen_FlashloanNotInitiatedByHandler() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(MAINNET_WSTETH));
 
@@ -214,6 +273,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     }
 
     function testFork_RevertWhen_FlashloanedMoreThanOneToken() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](2);
         addresses[0] = IERC20Balancer(address(MAINNET_WSTETH));
         addresses[1] = IERC20Balancer(address(weth));
@@ -229,6 +290,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     }
 
     function testFork_RevertWhen_UntrustedCallerCallsFlashloanCallback() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(MAINNET_WSTETH));
 
@@ -242,6 +305,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     }
 
     function testFork_RevertWhen_FlashloanedTokenIsNeitherWethNorCorrectLst() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
 
@@ -255,6 +320,8 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     }
 
     function testFork_RevertWhen_UntrustedCallerCallsFlashswapCallback() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         vm.expectRevert(
             abi.encodeWithSelector(UniswapFlashswapHandler.CallbackOnlyCallableByPool.selector, address(this))
         );
@@ -262,36 +329,40 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
     }
 
     function testFork_RevertWhen_TradingInZeroLiquidityRegion() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         vm.prank(address(WSTETH_WETH_POOL));
         vm.expectRevert(UniswapFlashswapHandler.InvalidZeroLiquidityRegionSwap.selector);
         wstEthHandler.uniswapV3SwapCallback(0, 0, "");
     }
 
     function testFork_RevertWhen_FlashswapLeverageCreatesMoreDebtThanUserIsWilling() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = 3e18; // In weth
+        uint256 maxResultingDebt = 3e18; // In weth
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
         vm.expectRevert();
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
-        );
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof);
     }
 
     function testFork_RevertWhen_FlashswapDeleverageSellsMoreCollateralThanUserIsWilling() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxmaxResultingDebt = type(uint256).max;
+        uint256 maxResultingDebt = type(uint256).max;
 
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
         wstEthHandler.flashswapLeverage(
-            initialDeposit, resultingAdditionalCollateral, maxmaxResultingDebt, sqrtPriceLimitX96
-        );
+            initialDeposit, resultingAdditionalCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, borrowerWhitelistProof) ;
 
         uint256 slippageAndFeeTolerance = 1.0e18; // 0%
         // Want to completely deleverage position and only leave initial capital
@@ -304,7 +375,37 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
         vm.expectRevert();
-        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0);
+        wstEthHandler.flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
+    }
+}
+
+contract WstEthHandlerWhitelist_ForkTest is WstEthHandler_ForkTest {
+    // generate merkle root
+    // ["0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496"],
+    // ["0x2222222222222222222222222222222222222222"],
+    // => 0xb51a382d5bcb4cd5fe50a7d4d8abaf056ac1a6961cf654ec4f53a570ab75a30b
+
+    bytes32 borrowerWhitelistRoot = 0x846dfddafc70174f2089edda6408bf9dd643c19ee06ff11643b614f0e277d6e3;
+
+    bytes32[][] borrowerProofs = [
+        [bytes32(0x708e7cb9a75ffb24191120fba1c3001faa9078147150c6f2747569edbadee751)],
+        [bytes32(0xa6e6806303186f9c20e1af933c7efa83d98470acf93a10fb8da8b1d9c2873640)]
+    ];
+
+    Whitelist _whitelist;
+
+    function setUp() public override {
+        super.setUp();
+
+        bytes32[] memory borrowerRoots = new bytes32[](1);
+        borrowerRoots[0] = borrowerWhitelistRoot;
+
+        _whitelist = new Whitelist(borrowerRoots, bytes32(0)); 
+        _whitelist.approveProtocolWhitelist(address(wstEthHandler));
+
+        ionPool.updateWhitelist(_whitelist);
+
+        borrowerWhitelistProof = borrowerProofs[0];
     }
 }
 

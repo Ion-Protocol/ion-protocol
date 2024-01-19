@@ -21,7 +21,7 @@ contract IonZapper {
     Whitelist public immutable WHITELIST;
 
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
-        WHITELIST.isWhitelistedLender(msg.sender, proof);
+        WHITELIST.isWhitelistedLender(msg.sender, msg.sender, proof);
         _;
     }
 
@@ -42,6 +42,8 @@ contract IonZapper {
 
         WHITELIST = _whitelist;
         _weth.approve(address(_ionPool), type(uint256).max);
+        _stEth.approve(address(_wstEth), type(uint256).max);
+        IERC20(address(_wstEth)).approve(address(_wstEthJoin), type(uint256).max);
     }
 
     function zapSupply(bytes32[] calldata proof) external payable onlyWhitelistedLenders(proof) {
@@ -55,16 +57,17 @@ contract IonZapper {
         uint256 amount = msg.value;
 
         uint256 currentIlkRate = POOL.rate(ilkIndex);
-        (,, uint256 ilkRateIncrease,,) = POOL.calculateRewardAndDebtDistribution(ilkIndex);
+        (uint256 ilkRateIncrease,) = POOL.calculateRewardAndDebtDistributionForIlk(ilkIndex);
         uint256 newIlkRate = currentIlkRate + ilkRateIncrease;
 
         uint256 normalizedAmountToRepay = amount * RAY / newIlkRate;
 
         WETH.deposit{ value: amount }();
-        POOL.repay(ilkIndex, msg.sender, msg.sender, normalizedAmountToRepay);
+        POOL.repay(ilkIndex, msg.sender, address(this), normalizedAmountToRepay);
     }
 
-    function zapDepositWstEth(uint256 amountStEth) external payable {
+    function zapJoinWstEth(uint256 amountStEth) external {
+
         STETH.transferFrom(msg.sender, address(this), amountStEth);
 
         uint256 outputWstEthAmount = WSTETH.wrap(amountStEth);

@@ -6,9 +6,28 @@ import { ReserveFeed } from "../../../src/oracles/reserve/ReserveFeed.sol";
 import { ISwEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 import { RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
+import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
 
 contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- swETH Reserve Oracle Test ---
+
+    function test_RevertWhen_UpdateIsOnCooldown() public {
+        uint256 maxChange = 3e25; // 0.03 3%
+        address[] memory feeds = new address[](3);
+        uint8 quorum = 0;
+        SwEthReserveOracle swEthReserveOracle = new SwEthReserveOracle(
+            SWETH,
+            SWETH_ILK_INDEX, 
+            feeds, 
+            quorum,
+            maxChange
+        );
+
+        swEthReserveOracle.updateExchangeRate();
+
+        vm.expectRevert(abi.encodeWithSelector(ReserveOracle.UpdateCooldown.selector, block.timestamp));
+        swEthReserveOracle.updateExchangeRate();
+    }
 
     function test_SwEthReserveOracleGetProtocolExchangeRate() public {
         uint256 maxChange = 3e25; // 0.03 3%
@@ -28,9 +47,9 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleAggregation() public {
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint256 reserveFeed1ExchangeRate = 0.9 ether;
         uint256 reserveFeed2ExchangeRate = 0.95 ether;
@@ -146,7 +165,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- Reserve Oracle Aggregation Test ---
 
     function test_SwEthReserveOracleGetAggregateExchangeRateMin() public {
-        ReserveFeed reserveFeed = new ReserveFeed();
+        ReserveFeed reserveFeed = new ReserveFeed(address(this));
         reserveFeed.setExchangeRate(SWETH_ILK_INDEX, 1.01 ether);
 
         // reserve oracle
@@ -171,8 +190,8 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleTwoFeeds() public {
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
         reserveFeed1.setExchangeRate(SWETH_ILK_INDEX, 0.9 ether);
         reserveFeed2.setExchangeRate(SWETH_ILK_INDEX, 0.8 ether);
 
@@ -196,9 +215,9 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_SwEthReserveOracleThreeFeeds() public {
-        ReserveFeed reserveFeed1 = new ReserveFeed();
-        ReserveFeed reserveFeed2 = new ReserveFeed();
-        ReserveFeed reserveFeed3 = new ReserveFeed();
+        ReserveFeed reserveFeed1 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed2 = new ReserveFeed(address(this));
+        ReserveFeed reserveFeed3 = new ReserveFeed(address(this));
 
         uint256 reserveFeed1ExchangeRate = 1 ether;
         uint256 reserveFeed2ExchangeRate = 1.4 ether;
