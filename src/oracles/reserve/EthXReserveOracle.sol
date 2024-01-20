@@ -6,7 +6,7 @@ import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
 contract EthXReserveOracle is ReserveOracle {
-    address public PROTOCOL_FEED;
+    address public immutable PROTOCOL_FEED;
 
     // @param _quorum number of extra feeds to aggregate. If any of the feeds fail, pause the protocol.
     constructor(
