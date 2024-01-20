@@ -59,7 +59,7 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
         uint256 beginningBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
         vm.deal(address(this), amount);
         (bool sent,) = address(MAINNET_STETH).call{ value: amount }("");
-        assertTrue(sent, "mint stEth failed");
+        require(sent == true, "mint stEth failed"); 
         uint256 resultingBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
         return resultingBalance - beginningBalance;
     }
