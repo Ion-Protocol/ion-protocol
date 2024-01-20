@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { LidoLibrary } from "src/libraries/LidoLibrary.sol";
-import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
-import { IStEth } from "src/interfaces/ProviderInterfaces.sol";
+import { LidoLibrary } from "../../../src/libraries/LidoLibrary.sol";
+import { IWstEth } from "../../../src/interfaces/ProviderInterfaces.sol";
+import { IStEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

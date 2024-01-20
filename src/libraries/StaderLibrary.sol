@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IStaderStakePoolsManager, IStaderOracle } from "src/interfaces/ProviderInterfaces.sol";
+import { IStaderStakePoolsManager, IStaderOracle } from "../interfaces/ProviderInterfaces.sol";
+
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 library StaderLibrary {

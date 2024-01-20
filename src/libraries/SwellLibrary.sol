@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
+import { WadRayMath } from "../libraries/math/WadRayMath.sol";
+import { ISwEth } from "../interfaces/ProviderInterfaces.sol";
 
 library SwellLibrary {
     using WadRayMath for uint256;

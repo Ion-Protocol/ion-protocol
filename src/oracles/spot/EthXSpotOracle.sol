@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.21;
 
-import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
-import { IChainlink } from "src/interfaces/IChainlink.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
+import { IChainlink } from "../../interfaces/IChainlink.sol";
+import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 
 interface IRedstonePriceFeed {
     function latestRoundData()

@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { WadRayMath } from "../src/libraries/math/WadRayMath.sol";
+import { YieldOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "../src/YieldOracle.sol";
+
 import { BaseScript } from "./Base.s.sol";
+
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+import { stdJson as StdJson } from "forge-std/StdJson.sol";
 import { console2 } from "forge-std/Script.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { YieldOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "src/YieldOracle.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
-import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 contract DeployYieldOracleScript is BaseScript {
     using WadRayMath for uint256;

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IStEth } from "src/interfaces/ProviderInterfaces.sol";
-import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+import { IStEth } from "../interfaces/ProviderInterfaces.sol";
+import { IWstEth } from "../interfaces/ProviderInterfaces.sol";
+import { WadRayMath } from "../libraries/math/WadRayMath.sol";
 
 library LidoLibrary {
     using WadRayMath for uint256;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "../libraries/math/WadRayMath.sol";
 
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from

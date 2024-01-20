@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WAD } from "src/libraries/math/WadRayMath.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth } from "src/interfaces/ProviderInterfaces.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { WAD } from "../../src/libraries/math/WadRayMath.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
 
 import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
 
@@ -56,8 +56,11 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
 
     IUniswapV3Pool constant WSTETH_WETH_POOL = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
 
+    uint256 forkBlock = 0;
+
     function setUp() public virtual override {
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
+        if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
+        else vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), forkBlock);
         super.setUp();
 
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();

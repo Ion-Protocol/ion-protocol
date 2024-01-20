@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { Whitelist } from "src/Whitelist.sol";
+import { Whitelist } from "../../../src/Whitelist.sol";
+
 import { Test } from "forge-std/Test.sol";
 
 contract MockModifiers {

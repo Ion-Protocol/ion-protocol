@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { SwEthHandler_ForkBase } from "test/fork/concrete/SwEthHandlerFork.t.sol";
+import { SwEthHandler_ForkBase } from "../../fork/concrete/SwEthHandlerFork.t.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
-import { ISwEth } from "src/interfaces/ProviderInterfaces.sol";
-import { SwellLibrary } from "src/libraries/SwellLibrary.sol";
+import { WadRayMath, WAD, RAY } from "../../../src/libraries/math/WadRayMath.sol";
+import { ISwEth } from "../../../src/interfaces/ProviderInterfaces.sol";
+import { SwellLibrary } from "../../../src/libraries/SwellLibrary.sol";
 
 import { Vm } from "forge-std/Vm.sol";
 

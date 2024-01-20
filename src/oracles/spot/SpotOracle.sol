@@ -2,9 +2,10 @@
 
 pragma solidity 0.8.21;
 
+import { ReserveOracle } from "../../oracles/reserve/ReserveOracle.sol";
+import { WadRayMath, RAY } from "../../libraries/math/WadRayMath.sol";
+
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
 
 // pushes spot price from value feeds to the IonPool contract
 abstract contract SpotOracle {
@@ -32,7 +33,7 @@ abstract contract SpotOracle {
     // @return price of the asset in ETH [wad]
     function getPrice() public view virtual returns (uint256 price);
 
-    // @dev Gets the market price multiplied by the LTV. 
+    // @dev Gets the market price multiplied by the LTV.
     // @return spot value of the asset in ETH [ray]
     function getSpot() external view returns (uint256 spot) {
         uint256 price = getPrice(); // must be [wad]

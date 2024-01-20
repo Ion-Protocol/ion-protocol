@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.21;
+
+import { IonPool } from "./IonPool.sol";
+import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
+import { ReserveOracle } from "./oracles/reserve/ReserveOracle.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
-import { IonPool } from "src/IonPool.sol";
-import { ReserveOracle } from "src/oracles/reserve/ReserveOracle.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract Liquidation {
@@ -150,6 +150,40 @@ contract Liquidation {
         }
     }
 
+    function getRepayAmt(uint8 ilkIndex, address vault) public view returns (uint256 repay) {
+        Configs memory configs = _getConfigs(ilkIndex);
+
+        // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
+        uint256 exchangeRate = uint256(ReserveOracle(configs.reserveOracle).currentExchangeRate()).scaleUpToRay(18);
+        (uint256 collateral, uint256 normalizedDebt) = POOL.vault(ilkIndex, vault);
+        uint256 rate = POOL.rate(ilkIndex);
+
+        if (exchangeRate == 0) {
+            revert ExchangeRateCannotBeZero();
+        }
+
+        // collateralValue = collateral * exchangeRate * liquidationThreshold
+        // debtValue = normalizedDebt * rate
+        // healthRatio = collateralValue / debtValue
+        // collateralValue = [wad] * [ray] * [ray] / RAY = [rad]
+        // debtValue = [wad] * [ray] = [rad]
+        // healthRatio = [rad] * RAY / [rad] = [ray]
+        // round down in protocol favor
+        uint256 collateralValue = (collateral * exchangeRate).rayMulDown(configs.liquidationThreshold);
+    
+        uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
+        if (healthRatio >= RAY) {
+            revert VaultIsNotUnsafe(healthRatio);
+        }
+
+        uint256 discount = BASE_DISCOUNT + (RAY - healthRatio); // [ray] + ([ray] - [ray])
+        discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount favor
+        uint256 repayRad = _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
+
+        repay = (repayRad / RAY);
+        if (repayRad % RAY > 0) ++repay; 
+    }
+
     /**
      * @notice Internal helper function for calculating the repay amount.
      * @param debtValue [rad] totalDebt
@@ -172,7 +206,9 @@ contract Liquidation {
         // repayDen = (targetHealth - (liquidationThreshold / (1 - discount)))
         // repay = repayNum / repayDen
 
-        // round up repay in protocol favor for safer post-liquidation position
+        // Round up repay in protocol favor for safer post-liquidation position
+        // This will never underflow because at this point we know health ratio
+        // is less than 1, which means that collateralValue < debtValue.
         uint256 repayNum = debtValue.rayMulUp(TARGET_HEALTH) - collateralValue; // [rad] - [rad] = [rad]
         uint256 repayDen = TARGET_HEALTH - liquidationThreshold.rayDivUp(RAY - discount); // [ray]
         repay = repayNum.rayDivUp(repayDen); // [rad] * RAY / [ray] = [rad]

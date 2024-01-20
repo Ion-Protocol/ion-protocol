@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IStaderStakePoolsManager } from "src/interfaces/ProviderInterfaces.sol";
-import { EthXHandler } from "src/flash/handlers/EthXHandler.sol";
-import { WadRayMath, WAD, RAY } from "src/libraries/math/WadRayMath.sol";
+import { IStaderStakePoolsManager } from "../../../src/interfaces/ProviderInterfaces.sol";
+import { EthXHandler } from "../../../src/flash/handlers/EthXHandler.sol";
+import { WadRayMath, WAD, RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import {
-    BalancerFlashloanDirectMintHandler, VAULT
-} from "src/flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
-import { UniswapFlashloanBalancerSwapHandler } from "src/flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
-import { StaderLibrary } from "src/libraries/StaderLibrary.sol";
-import { Whitelist } from "src/Whitelist.sol";
-import { IonHandlerBase } from "src/flash/handlers/base/IonHandlerBase.sol";
+    BalancerFlashloanDirectMintHandler,
+    VAULT
+} from "../../../src/flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
+import { UniswapFlashloanBalancerSwapHandler } from
+    "../../../src/flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
+import { StaderLibrary } from "../../../src/libraries/StaderLibrary.sol";
+import { Whitelist } from "../../../src/Whitelist.sol";
+import { IonHandlerBase } from "../../../src/flash/handlers/base/IonHandlerBase.sol";
 
-import { IonHandler_ForkBase } from "test/helpers/IonHandlerForkBase.sol";
+import { IonHandler_ForkBase } from "../../helpers/IonHandlerForkBase.sol";
 
 import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
 import { IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
@@ -32,6 +34,9 @@ contract EthXHandler_ForkBase is IonHandler_ForkBase {
     bytes32[] borrowerWhitelistProof;
 
     function setUp() public virtual override {
+        // Since Balancer EthX pool has no liquidity, this needs to be pinned to
+        // a specific block
+        forkBlock = 18537430;
         super.setUp();
         ethXHandler =
         new EthXHandler(ilkIndex, ionPool, gemJoins[ilkIndex], MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL, 0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb);
@@ -90,7 +95,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
-            1e27 / RAY
+            roundingError
         );
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
         assertLe(weth.balanceOf(address(ethXHandler)), roundingError);

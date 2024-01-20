@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IYieldOracle } from "src/interfaces/IYieldOracle.sol";
-import { WadRayMath, RAY } from "src/libraries/math/WadRayMath.sol";
+import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
+import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
 
 // forgefmt: disable-start
 
@@ -282,7 +282,8 @@ contract InterestRate {
             return (ilkData.minimumKinkRate, ilkData.reserveFactor.scaleUpToRay(4));
         }
         // [RAD] / [WAD] = [RAY]
-        uint256 utilizationRate = totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(distributionFactor.scaleUpToWad(4)));
+        uint256 utilizationRate =
+            totalEthSupply == 0 ? 0 : totalIlkDebt / (totalEthSupply.wadMulDown(distributionFactor.scaleUpToWad(4)));
 
         // Avoid stack too deep
         uint256 adjustedBelowKinkSlope;
@@ -293,13 +294,13 @@ contract InterestRate {
             }
 
             // Underflow occured
-            // If underflow occured, then the Apy was too low or the profitMargin was too high and 
-            // we would want to switch to minimum borrow rate. Set slopeNumerator to zero such 
-            // that adjusted borrow rate is below the minimum borrow rate. 
+            // If underflow occured, then the Apy was too low or the profitMargin was too high and
+            // we would want to switch to minimum borrow rate. Set slopeNumerator to zero such
+            // that adjusted borrow rate is below the minimum borrow rate.
             if (slopeNumerator > collateralApyRayInSeconds) {
                 slopeNumerator = 0;
             }
-            
+
             adjustedBelowKinkSlope = slopeNumerator.rayDivDown(optimalUtilizationRateRay);
         }
 

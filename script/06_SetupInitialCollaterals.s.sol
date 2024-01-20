@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { SpotOracle } from "src/oracles/spot/SpotOracle.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { SpotOracle } from "../src/oracles/spot/SpotOracle.sol";
 
-import { BaseScript } from "script/Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 

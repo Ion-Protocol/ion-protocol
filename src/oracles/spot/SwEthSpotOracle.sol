@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { TickMath } from "src/libraries/uniswap/TickMath.sol";
-import { UniswapOracleLibrary } from "src/libraries/uniswap/UniswapOracleLibrary.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { TickMath } from "../../libraries/uniswap/TickMath.sol";
+import { UniswapOracleLibrary } from "../../libraries/uniswap/UniswapOracleLibrary.sol";
+import { WAD } from "../../libraries/math/WadRayMath.sol";
 import { SpotOracle } from "./SpotOracle.sol";
-import { WAD } from "src/libraries/math/WadRayMath.sol";
+
+import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract SwEthSpotOracle is SpotOracle {
     using Math for uint256;
@@ -30,9 +32,9 @@ contract SwEthSpotOracle is SpotOracle {
         SECONDS_AGO = _secondsAgo;
     }
 
-    // @notice Gets the price of swETH in ETH. 
+    // @notice Gets the price of swETH in ETH.
     // @dev Uniswap returns price in swETH per ETH. This needs to be inversed.
-    // @return ethPerSwEth price of swETH in ETH [wad] 
+    // @return ethPerSwEth price of swETH in ETH [wad]
     function getPrice() public view override returns (uint256 ethPerSwEth) {
         (int24 arithmeticMeanTick,) = UniswapOracleLibrary.consult(address(POOL), SECONDS_AGO);
         uint256 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
