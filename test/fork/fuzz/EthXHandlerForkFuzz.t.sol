@@ -152,6 +152,51 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
         assertLe(weth.balanceOf(address(ethXHandler)), roundingError);
     }
+
+    function testForkFuzz_FlashSwapDeleverageFull(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
+        initialDeposit = bound(initialDeposit, minDeposit, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
+        uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
+            // skip protecting for this in the test
+
+        weth.approve(address(ethXHandler), type(uint256).max);
+        ionPool.addOperator(address(ethXHandler));
+
+        vm.recordLogs();
+        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        uint256 normalizedDebtCreated;
+        for (uint256 i = 0; i < entries.length; i++) {
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
+            normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
+        }
+
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
+
+        vm.warp(block.timestamp + 3 hours);
+
+        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        // Want to completely deleverage position and only leave initial capital
+        // in vault
+        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        // Remove all debt
+        uint256 debtToRemove = type(uint256).max;
+
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
+        assertLe(weth.balanceOf(address(ethXHandler)), roundingError);
+    }
 }
 
 contract EthXHandler_WithRateChange_ForkFuzzTest is EthXHandler_ForkFuzzTest {

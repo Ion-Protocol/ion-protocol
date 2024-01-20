@@ -123,11 +123,11 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
      * @param debtToRemove The desired amount of debt to remove.
      */
     function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove, uint256 deadline) external checkDeadline(deadline) {
-        if (debtToRemove == 0) return;
-
         if (debtToRemove == type(uint256).max) {
             (debtToRemove,) = _getFullRepayAmount(msg.sender);
         }
+
+        if (debtToRemove == 0) return;
 
         uint256 amount0ToFlash;
         uint256 amount1ToFlash;
