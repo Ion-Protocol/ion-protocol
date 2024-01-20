@@ -54,6 +54,15 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
         uint256 exchangeRate = MAINNET_WSTETH.getStETHByWstETH(1 ether);
         sqrtPriceLimitX96 = uint160(Math.sqrt(uint256(exchangeRate << 192) / 1e18));
     }
+
+    function _mintStEth(uint256 amount) internal returns (uint256) {
+        uint256 beginningBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
+        vm.deal(address(this), amount);
+        (bool sent,) = address(MAINNET_STETH).call{ value: amount }("");
+        assertTrue(sent, "mint stEth failed");
+        uint256 resultingBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
+        return resultingBalance - beginningBalance;
+    }
 }
 
 contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
@@ -454,14 +463,6 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 }
 
 contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
-    function _mintStEth(uint256 amount) internal returns (uint256) {
-        uint256 beginningBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
-        vm.deal(address(this), amount);
-        (bool sent,) = address(MAINNET_STETH).call{ value: amount }("");
-        assertTrue(sent, "mint stEth failed");
-        uint256 resultingBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
-        return resultingBalance - beginningBalance;
-    }
 
     function testFork_ZapDepositAndBorrow() external {
         uint256 ethDepositAmount = 2e18; // in eth
@@ -473,9 +474,6 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
         ionPool.addOperator(address(wstEthHandler));
 
         // if whitelist root is not zero, check that incorrect merkle proof fails
-        // console2.log("borrowersRoot: ", Whitelist(whitelist).borrowersRoot(0));
-        console2.log("borrowersRoot");
-        console2.logBytes32(Whitelist(whitelist).borrowersRoot(0));
         if (Whitelist(whitelist).borrowersRoot(0) != 0) {
             vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
             wstEthHandler.zapDepositAndBorrow(stEthDepositAmount, borrowAmount, new bytes32[](0));
