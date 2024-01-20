@@ -114,7 +114,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
      * previous interest rate must be accrued, or else its effect will be lost.
      */
     function updateAll() external {
-        ionPool.accrueInterest();
+        if (!ionPool.paused()) ionPool.accrueInterest();
         _updateAll();
     }
 
