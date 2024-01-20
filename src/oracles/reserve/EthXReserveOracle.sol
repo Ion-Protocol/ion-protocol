@@ -2,13 +2,24 @@
 pragma solidity 0.8.21;
 
 import { IStaderStakePoolsManager } from "../../interfaces/ProviderInterfaces.sol";
-import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
+/**
+ * @notice Reserve oracle for ETHx.
+ * 
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract EthXReserveOracle is ReserveOracle {
     address public immutable PROTOCOL_FEED;
 
-    // @param _quorum number of extra feeds to aggregate. If any of the feeds fail, pause the protocol.
+    /**
+     * @notice Creates a new `EthXReserveOracle` instance.
+     * @param _protocolFeed Data source for the LST provider exchange rate.
+     * @param _ilkIndex of ETHx.
+     * @param _feeds List of alternative data sources for the ETHx exchange rate.
+     * @param _quorum The amount of alternative data sources to aggregate.
+     * @param _maxChange Maximum percent change between exchange rate updates. [RAY]
+     */
     constructor(
         address _protocolFeed,
         uint8 _ilkIndex,
@@ -22,7 +33,10 @@ contract EthXReserveOracle is ReserveOracle {
         _initializeExchangeRate();
     }
 
-    // @dev exchange rate is total LST supply divided by total underlying ETH
+    /**
+     * @notice Returns the exchange rate between ETH and ETHx.
+     * @return Exchange rate between ETH and ETHx.
+     */
     function _getProtocolExchangeRate() internal view override returns (uint256) {
         return IStaderStakePoolsManager(PROTOCOL_FEED).getExchangeRate();
     }

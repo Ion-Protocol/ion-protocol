@@ -10,6 +10,25 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 uint8 constant FEED_COUNT = 3;
 uint256 constant UPDATE_COOLDOWN = 1 hours;
 
+/**
+ * @notice Reserve oracles are used to determine the LST provider exchange rate
+ * and is utilizated by Ion's liquidation module. Liquidations will only be
+ * triggered against this exchange rate and will be completely market-price
+ * agnostic. Importantly, this means that liquidations will only be triggered
+ * through lack of debt repayment or slashing events.
+ * 
+ * @dev In order to protect against potential provider bugs or incorrect one-off
+ * values (malicious or accidental), the reserve oracle does not use live data.
+ * Instead it will query the exchange every intermittent period and persist the
+ * value and this value can only move up or down by a maximum percentage per query.
+ * 
+ * If additional data sources are available, they can involved as `FEED`s. If
+ * other `FEED`s are provided to the reserve oracle, a mean of all the `FEED`s
+ * is compared to the protocol exchange rate and the minimum of the two is used
+ * as the new exchange rate. This final value is subject to the bounding rules. 
+ * 
+ * @custom:security-contact security@molecularlabs.io
+ */
 abstract contract ReserveOracle {
     using WadRayMath for uint256;
 
@@ -35,6 +54,13 @@ abstract contract ReserveOracle {
     error InvalidInitialization(uint256 invalidExchangeRate);
     error UpdateCooldown(uint256 lastUpdated);
 
+    /**
+     * @notice Creates a new `ReserveOracle` instance.
+     * @param _ilkIndex of the associated collateral.
+     * @param _feeds Alternative data sources to be used for the reserve oracle.
+     * @param _quorum The number of feeds to aggregate.
+     * @param _maxChange Maximum percent change between exchange rate updates. [RAY]
+     */
     constructor(uint8 _ilkIndex, address[] memory _feeds, uint8 _quorum, uint256 _maxChange) {
         if (_feeds.length != FEED_COUNT) revert InvalidFeedLength(_feeds.length);
         if (_quorum > FEED_COUNT) revert InvalidQuorum(_quorum);
@@ -50,16 +76,26 @@ abstract contract ReserveOracle {
     }
 
     // --- Override ---
+
+    /**
+     * @notice Returns the protocol exchange rate.
+     * @dev Must be implemented in the child contract with LST-specific logic.
+     * @return The protocol exchange rate.
+     */
     function _getProtocolExchangeRate() internal view virtual returns (uint256);
 
+    /**
+     * @notice Returns the protocol exchange rate.
+     * @return The protocol exchange rate.
+     */
     function getProtocolExchangeRate() external view returns (uint256) {
         return _getProtocolExchangeRate();
     }
 
     /**
-     * @dev queries values from whitelisted data feeds and calculates
-     *      the min. Does not include the protocol exchange rate.
-     * @notice if quorum isn't met, should revert
+     * @notice Queries values from whitelisted data feeds and calculates the
+     * mean. This does not include the protocol exchange rate.
+     * @param _ILK_INDEX of the associated collateral.
      */
     function _aggregate(uint8 _ILK_INDEX) internal view returns (uint256 val) {
         if (QUORUM == 0) {
@@ -78,13 +114,22 @@ abstract contract ReserveOracle {
         }
     }
 
-    // bound the final reported value between the min and the max
+    /**
+     * @notice Bounds the value between the min and the max.
+     * @param value The value to be bounded.
+     * @param min The minimum bound.
+     * @param max The maximum bound.
+     */
     function _bound(uint256 value, uint256 min, uint256 max) internal pure returns (uint256) {
         if (min > max) revert InvalidMinMax(min, max);
 
         return Math.max(min, Math.min(max, value));
     }
 
+    /**
+     * @notice Intializes the `currentExchangeRate` state variable.
+     * @dev Called once during construction.
+     */
     function _initializeExchangeRate() internal {
         currentExchangeRate = Math.min(_getProtocolExchangeRate(), _aggregate(ILK_INDEX));
         if (currentExchangeRate == 0) {
@@ -94,10 +139,12 @@ abstract contract ReserveOracle {
         emit UpdateExchangeRate(currentExchangeRate);
     }
 
-    // @dev Takes the minimum between the aggregated values and the protocol exchange rate,
-    // then bounds it up to the maximum change and writes the bounded value to the state.
-    // NOTE: keepers should call this update to reflect recent values
-
+    /**
+     * @notice Updates the `currentExchangeRate` state variable.
+     * @dev Takes the minimum between the aggregated values and the protocol exchange rate,
+     * then bounds it up to the maximum change and writes the bounded value to the state.
+     * NOTE: keepers should call this update to reflect recent values
+     */
     function updateExchangeRate() external {
         if (block.timestamp - lastUpdated < UPDATE_COOLDOWN) revert UpdateCooldown(lastUpdated);
 

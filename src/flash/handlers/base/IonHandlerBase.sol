@@ -13,20 +13,16 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 /**
- * @dev There a couple things to consider here from a security perspective. The
- * first one is that the flashloan callback must only be callable from the
- * Balancer vault. This ensures that nobody can pass arbitrary data to the
- * callback from initiating a separate flashloan. The second one is that the
- * flashloan must only be initialized from this contract. This is a trickier one
- * to enforce since Balancer flashloans are not EIP-3156 compliant and do not
- * pass on the initiator through the callback. To get around this, an inverse
- * reentrancy lock of sorts is used. The lock is set to 2 when a flashloan is initiated
- * and set to 1 once the callback execution terminates. If the lock is not 2
- * when the callback is called, then the flashloan was not initiated by this
- * contract and the tx is reverted.
- *
- * This contract currently deposits directly into LST contract 1:1. It should be
- * noted that a more favorable trade could be possible via DEXs.
+ * @notice The base handler contract for simpler interactions with the `IonPool`
+ * core contract. It combines various individual interactions into one compound
+ * interaction to faciliate reaching user end-goals in atomic fashion.
+ * 
+ * @dev To actually borrow from `IonPool`, a user must submit a "normalized" borrow
+ * amount. This contract is designed to be user-intuitive and, thus, allows a user
+ * to submit a standard desired borrow amount, which this contract will then
+ * convert into to the appropriate "normalized" borrow amount.
+ * 
+ * @custom:security-contact security@molecularlabs.io
  */
 abstract contract IonHandlerBase {
     using SafeERC20 for IERC20;
@@ -37,11 +33,38 @@ abstract contract IonHandlerBase {
     error FlashloanRepaymentTooExpensive(uint256 repaymentAmount, uint256 maxRepaymentAmount);
     error TransactionDeadlineReached(uint256 deadline);
 
+    /**
+     * @notice Checks if the tx is being executed before the designated deadline
+     * for execution.
+     * @dev This is used to prevent txs that have sat in the mempool for too
+     * long from executing at unintended prices.
+     */
     modifier checkDeadline(uint256 deadline) {
         if (deadline <= block.timestamp) revert TransactionDeadlineReached(deadline);
         _;
     }
 
+    /**
+     * @notice Checks if `msg.sender` is on the whitelist.
+     * @dev This contract will be on the `protocolControlledWhitelist`. As such,
+     * it will validate that users are on the whitelist itself and be able to
+     * bypass the whitelist check on `IonPool`.
+     * @param proof to validate the whitelist check.
+     */
+    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
+        WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, msg.sender, proof);
+        _;
+    }
+
+    /**
+     * @dev During conversion from borrow amount -> "normalized" borrow amount,"
+     * there is division required. In certain scenarios, it may be desirable to
+     * round up during division, in others, to round down. This enum allows a
+     * developer to indicate the rounding direction by describing the
+     * `amountToBorrow`. If it `IS_MIN`, then the final borrowed amount should
+     * be larger than `amountToBorrow` (round up), and vice versa for `IS_MAX`
+     * (round down).
+     */
     enum AmountToBorrow {
         IS_MIN,
         IS_MAX
@@ -54,11 +77,14 @@ abstract contract IonHandlerBase {
     IERC20 public immutable LST_TOKEN;
     Whitelist public immutable WHITELIST;
 
-    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
-        WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, msg.sender, proof);
-        _;
-    }
-
+    /**
+     * @notice Creates a new instance of `IonHandlerBase`
+     * @param _ilkIndex of the ilk for which this instance is associated with.
+     * @param _ionPool address of `IonPool` core contract.
+     * @param _gemJoin the `GemJoin` associated with the `ilkIndex` of this
+     * contract.
+     * @param _whitelist the `Whitelist` module address.
+     */
     constructor(uint8 _ilkIndex, IonPool _ionPool, GemJoin _gemJoin, Whitelist _whitelist) {
         POOL = _ionPool;
         ILK_INDEX = _ilkIndex;
@@ -78,10 +104,12 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     *
-     * @param amountCollateral amount of collateral to deposit.
-     * @param amountToBorrow amount of WETH to borrow. Due to rounding, true borrow amount might be slightly less.
-     * @param proof merkle proof that the user is whitelisted.
+     * @notice Combines gem-joining and depositing collateral and then borrowing
+     * into one compound action. 
+     * @param amountCollateral Amount of collateral to deposit. [WAD]
+     * @param amountToBorrow Amount of WETH to borrow. Due to rounding, true
+     * borrow amount might be slightly less. [WAD]
+     * @param proof that the user is whitelisted.
      */
     function depositAndBorrow(
         uint256 amountCollateral,
@@ -96,11 +124,14 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     * @param vaultHolder the user who will be responsible for repaying debt
-     * @param receiver the user who receives the borrowed funds
-     * @param amountCollateral to move into vault
-     * @param amountToBorrow out of the vault [WAD]
-     * @param amountToBorrowType whether the `amountToBorrow` is a min or max.
+     * @notice Handles all logic to gem-join and deposit collateral, followed by
+     * a borrow. It is also possible to use this function simply to gem-join and
+     * deposit collateral atomically by setting `amountToBorrow` to 0.
+     * @param vaultHolder The user who will be responsible for repaying debt.
+     * @param receiver The user who receives the borrowed funds.
+     * @param amountCollateral to move into vault. [WAD]
+     * @param amountToBorrow out of the vault. [WAD]
+     * @param amountToBorrowType Whether the `amountToBorrow` is a min or max.
      * This will dictate the rounding direction when converting to normalized
      * amount. If it is a minimum, then the rounding will be rounded up. If it
      * is a maximum, then the rounding will be rounded down.
@@ -133,9 +164,17 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     * @notice Will repay all debt and withdraw desired collateral amount
-     * @dev Will repay the debt belonging to `msg.sender`
-     * @param collateralToWithdraw in collateral terms
+     * @notice Will repay all debt and withdraw desired collateral amount. This
+     * function can also simply be used for a full repayment (which may be
+     * difficult through a direct tx to the `IonPool`) by setting
+     * `collateralToWithdraw` to 0.
+     * @dev Will repay the debt belonging to `msg.sender`. This function is
+     * necessary because with `rate` updating every single block, it may be
+     * difficult to repay a full amount if a user uses the total debt from a
+     * previous block. If a user ends up repaying all but dust amounts of debt
+     * (due to a slight `rate` change), then they repayment will likely fail due
+     * to the `dust` parameter.
+     * @param collateralToWithdraw in collateral terms. [WAD]
      */
     function repayFullAndWithdraw(uint256 collateralToWithdraw) external {
         (uint256 repayAmount, uint256 normalizedDebtToRepay) = _getFullRepayAmount(msg.sender);
@@ -150,10 +189,15 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     * @dev Helper function to get the repayment amount for all the debt of a `user`.
-     * @param user address of the user
-     * @return repayAmount amount of WETH required to repay all debt (this mimics IonPool's behavior)
-     * @return normalizedDebt total normalized debt held by user's vault
+     * @notice Helper function to get the repayment amount for all the debt of a
+     * `user`.
+     * @dev This simply emulates the rounding behaviour of the `IonPool` to
+     * arrive at an accurate value.
+     * @param user Address of the user.
+     * @return repayAmount Amount of WETH required to repay all debt (this
+     * mimics IonPool's behavior). [WAD]
+     * @return normalizedDebt Total normalized debt held by `user`'s vault.
+     * [WAD]
      */
     function _getFullRepayAmount(address user) internal view returns (uint256 repayAmount, uint256 normalizedDebt) {
         uint256 currentRate = POOL.rate(ILK_INDEX);
@@ -167,14 +211,28 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     * @param debtToRepay in eth terms
-     * @param collateralToWithdraw in collateral terms
+     * @notice Combines repaying debt and then withdrawing and gem-exitting
+     * collateral into one compound action. 
+     * 
+     * If repaying **all** is the intention, use `repayFullAndWithdraw()`
+     * instead to prevent tx revert from dust amounts of debt in vault.
+     * @param debtToRepay In ETH terms. [WAD]
+     * @param collateralToWithdraw In collateral terms. [WAD]
      */
     function repayAndWithdraw(uint256 debtToRepay, uint256 collateralToWithdraw) external {
         WETH.safeTransferFrom(msg.sender, address(this), debtToRepay);
         _repayAndWithdraw(msg.sender, msg.sender, collateralToWithdraw, debtToRepay);
     }
 
+    /**
+     * @notice Handles all logic to repay debt, followed by a collateral
+     * withdrawal and gem-exit. This function can also be used to just withdraw
+     * and gem-exit in atomic fashion by setting the `debtToRepay` to 0. 
+     * @param vaultHolder The user whose debt will be repaid.
+     * @param receiver The user who receives the the withdrawn collateral.
+     * @param collateralToWithdraw to move into vault. [WAD]
+     * @param debtToRepay out of the vault. [WAD]
+     */
     function _repayAndWithdraw(
         address vaultHolder,
         address receiver,
@@ -195,7 +253,8 @@ abstract contract IonHandlerBase {
     }
 
     /**
-     * @dev To allow unwrapping of WETH into ETH
+     * @notice ETH cannot be directly sent to this contract.
+     * @dev To allow unwrapping of WETH into ETH.
      */
     receive() external payable {
         if (msg.sender != address(WETH)) revert CannotSendEthToContract();

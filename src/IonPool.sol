@@ -17,6 +17,14 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
+/**
+ * @notice `IonPool` is the central contract of the Ion Protocol system. All
+ * other contracts in the system revolve around it. Directly interacting with
+ * `IonPool` may be unintuitive and it is recommended to interface with the
+ * protocol through Handler contracts for a more UX-friendly experience. 
+ * 
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract IonPool is PausableUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;
@@ -136,7 +144,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
         uint256 debt; // Total Debt [RAD]
         uint256 weth; // liquidity in pool [WAD]
         uint256 wethSupplyCap; // [WAD]
-        uint256 totalUnbackedDebt; // Total Unbacked Dai  [RAD]
+        uint256 totalUnbackedDebt; // Total Unbacked WETH  [RAD]
         InterestRate interestRateModule;
         Whitelist whitelist;
     }

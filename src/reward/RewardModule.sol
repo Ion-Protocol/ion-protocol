@@ -11,6 +11,12 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 /**
  * @title RewardModule
+ * @notice The supply-side reward accounting portion of the protocol. A lender's
+ * balance is measured in two parts: a static balance and a dynamic "supply
+ * factor". Their true balance is the product of the two values. The dynamic
+ * portion is then able to be used to distribute interest accrued to the lender.
+ * 
+ * @custom:security-contact security@molecularlabs.io
  */
 abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
     using WadRayMath for uint256;

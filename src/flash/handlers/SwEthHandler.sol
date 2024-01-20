@@ -14,10 +14,23 @@ import { Whitelist } from "../../Whitelist.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
+/**
+ * @notice Handler for the SwEth collateral.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using WadRayMath for uint256;
     using SwellLibrary for ISwEth;
 
+    /**
+     * @notice Creates a new `SwEthHandler` instance.
+     * @param _ilkIndex of SwEth.
+     * @param _ionPool `IonPool` contract address.
+     * @param _gemJoin `GemJoin` contract address associated with SwEth.
+     * @param _whitelist Address of the `Whitelist` contract.
+     * @param _swEthPool Adderess of the SwEth/ETH Uniswap V3 pool.
+     */
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
@@ -29,12 +42,24 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
         UniswapFlashswapHandler(_swEthPool, true)
     { }
 
-    function _depositWethForLst(uint256 wethAmount) internal override returns (uint256) {
-        WETH.withdraw(wethAmount);
-        return ISwEth(address(LST_TOKEN)).depositForLst(wethAmount);
+    /**
+     * @notice Unwraps weth into eth and deposits into lst contract.
+     * @dev Unwraps weth into eth and deposits into lst contract.
+     * @param amountWeth to deposit. [WAD]
+     * @return Amount of lst received. [WAD]
+     */
+    function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
+        WETH.withdraw(amountWeth);
+        return ISwEth(address(LST_TOKEN)).depositForLst(amountWeth);
     }
 
-    function _getEthAmountInForLstAmountOut(uint256 lstAmount) internal view override returns (uint256) {
-        return ISwEth(address(LST_TOKEN)).getEthAmountInForLstAmountOut(lstAmount);
+    /**
+     * @notice Calculates the amount of eth required to receive `amountLst`.
+     * @dev Calculates the amount of eth required to receive `amountLst`.
+     * @param amountLst desired output amount. [WAD]
+     * @return Eth required for desired lst output. [WAD]
+     */
+    function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {
+        return ISwEth(address(LST_TOKEN)).getEthAmountInForLstAmountOut(amountLst);
     }
 }

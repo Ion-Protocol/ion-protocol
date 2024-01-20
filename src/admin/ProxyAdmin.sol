@@ -13,6 +13,8 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
  *
  * @dev This is an auxiliary contract meant to be assigned as the admin of a {TransparentUpgradeableProxy}. For an
  * explanation of why you would want to use this see the documentation for {TransparentUpgradeableProxy}.
+ * 
+ * @custom:security-contact security@molecularlabs.io
  */
 contract ProxyAdmin is Ownable2Step {
     /**

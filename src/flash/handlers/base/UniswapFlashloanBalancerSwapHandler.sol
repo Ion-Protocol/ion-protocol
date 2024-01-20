@@ -16,11 +16,23 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
+ * @notice This contract allows for easy creation and closing of leverage
+ * positions through Uniswap flashloans and LST swaps on Balancer. In terms of
+ * creation, this may be a more desirable path than directly minting from an LST
+ * provider since market prices tend to be slightly lower than provider exchange
+ * rates. DEXes also provide an avenue for atomic deleveraging since the LST ->
+ * ETH exchange can be made.
+ * 
+ * NOTE: Uniswap flashloans do charge a small fee.
+ * 
  * @dev Some tokens only have liquidity on Balancer. Due to the reentrancy lock
  * on the Balancer VAULT, utilizing their free flashloan followed by a pool swap
  * is not possible. Instead, we will take a cheap (0.01%) flashloan from the
  * wstETH/ETH uniswap pool and perform the Balancer swap. The rETH/ETH uniswap
- * pool could also be used since it has a 0.01% but it does have less liquidity.
+ * pool could also be used since it has a 0.01% fee but it does have less
+ * liquidity.
+ * 
+ * @custom:security-contact security@molecularlabs.io
  */
 abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback, IonHandlerBase {
     using SafeERC20 for IERC20;
@@ -35,6 +47,12 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     IUniswapV3Pool public immutable FLASHLOAN_POOL;
     bytes32 public immutable BALANCER_POOL_ID;
 
+    /**
+     * @notice Creates a new instance of `UniswapFlashloanBalancerSwapHandler`
+     * @param _flashloanPool UniswapV3 pool from which to flashloan
+     * @param _balancerPoolId Balancer pool identifier through which to route
+     * swaps.
+     */
     constructor(IUniswapV3Pool _flashloanPool, bytes32 _balancerPoolId) {
         address weth = address(WETH);
         IERC20(weth).approve(address(VAULT), type(uint256).max);
@@ -56,11 +74,20 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     }
 
     /**
-     * @notice Uniswap flashloans do incur a fee.
-     * @param initialDeposit in collateral terms.
-     * @param resultingAdditionalCollateral in collateral terms.
+     * @notice Transfer collateral from user + flashloan WETH from Uniswap ->
+     * swap for collateral using WETH on Balancer pool -> deposit all collateral
+     * into `IonPool` -> borrow WETH from `IonPool` -> repay Uniswap flashloan + fee. 
+     * 
+     * Uniswap flashloans do incur a fee.
+     * 
+     * @param initialDeposit in collateral terms. [WAD]
+     * @param resultingAdditionalCollateral in collateral terms. [WAD]
      * @param maxResultingAdditionalDebt in WETH terms. This value also allows
-     * the user to control slippage of the swap.
+     * the user to control slippage of the swap. [WAD]
+     * @param deadline timestamp for which the transaction must be executed.
+     * This prevents txs that have sat in the mempool for too long to be
+     * executed.
+     * @param proof used to validate the user is whitelisted.
      */
     function flashLeverageWethAndSwap(
         uint256 initialDeposit,
@@ -117,10 +144,18 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     }
 
     /**
-     * @dev Uniswap flashloans do incur a fee.
-     * @param maxCollateralToRemove The max amount of collateral willing to sell
-     * to repay `debtToRemove` debt.
-     * @param debtToRemove The desired amount of debt to remove.
+     * @notice Flashloan WETH from Uniswap -> repay debt in `IonPool` ->
+     * withdraw collateral from `IonPool` -> sell collateral for `WETH` on
+     * Balancer -> repay Uniswap flashloan + fee. 
+     * 
+     * Uniswap flashloans do incur a fee.
+     * 
+     * @param maxCollateralToRemove The max amount of collateral user is willing
+     * to sell to repay `debtToRemove` debt. [WAD]
+     * @param debtToRemove The desired amount of debt to remove. [WAD]
+     * @param deadline timestamp for which the transaction must be executed.
+     * This prevents txs that have sat in the mempool for too long to be
+     * executed.
      */
     function flashDeleverageWethAndSwap(uint256 maxCollateralToRemove, uint256 debtToRemove, uint256 deadline) external checkDeadline(deadline) {
         if (debtToRemove == type(uint256).max) {
@@ -169,12 +204,23 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
     }
 
     /**
-     * @notice Called to `msg.sender` after transferring to the recipient from IUniswapV3Pool#flash.
-     * @dev In the implementation you must repay the pool the tokens sent by flash plus the computed fee amounts.
-     * The caller of this method must be checked to be a UniswapV3Pool deployed by the canonical UniswapV3Factory.
-     * @param fee0 The fee amount in tokenInBalancer due to the pool by the end of the flash
-     * @param fee1 The fee amount in tokenOutBalancer due to the pool by the end of the flash
-     * @param data Any data passed through by the caller via the IUniswapV3PoolActions#flash call
+     * @notice Called to `msg.sender` after transferring to the recipient from
+     * IUniswapV3Pool#flash.
+     * 
+     * @dev In the implementation, you must repay the pool the tokens sent by
+     * `flash()` plus the computed fee amounts.
+     * 
+     * The caller of this method must be checked to be a UniswapV3Pool. 
+     *
+     * Initiator is gaurenteed to be this contract since UniswapV3 pools will
+     * only call the callback on msg.sender.
+     * 
+     * @param fee0 The fee amount in tokenInBalancer due to the pool by the end
+     * of the flash
+     * @param fee1 The fee amount in tokenOutBalancer due to the pool by the end
+     * of the flash
+     * @param data Any data passed through by the caller via the
+     * IUniswapV3PoolActions#flash call
      */
     function uniswapV3FlashCallback(uint256 fee0, uint256 fee1, bytes calldata data) external override {
         if (msg.sender != address(FLASHLOAN_POOL)) revert ReceiveCallerNotPool(msg.sender);
@@ -257,6 +303,13 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         }
     }
 
+    /**
+     * @notice Simulates a Balancer swap with a desired amount of `assetOut`.
+     * @param fundManagement Balancer fund management struct
+     * @param assetIn asset to swap from
+     * @param assetOut asset to swap to
+     * @param amountOut desired amount of assetOut. Will revert if not received. [WAD]
+     */
     function _simulateGivenOutBalancerSwap(
         IVault.FundManagement memory fundManagement,
         address assetIn,
