@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { IonZapper } from "src/periphery/IonZapper.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
-import { BaseScript } from "script/Base.s.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { IonZapper } from "../src/periphery/IonZapper.sol";
+import { IWETH9 } from "../src/interfaces/IWETH9.sol";
+
+import { BaseScript } from "./Base.s.sol";
+
 import { console2 } from "forge-std/console2.sol";
 
 // TODO: consolidate constants

@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { Whitelist } from "src/Whitelist.sol";
-import { GemJoin } from "src/join/GemJoin.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
-import { IWstEth } from "src/interfaces/ProviderInterfaces.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { Whitelist } from "../src/Whitelist.sol";
+import { GemJoin } from "../src/join/GemJoin.sol";
+import { IWETH9 } from "../src/interfaces/IWETH9.sol";
+import { IWstEth } from "../src/interfaces/ProviderInterfaces.sol";
+import { IonZapper } from "../src/periphery/IonZapper.sol";
+import { WadRayMath } from "../src/libraries/math/WadRayMath.sol";
 
 import { BaseScript } from "./Base.s.sol";
-import { console2 } from "forge-std/Script.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { IonZapper } from "src/periphery/IonZapper.sol";
+
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
+
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 contract DeployIonZapperScript is BaseScript {
