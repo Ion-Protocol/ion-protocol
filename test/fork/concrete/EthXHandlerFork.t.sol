@@ -36,7 +36,7 @@ contract EthXHandler_ForkBase is IonHandler_ForkBase {
     function setUp() public virtual override {
         // Since Balancer EthX pool has no liquidity, this needs to be pinned to
         // a specific block
-        forkBlock = 18537430;
+        forkBlock = 18_537_430;
         super.setUp();
         ethXHandler = new EthXHandler(
             ilkIndex,
@@ -202,7 +202,9 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         vm.recordLogs();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -227,8 +229,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         // Remove all debt
         uint256 debtToRemove = type(uint256).max;
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
-        ethXHandler.flashDeleverageWethAndSwap(
-            maxCollateralToRemove, debtToRemove, block.timestamp);
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp);
 
         uint256 gasBefore = gasleft();
         ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);

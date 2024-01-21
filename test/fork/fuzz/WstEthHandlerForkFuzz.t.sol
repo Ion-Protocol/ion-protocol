@@ -38,7 +38,11 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
 
-        assertLe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt + roundingError + 1, "max resulting debt");
+        assertLe(
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)),
+            resultingDebt + roundingError + 1,
+            "max resulting debt"
+        );
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0);
         assertLe(weth.balanceOf(address(wstEthHandler)), roundingError);
         assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
@@ -216,50 +220,53 @@ abstract contract WstEthHandler_ForkFuzzTest is WstEthHandler_ForkBase {
 }
 
 contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
-    using WadRayMath for *; 
+    using WadRayMath for *;
 
     function testForkFuzz_ZapDepositAndBorrow(uint256 depositAmount, uint256 borrowAmount) public {
-        depositAmount = bound(depositAmount, 0.1 ether, INITIAL_THIS_UNDERLYING_BALANCE); 
-        borrowAmount = bound(borrowAmount, 0.1 ether, depositAmount); 
+        depositAmount = bound(depositAmount, 0.1 ether, INITIAL_THIS_UNDERLYING_BALANCE);
+        borrowAmount = bound(borrowAmount, 0.1 ether, depositAmount);
 
-        uint256 stEthDepositAmount = _mintStEth(depositAmount); 
+        uint256 stEthDepositAmount = _mintStEth(depositAmount);
         uint256 wstEthDepositAmount = MAINNET_WSTETH.getWstETHByStETH(stEthDepositAmount);
 
-        uint256 ilkRate = ionPool.rate(ilkIndex); 
-        uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot(); 
+        uint256 ilkRate = ionPool.rate(ilkIndex);
+        uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
         uint256 newTotalDebt = borrowAmount.rayDivDown(ilkRate) * ilkRate; // AmountToBorrow.IS_MAX for depositAndBorrow
 
         bool unsafePositionChange = newTotalDebt > wstEthDepositAmount * ilkSpot;
 
-        vm.assume(!unsafePositionChange); 
+        vm.assume(!unsafePositionChange);
 
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
-        ionPool.addOperator(address(wstEthHandler)); 
+        ionPool.addOperator(address(wstEthHandler));
 
         wstEthHandler.zapDepositAndBorrow(stEthDepositAmount, borrowAmount, new bytes32[](0));
 
         uint256 currentRate = ionPool.rate(ilkIndex);
-        // uint256 roundingError = currentRate / RAY; 
+        // uint256 roundingError = currentRate / RAY;
 
-        assertEq(ionPool.collateral(ilkIndex, address(this)), wstEthDepositAmount, "collateral"); 
-        assertLe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(currentRate), newTotalDebt / RAY + 1, "debt");    
+        assertEq(ionPool.collateral(ilkIndex, address(this)), wstEthDepositAmount, "collateral");
+        assertLe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(currentRate), newTotalDebt / RAY + 1, "debt");
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0, "wstETH balance");
         assertLe(weth.balanceOf(address(wstEthHandler)), 0, "weth dust");
-    } 
+    }
 
-    function testForkFuzz_ZapFlashLoanCollateral(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {        
-        
+    function testForkFuzz_ZapFlashLoanCollateral(
+        uint256 initialDeposit,
+        uint256 resultingCollateralMultiplier
+    )
+        public
+    {
         initialDeposit = bound(initialDeposit, 4 wei, INITIAL_THIS_UNDERLYING_BALANCE);
 
-        uint256 initialStEthDeposit = _mintStEth(initialDeposit); 
+        uint256 initialStEthDeposit = _mintStEth(initialDeposit);
         uint256 resultingStEthDeposit = initialStEthDeposit * bound(resultingCollateralMultiplier, 1, 5);
 
-        uint256 expectedInitialWstEthDeposit =
-            MAINNET_WSTETH.getWstETHByStETH(initialStEthDeposit);
-        uint256 expectedResultingWstEthDeposit = 
-            MAINNET_WSTETH.getWstETHByStETH(resultingStEthDeposit); 
+        uint256 expectedInitialWstEthDeposit = MAINNET_WSTETH.getWstETHByStETH(initialStEthDeposit);
+        uint256 expectedResultingWstEthDeposit = MAINNET_WSTETH.getWstETHByStETH(resultingStEthDeposit);
 
-        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(expectedResultingWstEthDeposit - expectedInitialWstEthDeposit);
+        uint256 resultingDebt =
+            MAINNET_WSTETH.getEthAmountInForLstAmountOut(expectedResultingWstEthDeposit - expectedInitialWstEthDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
         uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
@@ -274,12 +281,18 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
-        wstEthHandler.zapFlashLeverageCollateral(initialStEthDeposit, resultingStEthDeposit, resultingDebt, new bytes32[](0));
+        wstEthHandler.zapFlashLeverageCollateral(
+            initialStEthDeposit, resultingStEthDeposit, resultingDebt, new bytes32[](0)
+        );
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
 
-        assertLe(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), resultingDebt + roundingError + 1, "max resulting debt bound");
+        assertLe(
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)),
+            resultingDebt + roundingError + 1,
+            "max resulting debt bound"
+        );
         assertEq(ionPool.collateral(ilkIndex, address(this)), expectedResultingWstEthDeposit, "collateral");
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0, "wstETH balance");
         assertLe(weth.balanceOf(address(wstEthHandler)), roundingError, "weth dust");
@@ -291,12 +304,12 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
         uint256 initialStEthDeposit = _mintStEth(initialDeposit);
         uint256 resultingStEthDeposit = initialStEthDeposit * bound(resultingCollateralMultiplier, 1, 5);
 
-        uint256 expectedInitialWstEthDeposit =
-            IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(initialStEthDeposit);
-        uint256 expectedResultingWstEthDeposit = 
-            IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingStEthDeposit); 
+        uint256 expectedInitialWstEthDeposit = IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(initialStEthDeposit);
+        uint256 expectedResultingWstEthDeposit =
+            IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingStEthDeposit);
 
-        uint256 resultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(expectedResultingWstEthDeposit - expectedInitialWstEthDeposit);
+        uint256 resultingDebt =
+            MAINNET_WSTETH.getEthAmountInForLstAmountOut(expectedResultingWstEthDeposit - expectedInitialWstEthDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
         uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
@@ -318,7 +331,8 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
-            ilkRate / RAY, "debt"
+            ilkRate / RAY,
+            "debt"
         );
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0, "wstETH balance");
         assertLe(weth.balanceOf(address(wstEthHandler)), roundingError, "weth dust");
@@ -327,17 +341,18 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
 
     function testForkFuzz_ZapFlashSwapLeverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         initialDeposit = bound(initialDeposit, 1e13, INITIAL_THIS_UNDERLYING_BALANCE);
-        
+
         uint256 initialStEthDeposit = _mintStEth(initialDeposit);
         uint256 resultingStEthDeposit = initialStEthDeposit * bound(resultingCollateralMultiplier, 1, 5);
 
-        uint256 expectedResultingWstEthDeposit = 
-            IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingStEthDeposit); 
+        uint256 expectedResultingWstEthDeposit =
+            IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingStEthDeposit);
 
-        uint256 maxResultingDebt = expectedResultingWstEthDeposit; // in weth. This is technically subject to slippage but we will
+        uint256 maxResultingDebt = expectedResultingWstEthDeposit; // in weth. This is technically subject to slippage
+            // but we will
             // skip protecting for this in the test
 
-        IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), initialStEthDeposit); 
+        IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), initialStEthDeposit);
         weth.approve(address(wstEthHandler), type(uint256).max);
         ionPool.addOperator(address(wstEthHandler));
 
@@ -356,9 +371,13 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
         assertEq(ionPool.collateral(ilkIndex, address(this)), expectedResultingWstEthDeposit, "collateral");
         assertEq(IERC20(address(MAINNET_WSTETH)).balanceOf(address(wstEthHandler)), 0, "wstETH balance");
         assertLe(weth.balanceOf(address(wstEthHandler)), roundingError, "weth dust");
-        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt, "max resulting debt");
+        assertLt(
+            ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)),
+            maxResultingDebt,
+            "max resulting debt"
+        );
     }
-} 
+}
 
 contract WstEthHandler_WithRateChange_ForkFuzzTest is WstEthHandler_ForkFuzzTest {
     function testForkFuzz_WithRateChange_FlashLoanCollateral(
@@ -415,14 +434,14 @@ contract WstEthHandler_WithRateChange_ZapForkFuzzTest is WstEthHandler_ZapForkFu
         uint256 depositAmount,
         uint256 borrowAmount,
         uint104 rate
-    ) 
+    )
         external
     {
-        rate = uint104(bound(rate, 1e27, 10e27)); 
-        ionPool.setRate(ilkIndex, rate); 
-        super.testForkFuzz_ZapDepositAndBorrow(depositAmount, borrowAmount); 
+        rate = uint104(bound(rate, 1e27, 10e27));
+        ionPool.setRate(ilkIndex, rate);
+        super.testForkFuzz_ZapDepositAndBorrow(depositAmount, borrowAmount);
     }
-    
+
     function testForkFuzz_WithRateChange_ZapFlashLoanCollateral(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,

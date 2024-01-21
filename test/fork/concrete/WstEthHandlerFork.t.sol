@@ -59,7 +59,7 @@ contract WstEthHandler_ForkBase is IonHandler_ForkBase {
         uint256 beginningBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
         vm.deal(address(this), amount);
         (bool sent,) = address(MAINNET_STETH).call{ value: amount }("");
-        require(sent == true, "mint stEth failed"); 
+        require(sent == true, "mint stEth failed");
         uint256 resultingBalance = IERC20(address(MAINNET_STETH)).balanceOf(address(this));
         return resultingBalance - beginningBalance;
     }
@@ -463,7 +463,6 @@ contract WstEthHandler_ForkTest is WstEthHandler_ForkBase {
 }
 
 contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
-
     function testFork_ZapDepositAndBorrow() external {
         uint256 ethDepositAmount = 2e18; // in eth
         uint256 borrowAmount = 0.5e18; // in weth

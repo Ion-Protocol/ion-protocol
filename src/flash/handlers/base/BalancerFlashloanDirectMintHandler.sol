@@ -15,7 +15,7 @@ IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 /**
  * @notice This contract allows for easy creation of leverage positions through
  * Balancer flashloans and LST mints through the LST provider.
- * 
+ *
  * @dev There are a couple things to consider here from a security perspective. The
  * first one is that the flashloan callback must only be callable from the
  * Balancer vault. This ensures that nobody can pass arbitrary data to the
@@ -30,7 +30,7 @@ IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
  *
  * This contract currently deposits directly into LST contract 1:1. It should be
  * noted that a more favorable trade could be possible via DEXs.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLoanRecipient {
@@ -193,13 +193,13 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     }
 
     /**
-     * @notice This function is never intended to be called directly. 
-     * @dev Code assumes Balancer flashloans remain free. 
-     * 
+     * @notice This function is never intended to be called directly.
+     * @dev Code assumes Balancer flashloans remain free.
+     *
      * This function is intended to never be called directly. It should only be
      * called by the Balancer VAULT during a flashloan initiated by this
      * contract.
-     * 
+     *
      * This callback logic only handles the creation of leverage positions by
      * minting. Since atomic withdrawals are not possible, deleveraging with a
      * flashloan directly through an LST provider is not possible.

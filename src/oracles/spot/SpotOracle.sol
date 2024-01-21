@@ -11,14 +11,14 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
  * @notice The `SpotOracle` is supposed to reflect the current market price of a
  * collateral asset. It is used by `IonPool` to determine the health factor of a
  * vault as a user is opening or closing a position.
- * 
+ *
  * NOTE: The price data provided by this contract is not used by the liquidation
  * module at all.
- * 
+ *
  * The spot price will also always be bounded by the collateral's corresponding
  * reserve oracle price to ensure that a user can never open position that is
  * directly liquidatable.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 abstract contract SpotOracle {
