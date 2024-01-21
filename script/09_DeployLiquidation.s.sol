@@ -2,10 +2,11 @@
 pragma solidity 0.8.21;
 
 import { BaseScript } from "./Base.s.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-import { Liquidation } from "src/Liquidation.sol";
+import { Liquidation } from "../src/Liquidation.sol";
+import { WadRayMath } from "../src/libraries/math/WadRayMath.sol";
+import { IonPool } from "../src/IonPool.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { WadRayMath } from "src/libraries/math/WadRayMath.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 contract DeployLiquidationScript is BaseScript {
@@ -30,8 +31,10 @@ contract DeployLiquidationScript is BaseScript {
         // assert(liquidationThresholds.length == ILK_COUNT);
         // assert(maxDiscounts.length == ILK_COUNT);
 
-        liquidation = new Liquidation(
+        liquidation = new Liquidation{ salt: bytes32(abi.encode(0)) }(
             ionPool, protocol, reserveOracles, liquidationThresholds, targetHealth, reserveFactor, maxDiscounts
         );
+
+        IonPool(ionPool).grantRole(IonPool(ionPool).LIQUIDATOR_ROLE(), address(liquidation));
     }
 }

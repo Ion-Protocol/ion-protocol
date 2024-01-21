@@ -134,7 +134,11 @@ contract Liquidation {
     /**
      * @notice Returns the exchange rate and liquidation threshold for the given ilkIndex.
      */
-    function _getConfigs(uint8 ilkIndex) internal view returns (Configs memory configs) {
+    function _getConfigs(uint8 ilkIndex)
+        internal
+        view
+        returns (Configs memory configs)
+    {
         if (ilkIndex == 0) {
             configs.reserveOracle = RESERVE_ORACLE_0;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
@@ -148,6 +152,40 @@ contract Liquidation {
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_2;
             configs.maxDiscount = MAX_DISCOUNT_2;
         }
+    }
+
+    function getRepayAmt(uint8 ilkIndex, address vault) public view returns (uint256 repay) {
+        Configs memory configs = _getConfigs(ilkIndex);
+
+        // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
+        uint256 exchangeRate = uint256(ReserveOracle(configs.reserveOracle).currentExchangeRate()).scaleUpToRay(18);
+        (uint256 collateral, uint256 normalizedDebt) = POOL.vault(ilkIndex, vault);
+        uint256 rate = POOL.rate(ilkIndex);
+
+        if (exchangeRate == 0) {
+            revert ExchangeRateCannotBeZero();
+        }
+
+        // collateralValue = collateral * exchangeRate * liquidationThreshold
+        // debtValue = normalizedDebt * rate
+        // healthRatio = collateralValue / debtValue
+        // collateralValue = [wad] * [ray] * [ray] / RAY = [rad]
+        // debtValue = [wad] * [ray] = [rad]
+        // healthRatio = [rad] * RAY / [rad] = [ray]
+        // round down in protocol favor
+        uint256 collateralValue = (collateral * exchangeRate).rayMulDown(configs.liquidationThreshold);
+    
+        uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
+        if (healthRatio >= RAY) {
+            revert VaultIsNotUnsafe(healthRatio);
+        }
+
+        uint256 discount = BASE_DISCOUNT + (RAY - healthRatio); // [ray] + ([ray] - [ray])
+        discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount favor
+        uint256 repayRad = _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
+
+        repay = (repayRad / RAY);
+        if (repayRad % RAY > 0) ++repay; 
     }
 
     /**

@@ -34,6 +34,9 @@ contract EthXHandler_ForkBase is IonHandler_ForkBase {
     bytes32[] borrowerWhitelistProof;
 
     function setUp() public virtual override {
+        // Since Balancer EthX pool has no liquidity, this needs to be pinned to
+        // a specific block
+        forkBlock = 18537430;
         super.setUp();
         ethXHandler = new EthXHandler(
             ilkIndex,
@@ -99,7 +102,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         assertApproxEqAbs(
             ionPool.normalizedDebt(ilkIndex, address(this)).rayMulDown(ionPool.rate(ilkIndex)),
             resultingDebt,
-            1e27 / RAY
+            roundingError
         );
         assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
         assertLe(weth.balanceOf(address(ethXHandler)), roundingError);

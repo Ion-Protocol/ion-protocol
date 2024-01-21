@@ -9,7 +9,7 @@ import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract WstEthSpotOracle is SpotOracle {
-    using SafeCast for int256;
+    using SafeCast for int256; 
 
     IChainlink public immutable ST_ETH_TO_ETH_CHAINLINK;
     IWstEth public immutable WST_ETH;

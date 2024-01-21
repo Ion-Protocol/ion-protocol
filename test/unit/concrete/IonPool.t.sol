@@ -1004,7 +1004,7 @@ contract IonPool_Test is IonPoolSharedSetup, IIonPoolEvents {
     }
 }
 
-contract IonPool_InterestTest is IonPoolSharedSetup {
+contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
     function setUp() public override {
         super.setUp();
 
@@ -1128,40 +1128,69 @@ contract IonPool_InterestTest is IonPoolSharedSetup {
         }
     }
 
-    // function test_AccrueInterest() public {
-    //     uint256 collateralDepositAmount = 10e18;
-    //     uint256 normalizedBorrowAmount = 5e18;
+    function test_AccrueInterest() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
 
-    //     uint256 borrowedSoFar;
-    //     uint256[] memory previousRates = new uint256[](ionPool.ilkCount());
-    //     for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
-    //         vm.prank(borrower1);
-    //         ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+        vm.warp(block.timestamp + 1 days);
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
 
-    //         uint256 rate = ionPool.rate(i);
-    //         uint256 liquidityBefore = ionPool.weth();
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = ionPool.weth();
 
-    //         assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
-    //         assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
 
-    //         vm.expectEmit(true, true, true, true);
-    //         // Rate will be 1e27 here
-    //         emit Borrow(
-    //             i, borrower1, borrower1, normalizedBorrowAmount, RAY, (borrowedSoFar += normalizedBorrowAmount * RAY)
-    //         );
-    //         vm.prank(borrower1);
-    //         ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
 
-    //         uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
 
-    //         assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
-    //         assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
-    //         assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
-    //         assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
 
-    //         previousRates[i] = rate;
-    //     }
-    // }
+            assertEq(ionPool.lastRateUpdate(i), block.timestamp);
+        }
+    }
+
+    function test_AccrueInterestForAll() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        uint256 borrowedSoFar;
+        uint256[] memory previousRates = new uint256[](ionPool.ilkCount());
+        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = ionPool.weth();
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.expectEmit(true, true, true, true);
+            // Rate will be 1e27 here
+            emit Borrow(
+                i, borrower1, borrower1, normalizedBorrowAmount, RAY, (borrowedSoFar += normalizedBorrowAmount * RAY)
+            );
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(ionPool.totalNormalizedDebt(i), normalizedBorrowAmount);
+            assertEq(ionPool.weth(), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+
+            previousRates[i] = rate;
+        }
+    }
 }
 
 contract IonPool_AdminTest is IonPoolSharedSetup {
@@ -1170,9 +1199,9 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
     event InterestRateModuleUpdated(address newModule);
     event WhitelistUpdated(address newWhitelist);
 
-    event IlkSpotUpdated(address newSpot);
-    event IlkDebtCeilingUpdated(uint256 newDebtCeiling);
-    event IlkDustUpdated(uint256 newDust);
+    event IlkSpotUpdated(uint8 indexed ilkIndex, address newSpot);
+    event IlkDebtCeilingUpdated(uint8 indexed ilkIndex, uint256 newDebtCeiling);
+    event IlkDustUpdated(uint8 indexed ilkIndex, uint256 newDust);
 
     event AddOperator(address indexed from, address indexed to);
     event RemoveOperator(address indexed from, address indexed to);
@@ -1241,7 +1270,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             ionPool.updateIlkSpot(i, newSpotAddress);
 
             vm.expectEmit(true, true, true, true);
-            emit IlkSpotUpdated(address(newSpotAddress));
+            emit IlkSpotUpdated(i, address(newSpotAddress));
             ionPool.updateIlkSpot(i, newSpotAddress);
 
             assertEq(address(ionPool.spot(i)), address(newSpotAddress));
@@ -1261,7 +1290,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             ionPool.updateIlkDebtCeiling(i, newIlkDebtCeiling);
 
             vm.expectEmit(true, true, true, true);
-            emit IlkDebtCeilingUpdated(newIlkDebtCeiling);
+            emit IlkDebtCeilingUpdated(i, newIlkDebtCeiling);
             ionPool.updateIlkDebtCeiling(i, newIlkDebtCeiling);
 
             assertEq(ionPool.debtCeiling(i), newIlkDebtCeiling);
@@ -1281,7 +1310,7 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
             ionPool.updateIlkDust(i, newIlkDust);
 
             vm.expectEmit(true, true, true, true);
-            emit IlkDustUpdated(newIlkDust);
+            emit IlkDustUpdated(i, newIlkDust);
             ionPool.updateIlkDust(i, newIlkDust);
 
             assertEq(ionPool.dust(i), newIlkDust);

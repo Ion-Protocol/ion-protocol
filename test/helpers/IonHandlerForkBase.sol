@@ -57,8 +57,11 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
 
     IUniswapV3Pool constant WSTETH_WETH_POOL = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
 
+    uint256 forkBlock = 0;
+
     function setUp() public virtual override {
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
+        if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
+        else vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), forkBlock);
         super.setUp();
 
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();
