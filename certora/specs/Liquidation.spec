@@ -13,10 +13,11 @@ methods {
     function _.mulDiv(uint x, uint y, uint denominator) internal => cvlMulDiv(x,y,denominator) expect uint;
 
     // InterestRate
+    // Summarizing this function will improve run time, use NONDET if output doesn't matter
     function _.calculateInterestRate(uint256,uint256,uint256) external => DISPATCHER(true);
 
     // YieldOracle
-    function _.apys(uint32) external => PER_CALLEE_CONSTANT;
+    function _.apys(uint256) external => PER_CALLEE_CONSTANT;
 
     // envfree definitions
     function Ion.underlying() external returns (address) envfree;

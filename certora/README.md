@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Formal Verification (FV) component of the contest is about using the Certora prover to formally verify properties in the Solidity smart contracts in scope. Participants are incentivized to implement and verify high coverage properties. Submissions, incentives, and judging are different from the main contest so please read this document in its entirety.
+The Formal Verification (FV) component of the contest is about using the Certora Prover to formally verify properties in the Solidity smart contracts in scope. Participants are incentivized to implement and verify high coverage properties. Submissions, incentives, and judging are different from the main contest so please read this document in its entirety.
 
 ## Scope
 
@@ -32,7 +32,7 @@ The Formal Verification (FV) component of the contest is about using the Certora
 - **Contest Participation**:
   - [Import](https://github.com/new/import) the public repository into a new private repository at the contest's commencement.
   - Conduct verifications on the main branch.
-  - Grant access to `teryanarmen` and `nd-certora` for judging.
+  - Grant access to `teryanarmen` and `pistiner` for judging.
 - **Support Channels**:
   - For tool-related issues, send a detailed message with a job link in `help-desk` channel in Discord. Remove the anonymousKey component from the link if you wish to limit viewing to Certora employees. 
   - For FV contest questions, use the relevant community verification channel in Discord.
@@ -80,7 +80,7 @@ The Formal Verification (FV) component of the contest is about using the Certora
 - **Preliminary Results**: Initial findings will be announced along with the mutations used for evaluation. A google sheet showing which mutants were caught by which participants will be shared. Participants will have a 72-hour period for review and submit corrections in case a certain mutant is marked as not caught but they actually caught it.
 - **Correction Submissions**: Corrections must include a verified run on the source code and a violated run on the mutant. Any changes other than the mutation will result in exclusion of the correction.
 - **Check your work**: Use `certoraMutate` to evaluate your work on public mutations and random mutations created by gambit.
-  - Gambit confs will be provided for all the in scope contracts. To run mutation testing, you can do `certoraMutate --prover_conf certora/confs/contract_verified.conf --mutation_conf certora/confs/gambit/contract.mconf`. 
+  - Gambit confs will be provided for all the in scope contracts. To run mutation testing, you can do `certoraMutate --prover_conf certora/confs/contract_verified.conf --mutation_conf certora/confs/gambit/contract.mconf` from root of the directory, same as `certoraRun`. 
   - You can change the number of bugs that are injected by adding manual mutations in the `mutations` folder in a similar fashion to the public mutations or by changing the value of automatic mutation in the contract's mutation conf.
   - Use `--dump_csv file_path.csv` flag with `certoraMutate` to get a csv output of your results. During evaluation, the data from this output is aggregated for all participants used for coverage and participation evaluation. Make sure everthing looks right, specifically, all rules should have "SUCCESS" for the original run.
 
