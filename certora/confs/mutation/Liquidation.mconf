@@ -1,6 +1,10 @@
 { "gambit": {                                                                   
       "filename" : "../../../src/Liquidation.sol",
-      "num_mutants": 10                                                          
+      "num_mutants": 10,
+      "solc_remappings": [
+        "@openzeppelin/contracts=../../../lib/openzeppelin-contracts/contracts",
+        "@openzeppelin/contracts-upgradeable=../../../lib/openzeppelin-contracts-upgradeable/contracts"
+      ]                                                         
    },                                                                           
    "manual_mutants": {                                                          
       "../../../src/Liquidation.sol" : "../../mutations/Liquidation",
