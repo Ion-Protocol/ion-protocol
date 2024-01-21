@@ -27,7 +27,7 @@ contract MockUniswapPool {
 
     function fee() external pure returns (uint24) {
         return 500;
-    }   
+    }
 }
 
 contract SwEthHandler_Test is IonPoolSharedSetup {
@@ -42,8 +42,9 @@ contract SwEthHandler_Test is IonPoolSharedSetup {
         mockPool.setUnderlying(address(underlying));
 
         // Ignore Uniswap args since they will be tested through forks
-        swEthHandler =
-        new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Pool(address(mockPool)));
+        swEthHandler = new SwEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Pool(address(mockPool))
+        );
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {

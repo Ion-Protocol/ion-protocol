@@ -159,7 +159,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
             uint64 newExchangeRate = _getExchangeRate(i);
             uint64 previousExchangeRate = previousExchangeRates[i];
 
-            // Enforce that the exchange rate is not 0 
+            // Enforce that the exchange rate is not 0
             if (newExchangeRate == 0) revert InvalidExchangeRate(i);
 
             // If there is a slashing event, the new exchange rate could be

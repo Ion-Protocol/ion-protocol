@@ -38,8 +38,15 @@ contract EthXHandler_ForkBase is IonHandler_ForkBase {
         // a specific block
         forkBlock = 18537430;
         super.setUp();
-        ethXHandler =
-        new EthXHandler(ilkIndex, ionPool, gemJoins[ilkIndex], MAINNET_STADER, Whitelist(whitelist), WSTETH_WETH_POOL, 0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb);
+        ethXHandler = new EthXHandler(
+            ilkIndex,
+            ionPool,
+            gemJoins[ilkIndex],
+            MAINNET_STADER,
+            Whitelist(whitelist),
+            WSTETH_WETH_POOL,
+            0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb
+        );
 
         IERC20(address(MAINNET_ETHX)).approve(address(ethXHandler), type(uint256).max);
 
@@ -112,10 +119,13 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
 
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         ethXHandler.flashLeverageWethAndSwap(
-            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp, borrowerWhitelistProof);
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp, borrowerWhitelistProof
+        );
 
         uint256 gasBefore = gasleft();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -137,7 +147,9 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         vm.recordLogs();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -165,8 +177,7 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
-        ethXHandler.flashDeleverageWethAndSwap(
-            maxCollateralToRemove, debtToRemove, block.timestamp);
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp);
 
         uint256 gasBefore = gasleft();
         ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
@@ -311,7 +322,9 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         vm.expectRevert();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
     }
 
     function testFork_RevertWhen_FlashswapDeleverageSellsMoreCollateralThanUserIsWilling() external {
@@ -324,7 +337,9 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         weth.approve(address(ethXHandler), type(uint256).max);
         ionPool.addOperator(address(ethXHandler));
 
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
 
         // No slippage tolerance
         uint256 slippageAndFeeTolerance = 1.0e18; // 0%
@@ -360,7 +375,7 @@ contract EthXHandlerWhitelist_ForkTest is EthXHandler_ForkTest {
         bytes32[] memory borrowerRoots = new bytes32[](1);
         borrowerRoots[0] = borrowerWhitelistRoot;
 
-        _whitelist = new Whitelist(borrowerRoots, bytes32(0)); 
+        _whitelist = new Whitelist(borrowerRoots, bytes32(0));
         _whitelist.approveProtocolWhitelist(address(ethXHandler));
 
         ionPool.updateWhitelist(_whitelist);

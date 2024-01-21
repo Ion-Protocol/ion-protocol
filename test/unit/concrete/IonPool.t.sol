@@ -16,8 +16,6 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 using Strings for uint256;
 using WadRayMath for uint256;
 
@@ -1438,79 +1436,49 @@ contract IonPool_PausedTest is IonPoolSharedSetup {
     function test_RevertWhen_CallingFunctionsWhenPaused() public {
         ionPool.pause();
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdraw(address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdrawCollateral(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.transferGem(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.accrueInterest();
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.supply(address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.repay(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.depositCollateral(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.repayBadDebt(address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdraw(address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.borrow(0, address(0), address(0), 0, new bytes32[](0));
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.withdrawCollateral(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.transferGem(0, address(0), address(0), 0);
 
-        vm.expectRevert(
-            PausableUpgradeable.EnforcedPause.selector
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         ionPool.confiscateVault(0, address(0), address(0), address(0), 0, 0);
     }
 }
@@ -1559,11 +1527,7 @@ contract IonPool_WhitelistTest is IonPoolSharedSetup {
             0xa7409058568815d08a7ad3c7d4fd44cf1dec90c620cb31e55ad24c654f7ba34f,
             0xbd164a4590db938a0b098da1b25cf37b155f857b38c37c016ad5b8f8fce80192
         ),
-        abi.encode(
-            32,
-            1,
-            0xc6ce8ae383124b268df66d71f0af2206e6dafb13eba0b03806eed8a4e7991329
-        )
+        abi.encode(32, 1, 0xc6ce8ae383124b268df66d71f0af2206e6dafb13eba0b03806eed8a4e7991329)
     ];
 
     bytes[] lenderProofs = [

@@ -36,8 +36,7 @@ contract SwEthHandler_ForkBase is IonHandler_ForkBase {
 
     function setUp() public virtual override {
         super.setUp();
-        swEthHandler =
-            new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), SWETH_ETH_POOL);
+        swEthHandler = new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), SWETH_ETH_POOL);
 
         IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
 
@@ -115,10 +114,23 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
 
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         swEthHandler.flashswapLeverage(
-            initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp, borrowerWhitelistProof);
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp,
+            borrowerWhitelistProof
+        );
 
         uint256 gasBefore = gasleft();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
         uint256 gasAfter = gasleft();
         if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
@@ -140,7 +152,14 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         ionPool.addOperator(address(swEthHandler));
 
         vm.recordLogs();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -190,7 +209,14 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         ionPool.addOperator(address(swEthHandler));
 
         vm.recordLogs();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -310,7 +336,14 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         ionPool.addOperator(address(swEthHandler));
 
         vm.expectRevert();
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
     }
 
     function testFork_RevertWhen_FlashswapDeleverageSellsMoreCollateralThanUserIsWilling() external {
@@ -323,7 +356,14 @@ contract SwEthHandler_ForkTest is SwEthHandler_ForkBase {
         weth.approve(address(swEthHandler), type(uint256).max);
         ionPool.addOperator(address(swEthHandler));
 
-        swEthHandler.flashswapLeverage(initialDeposit, resultingCollateral, maxResultingDebt, sqrtPriceLimitX96, block.timestamp + 1, new bytes32[](0));
+        swEthHandler.flashswapLeverage(
+            initialDeposit,
+            resultingCollateral,
+            maxResultingDebt,
+            sqrtPriceLimitX96,
+            block.timestamp + 1,
+            new bytes32[](0)
+        );
 
         uint256 slippageAndFeeTolerance = 1.0e18; // 0%
         // Want to completely deleverage position and only leave initial capital
@@ -361,7 +401,7 @@ contract SwEthHandlerWhitelist_ForkTest is SwEthHandler_ForkTest {
         bytes32[] memory borrowerRoots = new bytes32[](1);
         borrowerRoots[0] = borrowerWhitelistRoot;
 
-        _whitelist = new Whitelist(borrowerRoots, bytes32(0)); 
+        _whitelist = new Whitelist(borrowerRoots, bytes32(0));
         _whitelist.approveProtocolWhitelist(address(swEthHandler));
 
         ionPool.updateWhitelist(_whitelist);

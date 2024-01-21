@@ -66,7 +66,9 @@ contract Liquidation {
     IERC20 public immutable UNDERLYING;
 
     // --- Events ---
-    event Liquidate(address indexed initiator, address indexed kpr, uint8 indexed ilkIndex, uint256 repay, uint256 gemOut);
+    event Liquidate(
+        address indexed initiator, address indexed kpr, uint8 indexed ilkIndex, uint256 repay, uint256 gemOut
+    );
 
     /**
      * @notice Creates a new `Liquidation` instance.
@@ -122,7 +124,9 @@ contract Liquidation {
             // This invariant must hold otherwise all liquidations will revert
             // when discount == configs.maxDiscount within the _getRepayAmt
             // function.
-            if (_targetHealth < _liquidationThresholds[i].rayDivUp(RAY - _maxDiscounts[i])) revert InvalidTargetHealth(_targetHealth);
+            if (_targetHealth < _liquidationThresholds[i].rayDivUp(RAY - _maxDiscounts[i])) {
+                revert InvalidTargetHealth(_targetHealth);
+            }
 
             // forgefmt: disable-next-line
             unchecked { ++i; }

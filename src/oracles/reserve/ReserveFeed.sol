@@ -7,7 +7,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 contract ReserveFeed is Ownable2Step {
     mapping(uint8 ilkIndex => uint256 exchangeRate) public exchangeRates;
 
-    constructor(address owner) Ownable(owner) {}
+    constructor(address owner) Ownable(owner) { }
 
     function setExchangeRate(uint8 _ilkIndex, uint256 _exchangeRate) external onlyOwner {
         exchangeRates[_ilkIndex] = _exchangeRate;

@@ -15,8 +15,6 @@ import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableS
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 /**
  * @notice `IonPool` is the central contract of the Ion Protocol system. All
  * other contracts in the system revolve around it. Directly interacting with

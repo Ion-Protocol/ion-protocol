@@ -48,29 +48,11 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
         // instantiate reserve oracles
         address[] memory feeds = new address[](3);
-        stEthReserveOracle = new WstEthReserveOracle(
-            WSTETH,
-            ILK_INDEX,
-            feeds,
-            QUORUM,
-            MAX_CHANGE
-        );
+        stEthReserveOracle = new WstEthReserveOracle(WSTETH, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
 
-        ethXReserveOracle = new EthXReserveOracle(
-            STADER_STAKE_POOLS_MANAGER,
-            ILK_INDEX,
-            feeds,
-            QUORUM,
-            MAX_CHANGE
-        );
+        ethXReserveOracle = new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
 
-        swEthReserveOracle = new SwEthReserveOracle(
-            SWETH,
-            ILK_INDEX,
-            feeds,
-            QUORUM,
-            MAX_CHANGE
-        );
+        swEthReserveOracle = new SwEthReserveOracle(SWETH, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
         // update e
     }
 
@@ -83,12 +65,8 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         // ETH per wstETH   = (ETH per stETH) * (stETH per wstETH) = 1.1428692e18 (1142869193361749358)
         uint256 ltv = 0.5e27; // 0.5
 
-        stEthSpotOracle = new WstEthSpotOracle(
-            ltv,
-            address(stEthReserveOracle), 
-            MAINNET_ETH_PER_STETH_CHAINLINK, 
-            MAINNET_WSTETH
-        );
+        stEthSpotOracle =
+            new WstEthSpotOracle(ltv, address(stEthReserveOracle), MAINNET_ETH_PER_STETH_CHAINLINK, MAINNET_WSTETH);
 
         uint256 price = stEthSpotOracle.getPrice();
         assertEq(price, 1_142_869_193_361_749_358, "ETH per wstETH price");
@@ -97,12 +75,8 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
     function test_WstEthSpotOracleViewSpot() public {
         uint256 ltv = 0.8e27; // 0.8
 
-        stEthSpotOracle = new WstEthSpotOracle(
-            ltv, 
-            address(stEthReserveOracle),
-            MAINNET_ETH_PER_STETH_CHAINLINK, 
-            MAINNET_WSTETH
-        );
+        stEthSpotOracle =
+            new WstEthSpotOracle(ltv, address(stEthReserveOracle), MAINNET_ETH_PER_STETH_CHAINLINK, MAINNET_WSTETH);
 
         uint256 expectedPrice = stEthSpotOracle.getPrice();
         uint256 expectedSpot = ltv.wadMulDown(expectedPrice);
@@ -113,12 +87,8 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
     function test_WstEthSpotOracleUsesPriceAsMin() public {
         uint256 ltv = 1e27; // 1 100%
 
-        stEthSpotOracle = new WstEthSpotOracle(
-            ltv, 
-            address(stEthReserveOracle),
-            MAINNET_ETH_PER_STETH_CHAINLINK, 
-            MAINNET_WSTETH
-        );
+        stEthSpotOracle =
+            new WstEthSpotOracle(ltv, address(stEthReserveOracle), MAINNET_ETH_PER_STETH_CHAINLINK, MAINNET_WSTETH);
 
         uint256 price = stEthSpotOracle.getPrice();
 
@@ -145,12 +115,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         // ETH per wstETH   = (ETH per stETH) * (stETH per wstETH) = 1.1428692e18 (1142869193361749358)
         uint256 ltv = 0.5e27;
 
-        swEthSpotOracle = new SwEthSpotOracle(
-            ltv, 
-            address(swEthReserveOracle), 
-            MAINNET_SWETH_ETH_UNISWAP_01,
-            100
-        );
+        swEthSpotOracle = new SwEthSpotOracle(ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, 100);
 
         uint256 price = swEthSpotOracle.getPrice(); // 1 ETH is 0.992 swETH
         assertEq(price, 1_007_326_342_304_993_374, "ETH per swETH price");
@@ -192,10 +157,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
     function test_EthXSpotOracleViewPrice() public {
         uint256 ltv = 0.7e27;
         ethXSpotOracle = new EthXSpotOracle(
-            ltv, 
-            address(ethXReserveOracle),
-            MAINNET_USD_PER_ETHX_REDSTONE,
-            MAINNET_USD_PER_ETH_CHAINLINK
+            ltv, address(ethXReserveOracle), MAINNET_USD_PER_ETHX_REDSTONE, MAINNET_USD_PER_ETH_CHAINLINK
         );
 
         uint256 price = ethXSpotOracle.getPrice();
@@ -212,10 +174,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 0.85e27;
 
         ethXSpotOracle = new EthXSpotOracle(
-            ltv, 
-            address(ethXReserveOracle), 
-            MAINNET_USD_PER_ETHX_REDSTONE, 
-            MAINNET_USD_PER_ETH_CHAINLINK
+            ltv, address(ethXReserveOracle), MAINNET_USD_PER_ETHX_REDSTONE, MAINNET_USD_PER_ETH_CHAINLINK
         );
 
         changeStaderOracleExchangeRate(2e18, 1e18); // 2 ETH per ETHx
@@ -233,10 +192,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 ltv = 1e27;
 
         ethXSpotOracle = new EthXSpotOracle(
-            ltv, 
-            address(ethXReserveOracle), 
-            MAINNET_USD_PER_ETHX_REDSTONE, 
-            MAINNET_USD_PER_ETH_CHAINLINK
+            ltv, address(ethXReserveOracle), MAINNET_USD_PER_ETHX_REDSTONE, MAINNET_USD_PER_ETH_CHAINLINK
         );
 
         uint256 newExchangeRate = 0.5e18;

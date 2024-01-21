@@ -108,7 +108,28 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        _flashswapLeverage(initialDeposit, resultingAdditionalCollateral, maxResultingAdditionalDebt, sqrtPriceLimitX96);
+    }
 
+    /**
+     *
+     * @param initialDeposit in terms of swEth
+     * @param resultingAdditionalCollateral in terms of swEth. How much
+     * collateral to add to the position in the vault.
+     * @param maxResultingAdditionalDebt in terms of WETH. How much debt to add
+     * to the position in the vault.
+     * @param sqrtPriceLimitX96 for the swap. Recommended value is the current
+     * exchange rate to ensure the swap never costs more than a direct mint
+     * would.
+     */
+    function _flashswapLeverage(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingAdditionalDebt,
+        uint160 sqrtPriceLimitX96
+    )
+        internal
+    {
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in swEth
 
         if (amountToLeverage == 0) {
@@ -199,7 +220,9 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         private
         returns (uint256 amountIn)
     {
-        if ((sqrtPriceLimitX96 < MIN_SQRT_RATIO || sqrtPriceLimitX96 > MAX_SQRT_RATIO) && sqrtPriceLimitX96 != 0) revert InvalidSqrtPriceLimitX96(sqrtPriceLimitX96);
+        if ((sqrtPriceLimitX96 < MIN_SQRT_RATIO || sqrtPriceLimitX96 > MAX_SQRT_RATIO) && sqrtPriceLimitX96 != 0) {
+            revert InvalidSqrtPriceLimitX96(sqrtPriceLimitX96);
+        }
 
         (int256 amount0Delta, int256 amount1Delta) = UNISWAP_POOL.swap(
             recipient,

@@ -87,7 +87,7 @@ abstract contract YieldOracleSharedSetup is Test {
         IonPool mockIonPool = IonPool(address(new MockIonPool()));
 
         oracle = new YieldOracle(
-            historicalExchangeRatesInitial, 
+            historicalExchangeRatesInitial,
             address(lidoOracle),
             address(staderOracle),
             address(swellOracle),

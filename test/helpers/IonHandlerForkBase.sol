@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WAD } from "../../src/libraries/math/WadRayMath.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth } from "../../src/interfaces/ProviderInterfaces.sol";
-import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
+import { WAD } from "src/libraries/math/WadRayMath.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth, IStEth } from "src/interfaces/ProviderInterfaces.sol";
+import { IWETH9 } from "src/interfaces/IWETH9.sol";
 
 import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
 
@@ -38,6 +38,7 @@ interface IComposableStableSwapPool {
 abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     uint256 constant INITIAL_THIS_UNDERLYING_BALANCE = 20e18;
 
+    IStEth constant MAINNET_STETH = IStEth(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
     IWstEth constant MAINNET_WSTETH = IWstEth(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0);
     IStaderStakePoolsManager constant MAINNET_STADER =
         IStaderStakePoolsManager(0xcf5EA1b38380f6aF39068375516Daf40Ed70D299);
@@ -59,8 +60,8 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     uint256 forkBlock = 0;
 
     function setUp() public virtual override {
-        if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
-        else vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), forkBlock);
+        if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
+        else vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), forkBlock);
         super.setUp();
 
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();

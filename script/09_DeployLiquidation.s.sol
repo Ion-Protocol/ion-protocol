@@ -7,8 +7,6 @@ import { WadRayMath } from "../src/libraries/math/WadRayMath.sol";
 import { IonPool } from "../src/IonPool.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 contract DeployLiquidationScript is BaseScript {

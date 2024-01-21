@@ -192,7 +192,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         }
 
         for (uint256 i = 0; i < AMOUNT_LENDERS; i++) {
-            LenderHandler lender = new LenderHandler(ionPool,ionRegistry, underlying, distributionFactors, log, report);
+            LenderHandler lender = new LenderHandler(ionPool, ionRegistry, underlying, distributionFactors, log, report);
             lenders.push(lender);
             underlying.grantRole(underlying.MINTER_ROLE(), address(lender));
 
@@ -201,8 +201,9 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         }
 
         for (uint256 i = 0; i < AMOUNT_BORROWERS; i++) {
-            BorrowerHandler borrower =
-            new BorrowerHandler(ionPool, ionRegistry, underlying, mintableCollaterals, distributionFactors, log, report);
+            BorrowerHandler borrower = new BorrowerHandler(
+                ionPool, ionRegistry, underlying, mintableCollaterals, distributionFactors, log, report
+            );
             borrowers.push(borrower);
             for (uint8 j = 0; j < collaterals.length; j++) {
                 mintableCollaterals[j].grantRole(mintableCollaterals[j].MINTER_ROLE(), address(borrowers[i]));
@@ -231,7 +232,10 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         for (uint256 i = 0; i < lenders.length; i++) {
             totalLenderNormalizedBalances += ionPool.normalizedBalanceOf(address(lenders[i]));
         }
-        assertEq(totalLenderNormalizedBalances + ionPool.normalizedBalanceOf(TREASURY), ionPool.normalizedTotalSupplyUnaccrued());
+        assertEq(
+            totalLenderNormalizedBalances + ionPool.normalizedBalanceOf(TREASURY),
+            ionPool.normalizedTotalSupplyUnaccrued()
+        );
 
         return !failed();
     }
@@ -248,7 +252,8 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         }
         assertGe(ionPool.weth() + totalDebt, ionPool.totalSupplyUnaccrued());
         assertGe(
-            ionPool.weth().scaleUpToRad(18) + ionPool.debtUnaccrued(), ionPool.normalizedTotalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
+            ionPool.weth().scaleUpToRad(18) + ionPool.debtUnaccrued(),
+            ionPool.normalizedTotalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
         );
 
         return !failed();

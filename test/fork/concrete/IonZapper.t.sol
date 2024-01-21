@@ -149,5 +149,5 @@ contract IonZapper_ForkTest is IonPoolSharedSetup {
         _underlying = address(WETH);
     }
 
-    receive() external payable {}
+    receive() external payable { }
 }

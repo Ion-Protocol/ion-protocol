@@ -23,7 +23,8 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
  * @custom:security-contact security@molecularlabs.io
  */
 contract Whitelist is Ownable2Step {
-    mapping(address protocolControlledAddress => bool) public protocolWhitelist; // peripheral addresses that can bypass the merkle proof check
+    mapping(address protocolControlledAddress => bool) public protocolWhitelist; // peripheral addresses that can bypass
+        // the merkle proof check
 
     mapping(uint8 ilkIndex => bytes32) public borrowersRoot; // root of the merkle tree of borrowers for each ilk
 
@@ -114,7 +115,15 @@ contract Whitelist is Ownable2Step {
      * @return True if the addr is part of the lender whitelist or the protocol
      * whitelist. False otherwise
      */
-    function isWhitelistedLender(address poolCaller, address addr, bytes32[] calldata proof) external view returns (bool) {
+    function isWhitelistedLender(
+        address poolCaller,
+        address addr,
+        bytes32[] calldata proof
+    )
+        external
+        view
+        returns (bool)
+    {
         if (protocolWhitelist[poolCaller]) return true;
         bytes32 root = lendersRoot;
         if (root == bytes32(0)) return true;

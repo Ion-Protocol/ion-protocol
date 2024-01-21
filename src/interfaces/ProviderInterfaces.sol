@@ -11,6 +11,8 @@ interface IStEth {
     function getSharesByPooledEth(uint256 _ethAmount) external view returns (uint256);
 
     function getCurrentStakeLimit() external view returns (uint256);
+
+    function approve(address spender, uint256 value) external returns (bool);
 }
 
 interface IWstEth {

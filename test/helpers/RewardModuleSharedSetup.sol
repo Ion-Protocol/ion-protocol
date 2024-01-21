@@ -50,8 +50,8 @@ contract RewardModuleExposed is RewardModule {
             uint104[] memory rateIncreases,
             uint256 totalDebtIncrease,
             uint48[] memory timestampIncreases
-        ) {}
-
+        )
+    { }
 }
 
 abstract contract RewardModuleSharedSetup is BaseTestSetup {
@@ -83,13 +83,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
         );
 
         rewardModule = RewardModuleExposed(
-            address(
-                new TransparentUpgradeableProxy(
-                    address(rewardModuleImpl),
-                    address(ionProxyAdmin),
-                    initializeBytes
-                )
-            )
+            address(new TransparentUpgradeableProxy(address(rewardModuleImpl), address(ionProxyAdmin), initializeBytes))
         );
     }
 
@@ -103,13 +97,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
 
         vm.expectRevert(RewardModule.InvalidUnderlyingAddress.selector);
         rewardModule = RewardModuleExposed(
-            address(
-                new TransparentUpgradeableProxy(
-                    address(_rewardModuleImpl),
-                    address(_admin),
-                    initializeBytes
-                )
-            )
+            address(new TransparentUpgradeableProxy(address(_rewardModuleImpl), address(_admin), initializeBytes))
         );
 
         initializeBytes = abi.encodeWithSelector(
@@ -118,26 +106,14 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
 
         vm.expectRevert(RewardModule.InvalidTreasuryAddress.selector);
         rewardModule = RewardModuleExposed(
-            address(
-                new TransparentUpgradeableProxy(
-                    address(_rewardModuleImpl),
-                    address(_admin),
-                    initializeBytes
-                )
-            )
+            address(new TransparentUpgradeableProxy(address(_rewardModuleImpl), address(_admin), initializeBytes))
         );
 
         initializeBytes = abi.encodeWithSelector(
             RewardModuleExposed.init.selector, address(underlying), address(TREASURY), DECIMALS, NAME, SYMBOL
         );
         rewardModule = RewardModuleExposed(
-            address(
-                new TransparentUpgradeableProxy(
-                    address(_rewardModuleImpl),
-                    address(_admin),
-                    initializeBytes
-                )
-            )
+            address(new TransparentUpgradeableProxy(address(_rewardModuleImpl), address(_admin), initializeBytes))
         );
     }
 
