@@ -13,9 +13,9 @@ import { BalancerFlashloanDirectMintHandler } from "../../flash/handlers/base/Ba
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 /**
- * @dev Since ETHx only has liquidity on Balancer, a free Balancer flashloan
- * cannot be used due to the reentrancy locks on the Balancer vault. Instead we
- * will take a cheap flashloan from the wstETH/ETH uniswap pool.
+ * @notice Handler for the ETHx collateral.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDirectMintHandler {
     using StaderLibrary for IStaderStakePoolsManager;
@@ -23,6 +23,16 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
     // Stader deposit contract is separate from the ETHx lst contract
     IStaderStakePoolsManager public immutable STADER_DEPOSIT;
 
+    /**
+     * @notice Creates a new `EthXHandler` instance.
+     * @param _ilkIndex of ETHx.
+     * @param _ionPool `IonPool` contract address.
+     * @param _gemJoin `GemJoin` contract address associated with ETHx.
+     * @param _staderDeposit Address for the Stader deposit contract.
+     * @param _whitelist Address of the `Whitelist` contract.
+     * @param _wstEthUniswapPool Address of the wstETH/ETH Uniswap V3 pool.
+     * @param _balancerPoolId Balancer pool ID for the ETHx/ETH pool.
+     */
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
@@ -38,11 +48,23 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
         STADER_DEPOSIT = _staderDeposit;
     }
 
+    /**
+     * @notice Unwraps weth into eth and deposits into lst contract.
+     * @dev Unwraps weth into eth and deposits into lst contract.
+     * @param amountWeth The WETH amount to deposit. [WAD]
+     * @return Amount of lst received. [WAD]
+     */
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
         WETH.withdraw(amountWeth);
         return STADER_DEPOSIT.depositForLst(amountWeth);
     }
 
+    /**
+     * @notice Calculates the amount of eth required to receive `amountLst`.
+     * @dev Calculates the amount of eth required to receive `amountLst`.
+     * @param amountLst Desired output amount. [WAD]
+     * @return Eth required for desired lst output. [WAD]
+     */
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {
         return STADER_DEPOSIT.getEthAmountInForLstAmountOut(amountLst);
     }

@@ -10,6 +10,15 @@ import { GemJoin } from "../join/GemJoin.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/**
+ * @notice A peripheral helper contract to interact with the `IonPool` and the
+ * wstETH `GemJoin` even when holding StEth and native Ether. At the core level,
+ * the `IonPool` only interacts with wstETH and WETH. This contract will allow
+ * users to deposit StEth and native Ether into the `IonPool` by auto-wrapping
+ * on the user's behalf.
+ * 
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract IonZapper {
     IonPool public immutable POOL;
     IWETH9 public immutable WETH;
@@ -20,11 +29,27 @@ contract IonZapper {
 
     Whitelist public immutable WHITELIST;
 
+    /**
+     * @notice Checks if `msg.sender` is on the whitelist.
+     * @dev This contract will be on the `protocolControlledWhitelist`. As such,
+     * it will validate that users are on the whitelist itself and be able to
+     * bypass the whitelist check on `IonPool`.
+     * @param proof to validate the whitelist check.
+     */
     modifier onlyWhitelistedLenders(bytes32[] memory proof) {
         WHITELIST.isWhitelistedLender(msg.sender, msg.sender, proof);
         _;
     }
 
+    /**
+     * @notice Creates a new `IonZapper` instance. 
+     * @param _ionPool `IonPool` contract address.
+     * @param _weth `WETH9` contract address.
+     * @param _stEth `StEth` contract address.
+     * @param _wstEth `wstETH` contract address.
+     * @param _wstEthJoin `GemJoin` contract address associated with wstETH.
+     * @param _whitelist `Whitelist` contract address.
+     */
     constructor(
         IonPool _ionPool,
         IWETH9 _weth,
@@ -46,6 +71,11 @@ contract IonZapper {
         IERC20(address(_wstEth)).approve(address(_wstEthJoin), type(uint256).max);
     }
 
+    /**
+     * @notice Deposits WETH into the `IonPool` by auto-wrapping the user's
+     * native ether on their behalf.
+     * @param proof to validate the whitelist check.
+     */
     function zapSupply(bytes32[] calldata proof) external payable onlyWhitelistedLenders(proof) {
         uint256 amount = msg.value;
 
@@ -53,19 +83,27 @@ contract IonZapper {
         POOL.supply(msg.sender, amount, proof);
     }
 
+    /**
+     * @notice Repays WETH into the `IonPool` by auto-wrapping the user's native
+     * ether on their behalf. 
+     * @param ilkIndex of the collateral.
+     */
     function zapRepay(uint8 ilkIndex) external payable {
         uint256 amount = msg.value;
 
         uint256 currentIlkRate = POOL.rate(ilkIndex);
-        (uint256 ilkRateIncrease,) = POOL.calculateRewardAndDebtDistributionForIlk(ilkIndex);
-        uint256 newIlkRate = currentIlkRate + ilkRateIncrease;
 
-        uint256 normalizedAmountToRepay = amount * RAY / newIlkRate;
+        uint256 normalizedAmountToRepay = amount * RAY / currentIlkRate;
 
         WETH.deposit{ value: amount }();
         POOL.repay(ilkIndex, msg.sender, address(this), normalizedAmountToRepay);
     }
 
+    /**
+     * @notice Deposits wstETH into the wstETH `GemJoin` by auto-wrapping the
+     * user's StEth on their behalf.
+     * @param amountStEth to gem-join. [WAD]
+     */
     function zapJoinWstEth(uint256 amountStEth) external {
         STETH.transferFrom(msg.sender, address(this), amountStEth);
 

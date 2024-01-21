@@ -12,11 +12,13 @@ import { RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import { IonPoolSharedSetup } from "../../helpers/IonPoolSharedSetup.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract IonZapper_ForkTest is IonPoolSharedSetup {
     using LidoLibrary for IWstEth;
+    using Math for uint256;
 
     IonZapper public ionZapper;
 
@@ -95,6 +97,30 @@ contract IonZapper_ForkTest is IonPoolSharedSetup {
 
         assertEq(ionPool.rate(0) * ionPool.normalizedDebt(0, address(this)), 0);
         assertEq(addressThisBalance, address(this).balance);
+
+        ionPool.borrow({
+            ilkIndex: 0,
+            user: address(this),
+            recipient: address(this),
+            amountOfNormalizedDebt: borrowAmount,
+            proof: new bytes32[](0)
+        });
+
+        assertEq(ionPool.rate(0) * ionPool.normalizedDebt(0, address(this)), borrowAmount * RAY);
+        assertEq(WETH.balanceOf(address(this)), borrowAmount);
+
+        WETH.withdraw(borrowAmount);
+
+        assertEq(WETH.balanceOf(address(this)), 0);
+        assertEq(address(this).balance - addressThisBalance, borrowAmount);
+
+        vm.warp(block.timestamp + 60000);
+
+        uint256 amountToRepay = ionPool.normalizedDebt(0, address(this)).mulDiv(ionPool.rate(0), RAY, Math.Rounding.Ceil);
+
+        ionZapper.zapRepay{ value: amountToRepay }(0);
+
+        assertEq(ionPool.rate(0) * ionPool.normalizedDebt(0, address(this)), 0);
     }
 
     function test_ZapDepositWstEth() public {
