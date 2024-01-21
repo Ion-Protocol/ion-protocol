@@ -12,7 +12,6 @@ import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 import { Whitelist } from "../../Whitelist.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 /**
  * @notice Handler for the SwEth collateral.

@@ -10,8 +10,6 @@ import { Whitelist } from "../../../Whitelist.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 /**
  * @notice The base handler contract for simpler interactions with the `IonPool`
  * core contract. It combines various individual interactions into one compound
