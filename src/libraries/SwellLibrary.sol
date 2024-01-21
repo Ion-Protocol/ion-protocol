@@ -6,9 +6,9 @@ import { ISwEth } from "../interfaces/ProviderInterfaces.sol";
 
 /**
  * @title SwellLibrary
- * 
+ *
  * @notice A helper library for Swell-related conversions.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 library SwellLibrary {
@@ -24,7 +24,7 @@ library SwellLibrary {
     }
 
     /**
-     * 
+     *
      * @param swEth address.
      * @param ethAmount Amount of ETH to deposit. [WAD]
      */

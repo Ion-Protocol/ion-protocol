@@ -75,7 +75,7 @@ uint48 constant SECONDS_IN_A_YEAR = 31_536_000;
  * @notice An external contract that provides the APY for each collateral type.
  * A modular design here allows for updating of the parameters at a later date
  * without upgrading the core protocol.
- * 
+ *
  * @dev Each collateral has its own interest rate model, and every operation on
  * the `IonPool` (lend, withdraw, borrow, repay) will alter the interest rate
  * for all collaterals. Therefore, before every operation, the previous interest
@@ -85,7 +85,7 @@ uint48 constant SECONDS_IN_A_YEAR = 31_536_000;
  * storage on every operation introduces an immense gas overhead, especially as
  * more collaterals are listed on Ion. Therefore, this contract is heavily
  * optimized to reduce storage reads at the unfortunate cost of code-complexity.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract InterestRate {
@@ -181,9 +181,9 @@ contract InterestRate {
      * function is only called during construction.
      * @param ilkDataList The list of ilk configs.
      * @param index The ilkIndex to pack.
-     * @return packedConfig_a 
-     * @return packedConfig_b 
-     * @return packedConfig_c 
+     * @return packedConfig_a
+     * @return packedConfig_b
+     * @return packedConfig_c
      */
     function _packCollateralConfig(
         IlkData[] memory ilkDataList,

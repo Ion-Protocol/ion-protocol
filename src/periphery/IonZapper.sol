@@ -16,7 +16,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * the `IonPool` only interacts with wstETH and WETH. This contract will allow
  * users to deposit StEth and native Ether into the `IonPool` by auto-wrapping
  * on the user's behalf.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract IonZapper {
@@ -42,7 +42,7 @@ contract IonZapper {
     }
 
     /**
-     * @notice Creates a new `IonZapper` instance. 
+     * @notice Creates a new `IonZapper` instance.
      * @param _ionPool `IonPool` contract address.
      * @param _weth `WETH9` contract address.
      * @param _stEth `StEth` contract address.
@@ -85,7 +85,7 @@ contract IonZapper {
 
     /**
      * @notice Repays WETH into the `IonPool` by auto-wrapping the user's native
-     * ether on their behalf. 
+     * ether on their behalf.
      * @param ilkIndex of the collateral.
      */
     function zapRepay(uint8 ilkIndex) external payable {

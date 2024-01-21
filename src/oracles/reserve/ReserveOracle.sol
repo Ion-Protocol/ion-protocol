@@ -15,17 +15,17 @@ uint256 constant UPDATE_COOLDOWN = 1 hours;
  * triggered against this exchange rate and will be completely market-price
  * agnostic. Importantly, this means that liquidations will only be triggered
  * through lack of debt repayment or slashing events.
- * 
+ *
  * @dev In order to protect against potential provider bugs or incorrect one-off
  * values (malicious or accidental), the reserve oracle does not use live data.
  * Instead it will query the exchange every intermittent period and persist the
  * value and this value can only move up or down by a maximum percentage per query.
- * 
+ *
  * If additional data sources are available, they can be involved as `FEED`s. If
  * other `FEED`s are provided to the reserve oracle, a mean of all the `FEED`s
  * is compared to the protocol exchange rate and the minimum of the two is used
- * as the new exchange rate. This final value is subject to the bounding rules. 
- * 
+ * as the new exchange rate. This final value is subject to the bounding rules.
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 abstract contract ReserveOracle {

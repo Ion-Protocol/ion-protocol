@@ -8,18 +8,18 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
 /**
  * @notice An external Whitelist module that Ion's system-wide contracts can use
  * to verify that a user is permitted to borrow or lend.
- * 
+ *
  * A merkle whitelist is used to allow for a large number of addresses to be
  * whitelisted without consuming infordinate amounts of gas for the updates.
- * 
+ *
  * There is also a protocol whitelist that can be used to allow for a protocol
  * controlled address to bypass the merkle proof check. These
  * protocol-controlled contract are expected to perform whitelist checks
  * themsleves on their own entrypoints.
- * 
+ *
  * @dev The full merkle tree is stored off-chain and only the root is stored
- * on-chain. 
- * 
+ * on-chain.
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract Whitelist is Ownable2Step {
@@ -57,7 +57,7 @@ contract Whitelist is Ownable2Step {
     }
 
     /**
-     * @notice Updates the lender merkle root. 
+     * @notice Updates the lender merkle root.
      * @param _lendersRoot The new lender merkle root.
      */
     function updateLendersRoot(bytes32 _lendersRoot) external onlyOwner {

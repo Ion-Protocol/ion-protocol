@@ -37,7 +37,7 @@ uint256 constant UPDATE_LOCK_LENGTH = 84_600;
 
 /**
  * @notice An on-chain oracle that provides the APY for each collateral type.
- * 
+ *
  * @dev This contract stores a history of the exchange rates of each collateral
  * for the past `LOOK_BACK` days. Every time that `updateAll()` is called, it
  * will update the value at `currentIndex` in the `historicalExchangeRates` with the
@@ -46,12 +46,12 @@ uint256 constant UPDATE_LOCK_LENGTH = 84_600;
  * taking the difference between the new element being added and the element
  * being replaced. This provides a growth amount of `LOOK_BACK` days. This value
  * is then projected out to a year.
- * 
+ *
  * Similar to the `InterestRate` module, as the amount of collaterals added to
  * the market increases, storage reads during interest accrual can become
  * prohibitively expensive. Therefore, this contract is heavily optimized at the
  * unfortunate cost of code-complexity.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract YieldOracle is IYieldOracle, Ownable2Step {
@@ -131,7 +131,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
      * @notice Every update should also accrue interest on `IonPool`. This is
      * because an update to the apy changes interest rates which means the
      * previous interest rate must be accrued, or else its effect will be lost.
-     * 
+     *
      * NOTE: This contract should continue to function as normal even if
      * `IonPool` is paused.
      */
@@ -143,11 +143,11 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     /**
      * @notice Handles the logic for updating the APYs and the historical
      * exchange rates matrix.
-     * 
+     *
      * If the last update was less than `UPDATE_LOCK_LENGTH` seconds ago, then
      * this function will revert.
-     * 
-     * If APY is ever negative, then it will simply be set to 0. 
+     *
+     * If APY is ever negative, then it will simply be set to 0.
      */
     function _updateAll() internal {
         if (lastUpdated + UPDATE_LOCK_LENGTH > block.timestamp) revert AlreadyUpdated();

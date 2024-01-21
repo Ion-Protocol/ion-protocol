@@ -18,14 +18,14 @@ import { IUniswapV3SwapCallback } from "@uniswap/v3-core/contracts/interfaces/ca
  * provider since market prices tend to be slightly lower than provider exchange
  * rates. DEXes also provide an avenue for atomic deleveraging since the LST ->
  * ETH exchange can be made.
- * 
+ *
  * @dev When using the `UniswapFlashSwapHandler`, the `IUniswapV3Pool pool` fed to the
  * constructor should be the WETH/[LST] pool.
  *
  * Unlike Balancer flashloans, there is no concern here that somebody else could
  * initiate a flashswap, then direct the callback to be called on this contract.
  * Uniswap enforces that callback is only called on `msg.sender`.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallback {
@@ -79,8 +79,8 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
      * @notice Transfer collateral from user -> initate swap for collateral from
      * WETH on Uniswap (contract will receive collateral first) -> deposit all
      * collateral into `IonPool` -> borrow WETH from `IonPool` -> complete swap
-     * by sending WETH to Uniswap. 
-     * 
+     * by sending WETH to Uniswap.
+     *
      * @param initialDeposit in collateral terms. [WAD]
      * @param resultingAdditionalCollateral in collateral terms. [WAD]
      * @param maxResultingAdditionalDebt in WETH terms. This value also allows
@@ -162,7 +162,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
      * WETH first) -> repay debt on `IonPool` -> withdraw (and gem-exit)
      * collateral from `IonPool` -> complete swap by sending collateral to
      * Uniswap.
-     * 
+     *
      * @dev The two function parameters must be chosen carefully. If
      * `maxCollateralToRemove`'s ETH valuation were higher then `debtToRemove`,
      * it would theoretically be possible to sell more collateral then was

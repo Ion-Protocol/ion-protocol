@@ -12,14 +12,14 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 /**
  * @notice Collateral deposits are held independently from the `IonPool` core
  * contract, but credited to users through `gem` balances.
- * 
+ *
  * @dev Seperating collateral deposits from the core contract allows for
  * handling tokens with non-standard behavior, if needed.
- * 
+ *
  * This contract implements access control through `Ownable2Step`.
- * 
+ *
  * This contract implements pausing through OpenZeppelin's `Pausable`.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract GemJoin is Ownable2Step, Pausable {

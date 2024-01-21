@@ -7,7 +7,7 @@ import { ReserveOracle } from "./ReserveOracle.sol";
 
 /**
  * @notice Reserve oracle for wstETH.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract WstEthReserveOracle is ReserveOracle {
@@ -40,7 +40,7 @@ contract WstEthReserveOracle is ReserveOracle {
      * a decrease in the wstETH to stETH exchange rate inside the wstETH
      * contract. The stETH to ETH ratio in the Lido contract will still remain
      * 1:1 as it rebases.
-     * 
+     *
      * stETH / wstETH = stEth per wstETH
      * ETH / stETH = total ether value / total stETH supply
      * ETH / wstETH = (ETH / stETH) * (stETH / wstETH)

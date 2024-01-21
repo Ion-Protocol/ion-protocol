@@ -18,7 +18,7 @@ uint8 constant CHAINLINK_DECIMALS = 8;
 
 /**
  * @notice The ETHx spot oracle.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract EthXSpotOracle is SpotOracle {

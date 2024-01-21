@@ -12,7 +12,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @notice The swETH spot oracle.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract SwEthSpotOracle is SpotOracle {
