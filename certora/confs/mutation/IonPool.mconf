@@ -1,0 +1,14 @@
+{ 
+   "gambit": {                                                                   
+      "filename" : "../../../src/IonPool.sol",
+      "num_mutants": 10,
+      "solc_remappings": [
+        "@openzeppelin/contracts=../../../lib/openzeppelin-contracts/contracts",
+        "@openzeppelin/contracts-upgradeable=../../../lib/openzeppelin-contracts-upgradeable/contracts"
+      ]                                                       
+   },                                                                           
+   "manual_mutants": {                                                          
+      "../../../src/IonPool.sol" : "../../mutations/IonPool",
+      "../../../src/InterestRate.sol": "../../mutations/InterestRate"
+   }                                                                            
+} 
