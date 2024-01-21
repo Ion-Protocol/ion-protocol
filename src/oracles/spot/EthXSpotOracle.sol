@@ -29,7 +29,7 @@ contract EthXSpotOracle is SpotOracle {
 
     /**
      * @notice Creates a new `EthXSpotOracle` instance.
-     * @param _ltv The loan to value ratio for EthX.
+     * @param _ltv The loan to value ratio for ETHX.
      * @param _reserveOracle The associated reserve oracle.
      * @param _redstoneEthXPriceFeed The redstone price feed for ETHx/USD.
      * @param _usdPerEthChainlink The chainlink price feed for ETH/USD.
