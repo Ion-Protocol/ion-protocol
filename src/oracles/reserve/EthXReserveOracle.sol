@@ -6,7 +6,7 @@ import { ReserveOracle } from "./ReserveOracle.sol";
 
 /**
  * @notice Reserve oracle for ETHx.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract EthXReserveOracle is ReserveOracle {

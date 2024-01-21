@@ -14,12 +14,12 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  * @notice The base handler contract for simpler interactions with the `IonPool`
  * core contract. It combines various individual interactions into one compound
  * interaction to faciliate reaching user end-goals in atomic fashion.
- * 
+ *
  * @dev To actually borrow from `IonPool`, a user must submit a "normalized" borrow
  * amount. This contract is designed to be user-intuitive and, thus, allows a user
  * to submit a standard desired borrow amount, which this contract will then
  * convert into to the appropriate "normalized" borrow amount.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 abstract contract IonHandlerBase {
@@ -103,7 +103,7 @@ abstract contract IonHandlerBase {
 
     /**
      * @notice Combines gem-joining and depositing collateral and then borrowing
-     * into one compound action. 
+     * into one compound action.
      * @param amountCollateral Amount of collateral to deposit. [WAD]
      * @param amountToBorrow Amount of WETH to borrow. Due to rounding, true
      * borrow amount might be slightly less. [WAD]
@@ -210,8 +210,8 @@ abstract contract IonHandlerBase {
 
     /**
      * @notice Combines repaying debt and then withdrawing and gem-exitting
-     * collateral into one compound action. 
-     * 
+     * collateral into one compound action.
+     *
      * If repaying **all** is the intention, use `repayFullAndWithdraw()`
      * instead to prevent tx revert from dust amounts of debt in vault.
      * @param debtToRepay In ETH terms. [WAD]
@@ -225,7 +225,7 @@ abstract contract IonHandlerBase {
     /**
      * @notice Handles all logic to repay debt, followed by a collateral
      * withdrawal and gem-exit. This function can also be used to just withdraw
-     * and gem-exit in atomic fashion by setting the `debtToRepay` to 0. 
+     * and gem-exit in atomic fashion by setting the `debtToRepay` to 0.
      * @param vaultHolder The user whose debt will be repaid.
      * @param receiver The user who receives the the withdrawn collateral.
      * @param collateralToWithdraw to move into vault. [WAD]

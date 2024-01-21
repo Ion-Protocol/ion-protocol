@@ -19,8 +19,8 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
  * @notice `IonPool` is the central contract of the Ion Protocol system. All
  * other contracts in the system revolve around it. Directly interacting with
  * `IonPool` may be unintuitive and it is recommended to interface with the
- * protocol through Handler contracts for a more UX-friendly experience. 
- * 
+ * protocol through Handler contracts for a more UX-friendly experience.
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 contract IonPool is PausableUpgradeable, RewardModule {

@@ -114,9 +114,10 @@ contract IonZapper_ForkTest is IonPoolSharedSetup {
         assertEq(WETH.balanceOf(address(this)), 0);
         assertEq(address(this).balance - addressThisBalance, borrowAmount);
 
-        vm.warp(block.timestamp + 60000);
+        vm.warp(block.timestamp + 60_000);
 
-        uint256 amountToRepay = ionPool.normalizedDebt(0, address(this)).mulDiv(ionPool.rate(0), RAY, Math.Rounding.Ceil);
+        uint256 amountToRepay =
+            ionPool.normalizedDebt(0, address(this)).mulDiv(ionPool.rate(0), RAY, Math.Rounding.Ceil);
 
         ionZapper.zapRepay{ value: amountToRepay }(0);
 

@@ -6,8 +6,8 @@ import { IWstEth } from "../interfaces/ProviderInterfaces.sol";
 import { WadRayMath } from "../libraries/math/WadRayMath.sol";
 
 /**
- * @title LidoLibrary 
- * 
+ * @title LidoLibrary
+ *
  * @notice A helper library for Lido-related conversions.
  *
  * @custom:security-contact security@molecularlabs.io

@@ -9,16 +9,16 @@ uint256 constant RAD = 1e45;
 
 /**
  * @title WadRayMath
- * 
+ *
  * @notice This library provides mul/div[up/down] functionality for WAD, RAY and
  * RAD with phantom overflow protection as well as scale[up/down] functionality
  * for WAD, RAY and RAD.
- * 
+ *
  * @custom:security-contact security@molecularlabs.io
  */
 library WadRayMath {
     using Math for uint256;
-    
+
     error NotScalingUp(uint256 from, uint256 to);
     error NotScalingDown(uint256 from, uint256 to);
 
@@ -132,7 +132,6 @@ library WadRayMath {
         return a.mulDiv(RAD, b);
     }
 
-
     /**
      * @notice Divides two RAD numbers and returns the result as a RAD rounding
      * the result up.
@@ -155,7 +154,6 @@ library WadRayMath {
         return scaleUp(value, scale, 18);
     }
 
-
     /**
      * @notice Scales a value up from RAY. NOTE: The `scale` value must be
      * less than 27.
@@ -165,7 +163,6 @@ library WadRayMath {
     function scaleUpToRay(uint256 value, uint256 scale) internal pure returns (uint256) {
         return scaleUp(value, scale, 27);
     }
-
 
     /**
      * @notice Scales a value up from RAD. NOTE: The `scale` value must be
@@ -178,8 +175,8 @@ library WadRayMath {
     }
 
     /**
-     * @notice Scales a value down to WAD. NOTE: The `scale` value must be 
-     * greater than 18. 
+     * @notice Scales a value down to WAD. NOTE: The `scale` value must be
+     * greater than 18.
      * @param value to scale down.
      * @param scale of the returned value.
      */
@@ -188,8 +185,8 @@ library WadRayMath {
     }
 
     /**
-     * @notice Scales a value down to RAY. NOTE: The `scale` value must be 
-     * greater than 27. 
+     * @notice Scales a value down to RAY. NOTE: The `scale` value must be
+     * greater than 27.
      * @param value to scale down.
      * @param scale of the returned value.
      */
@@ -197,10 +194,9 @@ library WadRayMath {
         return scaleDown(value, scale, 27);
     }
 
-
     /**
-     * @notice Scales a value down to RAD. NOTE: The `scale` value must be 
-     * greater than 45. 
+     * @notice Scales a value down to RAD. NOTE: The `scale` value must be
+     * greater than 45.
      * @param value to scale down.
      * @param scale of the returned value.
      */
@@ -209,7 +205,7 @@ library WadRayMath {
     }
 
     /**
-     * @notice Scales a value up from one fixed-point precision to another. 
+     * @notice Scales a value up from one fixed-point precision to another.
      * @param value to scale up.
      * @param from Precision to scale from.
      * @param to Precision to scale to.
