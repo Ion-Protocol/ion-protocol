@@ -39,17 +39,17 @@ To engage in conversations around Ion Protocol and the staking/restaking ecosyst
 
 Install Bun 
 ```shell
-$ curl -fsSL https://bun.sh/install | bash 
+curl -fsSL https://bun.sh/install | bash 
 ```
 
 Run Bun install for javascript dependencies
 ```shell
-$ bun install
+bun install
 ```
 
 Install jq 
 ```shell
-$ brew install jq 
+brew install jq 
 ```
 
 ### Environmental Variables 
@@ -69,7 +69,7 @@ RPC_URL= # RPC of the desired testnet used in deployment scripts
 1. The test suite includes fork tests that require foundry ffi. 
 2. Add RPC_URLs to the .env and run forge test with the --ffi flag. 
 ```shell
-$ forge test --ffi 
+forge test --ffi 
 ```
 ### Testnet Setup
 1. Set up anvil as a mainnet fork. 
