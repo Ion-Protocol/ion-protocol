@@ -211,7 +211,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
      * 
      * The caller of this method must be checked to be a UniswapV3Pool. 
      *
-     * Initiator is gaurenteed to be this contract since UniswapV3 pools will
+     * Initiator is guaranteed to be this contract since UniswapV3 pools will
      * only call the callback on msg.sender.
      * 
      * @param fee0 The fee amount in tokenInBalancer due to the pool by the end

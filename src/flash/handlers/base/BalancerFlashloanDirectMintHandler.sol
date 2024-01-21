@@ -73,7 +73,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
      * that needs additional logic
-     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     * to obtain the LST. Ex) Zapping stEth to wstETH.
      */
     function _flashLeverageCollateral(
         uint256 initialDeposit,
@@ -144,7 +144,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
      * that needs additional logic
-     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     * to obtain the LST. Ex) Zapping stEth to wstETH.
      */
     function _flashLeverageWeth(
         uint256 initialDeposit,
@@ -257,7 +257,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @notice Unwraps weth into eth and deposits into lst contract.
      * @dev Unwraps weth into eth and deposits into lst contract.
-     * @param amountWeth to deposit. [WAD]
+     * @param amountWeth The WETH amount to deposit. [WAD]
      * @return Amount of lst received. [WAD]
      */
     function _depositWethForLst(uint256 amountWeth) internal virtual returns (uint256);
@@ -265,7 +265,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @notice Calculates the amount of eth required to receive `amountLst`.
      * @dev Calculates the amount of eth required to receive `amountLst`.
-     * @param amountLst desired output amount. [WAD]
+     * @param amountLst Desired output amount. [WAD]
      * @return Eth required for desired lst output. [WAD]
      */
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view virtual returns (uint256);

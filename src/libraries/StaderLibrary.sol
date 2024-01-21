@@ -60,7 +60,7 @@ library StaderLibrary {
     /**
      * @notice Deposits ETH into the stader deposit contract and returns the amount of ETHx received.
      * 
-     * This function paramterizes the address to receive the ETHx.
+     * This function parameterizes the address to receive the ETHx.
      * @param staderDeposit address.
      * @param ethAmount Amount of ETH to deposit. [WAD]
      * @param receiver to receive the ETHx.

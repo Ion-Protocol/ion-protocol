@@ -73,10 +73,10 @@ uint48 constant SECONDS_IN_A_YEAR = 31_536_000;
 
 /**
  * @notice An external contract that provides the APY for each collateral type.
- * A modular design here allows for updating of the paramters at a later date
+ * A modular design here allows for updating of the parameters at a later date
  * without upgrading the core protocol.
  * 
- * @dev Each collateral has its own interest rate model and every operation on
+ * @dev Each collateral has its own interest rate model, and every operation on
  * the `IonPool` (lend, withdraw, borrow, repay) will alter the interest rate
  * for all collaterals. Therefore, before every operation, the previous interest
  * rate must be accrued. Ion determines the interest rate for each collateral
@@ -180,7 +180,7 @@ contract InterestRate {
      * @notice Helper function to pack the collateral configs into 3 words. This
      * function is only called during construction.
      * @param ilkDataList The list of ilk configs.
-     * @param index to pack.
+     * @param index The ilkIndex to pack.
      * @return packedConfig_a 
      * @return packedConfig_b 
      * @return packedConfig_c 
@@ -219,7 +219,7 @@ contract InterestRate {
     /**
      * @notice Helper function to unpack the collateral configs from the 3
      * words.
-     * @param index to unpack.
+     * @param index The ilkIndex to unpack.
      * @return ilkData The unpacked collateral config.
      */
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {

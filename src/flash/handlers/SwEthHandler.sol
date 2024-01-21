@@ -14,7 +14,7 @@ import { Whitelist } from "../../Whitelist.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 /**
- * @notice Handler for the SwEth collateral.
+ * @notice Handler for the swETH collateral.
  *
  * @custom:security-contact security@molecularlabs.io
  */
@@ -24,11 +24,11 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
 
     /**
      * @notice Creates a new `SwEthHandler` instance.
-     * @param _ilkIndex of SwEth.
+     * @param _ilkIndex of swETH.
      * @param _ionPool `IonPool` contract address.
-     * @param _gemJoin `GemJoin` contract address associated with SwEth.
+     * @param _gemJoin `GemJoin` contract address associated with swETH.
      * @param _whitelist Address of the `Whitelist` contract.
-     * @param _swEthPool Adderess of the SwEth/ETH Uniswap V3 pool.
+     * @param _swEthPool Adderess of the swETH/ETH Uniswap V3 pool.
      */
     constructor(
         uint8 _ilkIndex,
@@ -44,7 +44,7 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
     /**
      * @notice Unwraps weth into eth and deposits into lst contract.
      * @dev Unwraps weth into eth and deposits into lst contract.
-     * @param amountWeth to deposit. [WAD]
+     * @param amountWeth The WETH amount to deposit. [WAD]
      * @return Amount of lst received. [WAD]
      */
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
@@ -55,7 +55,7 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
     /**
      * @notice Calculates the amount of eth required to receive `amountLst`.
      * @dev Calculates the amount of eth required to receive `amountLst`.
-     * @param amountLst desired output amount. [WAD]
+     * @param amountLst Desired output amount. [WAD]
      * @return Eth required for desired lst output. [WAD]
      */
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {

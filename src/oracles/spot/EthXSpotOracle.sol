@@ -17,7 +17,7 @@ uint8 constant REDSTONE_DECIMALS = 8;
 uint8 constant CHAINLINK_DECIMALS = 8;
 
 /**
- * @notice The EthX spot oracle.
+ * @notice The ETHx spot oracle.
  * 
  * @custom:security-contact security@molecularlabs.io
  */
@@ -29,7 +29,7 @@ contract EthXSpotOracle is SpotOracle {
 
     /**
      * @notice Creates a new `EthXSpotOracle` instance.
-     * @param _ltv The loan to value ratio for ETHx.
+     * @param _ltv The loan to value ratio for EthX.
      * @param _reserveOracle The associated reserve oracle.
      * @param _redstoneEthXPriceFeed The redstone price feed for ETHx/USD.
      * @param _usdPerEthChainlink The chainlink price feed for ETH/USD.

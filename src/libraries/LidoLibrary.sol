@@ -18,7 +18,7 @@ library LidoLibrary {
     error WstEthDepositFailed();
 
     /**
-     * @notice Returns the amount of ETH needed to mint the given amount of wstEth.
+     * @notice Returns the amount of ETH needed to mint the given amount of wstETH.
      * @param wstEth address.
      * @param lstAmount Desired output amount. [WAD]
      */
@@ -28,7 +28,7 @@ library LidoLibrary {
     }
 
     /**
-     * @notice Returns the amount of wstEth that can be minted with the given amount of ETH.
+     * @notice Returns the amount of wstETH that can be minted with the given amount of ETH.
      * @param wstEth address.
      * @param ethAmount Amount of ETH to deposit. [WAD]
      */
@@ -38,7 +38,7 @@ library LidoLibrary {
     }
 
     /**
-     * @notice Deposits ETH into the wstEth contract and returns the amount of wstEth received.
+     * @notice Deposits ETH into the wstETH contract and returns the amount of wstETH received.
      * @param wstEth address.
      * @param ethAmount Amount of ETH to deposit. [WAD]
      */

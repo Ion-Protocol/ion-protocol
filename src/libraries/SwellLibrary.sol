@@ -15,7 +15,7 @@ library SwellLibrary {
     using WadRayMath for uint256;
 
     /**
-     * @notice Returns the amount of ETH needed to mint the given amount of swEth.
+     * @notice Returns the amount of ETH needed to mint the given amount of swETH.
      * @param swEth address.
      * @param lstAmount Desired output amount. [WAD]
      */
@@ -34,7 +34,7 @@ library SwellLibrary {
     }
 
     /**
-     * @notice Deposits ETH into the swEth contract and returns the amount of swEth received.
+     * @notice Deposits ETH into the swETH contract and returns the amount of swETH received.
      * @param swEth address.
      * @param ethAmount Amount of ETH to deposit. [WAD]
      */

@@ -5,7 +5,7 @@ import { ISwEth } from "../../interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
 /**
- * @notice Reserve oracle for SwEth.
+ * @notice Reserve oracle for swETH.
  * 
  * @custom:security-contact security@molecularlabs.io
  */
@@ -15,8 +15,8 @@ contract SwEthReserveOracle is ReserveOracle {
     /**
      * @notice Creates a new `EthXReserveOracle` instance.
      * @param _protocolFeed Data source for the LST provider exchange rate.
-     * @param _ilkIndex of SwEth.
-     * @param _feeds List of alternative data sources for the SwEth exchange rate.
+     * @param _ilkIndex of swETH.
+     * @param _feeds List of alternative data sources for the swETH exchange rate.
      * @param _quorum The amount of alternative data sources to aggregate.
      * @param _maxChange Maximum percent change between exchange rate updates. [RAY]
      */
@@ -34,8 +34,8 @@ contract SwEthReserveOracle is ReserveOracle {
     }
 
     /**
-     * @notice Returns the exchange rate between ETH and SwEth.
-     * @return protocolExchangeRate Exchange rate between ETH and SwEth.
+     * @notice Returns the exchange rate between ETH and swETH.
+     * @return protocolExchangeRate Exchange rate between ETH and swETH.
      */
     function _getProtocolExchangeRate() internal view override returns (uint256 protocolExchangeRate) {
         protocolExchangeRate = ISwEth(PROTOCOL_FEED).getRate();

@@ -11,7 +11,7 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
- * @notice The SwEth spot oracle.
+ * @notice The swETH spot oracle.
  * 
  * @custom:security-contact security@molecularlabs.io
  */
@@ -27,7 +27,7 @@ contract SwEthSpotOracle is SpotOracle {
      * @notice Creates a new `SwEthSpotOracle` instance.
      * @param _ltv The loan to value ratio for swETH.
      * @param _reserveOracle The associated reserve oracle.
-     * @param _uniswapPool SwEth/Eth Uniswap pool address.
+     * @param _uniswapPool swETH/Eth Uniswap pool address.
      * @param _secondsAgo The TWAP period in seconds.
      */
     constructor(

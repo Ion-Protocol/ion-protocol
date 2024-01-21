@@ -12,8 +12,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @notice A peripheral helper contract to interact with the `IonPool` and the
- * WstEth `GemJoin` even when holding StEth and native Ether. At the core level,
- * the `IonPool` only interacts with WstEth and WETH. This contract will allow
+ * wstETH `GemJoin` even when holding StEth and native Ether. At the core level,
+ * the `IonPool` only interacts with wstETH and WETH. This contract will allow
  * users to deposit StEth and native Ether into the `IonPool` by auto-wrapping
  * on the user's behalf.
  * 
@@ -46,8 +46,8 @@ contract IonZapper {
      * @param _ionPool `IonPool` contract address.
      * @param _weth `WETH9` contract address.
      * @param _stEth `StEth` contract address.
-     * @param _wstEth `WstEth` contract address.
-     * @param _wstEthJoin `GemJoin` contract address associated with WstEth.
+     * @param _wstEth `wstETH` contract address.
+     * @param _wstEthJoin `GemJoin` contract address associated with wstETH.
      * @param _whitelist `Whitelist` contract address.
      */
     constructor(
@@ -100,7 +100,7 @@ contract IonZapper {
     }
 
     /**
-     * @notice Deposits WstEth into the WstEth `GemJoin` by auto-wrapping the
+     * @notice Deposits wstETH into the wstETH `GemJoin` by auto-wrapping the
      * user's StEth on their behalf.
      * @param amountStEth to gem-join. [WAD]
      */

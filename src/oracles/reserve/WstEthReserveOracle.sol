@@ -6,7 +6,7 @@ import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
 /**
- * @notice Reserve oracle for WstEth.
+ * @notice Reserve oracle for wstETH.
  * 
  * @custom:security-contact security@molecularlabs.io
  */
@@ -15,8 +15,8 @@ contract WstEthReserveOracle is ReserveOracle {
 
     /**
      * @notice Creates a new `WstEthReserveOracle` instance.
-     * @param _wstEth WstEth contract address.
-     * @param _ilkIndex of WstEth.
+     * @param _wstEth wstETH contract address.
+     * @param _ilkIndex of wstETH.
      * @param _feeds List of alternative data sources for the WstEth exchange rate.
      * @param _quorum The amount of alternative data sources to aggregate.
      * @param _maxChange Maximum percent change between exchange rate updates. [RAY]
@@ -35,13 +35,13 @@ contract WstEthReserveOracle is ReserveOracle {
     }
 
     /**
-     * @notice Returns the exchange rate between WstEth and stETH.
+     * @notice Returns the exchange rate between wstETH and stETH.
      * @dev In a slashing event, the loss for the staker is represented through
-     * a decrease in the WstEth to stETH exchange rate inside the WstEth
+     * a decrease in the wstETH to stETH exchange rate inside the wstETH
      * contract. The stETH to ETH ratio in the Lido contract will still remain
      * 1:1 as it rebases.
      * 
-     * stETH / wstETH = stEth per wstEth
+     * stETH / wstETH = stEth per wstETH
      * ETH / stETH = total ether value / total stETH supply
      * ETH / wstETH = (ETH / stETH) * (stETH / wstETH)
      */

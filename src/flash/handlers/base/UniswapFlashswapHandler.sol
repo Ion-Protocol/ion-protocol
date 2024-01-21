@@ -112,8 +112,8 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
 
     /**
      *
-     * @param initialDeposit in terms of swEth
-     * @param resultingAdditionalCollateral in terms of swEth. How much
+     * @param initialDeposit in terms of swETH
+     * @param resultingAdditionalCollateral in terms of swETH. How much
      * collateral to add to the position in the vault.
      * @param maxResultingAdditionalDebt in terms of WETH. How much debt to add
      * to the position in the vault.
@@ -129,7 +129,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     )
         internal
     {
-        uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in swEth
+        uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in swETH
 
         if (amountToLeverage == 0) {
             // AmountToBorrow.IS_MAX because we don't want to create any new debt here

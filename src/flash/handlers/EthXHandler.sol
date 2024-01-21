@@ -30,7 +30,7 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
      * @param _gemJoin `GemJoin` contract address associated with ETHx.
      * @param _staderDeposit Address for the Stader deposit contract.
      * @param _whitelist Address of the `Whitelist` contract.
-     * @param _wstEthUniswapPool Address of the WSTETH/ETH Uniswap V3 pool.
+     * @param _wstEthUniswapPool Address of the wstETH/ETH Uniswap V3 pool.
      * @param _balancerPoolId Balancer pool ID for the ETHx/ETH pool.
      */
     constructor(
@@ -51,7 +51,7 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
     /**
      * @notice Unwraps weth into eth and deposits into lst contract.
      * @dev Unwraps weth into eth and deposits into lst contract.
-     * @param amountWeth to deposit. [WAD]
+     * @param amountWeth The WETH amount to deposit. [WAD]
      * @return Amount of lst received. [WAD]
      */
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
@@ -62,7 +62,7 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
     /**
      * @notice Calculates the amount of eth required to receive `amountLst`.
      * @dev Calculates the amount of eth required to receive `amountLst`.
-     * @param amountLst desired output amount. [WAD]
+     * @param amountLst Desired output amount. [WAD]
      * @return Eth required for desired lst output. [WAD]
      */
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {

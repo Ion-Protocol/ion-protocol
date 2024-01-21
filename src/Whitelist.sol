@@ -85,7 +85,7 @@ contract Whitelist is Ownable2Step {
      * @dev If the root is just zero, then the whitelist is effectively turned
      * off as every address will be allowed.
      * @return True if the addr is part of the borrower whitelist or the
-     * protocol whitelist. False otherwise
+     * protocol whitelist. False otherwise.
      */
     function isWhitelistedBorrower(
         uint8 ilkIndex,
@@ -113,7 +113,7 @@ contract Whitelist is Ownable2Step {
      * @dev If the root is just zero, then the whitelist is effectively turned
      * off as every address will be allowed.
      * @return True if the addr is part of the lender whitelist or the protocol
-     * whitelist. False otherwise
+     * whitelist. False otherwise.
      */
     function isWhitelistedLender(
         address poolCaller,

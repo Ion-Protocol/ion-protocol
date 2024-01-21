@@ -14,7 +14,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 /**
- * @notice Handler for the WstEth collateral.
+ * @notice Handler for the wstETH collateral.
  *
  * @custom:security-contact security@molecularlabs.io
  */
@@ -25,11 +25,11 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
 
     /**
      * @notice Creates a new `WstEthHandler` instance.
-     * @param _ilkIndex of WstEth.
+     * @param _ilkIndex of wstETH.
      * @param _ionPool `IonPool` contract address.
-     * @param _gemJoin `GemJoin` contract address associated with WstEth.
+     * @param _gemJoin `GemJoin` contract address associated with wstETH.
      * @param _whitelist Address of the `Whitelist` contract.
-     * @param _wstEthUniswapPool Adderess of the WstEth/ETH Uniswap V3 pool.
+     * @param _wstEthUniswapPool Adderess of the wstETH/ETH Uniswap V3 pool.
      */
     constructor(
         uint8 _ilkIndex,
@@ -41,14 +41,14 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
         UniswapFlashswapHandler(_wstEthUniswapPool, false)
     {
-        // NOTE: approves wstEth contract infinite approval to move this contract's stEth
+        // NOTE: approves wstETH contract infinite approval to move this contract's stEth
         STETH.approve(address(LST_TOKEN), type(uint256).max);
     }
 
     /**
      * @notice Unwraps weth into eth and deposits into lst contract.
      * @dev Unwraps weth into eth and deposits into lst contract.
-     * @param amountWeth to deposit. [WAD]
+     * @param amountWeth The WETH amount to deposit. [WAD]
      * @return Amount of lst received. [WAD]
      */
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
@@ -59,7 +59,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
     /**
      * @notice Calculates the amount of eth required to receive `amountLst`.
      * @dev Calculates the amount of eth required to receive `amountLst`.
-     * @param amountLst desired output amount. [WAD]
+     * @param amountLst Desired output amount. [WAD]
      * @return Eth required for desired lst output. [WAD]
      */
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {

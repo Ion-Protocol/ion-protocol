@@ -39,7 +39,7 @@ uint256 constant UPDATE_LOCK_LENGTH = 84_600;
  * @notice An on-chain oracle that provides the APY for each collateral type.
  * 
  * @dev This contract stores a history of the exchange rates of each collateral
- * for the past `LOOK_BACK` days. Every time, that `updateAll()` is called, it
+ * for the past `LOOK_BACK` days. Every time that `updateAll()` is called, it
  * will update the value at `currentIndex` in the `historicalExchangeRates` with the
  * current exchange rate and it will also calculate the APY for each collateral
  * type based on the data currently in the buffer. The APY is calculated by
@@ -84,7 +84,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
      * @notice Creates a new `YieldOracle` instance.
      * @param _historicalExchangeRates An intitial set of values for the
      * historical exchange rates matrix.
-     * @param _wstEth Address of the WstEth contract.
+     * @param _wstEth Address of the wstETH contract.
      * @param _stader Address of the Stader deposit contract.
      * @param _swell Address of the Swell Eth contract.
      * @param owner Admin address.
@@ -203,8 +203,8 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     }
 
     /**
-     * @notice Returns the exchange rate for a given collateral type.
-     * @param ilkIndex index of collateral type
+     * @notice Returns the exchange rate for a given collateral.
+     * @param ilkIndex The index of the collateral.
      * @return exchangeRate
      */
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {

@@ -20,7 +20,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  * - Protocol Liquidation: The liquidator transfers the position's debt and collateral onto the protocol's balance sheet.
  * 
  * NOTE: Protocol liqudations are unlikely to ever be executed since there is
- * not profit incentive for a liquidator to do so. They exist solely as a
+ * no profit incentive for a liquidator to do so. They exist solely as a
  * fallback if a liquidator were to ever execute a liquidation onto a vault that
  * had fallen into bad debt.
  * 
@@ -265,8 +265,8 @@ contract Liquidation {
     }
 
     /**
-     * @notice Closes a an unhealthy position on `IonPool`.
-     * @param ilkIndex index of the collateral.
+     * @notice Closes an unhealthy position on `IonPool`.
+     * @param ilkIndex The index of the collateral.
      * @param vault The position to be liquidated.
      * @param kpr Receiver of the collateral.
      * @return repayAmount The amount of WETH paid to close the position.

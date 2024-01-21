@@ -9,7 +9,7 @@ import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
- * @notice The WstEth spot oracle.
+ * @notice The wstETH spot oracle.
  * 
  * @custom:security-contact security@molecularlabs.io
  */
@@ -39,19 +39,19 @@ contract WstEthSpotOracle is SpotOracle {
     }
 
     /**
-     * @notice Gets the price of WstEth in terms of ETH.
+     * @notice Gets the price of wstETH in terms of ETH.
      * @dev Because the collateral amount in the core contract is denominated in
-     * amount of WstEth tokens, spot needs to equal (stETH/wstETH) * (ETH/stETH)
-     * * liquidationThreshold. If the beaconchain reserve decreases, the wstEth
+     * amount of wstETH tokens, spot needs to equal (stETH/wstETH) * (ETH/stETH)
+     * * liquidationThreshold. If the beaconchain reserve decreases, the wstETH
      * to stEth conversion will be directly impacted, but the stEth to Eth
      * conversion will simply be determined by the chainlink price oracle.
-     * @return ethPerWstEth price of WstEth in ETH. [WAD]
+     * @return ethPerWstEth price of wstETH in ETH. [WAD]
      */
     function getPrice() public view override returns (uint256 ethPerWstEth) {
         // get price from the protocol feed
         (, int256 _ethPerStEth,,,) = ST_ETH_TO_ETH_CHAINLINK.latestRoundData(); // price of stETH denominated in ETH
         uint256 ethPerStEth = _ethPerStEth.toUint256();
         // collateral * wstEthInEth = collateralInEth
-        ethPerWstEth = WST_ETH.getStETHByWstETH(ethPerStEth); // stEth per wstEth
+        ethPerWstEth = WST_ETH.getStETHByWstETH(ethPerStEth); // stEth per wstETH
     }
 }
