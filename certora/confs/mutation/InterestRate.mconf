@@ -1,0 +1,8 @@
+{ "gambit": {                                                                   
+      "filename" : "../../../src/InterestRate.sol",
+      "num_mutants": 10                                                         
+   },                                                    
+   "manual_mutants": {                                                          
+      "../../../src/InterestRate.sol": "../../mutations/InterestRate"
+   }    
+}

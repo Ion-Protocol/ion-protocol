@@ -28,3 +28,6 @@ diagrams/
 
 # test scripts 
 /script/test
+
+# certora
+.certora_internal
