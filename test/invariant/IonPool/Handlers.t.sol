@@ -267,7 +267,6 @@ contract LenderHandler is Handler {
 
         if (REPORT) reportAction(Actions.WITHDRAW, 0, amount);
     }
-
 }
 
 contract BorrowerHandler is Handler {

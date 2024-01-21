@@ -104,12 +104,12 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         }
 
         liquidation = new Liquidation(
-            address(ionPool),  
+            address(ionPool),
             protocol,
-            exchangeRateOracles, 
-            liquidationThresholds, 
-            deploymentArgs.targetHealth, 
-            deploymentArgs.reserveFactor, 
+            exchangeRateOracles,
+            liquidationThresholds,
+            deploymentArgs.targetHealth,
+            deploymentArgs.reserveFactor,
             maxDiscounts
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
@@ -128,18 +128,18 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
 
         if (results.category == 0) {
             // protocol
-            vm.writeLine("fuzz_out.txt", "PROTOCOL");
+            // vm.writeLine("fuzz_out.txt", "PROTOCOL");
             assert(ionPool.collateral(ILK_INDEX, borrower1) == 0);
             assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
         } else if (results.category == 1) {
             // dust
             // assert(false); // to see if it's ever reaching this branch
             // ffi to see when this branch gets hit
-            vm.writeLine("fuzz_out.txt", "DUST");
+            // vm.writeLine("fuzz_out.txt", "DUST");
             assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
             assert(ionPool.unbackedDebt(address(liquidation)) == 0);
         } else if (results.category == 2) {
-            vm.writeLine("fuzz_out.txt", "PARTIAL");
+            // vm.writeLine("fuzz_out.txt", "PARTIAL");
             uint256 actualCollateral = ionPool.collateral(ILK_INDEX, borrower1);
             uint256 actualNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
             if (actualNormalizedDebt != 0) {
@@ -211,12 +211,12 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         }
 
         liquidation = new Liquidation(
-            address(ionPool), 
+            address(ionPool),
             protocol,
-            exchangeRateOracles, 
-            liquidationThresholds, 
-            deploymentArgs.targetHealth, 
-            deploymentArgs.reserveFactor, 
+            exchangeRateOracles,
+            liquidationThresholds,
+            deploymentArgs.targetHealth,
+            deploymentArgs.reserveFactor,
             maxDiscounts
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
@@ -234,17 +234,17 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
 
         if (results.category == 0) {
             // protocol
-            vm.writeLine("fuzz_out.txt", "PROTOCOL");
+            // vm.writeLine("fuzz_out.txt", "PROTOCOL");
             assert(ionPool.collateral(ILK_INDEX, borrower1) == 0);
             assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
         } else if (results.category == 1) {
             // dust
             // assert(false); // to see if it's ever reaching this branch
             // ffi to see when this branch gets hit
-            vm.writeLine("fuzz_out.txt", "DUST");
+            // vm.writeLine("fuzz_out.txt", "DUST");
             assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
         } else if (results.category == 2) {
-            vm.writeLine("fuzz_out.txt", "PARTIAL");
+            // vm.writeLine("fuzz_out.txt", "PARTIAL");
             uint256 actualCollateral = ionPool.collateral(ILK_INDEX, borrower1);
             uint256 actualNormalizedDebt = ionPool.normalizedDebt(ILK_INDEX, borrower1);
             if (actualNormalizedDebt != 0) {

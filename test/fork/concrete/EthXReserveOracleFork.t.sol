@@ -6,7 +6,6 @@ import { ReserveFeed } from "../../../src/oracles/reserve/ReserveFeed.sol";
 import { IStaderStakePoolsManager } from "../../../src/interfaces/ProviderInterfaces.sol";
 import { WadRayMath, RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
-
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
 contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
@@ -18,13 +17,8 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
-            STADER_STAKE_POOLS_MANAGER,
-            ETHX_ILK_INDEX,
-            feeds,
-            quorum,
-            maxChange
-        );
+        EthXReserveOracle ethXReserveOracle =
+            new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum, maxChange);
 
         ethXReserveOracle.updateExchangeRate();
 
@@ -36,13 +30,8 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
-            STADER_STAKE_POOLS_MANAGER,
-            ETHX_ILK_INDEX,
-            feeds,
-            quorum,
-            maxChange
-        );
+        EthXReserveOracle ethXReserveOracle =
+            new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 protocolExchangeRate = ethXReserveOracle.getProtocolExchangeRate();
         assertEq(protocolExchangeRate, 1_010_109_979_339_787_990, "protocol exchange rate");
@@ -68,13 +57,8 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[0] = address(reserveFeed1);
         feeds[1] = address(reserveFeed2);
         feeds[2] = address(reserveFeed3);
-        EthXReserveOracle ethXReserveOracle = new EthXReserveOracle(
-            STADER_STAKE_POOLS_MANAGER,
-            ETHX_ILK_INDEX,
-            feeds,
-            quorum,
-            maxChange
-        );
+        EthXReserveOracle ethXReserveOracle =
+            new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 expectedExchangeRate =
             (reserveFeed1ExchangeRate + reserveFeed2ExchangeRate + reserveFeed3ExchangeRate) / 3;
@@ -135,8 +119,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
 
         // sets currentExchangeRate to be the current exchangeRate in constructor
         EthXReserveOracle ethXReserveOracle =
-        new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum,
-    maxChange);
+            new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum, maxChange);
 
         uint256 exchangeRate = ethXReserveOracle.currentExchangeRate();
 
@@ -164,8 +147,7 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
 
         // sets currentExchangeRate to be the current exchangeRate in constructor
         EthXReserveOracle ethXReserveOracle =
-        new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum,
-    maxChange);
+            new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, feeds, quorum, maxChange);
 
         // set Swell exchange rate to new but within bounds
         vm.store(STADER_ORACLE, STADER_ORACLE_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupplyToStore));

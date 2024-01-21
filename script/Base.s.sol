@@ -2,6 +2,7 @@
 pragma solidity >=0.8.19 <=0.9.0;
 
 import { Script } from "forge-std/Script.sol";
+import { console2 } from "forge-std/console2.sol";
 
 abstract contract BaseScript is Script {
     /// @dev Included to enable compilation of the script without a $MNEMONIC environment variable.
@@ -35,6 +36,12 @@ abstract contract BaseScript is Script {
 
     modifier broadcast() {
         vm.startBroadcast(broadcaster);
+        _;
+        vm.stopBroadcast();
+    }
+
+    modifier broadcastFrom(address from) {
+        vm.startBroadcast(from);
         _;
         vm.stopBroadcast();
     }

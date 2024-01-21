@@ -15,8 +15,6 @@ import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableS
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 contract IonPool is PausableUpgradeable, RewardModule {
     using SafeERC20 for IERC20;
     using SafeCast for *;

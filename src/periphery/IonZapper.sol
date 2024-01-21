@@ -67,7 +67,6 @@ contract IonZapper {
     }
 
     function zapJoinWstEth(uint256 amountStEth) external {
-
         STETH.transferFrom(msg.sender, address(this), amountStEth);
 
         uint256 outputWstEthAmount = WSTETH.wrap(amountStEth);

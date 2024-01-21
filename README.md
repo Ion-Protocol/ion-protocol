@@ -21,6 +21,11 @@ Run Bun install for javascript dependencies
 $ bun install
 ```
 
+Install jq 
+```shell
+$ brew install jq 
+```
+
 ### Environmental Variables 
 
 Copy .env.example to .env and add environmental variables. 
@@ -39,6 +44,8 @@ ETHERSCAN_API_KEY=
 ```shell
 $ forge test --ffi 
 ```
+### Testnet Setup
+TODO: document testnet setup with env 
 
 ### Format
 

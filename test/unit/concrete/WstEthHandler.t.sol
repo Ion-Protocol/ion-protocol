@@ -27,13 +27,15 @@ contract MockUniswapPool {
 
     function fee() external pure returns (uint24) {
         return 500;
-    }   
+    }
 }
 
 contract WstEthHandler_Test is IonPoolSharedSetup {
     WstEthHandler wstEthHandler;
 
     uint8 ilkIndex = 0;
+
+    address constant STETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     function setUp() public override {
         super.setUp();
@@ -42,8 +44,13 @@ contract WstEthHandler_Test is IonPoolSharedSetup {
         mockPool.setUnderlying(address(underlying));
 
         // Ignore Uniswap args since they will be tested through forks
-        wstEthHandler =
-        new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Pool(address(mockPool)));
+
+        // Deploy preset ERC20 code to STETH constant address to be compatible with constructor
+        vm.etch(STETH, address(wstEth).code);
+
+        wstEthHandler = new WstEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), IUniswapV3Pool(address(mockPool))
+        );
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {

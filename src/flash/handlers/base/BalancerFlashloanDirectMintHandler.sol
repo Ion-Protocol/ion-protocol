@@ -58,7 +58,21 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        _flashLeverageCollateral(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+    }
 
+    /**
+     * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
+     * that needs additional logic
+     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     */
+    function _flashLeverageCollateral(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingDebt
+    )
+        internal
+    {
         uint256 amountToLeverage = resultingAdditionalCollateral - initialDeposit; // in collateral terms
 
         if (amountToLeverage == 0) {
@@ -111,7 +125,21 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        _flashLeverageWeth(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+    }
 
+    /**
+     * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
+     * that needs additional logic
+     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     */
+    function _flashLeverageWeth(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingDebt
+    )
+        internal
+    {
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(WETH));
 

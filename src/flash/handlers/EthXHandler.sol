@@ -21,7 +21,7 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
     using StaderLibrary for IStaderStakePoolsManager;
 
     // Stader deposit contract is separate from the ETHx lst contract
-    IStaderStakePoolsManager immutable public STADER_DEPOSIT;
+    IStaderStakePoolsManager public immutable STADER_DEPOSIT;
 
     constructor(
         uint8 _ilkIndex,

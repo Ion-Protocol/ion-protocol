@@ -63,28 +63,16 @@ contract DeployInitialHandlersScript is BaseScript {
         GemJoin swEthGemJoin = GemJoin(config.readAddress(".swEthGemJoin"));
         Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
-        wstEthHandler = new WstEthHandler(
-                STETH_ILK_INDEX,
-                ionPool,
-                wstEthGemJoin,
-                whitelist,
-                WSTETH_WETH_POOL
-            );
+        wstEthHandler = new WstEthHandler(STETH_ILK_INDEX, ionPool, wstEthGemJoin, whitelist, WSTETH_WETH_POOL);
         ethXHandler = new EthXHandler(
-                ETHX_ILK_INDEX,
-                ionPool,
-                ethXGemJoin,
-                MAINNET_STADER,
-                whitelist,
-                WSTETH_WETH_POOL,
-                0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb
-            );
-        swEthHandler = new SwEthHandler(
-                SWETH_ILK_INDEX,
-                ionPool,
-                swEthGemJoin,
-                whitelist,
-                SWETH_ETH_POOL
-            );
+            ETHX_ILK_INDEX,
+            ionPool,
+            ethXGemJoin,
+            MAINNET_STADER,
+            whitelist,
+            WSTETH_WETH_POOL,
+            0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb
+        );
+        swEthHandler = new SwEthHandler(SWETH_ILK_INDEX, ionPool, swEthGemJoin, whitelist, SWETH_ETH_POOL);
     }
 }

@@ -94,7 +94,9 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         weth.approve(address(ethXHandler), type(uint256).max);
         ionPool.addOperator(address(ethXHandler));
 
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
 
         uint256 currentRate = ionPool.rate(ilkIndex);
         uint256 roundingError = currentRate / RAY;
@@ -115,7 +117,9 @@ abstract contract EthXHandler_ForkFuzzTest is EthXHandler_ForkBase {
         ionPool.addOperator(address(ethXHandler));
 
         vm.recordLogs();
-        ethXHandler.flashLeverageWethAndSwap(initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0));
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 

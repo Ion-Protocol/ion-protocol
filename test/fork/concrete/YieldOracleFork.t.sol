@@ -93,15 +93,20 @@ contract YieldOracle_ForkTest is Test {
             vm.parseJsonUint(config, string.concat(".dailyBlockData[", (LOOK_BACK - 1).toString(), "].blockNumber"));
         blockNumbersToRollTo = vm.parseJsonUintArray(config, ".nextDaysBlockData.blockNumbers");
 
-        uint256 mainnetFork = vm.createFork(vm.envString("MAINNET_RPC_URL"), blockNumberAtLastUpdate + 1);
+        uint256 mainnetFork = vm.createFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), blockNumberAtLastUpdate + 1);
         vm.selectFork(mainnetFork);
 
         IonPool mockIonPool = IonPool(address(new MockIonPool()));
 
         console2.log(staderExchangeRateAddress);
 
-        apyOracle =
-        new YieldOracleExposed(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));
+        apyOracle = new YieldOracleExposed(
+            historicalExchangeRates,
+            lidoExchangeRateAddress,
+            staderExchangeRateAddress,
+            swellExchangeRateAddress,
+            address(this)
+        );
         apyOracle.updateIonPool(mockIonPool);
         vm.makePersistent(address(apyOracle));
         vm.makePersistent(address(mockIonPool));
@@ -112,7 +117,7 @@ contract YieldOracle_ForkTest is Test {
 
     function testFork_YieldOracleUpdatesWithRealData() public {
         for (uint256 i = 0; i < blockNumbersToRollTo.length; i++) {
-            vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), blockNumbersToRollTo[i]);
+            vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), blockNumbersToRollTo[i]);
             uint64 currentIndex = apyOracle.currentIndex();
             uint64[ILK_COUNT] memory ratesToUpdate = apyOracle.historicalExchangeRatesByIndex(currentIndex);
 

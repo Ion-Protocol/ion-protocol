@@ -46,7 +46,13 @@ contract DeployYieldOracleScript is BaseScript {
 
         yieldOracle =
         // TODO: Fix admin
-        new YieldOracle(historicalExchangeRates, lidoExchangeRateAddress, staderExchangeRateAddress, swellExchangeRateAddress, address(this));
+        new YieldOracle(
+            historicalExchangeRates,
+            lidoExchangeRateAddress,
+            staderExchangeRateAddress,
+            swellExchangeRateAddress,
+            address(this)
+        );
     }
 
     function configureDeployment() external {

@@ -60,7 +60,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     event MintToTreasury(address indexed treasury, uint256 amount, uint256 supplyFactor);
 
     event TreasuryUpdate(address treasury);
- 
+
     /// @custom:storage-location erc7201:ion.storage.RewardModule
     struct RewardModuleStorage {
         IERC20 underlying;
@@ -222,7 +222,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param newTreasury address of new treasury
      */
     function updateTreasury(address newTreasury) external onlyRole(ION) {
-        if (newTreasury == address(0)) revert InvalidTreasuryAddress();        
+        if (newTreasury == address(0)) revert InvalidTreasuryAddress();
 
         RewardModuleStorage storage $ = _getRewardModuleStorage();
         $.treasury = newTreasury;
@@ -335,7 +335,8 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
 
         (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();
 
-        uint256 normalizedTreasuryMintAmount = totalTreasuryMintAmount.rayDivDown($.supplyFactor + totalSupplyFactorIncrease);
+        uint256 normalizedTreasuryMintAmount =
+            totalTreasuryMintAmount.rayDivDown($.supplyFactor + totalSupplyFactorIncrease);
 
         return $.normalizedTotalSupply + normalizedTreasuryMintAmount;
     }
