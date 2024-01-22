@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.21;
 
 import { IonPool } from "./IonPool.sol";
@@ -36,14 +36,23 @@ uint32 constant ILK_COUNT = 3;
 uint256 constant UPDATE_LOCK_LENGTH = 84_600;
 
 /**
+ * @notice An on-chain oracle that provides the APY for each collateral type.
+ *
  * @dev This contract stores a history of the exchange rates of each collateral
- * for the past `LOOK_BACK` days. Every time, that `updateAll()` is called, it
+ * for the past `LOOK_BACK` days. Every time that `updateAll()` is called, it
  * will update the value at `currentIndex` in the `historicalExchangeRates` with the
  * current exchange rate and it will also calculate the APY for each collateral
  * type based on the data currently in the buffer. The APY is calculated by
  * taking the difference between the new element being added and the element
  * being replaced. This provides a growth amount of `LOOK_BACK` days. This value
  * is then projected out to a year.
+ *
+ * Similar to the `InterestRate` module, as the amount of collaterals added to
+ * the market increases, storage reads during interest accrual can become
+ * prohibitively expensive. Therefore, this contract is heavily optimized at the
+ * unfortunate cost of code-complexity.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 contract YieldOracle is IYieldOracle, Ownable2Step {
     using Math for uint256;
@@ -71,6 +80,15 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     uint32 public currentIndex;
     uint48 public lastUpdated;
 
+    /**
+     * @notice Creates a new `YieldOracle` instance.
+     * @param _historicalExchangeRates An intitial set of values for the
+     * historical exchange rates matrix.
+     * @param _wstEth Address of the wstETH contract.
+     * @param _stader Address of the Stader deposit contract.
+     * @param _swell Address of the Swell Eth contract.
+     * @param owner Admin address.
+     */
     constructor(
         uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
         address _wstEth,
@@ -102,6 +120,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     }
 
     /**
+     * @notice Updates the `IonPool` reference.
      * @param _ionPool pool instance
      */
     function updateIonPool(IonPool _ionPool) external onlyOwner {
@@ -109,15 +128,27 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
     }
 
     /**
-     * @dev Every update should also accrue interest on `IonPool`. This is
+     * @notice Every update should also accrue interest on `IonPool`. This is
      * because an update to the apy changes interest rates which means the
      * previous interest rate must be accrued, or else its effect will be lost.
+     *
+     * NOTE: This contract should continue to function as normal even if
+     * `IonPool` is paused.
      */
     function updateAll() external {
-        ionPool.accrueInterest();
+        if (!ionPool.paused()) ionPool.accrueInterest();
         _updateAll();
     }
 
+    /**
+     * @notice Handles the logic for updating the APYs and the historical
+     * exchange rates matrix.
+     *
+     * If the last update was less than `UPDATE_LOCK_LENGTH` seconds ago, then
+     * this function will revert.
+     *
+     * If APY is ever negative, then it will simply be set to 0.
+     */
     function _updateAll() internal {
         if (lastUpdated + UPDATE_LOCK_LENGTH > block.timestamp) revert AlreadyUpdated();
 
@@ -171,6 +202,11 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
         lastUpdated = uint48(block.timestamp);
     }
 
+    /**
+     * @notice Returns the exchange rate for a given collateral.
+     * @param ilkIndex The index of the collateral.
+     * @return exchangeRate
+     */
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
             IWstEth wstEth = IWstEth(ADDRESS0);

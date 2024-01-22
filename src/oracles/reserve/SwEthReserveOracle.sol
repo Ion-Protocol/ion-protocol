@@ -4,11 +4,22 @@ pragma solidity 0.8.21;
 import { ISwEth } from "../../interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
 
-// https://etherscan.io/token/0xf951E335afb289353dc249e82926178EaC7DEd78#readProxyContract
+/**
+ * @notice Reserve oracle for swETH.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract SwEthReserveOracle is ReserveOracle {
     address public immutable PROTOCOL_FEED;
 
-    // @param _quorum number of extra feeds to aggregate. If any of the feeds fail, pause the protocol.
+    /**
+     * @notice Creates a new `EthXReserveOracle` instance.
+     * @param _protocolFeed Data source for the LST provider exchange rate.
+     * @param _ilkIndex of swETH.
+     * @param _feeds List of alternative data sources for the swETH exchange rate.
+     * @param _quorum The amount of alternative data sources to aggregate.
+     * @param _maxChange Maximum percent change between exchange rate updates. [RAY]
+     */
     constructor(
         address _protocolFeed,
         uint8 _ilkIndex,
@@ -22,7 +33,10 @@ contract SwEthReserveOracle is ReserveOracle {
         _initializeExchangeRate();
     }
 
-    // @notice returns the exchange rate between swETH to ETH that is supported by Swell.
+    /**
+     * @notice Returns the exchange rate between ETH and swETH.
+     * @return protocolExchangeRate Exchange rate between ETH and swETH.
+     */
     function _getProtocolExchangeRate() internal view override returns (uint256 protocolExchangeRate) {
         protocolExchangeRate = ISwEth(PROTOCOL_FEED).getRate();
     }

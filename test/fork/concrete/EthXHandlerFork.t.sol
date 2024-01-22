@@ -36,7 +36,7 @@ contract EthXHandler_ForkBase is IonHandler_ForkBase {
     function setUp() public virtual override {
         // Since Balancer EthX pool has no liquidity, this needs to be pinned to
         // a specific block
-        forkBlock = 18537430;
+        forkBlock = 18_537_430;
         super.setUp();
         ethXHandler = new EthXHandler(
             ilkIndex,
@@ -176,6 +176,58 @@ contract EthXHandler_ForkTest is EthXHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(ilkIndex));
 
+        vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp);
+
+        uint256 gasBefore = gasleft();
+        ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
+        uint256 gasAfter = gasleft();
+        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
+
+        uint256 currentRate = ionPool.rate(ilkIndex);
+        uint256 roundingError = currentRate / RAY;
+
+        assertGe(ionPool.collateral(ilkIndex, address(this)), resultingCollateral - maxCollateralToRemove);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), 0);
+        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(ethXHandler)), 0);
+        assertLe(weth.balanceOf(address(ethXHandler)), roundingError);
+    }
+
+    function testFork_FlashswapDeleverageFull() external {
+        uint256 initialDeposit = 1e18;
+        uint256 resultingCollateral = 5e18;
+        uint256 maxResultingDebt = type(uint256).max;
+
+        weth.approve(address(ethXHandler), type(uint256).max);
+        ionPool.addOperator(address(ethXHandler));
+
+        vm.recordLogs();
+        ethXHandler.flashLeverageWethAndSwap(
+            initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
+        );
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        uint256 normalizedDebtCreated;
+        for (uint256 i = 0; i < entries.length; i++) {
+            // keccak256("Borrow(uint8,address,address,uint256,uint256,uint256)")
+            if (entries[i].topics[0] != 0xe3e92e977f830d2a0b92c58e8866694b5dc929a35e2b95846f427de0f0bb412f) continue;
+            normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
+        }
+
+        assertEq(ionPool.collateral(ilkIndex, address(this)), resultingCollateral);
+        assertLt(ionPool.normalizedDebt(ilkIndex, address(this)).rayMulUp(ionPool.rate(ilkIndex)), maxResultingDebt);
+        assertEq(ionPool.normalizedDebt(ilkIndex, address(this)), normalizedDebtCreated);
+
+        vm.warp(block.timestamp + 3 hours);
+
+        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        // Want to completely deleverage position and only leave initial capital
+        // in vault
+        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+
+        // Remove all debt
+        uint256 debtToRemove = type(uint256).max;
         vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         ethXHandler.flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp);
 

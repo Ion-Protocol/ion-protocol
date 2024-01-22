@@ -9,6 +9,26 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+/**
+ * @notice The liquidation module for the `IonPool`.
+ *
+ * Liquidations at Ion operate a little differently than traditional liquidation schemes. Usually, liquidations are a
+ * function of the market price of an asset. However, the liquidation module is function of the reserve oracle price
+ * which reflects a rate based on **beacon-chain balances**.
+ *
+ * There are 3 different types of liquidations that can take place:
+ * - Partial Liquidation: The liquidator pays off a portion of the debt and receives a portion of the collateral.
+ * - Dust Liquidation: The liquidator pays off all of the debt and receives some or all of the collateral.
+ * - Protocol Liquidation: The liquidator transfers the position's debt and collateral onto the protocol's balance
+ * sheet.
+ *
+ * NOTE: Protocol liqudations are unlikely to ever be executed since there is
+ * no profit incentive for a liquidator to do so. They exist solely as a
+ * fallback if a liquidator were to ever execute a liquidation onto a vault that
+ * had fallen into bad debt.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract Liquidation {
     using SafeERC20 for IERC20;
     using WadRayMath for uint256;
@@ -53,6 +73,18 @@ contract Liquidation {
         address indexed initiator, address indexed kpr, uint8 indexed ilkIndex, uint256 repay, uint256 gemOut
     );
 
+    /**
+     * @notice Creates a new `Liquidation` instance.
+     * @param _ionPool The address of the `IonPool` contract.
+     * @param _protocol The address that will represent the protocol balance
+     * sheet (for protocol liquidation purposes).
+     * @param _reserveOracles List of reserve oracle addresses for each ilk.
+     * @param _liquidationThresholds List of liquidation thresholds for each
+     * ilk.
+     * @param _targetHealth The target health ratio for positions.
+     * @param _reserveFactor Base discount for collateral.
+     * @param _maxDiscounts List of max discounts for each ilk.
+     */
     constructor(
         address _ionPool,
         address _protocol,
@@ -132,13 +164,11 @@ contract Liquidation {
     }
 
     /**
-     * @notice Returns the exchange rate and liquidation threshold for the given ilkIndex.
+     * @notice Returns the exchange rate, liquidation threshold, and max
+     * discount for the given ilk.
+     * @param ilkIndex The index of the ilk.
      */
-    function _getConfigs(uint8 ilkIndex)
-        internal
-        view
-        returns (Configs memory configs)
-    {
+    function _getConfigs(uint8 ilkIndex) internal view returns (Configs memory configs) {
         if (ilkIndex == 0) {
             configs.reserveOracle = RESERVE_ORACLE_0;
             configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
@@ -154,6 +184,13 @@ contract Liquidation {
         }
     }
 
+    /**
+     * @notice If liquidation is possible, returns the amount of WETH necessary
+     * to liquidate a vault.
+     * @param ilkIndex The index of the ilk.
+     * @param vault The address of the vault.
+     * @return repay The amount of WETH necessary to liquidate the vault.
+     */
     function getRepayAmt(uint8 ilkIndex, address vault) public view returns (uint256 repay) {
         Configs memory configs = _getConfigs(ilkIndex);
 
@@ -174,27 +211,28 @@ contract Liquidation {
         // healthRatio = [rad] * RAY / [rad] = [ray]
         // round down in protocol favor
         uint256 collateralValue = (collateral * exchangeRate).rayMulDown(configs.liquidationThreshold);
-    
+
         uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
         if (healthRatio >= RAY) {
             revert VaultIsNotUnsafe(healthRatio);
         }
 
         uint256 discount = BASE_DISCOUNT + (RAY - healthRatio); // [ray] + ([ray] - [ray])
-        discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount favor
+        discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount
+            // favor
         uint256 repayRad = _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
 
         repay = (repayRad / RAY);
-        if (repayRad % RAY > 0) ++repay; 
+        if (repayRad % RAY > 0) ++repay;
     }
 
     /**
      * @notice Internal helper function for calculating the repay amount.
-     * @param debtValue [rad] totalDebt
-     * @param collateralValue [rad] collateral * exchangeRate * liquidationThreshold
-     * @param liquidationThreshold [ray]
-     * @param discount [ray]
-     * @return repay [rad]
+     * @param debtValue The total debt. [RAD]
+     * @param collateralValue Calculated with collateral * exchangeRate * liquidationThreshold. [RAD]
+     * @param liquidationThreshold Ratio at which liquidation can occur. [RAY]
+     * @param discount The discount from the exchange rate at which the collateral is sold. [RAY]
+     * @return repay The amount of WETH necessary to liquidate the vault. [RAD]
      */
     function _getRepayAmt(
         uint256 debtValue,
@@ -227,12 +265,21 @@ contract Liquidation {
     }
 
     /**
-     * @notice Executes collateral sale and repayment of debt by liquidators.
-     * @param ilkIndex index of the collateral in IonPool
-     * @param vault the position to be liquidated
-     * @param kpr payer of the debt and receiver of the collateral
+     * @notice Closes an unhealthy position on `IonPool`.
+     * @param ilkIndex The index of the collateral.
+     * @param vault The position to be liquidated.
+     * @param kpr Receiver of the collateral.
+     * @return repayAmount The amount of WETH paid to close the position.
+     * @return gemOut The amount of collateral received from the liquidation.
      */
-    function liquidate(uint8 ilkIndex, address vault, address kpr) external {
+    function liquidate(
+        uint8 ilkIndex,
+        address vault,
+        address kpr
+    )
+        external
+        returns (uint256 repayAmount, uint256 gemOut)
+    {
         LiquidateArgs memory liquidateArgs;
 
         Configs memory configs = _getConfigs(ilkIndex);
@@ -288,7 +335,7 @@ contract Liquidation {
                 ilkIndex, vault, PROTOCOL, PROTOCOL, -int256(liquidateArgs.gemOut), -int256(liquidateArgs.dart)
             );
             emit Liquidate(msg.sender, kpr, ilkIndex, liquidateArgs.dart, liquidateArgs.gemOut);
-            return; // early return
+            return (0, 0); // early return
         } else if (normalizedDebt * rate - liquidateArgs.repay < POOL.dust(ilkIndex)) {
             // [rad] - [rad] < [rad]
             liquidateArgs.repay = normalizedDebt * rate; // bound repay to total debt
@@ -323,5 +370,7 @@ contract Liquidation {
         POOL.repayBadDebt(address(this), liquidateArgs.repay);
 
         emit Liquidate(msg.sender, kpr, ilkIndex, liquidateArgs.dart, liquidateArgs.gemOut);
+
+        return (liquidateArgs.repay, liquidateArgs.gemOut);
     }
 }

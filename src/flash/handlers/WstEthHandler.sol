@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.21;
 
 import { IonPool } from "../../IonPool.sol";
@@ -12,13 +12,25 @@ import { Whitelist } from "../../Whitelist.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
+/**
+ * @notice Handler for the wstETH collateral.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHandler {
     using LidoLibrary for IWstEth;
 
     IERC20 constant STETH = IERC20(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
 
+    /**
+     * @notice Creates a new `WstEthHandler` instance.
+     * @param _ilkIndex of wstETH.
+     * @param _ionPool `IonPool` contract address.
+     * @param _gemJoin `GemJoin` contract address associated with wstETH.
+     * @param _whitelist Address of the `Whitelist` contract.
+     * @param _wstEthUniswapPool Adderess of the wstETH/ETH Uniswap V3 pool.
+     */
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
@@ -29,15 +41,27 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
         UniswapFlashswapHandler(_wstEthUniswapPool, false)
     {
-        // NOTE: approves wstEth contract infinite approval to move this contract's stEth
+        // NOTE: approves wstETH contract infinite approval to move this contract's stEth
         STETH.approve(address(LST_TOKEN), type(uint256).max);
     }
 
+    /**
+     * @notice Unwraps weth into eth and deposits into lst contract.
+     * @dev Unwraps weth into eth and deposits into lst contract.
+     * @param amountWeth The WETH amount to deposit. [WAD]
+     * @return Amount of lst received. [WAD]
+     */
     function _depositWethForLst(uint256 amountWeth) internal override returns (uint256) {
         WETH.withdraw(amountWeth);
         return IWstEth(address(LST_TOKEN)).depositForLst(amountWeth);
     }
 
+    /**
+     * @notice Calculates the amount of eth required to receive `amountLst`.
+     * @dev Calculates the amount of eth required to receive `amountLst`.
+     * @param amountLst Desired output amount. [WAD]
+     * @return Eth required for desired lst output. [WAD]
+     */
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view override returns (uint256) {
         return IWstEth(address(LST_TOKEN)).getEthAmountInForLstAmountOut(amountLst);
     }

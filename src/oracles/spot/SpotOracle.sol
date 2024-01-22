@@ -7,7 +7,20 @@ import { WadRayMath, RAY } from "../../libraries/math/WadRayMath.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-// pushes spot price from value feeds to the IonPool contract
+/**
+ * @notice The `SpotOracle` is supposed to reflect the current market price of a
+ * collateral asset. It is used by `IonPool` to determine the health factor of a
+ * vault as a user is opening or closing a position.
+ *
+ * NOTE: The price data provided by this contract is not used by the liquidation
+ * module at all.
+ *
+ * The spot price will also always be bounded by the collateral's corresponding
+ * reserve oracle price to ensure that a user can never open position that is
+ * directly liquidatable.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 abstract contract SpotOracle {
     using WadRayMath for uint256;
 
@@ -18,6 +31,11 @@ abstract contract SpotOracle {
     error InvalidLtv(uint256 ltv);
     error InvalidReserveOracle();
 
+    /**
+     * @notice Creates a new `SpotOracle` instance.
+     * @param _ltv Loan to value ratio for the collateral.
+     * @param _reserveOracle Address for the associated reserve oracle.
+     */
     constructor(uint256 _ltv, address _reserveOracle) {
         if (_ltv > RAY) {
             revert InvalidLtv(_ltv);
@@ -29,12 +47,20 @@ abstract contract SpotOracle {
         RESERVE_ORACLE = ReserveOracle(_reserveOracle);
     }
 
-    // @dev overridden by collateral specific spot oracle contracts
-    // @return price of the asset in ETH [wad]
+    /**
+     * @notice Gets the price of the collateral asset in ETH.
+     * @dev Overridden by collateral specific spot oracle contracts.
+     * @return price of the asset in ETH. [WAD]
+     */
     function getPrice() public view virtual returns (uint256 price);
 
     // @dev Gets the market price multiplied by the LTV.
     // @return spot value of the asset in ETH [ray]
+
+    /**
+     * @notice Gets the risk-adjusted market price.
+     * @return spot The risk-adjusted market price.
+     */
     function getSpot() external view returns (uint256 spot) {
         uint256 price = getPrice(); // must be [wad]
         uint256 exchangeRate = RESERVE_ORACLE.currentExchangeRate();

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
@@ -13,6 +13,9 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
 /**
+ * @notice This contract allows for easy creation of leverage positions through
+ * Balancer flashloans and LST mints through the LST provider.
+ *
  * @dev There are a couple things to consider here from a security perspective. The
  * first one is that the flashloan callback must only be callable from the
  * Balancer vault. This ensures that nobody can pass arbitrary data to the
@@ -27,6 +30,8 @@ IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
  *
  * This contract currently deposits directly into LST contract 1:1. It should be
  * noted that a more favorable trade could be possible via DEXs.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLoanRecipient {
     using SafeERC20 for IERC20;
@@ -40,13 +45,17 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     uint256 private flashloanInitiated = 1;
 
     /**
-     * @notice Code assumes Balancer flashloans remain free
-     * @param initialDeposit in collateral terms
-     * @param resultingAdditionalCollateral in collateral terms
+     * @notice Transfer collateral from user + flashloan collateral from
+     * balancer -> deposit all collateral into `IonPool` -> borrow WETH from
+     * `IonPool` -> mint collateral using WETH -> repay Balancer flashloan.
+     * @dev Code assumes Balancer flashloans remain free.
+     * @param initialDeposit in collateral terms. [WAD]
+     * @param resultingAdditionalCollateral in collateral terms. [WAD]
      * @param maxResultingDebt in WETH terms. While it is unlikely that the
      * exchange rate changes from when a transaction is submitted versus when it
      * is executed, it is still possible so we want to allow for a bound here,
-     * even though it doesn't pose the same level of threat as slippage.
+     * even though it doesn't pose the same level of threat as slippage. [WAD]
+     * @param proof used to validate the user is whitelisted.
      */
     function flashLeverageCollateral(
         uint256 initialDeposit,
@@ -64,7 +73,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
      * that needs additional logic
-     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     * to obtain the LST. Ex) Zapping stEth to wstETH.
      */
     function _flashLeverageCollateral(
         uint256 initialDeposit,
@@ -106,13 +115,17 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     }
 
     /**
-     * @notice Code assumes Balancer flashloans remain free
-     * @param initialDeposit in collateral terms
-     * @param resultingAdditionalCollateral in collateral terms
+     * @notice Transfer collateral from user + flashloan WETH from balancer ->
+     * mint collateral using WETH -> deposit all collateral into `IonPool` ->
+     * borrow WETH from `IonPool` -> repay Balancer flashloan.
+     * @dev Code assumes Balancer flashloans remain free.
+     * @param initialDeposit in collateral terms. [WAD]
+     * @param resultingAdditionalCollateral in collateral terms. [WAD]
      * @param maxResultingDebt in WETH terms. While it is unlikely that the
      * exchange rate changes from when a transaction is submitted versus when it
      * is executed, it is still possible so we want to allow for a bound here,
-     * even though it doesn't pose the same level of threat as slippage.
+     * even though it doesn't pose the same level of threat as slippage. [WAD]
+     * @param proof used to validate the user is whitelisted.
      */
     function flashLeverageWeth(
         uint256 initialDeposit,
@@ -131,7 +144,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     /**
      * @dev Assumes that the caller has already transferred the deposit asset. Can be called internally by a wrapper
      * that needs additional logic
-     * to obtain the LST. Ex) Zapping stEth to wstEth.
+     * to obtain the LST. Ex) Zapping stEth to wstETH.
      */
     function _flashLeverageWeth(
         uint256 initialDeposit,
@@ -180,17 +193,20 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     }
 
     /**
-     * @notice Code assumes Balancer flashloans remain free.
-     * @dev This function is intended to never be called directly. It should
-     * only be called by the Balancer VAULT during a flashloan initiated by this
-     * contract. This callback logic only handles the creation of leverage
-     * positions by minting. Since not all tokens have withdrawable liquidity
-     * via the LST protocol directly, deleverage through the protocol will need
-     * to be implemented in the inheriting contract.
+     * @notice This function is never intended to be called directly.
+     * @dev Code assumes Balancer flashloans remain free.
      *
-     * @param tokens Array of tokens flash loaned
-     * @param amounts amounts flash loaned
-     * @param userData arbitrary data passed from initiator of flash loan
+     * This function is intended to never be called directly. It should only be
+     * called by the Balancer VAULT during a flashloan initiated by this
+     * contract.
+     *
+     * This callback logic only handles the creation of leverage positions by
+     * minting. Since atomic withdrawals are not possible, deleveraging with a
+     * flashloan directly through an LST provider is not possible.
+     *
+     * @param tokens Array of tokens flashloaned.
+     * @param amounts Amounts flashloaned.
+     * @param userData Arbitrary data passed from initiator of flash loan.
      */
     function receiveFlashLoan(
         IERC20Balancer[] memory tokens,
@@ -239,11 +255,18 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
     }
 
     /**
-     * @dev Unwraps weth into eth and deposits into lst contract
-     * @param amountWeth to deposit
-     * @return amountLst received
+     * @notice Unwraps weth into eth and deposits into lst contract.
+     * @dev Unwraps weth into eth and deposits into lst contract.
+     * @param amountWeth The WETH amount to deposit. [WAD]
+     * @return Amount of lst received. [WAD]
      */
     function _depositWethForLst(uint256 amountWeth) internal virtual returns (uint256);
 
+    /**
+     * @notice Calculates the amount of eth required to receive `amountLst`.
+     * @dev Calculates the amount of eth required to receive `amountLst`.
+     * @param amountLst Desired output amount. [WAD]
+     * @return Eth required for desired lst output. [WAD]
+     */
     function _getEthAmountInForLstAmountOut(uint256 amountLst) internal view virtual returns (uint256);
 }
