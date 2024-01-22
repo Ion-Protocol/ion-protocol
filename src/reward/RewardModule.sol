@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.8.21;
 
 import { WadRayMath, RAY } from "../libraries/math/WadRayMath.sol";
