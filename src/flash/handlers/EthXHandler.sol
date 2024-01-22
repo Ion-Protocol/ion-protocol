@@ -3,12 +3,13 @@ pragma solidity 0.8.21;
 
 import { IonPool } from "../../IonPool.sol";
 import { GemJoin } from "../../join/GemJoin.sol";
-import { IonHandlerBase } from "../../flash/handlers/base/IonHandlerBase.sol";
 import { Whitelist } from "../../Whitelist.sol";
 import { StaderLibrary } from "../../libraries/StaderLibrary.sol";
 import { IStaderStakePoolsManager } from "../../interfaces/ProviderInterfaces.sol";
-import { UniswapFlashloanBalancerSwapHandler } from "../../flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
-import { BalancerFlashloanDirectMintHandler } from "../../flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
+import { IonHandlerBase } from "./base/IonHandlerBase.sol";
+import { UniswapFlashloanBalancerSwapHandler } from "./base/UniswapFlashloanBalancerSwapHandler.sol";
+import { BalancerFlashloanDirectMintHandler } from "./base/BalancerFlashloanDirectMintHandler.sol";
+import { UniswapFlashswapHandler } from "./base/UniswapFlashswapHandler.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
@@ -17,7 +18,11 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
  *
  * @custom:security-contact security@molecularlabs.io
  */
-contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDirectMintHandler {
+contract EthXHandler is
+    UniswapFlashloanBalancerSwapHandler,
+    UniswapFlashswapHandler,
+    BalancerFlashloanDirectMintHandler
+{
     using StaderLibrary for IStaderStakePoolsManager;
 
     // Stader deposit contract is separate from the ETHx lst contract
@@ -30,7 +35,8 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
      * @param _gemJoin `GemJoin` contract address associated with ETHx.
      * @param _staderDeposit Address for the Stader deposit contract.
      * @param _whitelist Address of the `Whitelist` contract.
-     * @param _wstEthUniswapPool Address of the wstETH/ETH Uniswap V3 pool.
+     * @param _wstEthUniswapPool Address of the WSTETH/ETH Uniswap V3 pool.
+     * @param _ethXUniswapPool Address of the ETHx/ETH Uniswap V3 pool.
      * @param _balancerPoolId Balancer pool ID for the ETHx/ETH pool.
      */
     constructor(
@@ -40,10 +46,12 @@ contract EthXHandler is UniswapFlashloanBalancerSwapHandler, BalancerFlashloanDi
         IStaderStakePoolsManager _staderDeposit,
         Whitelist _whitelist,
         IUniswapV3Pool _wstEthUniswapPool,
+        IUniswapV3Pool _ethXUniswapPool,
         bytes32 _balancerPoolId
     )
         UniswapFlashloanBalancerSwapHandler(_wstEthUniswapPool, _balancerPoolId)
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
+        UniswapFlashswapHandler(_ethXUniswapPool, false)
     {
         STADER_DEPOSIT = _staderDeposit;
     }
