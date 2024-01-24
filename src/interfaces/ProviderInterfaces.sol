@@ -35,6 +35,8 @@ interface IWstEth {
     function stETH() external view returns (address);
 
     function stEthPerToken() external view returns (uint256);
+
+    function tokensPerStEth() external view returns (uint256);
 }
 
 interface IStaderStakePoolsManager {
@@ -82,4 +84,18 @@ interface ISwEth {
     function ethToSwETHRate() external view returns (uint256);
 
     function getRate() external view returns (uint256);
+}
+
+interface IWeEth {
+    function getRate() external view returns (uint256);
+    function getEETHByWeETH(uint256) external view returns (uint256);
+}
+
+interface IEEth {
+    function totalShares() external view returns (uint256);
+}
+
+interface IEtherFiLiquidityPool {
+    function totalValueOutOfLp() external view returns (uint128);
+    function totalValueInLp() external view returns (uint128);
 }

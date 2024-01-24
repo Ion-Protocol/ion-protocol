@@ -13,6 +13,11 @@ import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup
 contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- stETH Reserve Oracle Test ---
 
+    function setUp() public override {
+        setBlockNumber(18_372_927);
+        super.setUp();
+    }
+
     function test_RevertWhen_UpdateIsOnCooldown() public {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);
@@ -151,6 +156,7 @@ contract WstEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 exchangeRate = stEthReserveOracle.currentExchangeRate();
         // set Lido exchange rate to be lower
+
         vm.store(LIDO, LIDO_CL_BALANCE_SLOT, bytes32(newClBalance));
 
         stEthReserveOracle.updateExchangeRate();

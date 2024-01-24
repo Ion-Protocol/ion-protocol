@@ -43,13 +43,19 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
 
     uint256 constant BLOCK_NUMBER = 18_372_927;
 
+    uint256 public blockNumber;
+
+    function setBlockNumber(uint256 _blockNumber) public {
+        blockNumber = _blockNumber;
+    }
+
     uint256 mainnetFork;
 
     ERC20PresetMinterPauser mockToken;
 
     function setUp() public virtual override {
-        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL); // specify blockheight?
-        vm.rollFork(BLOCK_NUMBER);
+        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL);
+        vm.rollFork(blockNumber);
 
         super.setUp();
 
