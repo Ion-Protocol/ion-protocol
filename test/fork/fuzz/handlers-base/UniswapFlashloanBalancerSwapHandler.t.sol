@@ -5,12 +5,10 @@ import { IonHandler_ForkBase } from "../../../helpers/IonHandlerForkBase.sol";
 import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UniswapFlashloanBalancerSwapHandler } from
     "../../../../src/flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
-import { IonHandlerBase } from "../../../../src/flash/handlers/base/IonHandlerBase.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import { Vm } from "forge-std/Vm.sol";
-import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint256;
 

@@ -14,8 +14,6 @@ import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 // fork tests for integrating with external contracts
 contract SpotOracleForkTest is ReserveOracleSharedSetup {
     using WadRayMath for uint256;

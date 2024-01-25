@@ -9,9 +9,6 @@ import { Whitelist } from "../../../../src/Whitelist.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-import { IFlashLoanRecipient } from "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
-import { IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
-
 import { Vm } from "forge-std/Vm.sol";
 import { console2 } from "forge-std/console2.sol";
 
