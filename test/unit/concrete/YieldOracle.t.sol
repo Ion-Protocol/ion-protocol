@@ -13,6 +13,11 @@ import {
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 contract YieldOracle_UnitTest is YieldOracleSharedSetup {
+    function setUp() public override {
+        vm.warp(1_696_181_435);
+        super.setUp();
+    }
+
     function test_Basic() external {
         vm.warp(block.timestamp + 1 days);
 

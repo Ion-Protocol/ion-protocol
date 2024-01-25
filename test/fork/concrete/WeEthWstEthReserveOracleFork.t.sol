@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WAD, RAY } from "../../../src/libraries/math/WadRayMath.sol";
-import { WstEthReserveOracle } from "../../../src/oracles/reserve/WstEthReserveOracle.sol";
+import { RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import { WeEthWstEthReserveOracle } from "../../../src/oracles/reserve/WeEthWstEthReserveOracle.sol";
 import { ReserveFeed } from "../../../src/oracles/reserve/ReserveFeed.sol";
 import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
-import { IStEth, IWstEth, IWeEth, IEEth, IEtherFiLiquidityPool } from "../../../src/interfaces/ProviderInterfaces.sol";
+import { IWeEth, IEEth, IEtherFiLiquidityPool } from "../../../src/interfaces/ProviderInterfaces.sol";
 
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
 import { ETHER_FI_LIQUIDITY_POOL_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "src/Constants.sol";
-
-bytes32 constant EETH_TOTAL_VALUE_MASK = 0x00000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
-bytes32 constant EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT =
-    0x00000000000000000000000000000000000000000000000000000000000000cf; // uint128 totalValueInLp, uint128 totalValueOutOfLp
 
 // fork tests for integrating with external contracts
 contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
@@ -30,7 +25,7 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
         address[] memory feeds = new address[](3);
         uint8 quorum = 0;
         WeEthWstEthReserveOracle weEthWstEthReserveOracle =
-            new WeEthWstEthReserveOracle(STETH_ILK_INDEX, feeds, quorum, maxChange); // TODO: ILK_INDEX?
+            new WeEthWstEthReserveOracle(STETH_ILK_INDEX, feeds, quorum, maxChange);
 
         weEthWstEthReserveOracle.updateExchangeRate();
 
@@ -86,7 +81,6 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     }
 
     function test_WeEthExchangeRatePostSlashing() public {
-
         uint256 totalValueOutOfLpDiff = 10_000 ether;
 
         uint256 totalValueOutOfLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueOutOfLp();

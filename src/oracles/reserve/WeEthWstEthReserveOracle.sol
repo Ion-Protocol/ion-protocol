@@ -11,7 +11,6 @@ import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
  *
  * @custom:security-contact security@molecularlabs.io
  */
-
 contract WeEthWstEthReserveOracle is ReserveOracle {
     using WadRayMath for uint256;
 
