@@ -22,3 +22,6 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/Vectorized/solady
+[submodule "lib/forge-safe"]
+	path = lib/forge-safe
+	url = https://github.com/ind-igo/forge-safe
