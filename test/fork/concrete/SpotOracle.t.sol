@@ -6,15 +6,15 @@ import { SpotOracle } from "../../../src/oracles/spot/SpotOracle.sol";
 import { SwEthSpotOracle } from "../../../src/oracles/spot/SwEthSpotOracle.sol";
 import { WstEthSpotOracle } from "../../../src/oracles/spot/WstEthSpotOracle.sol";
 import { EthXSpotOracle } from "../../../src/oracles/spot/EthXSpotOracle.sol";
+import { WeEthWstEthSpotOracle } from "../../../src/oracles/spot/WeEthWstEthSpotOracle.sol";
 import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
 import { SwEthReserveOracle } from "../../../src/oracles/reserve/SwEthReserveOracle.sol";
 import { WstEthReserveOracle } from "../../../src/oracles/reserve/WstEthReserveOracle.sol";
 import { EthXReserveOracle } from "../../../src/oracles/reserve/EthxReserveOracle.sol";
+import { WeEthWstEthReserveOracle } from "../../../src/oracles/reserve/WeEthWstEthReserveOracle.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
-
-import { console2 } from "forge-std/console2.sol";
 
 // fork tests for integrating with external contracts
 contract SpotOracleForkTest is ReserveOracleSharedSetup {
@@ -42,8 +42,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
     function setUp() public override {
         // fork test
-        // mainnetFork = vm.createSelectFork(MAINNET_RPC_URL); // specify blockheight?
-        // vm.rollFork(BLOCK_NUMBER);
+        setBlockNumber(18_372_927);
         super.setUp();
 
         // instantiate reserve oracles
@@ -53,7 +52,6 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         ethXReserveOracle = new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
 
         swEthReserveOracle = new SwEthReserveOracle(SWETH, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
-        // update e
     }
 
     // --- stETH Spot Oracle Test ---
@@ -106,13 +104,9 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
     }
 
     // --- swETH Spot Oracle Test ---
-    // uniswap twap oracle
 
     function test_SwEthSpotOracleViewPrice() public {
         // mainnet values
-        // stETH per wstETH = 1143213397000524230
-        // ETH per stETH    =  999698915670794300
-        // ETH per wstETH   = (ETH per stETH) * (stETH per wstETH) = 1.1428692e18 (1142869193361749358)
         uint256 ltv = 0.5e27;
 
         swEthSpotOracle = new SwEthSpotOracle(ltv, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01, 100);
@@ -203,5 +197,87 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
         uint256 expectedSpot = ltv.wadMulDown(newExchangeRate);
 
         assertEq(ethXSpotOracle.getSpot(), expectedSpot, "spot");
+    }
+}
+
+contract WeEthWstEthSpotOracleForkTest is ReserveOracleSharedSetup {
+    using WadRayMath for uint256;
+
+    WeEthWstEthSpotOracle weEthWstEthSpotOracle;
+    WeEthWstEthReserveOracle weEthWstEthReserveOracle;
+
+    function setUp() public override {
+        // fork test
+        setBlockNumber(19_084_676); // after ETH per weETH Redstone deployment
+        super.setUp();
+
+        // instantiate reserve oracles
+        address[] memory feeds = new address[](3);
+        weEthWstEthReserveOracle = new WeEthWstEthReserveOracle(ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
+    }
+
+    function test_WeEthWstEthSpotOracleViewPrice() public {
+        uint256 ltv = 0.5e27;
+        uint256 maxTimeFromLastUpdate = 2 days;
+
+        weEthWstEthSpotOracle = new WeEthWstEthSpotOracle(ltv, address(weEthWstEthReserveOracle), maxTimeFromLastUpdate);
+
+        uint256 price = weEthWstEthSpotOracle.getPrice();
+
+        assertEq(price, 891_084_573_571_076_834, "wstETH per weETH price");
+    }
+
+    function test_WeEthWstEthSpotOracleViewSpot() public {
+        uint256 ltv = 0.5e27;
+        uint256 maxTimeFromLastUpdate = 2 days;
+        weEthWstEthSpotOracle = new WeEthWstEthSpotOracle(ltv, address(weEthWstEthReserveOracle), maxTimeFromLastUpdate);
+        uint256 spot = weEthWstEthSpotOracle.getSpot();
+
+        uint256 expectedSpot = ltv.wadMulDown(weEthWstEthSpotOracle.getPrice());
+
+        assertEq(spot, expectedSpot, "wstETH per weETH spot");
+    }
+
+    function test_WeEthWstEthOracleExchangeRateGoesDownUsesExchangeRateAsMin() public {
+        uint256 ltv = 0.7e27;
+        uint256 maxTimeFromLastUpdate = 2 days;
+        weEthWstEthSpotOracle = new WeEthWstEthSpotOracle(ltv, address(weEthWstEthReserveOracle), maxTimeFromLastUpdate);
+
+        uint256 weEthLpDiff = 1000 ether;
+        changeWeEthLpBalance(weEthLpDiff);
+
+        weEthWstEthReserveOracle.updateExchangeRate();
+
+        uint256 newExchangeRate = weEthWstEthReserveOracle.currentExchangeRate();
+
+        uint256 expectedPrice = 891_084_573_571_076_834;
+        uint256 expectedSpot = ltv.wadMulDown(newExchangeRate);
+
+        assertEq(weEthWstEthSpotOracle.getPrice(), expectedPrice, "price");
+        assertEq(weEthWstEthSpotOracle.getSpot(), expectedSpot, "spot");
+    }
+
+    function test_WeEthWstEthOracleMaxTimeFromLastUpdateExceeded() public {
+        uint256 ltv = 0.7e27;
+        uint256 maxTimeFromLastUpdate = 2 days;
+        weEthWstEthSpotOracle = new WeEthWstEthSpotOracle(ltv, address(weEthWstEthReserveOracle), maxTimeFromLastUpdate);
+
+        vm.warp(block.timestamp + 2 days);
+
+        uint256 expectedPrice = 0;
+        uint256 expectedSpot = 0;
+        assertEq(weEthWstEthSpotOracle.getPrice(), expectedPrice, "price");
+        assertEq(weEthWstEthSpotOracle.getSpot(), expectedSpot, "spot");
+    }
+
+    function test_WeEthWstEthOracleMaxTimeFromLastUpdateNotExceeded() public {
+        uint256 ltv = 0.7e27;
+        uint256 maxTimeFromLastUpdate = 2 days;
+        weEthWstEthSpotOracle = new WeEthWstEthSpotOracle(ltv, address(weEthWstEthReserveOracle), maxTimeFromLastUpdate);
+
+        vm.warp(block.timestamp + 1 days);
+
+        assertNotEq(weEthWstEthSpotOracle.getPrice(), 0, "price");
+        assertNotEq(weEthWstEthSpotOracle.getSpot(), 0, "spot");
     }
 }

@@ -12,6 +12,7 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { Test } from "forge-std/Test.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 import { console2 } from "forge-std/console2.sol";
 
 contract YieldOracleExposed is YieldOracle {
@@ -97,8 +98,6 @@ contract YieldOracle_ForkTest is Test {
         vm.selectFork(mainnetFork);
 
         IonPool mockIonPool = IonPool(address(new MockIonPool()));
-
-        console2.log(staderExchangeRateAddress);
 
         apyOracle = new YieldOracleExposed(
             historicalExchangeRates,

@@ -6,7 +6,6 @@ pragma solidity 0.8.21;
  * @notice Interface for the reserve feeds for Ion Protocol.
  *
  */
-
 interface IReserveFeed {
     /**
      * @dev updates the total reserve of the validator backed asset
