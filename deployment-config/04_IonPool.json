@@ -4,7 +4,7 @@
   "decimals": "18",
   "name": "Ion Weth",
   "symbol": "iWETH",
-  "initialDefaultAdmin": "0x6450311D9A60c744b8Db774A6B9898938A0fD3eA",
+  "initialDefaultAdmin": "0xcecc1978A819D4A3c0A2ee7C260ECb7A10732EEF",
   "whitelist": "0xDFe3b8F976aA51d9Ae9bC232a7e9D93b615B8beB",
   "interestRateModule": "0xbd613f221213D5F71ae3D5273D2bD715318fD0FD"
 }

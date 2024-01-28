@@ -35,6 +35,7 @@ abstract contract BaseScript is Script {
     }
 
     modifier broadcast() {
+        console2.log("broadcast: ", broadcaster);
         vm.startBroadcast(broadcaster);
         _;
         vm.stopBroadcast();
