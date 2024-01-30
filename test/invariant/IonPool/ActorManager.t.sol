@@ -10,8 +10,6 @@ import { InvariantHelpers } from "../../helpers/InvariantHelpers.sol";
 
 import { LenderHandler, BorrowerHandler, LiquidatorHandler } from "./Handlers.t.sol";
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import { CommonBase } from "forge-std/Base.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";

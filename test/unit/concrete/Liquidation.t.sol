@@ -7,8 +7,6 @@ import { LiquidationSharedSetup } from "../../helpers/LiquidationSharedSetup.sol
 import { Liquidation } from "../../../src/Liquidation.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import "forge-std/console.sol";
-
 contract MockstEthReserveOracle {
     uint256 public exchangeRate;
 

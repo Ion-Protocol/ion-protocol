@@ -9,8 +9,6 @@ import { ERC20Pausable } from "@openzeppelin/contracts/token/ERC20/extensions/ER
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
-import "forge-std/console.sol";
-
 /**
  * @dev {ERC20} token, including:
  *
