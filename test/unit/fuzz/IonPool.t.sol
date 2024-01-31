@@ -819,8 +819,6 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
                     underlying.mint(borrower1, interestToPay);
                 }
 
-                console.log(ionPool.debt(), ionPool.debtUnaccrued(), totalDebtIncrease, totalChangeInDebt);
-
                 vm.expectEmit(true, true, true, true);
                 emit Repay(
                     i,

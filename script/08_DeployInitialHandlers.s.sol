@@ -44,6 +44,8 @@ IUniswapV3Factory constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a
 IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
 IUniswapV3Pool constant WSTETH_WETH_POOL = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
+IUniswapV3Pool constant ETHX_WETH_POOL = IUniswapV3Pool(0x1b9669b12959Ad51B01FaBcF01EaBDFADB82f578);
+
 uint24 constant WSTETH_WETH_POOL_FEE = 100;
 
 contract DeployInitialHandlersScript is BaseScript {
@@ -71,6 +73,7 @@ contract DeployInitialHandlersScript is BaseScript {
             MAINNET_STADER,
             whitelist,
             WSTETH_WETH_POOL,
+            ETHX_WETH_POOL,
             0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb
         );
         swEthHandler = new SwEthHandler(SWETH_ILK_INDEX, ionPool, swEthGemJoin, whitelist, SWETH_ETH_POOL);

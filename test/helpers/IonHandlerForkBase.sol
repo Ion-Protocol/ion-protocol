@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WAD } from "src/libraries/math/WadRayMath.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth, IStEth } from "src/interfaces/ProviderInterfaces.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { WAD } from "../../src/libraries/math/WadRayMath.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth, IStEth } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
+import { IProviderLibraryExposed } from "../helpers/IProviderLibraryExposed.sol";
 
 import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
 
@@ -56,8 +57,11 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     IUniswapV3Pool constant WSTETH_WETH_POOL = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
+    IUniswapV3Pool constant ETHX_WETH_POOL = IUniswapV3Pool(0x1b9669b12959Ad51B01FaBcF01EaBDFADB82f578);
 
     uint256 forkBlock = 0;
+
+    bytes32[] borrowerWhitelistProof;
 
     function setUp() public virtual override {
         if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
@@ -127,6 +131,19 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     function _getDebtCeiling(uint8) internal pure override returns (uint256) {
         return type(uint256).max;
     }
+
+    function _getUniswapPools() internal pure returns (address[] memory uniswapPools) {
+        uniswapPools = new address[](3);
+        uniswapPools[0] = address(WSTETH_WETH_POOL);
+        uniswapPools[1] = address(ETHX_WETH_POOL);
+        uniswapPools[2] = address(SWETH_ETH_POOL);
+    }
+
+    function _getIlkIndex() internal view virtual returns (uint8);
+
+    function _getProviderLibrary() internal view virtual returns (IProviderLibraryExposed);
+
+    function _getHandler() internal view virtual returns (address);
 
     receive() external payable { }
 }

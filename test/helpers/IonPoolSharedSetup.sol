@@ -6,7 +6,7 @@ import { IonRegistry } from "../../src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
-import { WadRayMath, WAD, RAY } from "../../src/libraries/math/WadRayMath.sol";
+import { WadRayMath, WAD } from "../../src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { SpotOracle } from "../../src/oracles/spot/SpotOracle.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
