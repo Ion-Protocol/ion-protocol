@@ -3,9 +3,8 @@ pragma solidity 0.8.21;
 
 import { IonHandler_ForkBase } from "../../../helpers/IonHandlerForkBase.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
-import {
-    BalancerFlashloanDirectMintHandler
-} from "../../../../src/flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
+import { BalancerFlashloanDirectMintHandler } from
+    "../../../../src/flash/handlers/base/BalancerFlashloanDirectMintHandler.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 

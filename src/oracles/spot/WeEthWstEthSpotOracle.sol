@@ -43,7 +43,7 @@ contract WeEthWstEthSpotOracle is SpotOracle {
      * @return wstEthPerWeEth price of weETH in wstETH. [WAD]
      */
     function getPrice() public view override returns (uint256) {
-        (, int256 answer,, uint256 updatedAt,) = IRedstonePriceFeed(REDSTONE_WEETH_ETH_PRICE_FEED).latestRoundData(); // ETH
+        (, int256 answer,, uint256 updatedAt,) = REDSTONE_WEETH_ETH_PRICE_FEED.latestRoundData(); // ETH
             // / weETH [8 decimals]
         if (block.timestamp - updatedAt > maxTimeFromLastUpdate) {
             return 0; // collateral valuation is zero if oracle data is stale

@@ -14,6 +14,8 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 struct Slot0 {
     // the current price
     uint160 sqrtPriceX96;
@@ -66,6 +68,7 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     function setUp() public virtual override {
         if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
         else vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), forkBlock);
+        console.log("d1");
         super.setUp();
 
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();
@@ -109,11 +112,11 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     uint256 constant STADER_LTV = 0.95e18;
     uint256 constant SWELL_LTV = 0.9e18;
 
-    function _getUnderlying() internal pure override returns (address) {
+    function _getUnderlying() internal pure virtual override returns (address) {
         return address(weth);
     }
 
-    function _getCollaterals() internal pure override returns (IERC20[] memory _collaterals) {
+    function _getCollaterals() internal pure virtual override returns (IERC20[] memory _collaterals) {
         _collaterals = new IERC20[](3);
 
         _collaterals[0] = IERC20(address(MAINNET_WSTETH));

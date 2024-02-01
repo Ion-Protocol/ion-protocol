@@ -20,8 +20,8 @@ using WadRayMath for uint256;
 
 abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase {
     function testFork_FlashloanCollateral() public virtual {
-        uint256 initialDeposit = 1e18; // in ethX
-        uint256 resultingAdditionalCollateral = 5e18; // in ethX
+        uint256 initialDeposit = 1e18;
+        uint256 resultingAdditionalCollateral = 5e18;
         uint256 maxResultingDebt =
             _getProviderLibrary().getEthAmountInForLstAmountOut(resultingAdditionalCollateral - initialDeposit);
 
@@ -44,12 +44,13 @@ abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase
 
         uint256 currentRate = ionPool.rate(_getIlkIndex());
         uint256 roundingError = currentRate / RAY;
+        if (currentRate % RAY != 0) roundingError++;
 
-        assertGe(
+        assertLe(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
-            maxResultingDebt
+            maxResultingDebt + roundingError
         );
-        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(_getTypedBFDMHandler())), 0);
+        assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedBFDMHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedBFDMHandler())), roundingError);
         assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral);
     }
@@ -85,7 +86,7 @@ abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase
             maxResultingDebt,
             roundingError
         );
-        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(_getTypedBFDMHandler())), 0);
+        assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedBFDMHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedBFDMHandler())), roundingError);
         assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral);
     }
@@ -94,7 +95,7 @@ abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase
         vm.skip(borrowerWhitelistProof.length > 0);
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
-        addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
+        addresses[0] = IERC20Balancer(address(_getCollaterals()[_getIlkIndex()]));
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 8e18;
@@ -109,7 +110,7 @@ abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase
         vm.skip(borrowerWhitelistProof.length > 0);
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](2);
-        addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
+        addresses[0] = IERC20Balancer(address(_getCollaterals()[_getIlkIndex()]));
         addresses[1] = IERC20Balancer(address(weth));
 
         uint256[] memory amounts = new uint256[](2);
@@ -126,7 +127,7 @@ abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase
         vm.skip(borrowerWhitelistProof.length > 0);
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
-        addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
+        addresses[0] = IERC20Balancer(address(_getCollaterals()[_getIlkIndex()]));
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 8e18;
@@ -141,7 +142,7 @@ abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase
         vm.skip(borrowerWhitelistProof.length > 0);
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
-        addresses[0] = IERC20Balancer(address(MAINNET_ETHX));
+        addresses[0] = IERC20Balancer(address(_getCollaterals()[_getIlkIndex()]));
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 8e18;

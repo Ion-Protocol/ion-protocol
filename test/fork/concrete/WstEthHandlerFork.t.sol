@@ -341,8 +341,9 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
         uint256 resultingAdditionalWstEthCollateral =
             IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingAdditionalStEthCollateral);
 
-        uint256 maxResultingDebt =
-            MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingAdditionalWstEthCollateral - wstEthDepositAmount) * 1.005e18; // Some slippage tolerance
+        uint256 maxResultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(
+            resultingAdditionalWstEthCollateral - wstEthDepositAmount
+        ) * 1.005e18; // Some slippage tolerance
         uint160 sqrtPriceLimitX96 = 0;
 
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
@@ -395,8 +396,9 @@ contract WstEthHandler_Zap_ForkTest is WstEthHandler_ForkBase {
         uint256 resultingAdditionalWstEthCollateral =
             IWstEth(address(MAINNET_WSTETH)).getWstETHByStETH(resultingAdditionalStEthCollateral);
 
-        uint256 maxResultingDebt =
-            MAINNET_WSTETH.getEthAmountInForLstAmountOut(resultingAdditionalWstEthCollateral - wstEthDepositAmount) * 1.005e18; // Some slippage tolerance
+        uint256 maxResultingDebt = MAINNET_WSTETH.getEthAmountInForLstAmountOut(
+            resultingAdditionalWstEthCollateral - wstEthDepositAmount
+        ) * 1.005e18; // Some slippage tolerance
         uint160 sqrtPriceLimitX96 = 0;
 
         IERC20(address(MAINNET_STETH)).approve(address(wstEthHandler), stEthDepositAmount);
