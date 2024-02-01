@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "./IonPool.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth } from "./interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth, IWeEth } from "./interfaces/ProviderInterfaces.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -209,8 +209,12 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
      */
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            IWstEth wstEth = IWstEth(ADDRESS0);
-            exchangeRate = wstEth.stEthPerToken().toUint64();
+            // IWstEth wstEth = IWstEth(ADDRESS0);
+            // exchangeRate = wstEth.stEthPerToken().toUint64();
+            
+            // NOTE: post-audit changed wstETH to weETH
+            IWeEth weEth = IWeEth(ADDRESS0); 
+            exchangeRate = weEth.getRate().toUint64();
         } else if (ilkIndex == 1) {
             IStaderStakePoolsManager stader = IStaderStakePoolsManager(ADDRESS1);
             exchangeRate = stader.getExchangeRate().toUint64();

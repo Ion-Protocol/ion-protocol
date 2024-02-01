@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { InterestRate, IlkData } from "../src/InterestRate.sol";
-import { IYieldOracle } from "../src/interfaces/IYieldOracle.sol";
+import { InterestRate, IlkData } from "../../src/InterestRate.sol";
+import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 
 import { LibString } from "solady/src/utils/LibString.sol";
 
-import { BaseScript } from "./Base.s.sol";
+import { BaseScript } from "../Base.s.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -37,8 +37,10 @@ contract DeployInterestRateScript is BaseScript {
     using LibString for string;
     using LibString for uint256;
 
-    string configPath = "./deployment-config/02_InterestRate.json";
+    string configPath = "./deployment-config/02_DeployInterestRateModule.json";
     string config = vm.readFile(configPath);
+
+    IYieldOracle yieldOracle = IYieldOracle(config.readAddress(".YieldOracleAddress"));
 
     function run() public broadcast returns (InterestRate interestRateModule) {
         IlkData[] memory ilkDataList = new IlkData[](ILK_COUNT);
@@ -67,8 +69,6 @@ contract DeployInterestRateScript is BaseScript {
 
             ilkDataList[i] = ilkData;
         }
-
-        IYieldOracle yieldOracle = IYieldOracle(config.readAddress(".YieldOracleAddress"));
 
         interestRateModule = new InterestRate(ilkDataList, yieldOracle);
     }

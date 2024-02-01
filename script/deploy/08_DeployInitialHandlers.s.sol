@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "../src/IonPool.sol";
-import { WstEthHandler } from "../src/flash/handlers/WstEthHandler.sol";
-import { EthXHandler } from "../src/flash/handlers/EthXHandler.sol";
-import { SwEthHandler } from "../src/flash/handlers/SwEthHandler.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth } from "../src/interfaces/ProviderInterfaces.sol";
-import { IWETH9 } from "../src/interfaces/IWETH9.sol";
-import { GemJoin } from "../src/join/GemJoin.sol";
-import { Whitelist } from "../src/Whitelist.sol";
+import { IonPool } from "../../src/IonPool.sol";
+import { WstEthHandler } from "../../src/flash/handlers/WstEthHandler.sol";
+import { EthXHandler } from "../../src/flash/handlers/EthXHandler.sol";
+import { SwEthHandler } from "../../src/flash/handlers/SwEthHandler.sol";
+import { IWstEth, IStaderStakePoolsManager, ISwEth } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWETH9 } from "../../src/interfaces/IWETH9.sol";
+import { GemJoin } from "../../src/join/GemJoin.sol";
+import { Whitelist } from "../../src/Whitelist.sol";
 
 import { AggregatorV2V3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import { BaseScript } from "./Base.s.sol";
+import { BaseScript } from "../Base.s.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
@@ -58,21 +58,29 @@ contract DeployInitialHandlersScript is BaseScript {
         returns (WstEthHandler wstEthHandler, EthXHandler ethXHandler, SwEthHandler swEthHandler)
     {
         IonPool ionPool = IonPool(config.readAddress(".ionPool"));
-        GemJoin wstEthGemJoin = GemJoin(config.readAddress(".wstEthGemJoin"));
-        GemJoin ethXGemJoin = GemJoin(config.readAddress(".ethXGemJoin"));
-        GemJoin swEthGemJoin = GemJoin(config.readAddress(".swEthGemJoin"));
+        GemJoin weEthGemJoin = GemJoin(config.readAddress(".gemJoin")); 
         Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
-        wstEthHandler = new WstEthHandler(STETH_ILK_INDEX, ionPool, wstEthGemJoin, whitelist, WSTETH_WETH_POOL);
-        ethXHandler = new EthXHandler(
-            ETHX_ILK_INDEX,
-            ionPool,
-            ethXGemJoin,
-            MAINNET_STADER,
-            whitelist,
-            WSTETH_WETH_POOL,
-            0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb
-        );
-        swEthHandler = new SwEthHandler(SWETH_ILK_INDEX, ionPool, swEthGemJoin, whitelist, SWETH_ETH_POOL);
+        require(address(ionPool) != address(0), "ionPool address cannot be zero");
+        require(address(weEthGemJoin) != address(0), "weEthGemJoin address cannot be zero");
+        require(address(whitelist) != address(0), "whitelist address cannot be zero");
+
+        // TODO: Deploy new UniswapDirectMintHandler for weETH/wstETH market
+
+        // GemJoin wstEthGemJoin = GemJoin(config.readAddress(".wstEthGemJoin"));
+        // GemJoin ethXGemJoin = GemJoin(config.readAddress(".ethXGemJoin"));
+        // GemJoin swEthGemJoin = GemJoin(config.readAddress(".swEthGemJoin"));
+
+        // wstEthHandler = new WstEthHandler(STETH_ILK_INDEX, ionPool, wstEthGemJoin, whitelist, WSTETH_WETH_POOL);
+        // ethXHandler = new EthXHandler(
+        //     ETHX_ILK_INDEX,
+        //     ionPool,
+        //     ethXGemJoin,
+        //     MAINNET_STADER,
+        //     whitelist,
+        //     WSTETH_WETH_POOL,
+        //     0x37b18b10ce5635a84834b26095a0ae5639dcb7520000000000000000000005cb
+        // );
+        // swEthHandler = new SwEthHandler(SWETH_ILK_INDEX, ionPool, swEthGemJoin, whitelist, SWETH_ETH_POOL);
     }
 }

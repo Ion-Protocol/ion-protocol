@@ -1,0 +1,10 @@
+{
+  "underlying": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  "treasury": "0x0000000000000000000000000000000000000001",
+  "decimals": "18",
+  "name": "Ion Weth",
+  "symbol": "iWETH",
+  "whitelist": "0x41219a0a9C0b86ED81933c788a6B63Dfef8f17eE",
+  "interestRateModule": "0x82A9286dB983093Ff234cefCea1d8fA66382876B",
+  "initialDefaultAdmin": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}

@@ -19,10 +19,14 @@ const RPC_URL =
   CHAIN_ID == "5" ? process.env.GOERLI_ARCHIVE : process.env.MAINNET_ARCHIVE_RPC_URL;
 
 const exchangeRateAddresses = {
-  lido: {
-    "1": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
-    "5": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
+  weETH: {
+    "1": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee", 
+    "5": "", 
   },
+  // lido: {
+  //   "1": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+  //   "5": "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f",
+  // },
   stader: {
     "1": "0xcf5EA1b38380f6aF39068375516Daf40Ed70D299",
     "5": "0x22F8E700ff3912f3Caba5e039F6dfF1a24390E80",
@@ -68,18 +72,30 @@ async function main() {
   };
 
   const exchangeRateContracts = {
-    lido: {
-      address: exchangeRateAddresses.lido[CHAIN_ID],
+    weETH: {
+      address: exchangeRateAddresses.weETH[CHAIN_ID],
       abi: [
         {
           inputs: [],
-          name: "stEthPerToken",
+          name: "getRate",
           outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
           stateMutability: "view",
           type: "function",
         },
       ],
     },
+    // lido: {
+    //   address: exchangeRateAddresses.lido[CHAIN_ID],
+    //   abi: [
+    //     {
+    //       inputs: [],
+    //       name: "stEthPerToken",
+    //       outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    //       stateMutability: "view",
+    //       type: "function",
+    //     },
+    //   ],
+    // },
     stader: {
       address: exchangeRateAddresses.stader[CHAIN_ID],
       abi: [

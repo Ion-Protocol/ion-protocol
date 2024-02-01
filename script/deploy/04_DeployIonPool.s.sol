@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "../src/IonPool.sol";
-import { Whitelist } from "../src/Whitelist.sol";
-import { InterestRate } from "../src/InterestRate.sol";
+import { IonPool } from "../../src/IonPool.sol";
+import { Whitelist } from "../../src/Whitelist.sol";
+import { InterestRate } from "../../src/InterestRate.sol";
 
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import { BaseScript } from "./Base.s.sol";
+import { BaseScript } from "../Base.s.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -17,20 +17,25 @@ contract DeployIonPoolScript is BaseScript {
     using StdJson for string;
     using SafeCast for uint256;
 
-    string configPath = "./deployment-config/04_IonPool.json";
+    string defaultConfigPath = "./deployment-config/00_Default.json"; 
+    string defaultConfig = vm.readFile(defaultConfigPath);
+
+    address protocol = defaultConfig.readAddress(".protocol"); 
+    
+    string configPath = "./deployment-config/04_DeployIonPool.json";
     string config = vm.readFile(configPath);
+
+    address initialDefaultAdmin = defaultConfig.readAddress(".defaultAdmin"); 
+    address underlying = config.readAddress(".underlying");
+    address treasury = config.readAddress(".treasury");
+    uint8 decimals = config.readUint(".decimals").toUint8();
+    string name = config.readString(".name");
+    string symbol = config.readString(".symbol");
+    InterestRate interestRateModule = InterestRate(config.readAddress(".interestRateModule"));
+    Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
     function run() public broadcast returns (IonPool ionPool) {
         IonPool ionPoolImpl = new IonPool();
-
-        address underlying = config.readAddress(".underlying");
-        address treasury = config.readAddress(".treasury");
-        uint8 decimals = config.readUint(".decimals").toUint8();
-        string memory name = config.readString(".name");
-        string memory symbol = config.readString(".symbol");
-        address initialDefaultAdmin = config.readAddress(".initialDefaultAdmin");
-        InterestRate interestRateModule = InterestRate(config.readAddress(".interestRateModule"));
-        Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
         bytes memory initData = abi.encodeWithSelector(
             IonPool.initialize.selector,
