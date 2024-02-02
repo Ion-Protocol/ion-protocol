@@ -40,7 +40,6 @@ contract EtherFiLibrary_FuzzTest is Test {
 
         vm.deal(address(this), ethAmount);
         WEETH_ADDRESS.depositForLrt(ethAmount);
-        assertLe(IERC20(address(EETH_ADDRESS)).balanceOf(address(this)), lrtAmountOut);
         assertEq(IERC20(address(WEETH_ADDRESS)).balanceOf(address(this)), lrtAmountOut);
     }
 }

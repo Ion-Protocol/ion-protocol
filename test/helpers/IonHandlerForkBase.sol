@@ -68,7 +68,6 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     function setUp() public virtual override {
         if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
         else vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), forkBlock);
-        console.log("d1");
         super.setUp();
 
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();
@@ -124,7 +123,7 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
         _collaterals[2] = IERC20(address(MAINNET_SWELL));
     }
 
-    function _getDepositContracts() internal pure override returns (address[] memory depositContracts) {
+    function _getDepositContracts() internal pure virtual override returns (address[] memory depositContracts) {
         depositContracts = new address[](3);
         depositContracts[0] = address(MAINNET_WSTETH);
         depositContracts[1] = address(MAINNET_STADER);

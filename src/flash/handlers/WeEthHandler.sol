@@ -5,14 +5,14 @@ import { IonPool } from "../../IonPool.sol";
 import { GemJoin } from "../../join/GemJoin.sol";
 import { IStaderStakePoolsManager, IWeEth } from "../../interfaces/ProviderInterfaces.sol";
 import { Whitelist } from "../../Whitelist.sol";
-import { BalancerFlashloanDirectMintUniswapSwapHandler } from "./base/BalancerFlashloanDirectMintUniswapSwapHandler.sol";
+import { UniswapFlashswapDirectMintHandler } from "./base/UniswapFlashswapDirectMintHandler.sol";
 import { IonHandlerBase } from "./base/IonHandlerBase.sol";
 import { EtherFiLibrary } from "../../libraries/EtherFiLibrary.sol";
 import { WEETH_ADDRESS, EETH_ADDRESS } from "../../Constants.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-contract WeEthHandler is BalancerFlashloanDirectMintUniswapSwapHandler {
+contract WeEthHandler is UniswapFlashswapDirectMintHandler {
     using EtherFiLibrary for IWeEth;
 
     constructor(
@@ -23,7 +23,7 @@ contract WeEthHandler is BalancerFlashloanDirectMintUniswapSwapHandler {
         IUniswapV3Pool _wstEthUniswapPool
     )
         IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
-        BalancerFlashloanDirectMintUniswapSwapHandler(_wstEthUniswapPool)
+        UniswapFlashswapDirectMintHandler(_wstEthUniswapPool)
     {
         EETH_ADDRESS.approve(address(WEETH_ADDRESS), type(uint256).max);
     }

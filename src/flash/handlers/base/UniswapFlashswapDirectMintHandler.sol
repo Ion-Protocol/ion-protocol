@@ -18,20 +18,12 @@ import { WEETH_ADDRESS, WSTETH_ADDRESS } from "../../../Constants.sol";
 
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
-IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-
 /**
  * @notice This contract allows for easy creation of leverge positions through a
- * Balancer flashloan, provider mint, and a final Curve swap.
- *
- * NOTE: This contract assumes Balancer flashloans are free.
  *
  * @custom:security-contact security@molecularlabs.io
  */
-abstract contract BalancerFlashloanDirectMintUniswapSwapHandler is
-    IonHandlerBase,
-    IUniswapV3SwapCallback
-{
+abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV3SwapCallback {
     using SafeERC20 for IERC20;
     using SafeERC20 for IWETH9;
     using SafeCast for uint256;
@@ -81,12 +73,24 @@ abstract contract BalancerFlashloanDirectMintUniswapSwapHandler is
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingDebt,
+        uint256 deadline,
         bytes32[] memory proof
     )
         external
         onlyWhitelistedBorrowers(proof)
+        checkDeadline(deadline)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
+        _flashloanWethMintAndSwap(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+    }
+
+    function _flashloanWethMintAndSwap(
+        uint256 initialDeposit,
+        uint256 resultingAdditionalCollateral,
+        uint256 maxResultingDebt
+    )
+        internal
+    {
         IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
         addresses[0] = IERC20Balancer(address(WETH));
 
@@ -111,7 +115,6 @@ abstract contract BalancerFlashloanDirectMintUniswapSwapHandler is
             recipient: address(this),
             data: abi.encode(msg.sender, zeroForOne, resultingAdditionalCollateral, initialDeposit)
         });
-
     }
 
     /**

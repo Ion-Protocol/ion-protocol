@@ -110,8 +110,17 @@ abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase
         vm.skip(borrowerWhitelistProof.length > 0);
 
         IERC20Balancer[] memory addresses = new IERC20Balancer[](2);
-        addresses[0] = IERC20Balancer(address(_getCollaterals()[_getIlkIndex()]));
-        addresses[1] = IERC20Balancer(address(weth));
+
+        address collateral = address(_getCollaterals()[_getIlkIndex()]);
+        address wethAddress = address(weth);
+
+        addresses[0] = IERC20Balancer(collateral);
+        addresses[1] = IERC20Balancer(wethAddress);
+
+        if (collateral > wethAddress) {
+            addresses[0] = IERC20Balancer(wethAddress);
+            addresses[1] = IERC20Balancer(collateral);
+        }
 
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = 8e18;

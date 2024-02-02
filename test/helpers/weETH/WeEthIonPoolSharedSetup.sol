@@ -10,7 +10,6 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 abstract contract WeEthIonPoolSharedSetup is IonPoolSharedSetup {
     function setUp() public override {
-        console.log("a1");
         for (uint256 i = 0; i < 2; i++) {
             minimumProfitMargins.pop();
             adjustedReserveFactors.pop();
@@ -31,5 +30,10 @@ abstract contract WeEthIonPoolSharedSetup is IonPoolSharedSetup {
     function _getCollaterals() internal pure override returns (IERC20[] memory _collaterals) {
         _collaterals = new IERC20[](1);
         _collaterals[0] = WEETH_ADDRESS;
+    }
+
+    function _getDepositContracts() internal pure override returns (address[] memory depositContracts) {
+        depositContracts = new address[](1);
+        depositContracts[0] = address(WEETH_ADDRESS);
     }
 }

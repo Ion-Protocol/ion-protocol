@@ -186,25 +186,18 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     IlkData[] ilkConfigs;
 
     function setUp() public virtual override(BaseTestSetup, YieldOracleSharedSetup) {
-        console.log("-1");
         collaterals = _getCollaterals();
-        console.log("0");
         address[] memory depositContracts = _getDepositContracts();
 
-        console.log("1");
         assert(
             collaterals.length == adjustedReserveFactors.length
                 && adjustedReserveFactors.length == optimalUtilizationRates.length
                 && optimalUtilizationRates.length == distributionFactors.length
                 && distributionFactors.length == debtCeilings.length
         );
-        console.log("2");
         BaseTestSetup.setUp();
-        console.log("3");
         YieldOracleSharedSetup.setUp();
-        console.log("4");
         apyOracle = new MockYieldOracle();
-        console.log("5");
 
         uint256 distributionFactorSum;
 
@@ -226,24 +219,19 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
             distributionFactorSum += distributionFactors[i];
         }
-        console.log("6");
 
         assert(distributionFactorSum == 1e4);
-        console.log("7");
 
         interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
 
-        console.log("8");
         // whitelist
         whitelist = address(new Whitelist(new bytes32[](0), bytes32(0)));
-        console.log("9");
 
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
-        console.log("10");
+
         // Instantiate upgradeable IonPool
         ionPoolImpl = new IonPoolExposed();
-        console.log("11");
 
         bytes memory initializeBytes = abi.encodeWithSelector(
             IonPool.initialize.selector,
@@ -256,16 +244,13 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             interestRateModule,
             whitelist
         );
-        console.log("12");
         ionPool = IonPoolExposed(
             address(new TransparentUpgradeableProxy(address(ionPoolImpl), address(ionProxyAdmin), initializeBytes))
         );
-        console.log("13");
 
         ionPool.grantRole(ionPool.ION(), address(this));
         ionPool.updateSupplyCap(type(uint256).max);
 
-        console.log("14");
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
             MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE);
@@ -279,10 +264,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoins[i]));
             ilkIndexes[address(collaterals[i])] = i;
         }
-        console.log("15");
 
-        // ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
-        console.log("16");
+        ionRegistry = new IonRegistry(gemJoins, depositContracts, address(this));
     }
 
     function test_SetUp() public virtual override {
