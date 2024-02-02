@@ -224,16 +224,18 @@ contract WeEthWstEthSpotOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 price = weEthWstEthSpotOracle.getPrice();
 
-        assertEq(price, 891_084_573_571_076_834, "wstETH per weETH price");
+        assertEq(price, 891_763_339_537_677_809, "wstETH per weETH price");
     }
 
-    function test_WeEthWstEthSpotOracleViewSpot() public {
+    function test_WeEthWstEthSpotOracleSpotPriceGoesUpUsesExchangeRateAsMin() public {
         uint256 ltv = 0.5e27;
         uint256 maxTimeFromLastUpdate = 2 days;
         weEthWstEthSpotOracle = new WeEthWstEthSpotOracle(ltv, address(weEthWstEthReserveOracle), maxTimeFromLastUpdate);
         uint256 spot = weEthWstEthSpotOracle.getSpot();
 
-        uint256 expectedSpot = ltv.wadMulDown(weEthWstEthSpotOracle.getPrice());
+        weEthWstEthReserveOracle.updateExchangeRate();
+        uint256 newExchangeRate = weEthWstEthReserveOracle.currentExchangeRate();
+        uint256 expectedSpot = ltv.wadMulDown(newExchangeRate);
 
         assertEq(spot, expectedSpot, "wstETH per weETH spot");
     }
@@ -250,7 +252,7 @@ contract WeEthWstEthSpotOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 newExchangeRate = weEthWstEthReserveOracle.currentExchangeRate();
 
-        uint256 expectedPrice = 891_084_573_571_076_834;
+        uint256 expectedPrice = 891_763_339_537_677_809;
         uint256 expectedSpot = ltv.wadMulDown(newExchangeRate);
 
         assertEq(weEthWstEthSpotOracle.getPrice(), expectedPrice, "price");
