@@ -42,7 +42,7 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
     function setUp() public override {
         // fork test
-        setBlockNumber(18_372_927);
+        blockNumber = 18_372_927;
         super.setUp();
 
         // instantiate reserve oracles
@@ -208,7 +208,7 @@ contract WeEthWstEthSpotOracleForkTest is ReserveOracleSharedSetup {
 
     function setUp() public override {
         // fork test
-        setBlockNumber(19_084_676); // after ETH per weETH Redstone deployment
+        blockNumber = 19_084_676; // after ETH per weETH Redstone deployment
         super.setUp();
 
         // instantiate reserve oracles
