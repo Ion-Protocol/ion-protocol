@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
-import { Errors } from "../../src/Errors.sol"; 
+
+import { Errors } from "../../src/Errors.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { SpotOracle } from "../../src/oracles/spot/SpotOracle.sol";
 
@@ -18,19 +19,22 @@ contract DeployInitialCollateralsSetUpScript is BaseScript, Errors {
     string configPath = "./deployment-config/06_DeployInitialCollateralsSetUp.json";
     string config = vm.readFile(configPath);
 
+    string defaultConfigPath = "./deployment-config/00_Default.json";
+    string defaultConfig = vm.readFile(defaultConfigPath);
+
+    address ilkAddress = defaultConfig.readAddress(".ilkAddress");
+
+    IonPool ionPool = IonPool(config.readAddress(".ionPool"));
+    SpotOracle spotOracle = SpotOracle(config.readAddress(".spotOracle"));
+    uint256 debtCeiling = config.readUint(".debtCeiling");
+    uint256 dust = config.readUint(".dust");
+
     function run() public broadcast {
-        
-        uint256 debtCeiling = config.readUint(".debtCeiling"); 
-
-        IonPool ionPool = IonPool(config.readAddress(".ionPool"));
-        SpotOracle weEthWstEthSpotOracle = SpotOracle(config.readAddress(".spotOracle")); 
-
         // this deployer address needs to have the ION role.
-        console2.log(address(this)); 
-        console2.log(WEETH_ADDRESS); 
-        ionPool.initializeIlk(WEETH_ADDRESS); 
-        ionPool.updateIlkSpot(0, weEthWstEthSpotOracle);
-        ionPool.updateIlkDebtCeiling(0, debtCeiling); 
+        ionPool.initializeIlk(ilkAddress);
+        ionPool.updateIlkSpot(0, spotOracle);
+        ionPool.updateIlkDebtCeiling(0, debtCeiling);
+        ionPool.updateIlkDust(0, dust);
 
         // ionPool.initializeIlk(WST_ETH);
         // ionPool.initializeIlk(MAINNET_ETHX);

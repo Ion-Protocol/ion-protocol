@@ -16,23 +16,25 @@ import { stdJson as StdJson } from "forge-std/StdJson.sol";
 contract DeployInitialGemJoinsScript is BaseScript {
     using StdJson for string;
 
-    string defaultConfigPath = "./deployment-config/00_Default.json"; 
+    string defaultConfigPath = "./deployment-config/00_Default.json";
     string defaultConfig = vm.readFile(defaultConfigPath);
+
     string configPath = "./deployment-config/07_DeployInitialGemJoins.json";
     string config = vm.readFile(configPath);
 
-    function run() public broadcast returns (
-        GemJoin gemJoin
-        // GemJoin wstEthGemJoin, 
-        // GemJoin ethXGemJoin, 
-        // GemJoin swEthGemJoin
-    ) {
-        IonPool ionPool = IonPool(config.readAddress(".ionPool"));
-        address defaultAdmin = config.readAddress(".defaultAdmin");
+    address ilkAddress = defaultConfig.readAddress(".ilkAddress");
 
-        gemJoin = new GemJoin(ionPool, IERC20(WEETH_ADDRESS), 0, defaultAdmin); 
-        
-        ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin)); 
+    IonPool ionPool = IonPool(config.readAddress(".ionPool"));
+    address defaultAdmin = defaultConfig.readAddress(".defaultAdmin");
+
+    function run() public broadcast returns (GemJoin gemJoin) 
+    // GemJoin wstEthGemJoin,
+    // GemJoin ethXGemJoin,
+    // GemJoin swEthGemJoin
+    {
+        gemJoin = new GemJoin(ionPool, IERC20(ilkAddress), 0, defaultAdmin);
+
+        ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin));
 
         // wstEthGemJoin = new GemJoin(ionPool, IERC20(WST_ETH), STETH_ILK_INDEX, owner);
         // ethXGemJoin = new GemJoin(ionPool, IERC20(MAINNET_ETHX), ETHX_ILK_INDEX, owner);

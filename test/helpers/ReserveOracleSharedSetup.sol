@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { ETHER_FI_LIQUIDITY_POOL_ADDRESS } from "../../src/Constants.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { IWstEth, IStaderStakePoolsManager, IEtherFiLiquidityPool } from "../../src/interfaces/ProviderInterfaces.sol";
 
@@ -51,10 +52,6 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
 
     uint256 public blockNumber;
 
-    function setBlockNumber(uint256 _blockNumber) public {
-        blockNumber = _blockNumber;
-    }
-
     uint256 mainnetFork;
 
     ERC20PresetMinterPauser mockToken;
@@ -91,8 +88,8 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     }
 
     function changeWeEthLpBalance(uint256 lpBalanceDiff) internal {
-        uint256 totalValueOutOfLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueOutOfLp();
-        uint256 totalValueInLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueInLp();
+        uint256 totalValueOutOfLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueOutOfLp();
+        uint256 totalValueInLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueInLp();
 
         bytes32 newTotalValueInLp = bytes32(totalValueInLp) << 128;
 
@@ -101,6 +98,6 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
         bytes32 newTotalValue = newTotalValueInLp | newTotalValueOutOfLp;
 
         // reduce rebase share values in EtherFi
-        vm.store(ETHER_FI_LIQUIDITY_POOL_ADDRESS, EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
+        vm.store(address(ETHER_FI_LIQUIDITY_POOL_ADDRESS), EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
     }
 }

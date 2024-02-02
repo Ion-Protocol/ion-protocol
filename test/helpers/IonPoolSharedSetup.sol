@@ -6,7 +6,7 @@ import { IonRegistry } from "../../src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
-import { WadRayMath, WAD, RAY } from "../../src/libraries/math/WadRayMath.sol";
+import { WadRayMath, WAD } from "../../src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { SpotOracle } from "../../src/oracles/spot/SpotOracle.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
@@ -17,6 +17,8 @@ import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/trans
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+
+import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 using WadRayMath for uint16;
 
@@ -40,14 +42,6 @@ contract MockYieldOracle is IYieldOracle {
 
     function apys(uint256) external view returns (uint32) {
         return APY;
-    }
-}
-
-contract InterestRateExposed is InterestRate {
-    constructor(IlkData[] memory ilks, IYieldOracle apyOracle) InterestRate(ilks, apyOracle) { }
-
-    function unpackCollateralConfig(uint256 index) external view returns (IlkData memory ilkData) {
-        return _unpackCollateralConfig(index);
     }
 }
 
@@ -106,7 +100,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     IonPoolExposed ionPoolImpl;
     IonRegistry ionRegistry;
 
-    InterestRateExposed interestRateModule;
+    InterestRate interestRateModule;
     IYieldOracle apyOracle;
 
     mapping(address ilkAddress => uint8 ilkIndex) public ilkIndexes;
@@ -166,6 +160,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
+    MockSpotOracle[] internal spotOracles;
+
     uint96[] internal minimumProfitMargins =
         [wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin];
     uint16[] internal adjustedReserveFactors =
@@ -174,8 +170,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         [wstEthOptimalUtilizationRate, ethXOptimalUtilizationRate, swEthOptimalUtilizationRate];
     uint16[] internal distributionFactors = [wstEthDistributionFactor, ethXDistributionFactor, swEthDistributionFactor];
     uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
-    MockSpotOracle[] internal spotOracles;
-
     uint96[] internal adjustedAboveKinkSlopes =
         [wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope];
     uint96[] internal minimumAboveKinkSlopes =
@@ -220,13 +214,14 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         assert(distributionFactorSum == 1e4);
 
-        interestRateModule = new InterestRateExposed(ilkConfigs, apyOracle);
+        interestRateModule = new InterestRate(ilkConfigs, apyOracle);
 
         // whitelist
         whitelist = address(new Whitelist(new bytes32[](0), bytes32(0)));
 
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
+
         // Instantiate upgradeable IonPool
         ionPoolImpl = new IonPoolExposed();
 

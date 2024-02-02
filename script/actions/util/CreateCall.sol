@@ -19,7 +19,14 @@ contract CreateCall {
      * @param salt The salt value to use for the contract creation.
      * @return newContract The address of the newly created contract.
      */
-    function performCreate2(uint256 value, bytes memory deploymentData, bytes32 salt) public returns (address newContract) {
+    function performCreate2(
+        uint256 value,
+        bytes memory deploymentData,
+        bytes32 salt
+    )
+        public
+        returns (address newContract)
+    {
         /* solhint-disable no-inline-assembly */
         /// @solidity memory-safe-assembly
         assembly {

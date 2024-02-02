@@ -4,8 +4,7 @@ pragma solidity 0.8.21;
 import { InterestRate } from "./InterestRate.sol";
 
 contract Errors {
-
-    // IonPool Errors 
+    // IonPool Errors
     error CeilingExceeded(uint256 newDebt, uint256 debtCeiling);
     error UnsafePositionChange(uint256 newTotalDebtInVault, uint256 collateral, uint256 spot);
     error UnsafePositionChangeWithoutConsent(uint8 ilkIndex, address user, address unconsentedOperator);
@@ -29,13 +28,13 @@ contract Errors {
     error InvalidIlkIndex(uint256 ilkIndex);
     error AlreadyUpdated();
 
-    // PausableUpgradeable Errors 
+    // PausableUpgradeable Errors
     error EnforcedPause();
-    error ExpectedPause(); 
+    error ExpectedPause();
     error InvalidInitialization();
     error NotInitializing();
 
-    // TransparentUpgradeableProxy Errors 
+    // TransparentUpgradeableProxy Errors
     error ProxyDeniedAdminAccess();
 
     // AccessControl Errors

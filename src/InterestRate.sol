@@ -222,6 +222,10 @@ contract InterestRate {
      * @param index The ilkIndex to unpack.
      * @return ilkData The unpacked collateral config.
      */
+    function unpackCollateralConfig(uint256 index) external view returns (IlkData memory ilkData) {
+        return _unpackCollateralConfig(index);
+    }
+
     function _unpackCollateralConfig(uint256 index) internal view returns (IlkData memory ilkData) {
         if (index > COLLATERAL_COUNT - 1) revert CollateralIndexOutOfBounds();
 

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { IonPool } from "src/IonPool.sol";
-import { IonZapper } from "src/periphery/IonZapper.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
-import { BaseScript } from "script/Base.s.sol";
+import { IonPool } from "../src/IonPool.sol";
+import { IWETH9 } from "../src/interfaces/IWETH9.sol";
+
+import { BaseScript } from "./Base.s.sol";
+
 import { console2 } from "forge-std/console2.sol";
 
 // TODO: consolidate constants
@@ -17,7 +18,6 @@ contract Addresses is BaseScript {
     string config = vm.readFile(configPath);
 
     IonPool pool = IonPool(vm.parseJsonAddress(config, ".ionPool"));
-    IonZapper ionZapper = IonZapper(vm.parseJsonAddress(config, ".ionZapper"));
 }
 
 contract Setup is Addresses {
@@ -40,12 +40,6 @@ contract Supply is Addresses {
 contract Withdraw is Addresses {
     function run() public broadcastFrom(ADDRESS_1) {
         // pool.withdraw(ADDRESS_1, 500 ether, new bytes32[](0));
-    }
-}
-
-contract ZapSupply is Addresses {
-    function run() public broadcastFrom(ADDRESS_1) {
-        ionZapper.zapSupply{ value: 2 ether }(new bytes32[](0));
     }
 }
 

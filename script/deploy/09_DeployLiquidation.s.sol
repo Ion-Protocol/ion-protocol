@@ -9,37 +9,47 @@ import { IonPool } from "../../src/IonPool.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-uint32 constant ILK_COUNT = 3;
+import { console2 } from "forge-std/console2.sol";
+
+uint32 constant ILK_COUNT = 1;
 
 contract DeployLiquidationScript is BaseScript {
     using WadRayMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
 
+    string defaultConfigPath = "./deployment-config/00_Default.json";
+    string defaultConfig = vm.readFile(defaultConfigPath);
+
     string configPath = "./deployment-config/09_DeployLiquidation.json";
     string config = vm.readFile(configPath);
 
+    uint256 targetHealth = config.readUint(".targetHealth");
+    uint256 liquidationThreshold = config.readUint(".liquidationThreshold");
+    uint256 maxDiscount = config.readUint(".maxDiscount");
+    address reserveOracle = config.readAddress(".reserveOracle");
+    uint256 reserveFactor = config.readUint(".reserveFactor");
+
+    IonPool ionPool = IonPool(config.readAddress(".ionPool"));
+    address protocol = config.readAddress(".protocol");
+
     function run() public broadcast returns (Liquidation liquidation) {
-        address ionPool = vm.parseJsonAddress(config, ".ionPool");
-        address protocol = vm.parseJsonAddress(config, ".protocol");
-        address[] memory reserveOracles = vm.parseJsonAddressArray(config, ".reserveOracles");
-        uint256[] memory liquidationThresholds = vm.parseJsonUintArray(config, ".liquidationThresholds");
-        uint256 targetHealth = vm.parseJsonUint(config, ".targetHealth");
-        uint256 reserveFactor = vm.parseJsonUint(config, ".reserveFactor");
-        uint256[] memory maxDiscounts = vm.parseJsonUintArray(config, ".maxDiscounts");
+        // NOTE: Liquidation contract reads the ilkCount() of the IonPool which
+        // should always be 1.
+        require(ionPool.ilkCount() == ILK_COUNT, "ionPool ilk count");
 
-        // Even though we are launching one collateral, Liquidation contract 
-        // requires length of 3 for the arrays. 
-        // Also requires that the parameters are realistic. 
+        uint256[] memory liquidationThresholds = new uint256[](ILK_COUNT);
+        uint256[] memory maxDiscounts = new uint256[](ILK_COUNT);
+        address[] memory reserveOracles = new address[](ILK_COUNT);
 
-        require(reserveOracles.length == ILK_COUNT); 
-        require(liquidationThresholds. length == ILK_COUNT); 
-        require(maxDiscounts.length == ILK_COUNT); 
+        liquidationThresholds[0] = liquidationThreshold;
+        maxDiscounts[0] = maxDiscount;
+        reserveOracles[0] = reserveOracle;
 
         liquidation = new Liquidation{ salt: bytes32(abi.encode(0)) }(
-            ionPool, protocol, reserveOracles, liquidationThresholds, targetHealth, reserveFactor, maxDiscounts
+            address(ionPool), protocol, reserveOracles, liquidationThresholds, targetHealth, reserveFactor, maxDiscounts
         );
 
-        IonPool(ionPool).grantRole(IonPool(ionPool).LIQUIDATOR_ROLE(), address(liquidation));
+        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
     }
 }

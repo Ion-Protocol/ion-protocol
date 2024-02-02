@@ -12,7 +12,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- swETH Reserve Oracle Test ---
 
     function setUp() public override {
-        setBlockNumber(18_372_927);
+        blockNumber = 18_372_927;
         super.setUp();
     }
 

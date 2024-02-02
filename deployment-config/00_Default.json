@@ -1,4 +1,5 @@
 {
     "defaultAdmin": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "protocol": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    "protocol": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "ilkAddress": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
 }

@@ -14,7 +14,7 @@ import { ETHER_FI_LIQUIDITY_POOL_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "sr
 // fork tests for integrating with external contracts
 contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     function setUp() public override {
-        setBlockNumber(19_079_925);
+        blockNumber = 19_079_925;
         super.setUp();
     }
 
@@ -64,13 +64,13 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     // --- Slashing Scenario ---
 
     function test_UnpackEtherFiTotalValue() public {
-        uint256 totalValueOutOfLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueOutOfLp();
+        uint256 totalValueOutOfLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueOutOfLp();
 
-        uint256 totalValueInLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueInLp();
+        uint256 totalValueInLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueInLp();
 
         // 0x00000000000001287956cfe67f3b5ffe0000000000001e3b21b7e61ce9aac681
         // [totalValueInLp, totalValueOutOfLp]
-        bytes32 totalValue = vm.load(ETHER_FI_LIQUIDITY_POOL_ADDRESS, EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT);
+        bytes32 totalValue = vm.load(address(ETHER_FI_LIQUIDITY_POOL_ADDRESS), EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT);
 
         uint256 unpackedTotalValueInLp = uint256(totalValue >> 128);
 
@@ -83,8 +83,8 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     function test_WeEthExchangeRatePostSlashing() public {
         uint256 totalValueOutOfLpDiff = 10_000 ether;
 
-        uint256 totalValueOutOfLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueOutOfLp();
-        uint256 totalValueInLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueInLp();
+        uint256 totalValueOutOfLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueOutOfLp();
+        uint256 totalValueInLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueInLp();
 
         bytes32 newTotalValueInLp = bytes32(totalValueInLp) << 128;
 
@@ -93,7 +93,7 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
         bytes32 newTotalValue = newTotalValueInLp | newTotalValueOutOfLp;
 
         // reduce rebase share values in EtherFi
-        vm.store(ETHER_FI_LIQUIDITY_POOL_ADDRESS, EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
+        vm.store(address(ETHER_FI_LIQUIDITY_POOL_ADDRESS), EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
 
         // _share * getTotalPooledEther() / totalShares
         // _share * (totalValueOutOfLp + totalValueInLp) / totalShares
@@ -142,7 +142,7 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 exchangeRate = weEthWstEthReserveOracle.currentExchangeRate();
 
-        uint256 totalValueInLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueInLp();
+        uint256 totalValueInLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueInLp();
 
         bytes32 newTotalValueInLp = bytes32(totalValueInLp) << 128;
 
@@ -150,7 +150,7 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         bytes32 newTotalValue = newTotalValueInLp | newTotalValueOutOfLp;
 
-        vm.store(ETHER_FI_LIQUIDITY_POOL_ADDRESS, EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
+        vm.store(address(ETHER_FI_LIQUIDITY_POOL_ADDRESS), EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
 
         weEthWstEthReserveOracle.updateExchangeRate();
         uint256 newExchangeRate = weEthWstEthReserveOracle.currentExchangeRate();
@@ -200,9 +200,9 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         uint256 exchangeRate = weEthWstEthReserveOracle.currentExchangeRate();
 
-        uint256 totalValueOutOfLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueOutOfLp();
+        uint256 totalValueOutOfLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueOutOfLp();
 
-        uint256 totalValueInLp = IEtherFiLiquidityPool(ETHER_FI_LIQUIDITY_POOL_ADDRESS).totalValueInLp();
+        uint256 totalValueInLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueInLp();
 
         bytes32 newTotalValueInLp = bytes32(totalValueInLp) << 128;
 
@@ -210,7 +210,7 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
 
         bytes32 newTotalValue = newTotalValueInLp | newTotalValueOutOfLp;
 
-        vm.store(ETHER_FI_LIQUIDITY_POOL_ADDRESS, EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
+        vm.store(address(ETHER_FI_LIQUIDITY_POOL_ADDRESS), EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
 
         weEthWstEthReserveOracle.updateExchangeRate();
         uint256 newExchangeRate = weEthWstEthReserveOracle.currentExchangeRate();

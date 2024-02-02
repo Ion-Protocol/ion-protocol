@@ -17,15 +17,15 @@ contract DeployIonPoolScript is BaseScript {
     using StdJson for string;
     using SafeCast for uint256;
 
-    string defaultConfigPath = "./deployment-config/00_Default.json"; 
+    string defaultConfigPath = "./deployment-config/00_Default.json";
     string defaultConfig = vm.readFile(defaultConfigPath);
 
-    address protocol = defaultConfig.readAddress(".protocol"); 
-    
+    address protocol = defaultConfig.readAddress(".protocol");
+
     string configPath = "./deployment-config/04_DeployIonPool.json";
     string config = vm.readFile(configPath);
 
-    address initialDefaultAdmin = defaultConfig.readAddress(".defaultAdmin"); 
+    address initialDefaultAdmin = defaultConfig.readAddress(".defaultAdmin");
     address underlying = config.readAddress(".underlying");
     address treasury = config.readAddress(".treasury");
     uint8 decimals = config.readUint(".decimals").toUint8();

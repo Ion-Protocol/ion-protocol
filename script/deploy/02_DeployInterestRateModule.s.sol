@@ -12,7 +12,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-uint256 constant ILK_COUNT = 3;
+import { console2 } from "forge-std/console2.sol";
 
 // struct IlkData {
 //     // Word 1
@@ -42,34 +42,45 @@ contract DeployInterestRateScript is BaseScript {
 
     IYieldOracle yieldOracle = IYieldOracle(config.readAddress(".YieldOracleAddress"));
 
+    uint16 constant DISTRIBUTION_FACTOR = 10_000; // should always be 1, 100%
+
+    uint96 adjustedProfitMargin = config.readUint(".ilkData.adjustedProfitMargin").toUint96();
+    uint96 minimumKinkRate = config.readUint(".ilkData.minimumKinkRate").toUint96();
+    uint16 reserveFactor = config.readUint(".ilkData.reserveFactor").toUint16();
+    uint96 adjustedBaseRate = config.readUint(".ilkData.adjustedBaseRate").toUint96();
+    uint96 minimumBaseRate = config.readUint(".ilkData.minimumBaseRate").toUint96();
+    uint16 optimalUtilizationRate = config.readUint(".ilkData.optimalUtilizationRate").toUint16();
+    uint96 adjustedAboveKinkSlope = config.readUint(".ilkData.adjustedAboveKinkSlope").toUint96();
+    uint96 minimumAboveKinkSlope = config.readUint(".ilkData.minimumAboveKinkSlope").toUint96();
+
     function run() public broadcast returns (InterestRate interestRateModule) {
-        IlkData[] memory ilkDataList = new IlkData[](ILK_COUNT);
-        for (uint256 i = 0; i < ILK_COUNT; i++) {
-            IlkData memory ilkData;
-            ilkData.adjustedProfitMargin =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.adjustedProfitMargin")).toUint96();
-            ilkData.minimumKinkRate =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.minimumKinkRate")).toUint96();
+        console2.log(adjustedProfitMargin);
+        console2.log(minimumKinkRate);
+        console2.log(reserveFactor);
+        console2.log(adjustedBaseRate);
+        console2.log(minimumBaseRate);
+        console2.log(optimalUtilizationRate);
+        // console2.log(distributionFactor);
+        console2.log(adjustedAboveKinkSlope);
+        console2.log(minimumAboveKinkSlope);
 
-            ilkData.reserveFactor =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.reserveFactor")).toUint16();
-            ilkData.adjustedBaseRate =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.adjustedBaseRate")).toUint96();
-            ilkData.minimumBaseRate =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.minimumBaseRate")).toUint96();
-            ilkData.optimalUtilizationRate =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.optimalUtilizationRate")).toUint16();
-            ilkData.distributionFactor =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.distributionFactor")).toUint16();
+        IlkData memory ilkData;
+        ilkData.adjustedProfitMargin = adjustedProfitMargin;
+        ilkData.minimumKinkRate = minimumKinkRate;
+        ilkData.reserveFactor = reserveFactor;
+        ilkData.adjustedBaseRate = adjustedBaseRate;
+        ilkData.minimumBaseRate = minimumBaseRate;
+        ilkData.optimalUtilizationRate = optimalUtilizationRate;
+        ilkData.distributionFactor = DISTRIBUTION_FACTOR;
+        ilkData.adjustedAboveKinkSlope = adjustedAboveKinkSlope;
+        ilkData.minimumAboveKinkSlope = minimumAboveKinkSlope;
 
-            ilkData.adjustedAboveKinkSlope =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.adjustedAboveKinkSlope")).toUint96();
-            ilkData.minimumAboveKinkSlope =
-                config.readUint(string.concat(".", i.toString(), ".ilkData.minimumAboveKinkSlope")).toUint96();
+        IlkData[] memory ilkDataList = new IlkData[](1);
+        ilkDataList[0] = ilkData;
 
-            ilkDataList[i] = ilkData;
-        }
-
+        // If the ilks array is expanded beyond length one via calling initializeIlk() more than once,
+        // all _accrueInterest() would revert as interest rate config only exists for ilkIndex 0.
+        // TODO: When calling initializeIlk(), always verify that the length is still zero
         interestRateModule = new InterestRate(ilkDataList, yieldOracle);
     }
 }
