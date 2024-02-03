@@ -19,6 +19,18 @@ using WadRayMath for uint256;
 library EtherFiLibrary {
     error NoAmountInFound();
 
+    /**
+     * @notice Returns the amount of ETH required to obtain a given amount of weETH.
+     * @dev Performing the calculations seems to potentially yield a rounding
+     * error of 1-2 wei. In order to ensure that the correct value is returned,
+     * both versions are tested and the correct one is returned.
+     *
+     * Should a correct version ever not be found, any contracts using the
+     * library should halt execution.
+     * @param weEth contract.
+     * @param lrtAmount Desired amount of weETH. [WAD]
+     * @return Amount of ETH required to obtain the given amount of weETH. [WAD]
+     */
     function getEthAmountInForLstAmountOut(IWeEth weEth, uint256 lrtAmount) internal view returns (uint256) {
         IEtherFiLiquidityPool pool = IEtherFiLiquidityPool(weEth.liquidityPool());
         IEEth eEth = IEEth(weEth.eETH());
@@ -40,6 +52,12 @@ library EtherFiLibrary {
         revert NoAmountInFound();
     }
 
+    /**
+     * @notice Returns the amount of weETH that will be obtained from a given amount of ETH.
+     * @param weEth contract.
+     * @param ethAmount Amount of ETH to deposit. [WAD]
+     * @return Amount of weETH that will be obtained. [WAD]
+     */
     function getLstAmountOutForEthAmountIn(IWeEth weEth, uint256 ethAmount) internal view returns (uint256) {
         IEtherFiLiquidityPool pool = IEtherFiLiquidityPool(weEth.liquidityPool());
         IEEth eEth = IEEth(weEth.eETH());
@@ -50,6 +68,16 @@ library EtherFiLibrary {
         return _getLstAmountOutForEthAmountIn(totalPooledEther, totalShares, ethAmount);
     }
 
+    /**
+     * @notice An internal helper function to calculate the amount of weETH that
+     * will be obtained from a given amount of ETH.
+     * @dev This is useful if the function arguments are already known so that
+     * additional external calls can be avoided.
+     * @param totalPooledEther Total pooled ether in the Ether Fi pool. [WAD]
+     * @param totalShares Total amount of minted shares. [WAD]
+     * @param ethAmount Amount of ETH to deposit. [WAD]
+     * @return Amount of weETH that will be obtained. [WAD]
+     */
     function _getLstAmountOutForEthAmountIn(
         uint256 totalPooledEther,
         uint256 totalShares,
@@ -69,6 +97,13 @@ library EtherFiLibrary {
         return _sharesForAmount(newTotalPooledEther, newTotalShares, eEthAmount);
     }
 
+    /**
+     * @notice Deposits a given amount of ETH into the Ether Fi pool and then
+     * uses the received eETH to mint weETH.
+     * @param weEth contract.
+     * @param ethAmount Amount of ETH to deposit. [WAD]
+     * @return Amount of weETH that was obtained. [WAD]
+     */
     function depositForLrt(IWeEth weEth, uint256 ethAmount) internal returns (uint256) {
         IEtherFiLiquidityPool pool = IEtherFiLiquidityPool(weEth.liquidityPool());
         uint256 eEthSharesAmount = pool.deposit{ value: ethAmount }();
@@ -79,6 +114,15 @@ library EtherFiLibrary {
         return weEth.wrap(amountEEthRecieved);
     }
 
+    /**
+     * @notice An internal helper function to calculate the amount of shares
+     * from amount.
+     * @dev Useful for avoiding external calls when the function arguments are
+     * already known.
+     * @param totalPooledEther Total pooled ether in the Ether Fi pool. [WAD]
+     * @param totalShares Total amount of minted shares. [WAD]
+     * @param _depositAmount Amount of ETH. [WAD]
+     */
     function _sharesForAmount(
         uint256 totalPooledEther,
         uint256 totalShares,
@@ -93,6 +137,15 @@ library EtherFiLibrary {
         return (_depositAmount * totalShares) / totalPooledEther;
     }
 
+    /**
+     * @notice An internal helper function to calculate the amount from given
+     * amount of shares.
+     * @dev Useful for avoiding external calls when the function arguments are
+     * already known.
+     * @param totalPooledEther Total pooled ether in the Ether Fi pool. [WAD]
+     * @param totalShares Total amount of minted shares. [WAD]
+     * @param _shares Amount of shares. [WAD]
+     */
     function _amountForShares(
         uint256 totalPooledEther,
         uint256 totalShares,
