@@ -14,7 +14,7 @@ import { console2 } from "forge-std/console2.sol";
 using WadRayMath for uint256;
 
 abstract contract UniswapFlashswapDirectMintHandler_Test is WeEthIonHandler_ForkBase {
-    function testFork_FlashloanWethMintAndSwap() public virtual {
+    function testFork_FlashswapAndMint() public virtual {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;
         uint256 maxResultingDebt =
@@ -25,13 +25,13 @@ abstract contract UniswapFlashswapDirectMintHandler_Test is WeEthIonHandler_Fork
 
         if (Whitelist(whitelist).borrowersRoot(0) != 0) {
             vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
-            _getTypedUFDMHandler().flashloanWethMintAndSwap(
+            _getTypedUFDMHandler().flashswapAndMint(
                 initialDeposit, resultingAdditionalCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
             );
         }
 
         uint256 gasBefore = gasleft();
-        _getTypedUFDMHandler().flashloanWethMintAndSwap(
+        _getTypedUFDMHandler().flashswapAndMint(
             initialDeposit, resultingAdditionalCollateral, maxResultingDebt, block.timestamp + 1, borrowerWhitelistProof
         );
         uint256 gasAfter = gasleft();
@@ -59,7 +59,7 @@ abstract contract UniswapFlashswapDirectMintHandler_Test is WeEthIonHandler_Fork
         _getTypedUFDMHandler().uniswapV3SwapCallback(1, 1, "");
     }
 
-    function testFork_RevertWhen_FlashloanWethMintAndSwapCreatesMoreDebtThanUserIsWilling() external {
+    function testFork_RevertWhen_FlashswapAndMintCreatesMoreDebtThanUserIsWilling() external {
         vm.skip(borrowerWhitelistProof.length > 0);
 
         uint256 initialDeposit = 1e18;
@@ -70,7 +70,7 @@ abstract contract UniswapFlashswapDirectMintHandler_Test is WeEthIonHandler_Fork
         ionPool.addOperator(address(_getTypedUFDMHandler()));
 
         vm.expectRevert();
-        _getTypedUFDMHandler().flashloanWethMintAndSwap(
+        _getTypedUFDMHandler().flashswapAndMint(
             initialDeposit, resultingAdditionalCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
         );
     }

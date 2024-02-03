@@ -69,6 +69,9 @@ abstract contract IonHandlerBase {
         IS_MAX
     }
 
+    IERC20 public immutable BASE;
+    // Will keep WETH for compatability with other strategies. But this should
+    // be removed eventually to remove dependence on WETH as a base asset.
     IWETH9 public immutable WETH;
     uint8 public immutable ILK_INDEX;
     IonPool public immutable POOL;
@@ -88,6 +91,8 @@ abstract contract IonHandlerBase {
         POOL = _ionPool;
         ILK_INDEX = _ilkIndex;
 
+        BASE = IERC20(_ionPool.underlying());
+
         IWETH9 _weth = WETH_ADDRESS;
         WETH = _weth;
 
@@ -98,7 +103,7 @@ abstract contract IonHandlerBase {
 
         WHITELIST = _whitelist;
 
-        _weth.approve(address(_ionPool), type(uint256).max);
+        BASE.approve(address(_ionPool), type(uint256).max);
         IERC20(ilkAddress).approve(address(_gemJoin), type(uint256).max);
     }
 
@@ -178,7 +183,7 @@ abstract contract IonHandlerBase {
     function repayFullAndWithdraw(uint256 collateralToWithdraw) external {
         (uint256 repayAmount, uint256 normalizedDebtToRepay) = _getFullRepayAmount(msg.sender);
 
-        WETH.safeTransferFrom(msg.sender, address(this), repayAmount);
+        BASE.safeTransferFrom(msg.sender, address(this), repayAmount);
 
         POOL.repay(ILK_INDEX, msg.sender, address(this), normalizedDebtToRepay);
 
@@ -193,7 +198,7 @@ abstract contract IonHandlerBase {
      * @dev This simply emulates the rounding behaviour of the `IonPool` to
      * arrive at an accurate value.
      * @param user Address of the user.
-     * @return repayAmount Amount of WETH required to repay all debt (this
+     * @return repayAmount Amount of base asset required to repay all debt (this
      * mimics IonPool's behavior). [WAD]
      * @return normalizedDebt Total normalized debt held by `user`'s vault.
      * [WAD]
@@ -203,7 +208,8 @@ abstract contract IonHandlerBase {
 
         normalizedDebt = POOL.normalizedDebt(ILK_INDEX, user);
 
-        // This is exactly how IonPool calculates the amount of weth required
+        // This is exactly how IonPool calculates the amount of base asset
+        // required
         uint256 amountRad = normalizedDebt * currentRate;
         repayAmount = amountRad / RAY;
         if (amountRad % RAY > 0) ++repayAmount;
@@ -219,7 +225,7 @@ abstract contract IonHandlerBase {
      * @param collateralToWithdraw In collateral terms. [WAD]
      */
     function repayAndWithdraw(uint256 debtToRepay, uint256 collateralToWithdraw) external {
-        WETH.safeTransferFrom(msg.sender, address(this), debtToRepay);
+        BASE.safeTransferFrom(msg.sender, address(this), debtToRepay);
         _repayAndWithdraw(msg.sender, msg.sender, collateralToWithdraw, debtToRepay);
     }
 
@@ -256,6 +262,6 @@ abstract contract IonHandlerBase {
      * @dev To allow unwrapping of WETH into ETH.
      */
     receive() external payable {
-        if (msg.sender != address(WETH)) revert CannotSendEthToContract();
+        if (msg.sender != address(WETH_ADDRESS)) revert CannotSendEthToContract();
     }
 }

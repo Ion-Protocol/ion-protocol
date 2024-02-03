@@ -6,7 +6,10 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ERC20Burnable } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import { ERC20Pausable } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import { AccessControl, AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import {
+    AccessControl,
+    AccessControlEnumerable
+} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
@@ -43,7 +46,7 @@ contract ERC20PresetMinterPauser is Context, AccessControlEnumerable, ERC20Burna
         _grantRole(PAUSER_ROLE, _msgSender());
     }
 
-    function grantRole(bytes32 role, address account) override(AccessControl, IAccessControl) public {
+    function grantRole(bytes32 role, address account) public override(AccessControl, IAccessControl) {
         _grantRole(role, account);
     }
 

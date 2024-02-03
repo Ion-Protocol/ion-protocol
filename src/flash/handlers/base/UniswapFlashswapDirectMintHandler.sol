@@ -3,20 +3,17 @@ pragma solidity 0.8.21;
 
 import { IonHandlerBase } from "./IonHandlerBase.sol";
 import { IWETH9 } from "../../../interfaces/IWETH9.sol";
-import { SpotOracle } from "../../../oracles/spot/SpotOracle.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3SwapCallback } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
 
-import { IVault, IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
+import { IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { WEETH_ADDRESS, WSTETH_ADDRESS } from "../../../Constants.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { WSTETH_ADDRESS } from "../../../Constants.sol";
 
 /**
  * @notice This contract allows for easy creation of leverge positions through a
@@ -40,26 +37,31 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
     /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
     uint160 internal constant MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342;
 
-    SpotOracle public immutable SPOT;
     IUniswapV3Pool public immutable UNISWAP_POOL;
-    bool private immutable WETH_IS_TOKEN0;
+    IERC20 public immutable MINT_ASSET;
+    bool private immutable MINT_IS_TOKEN0;
 
-    constructor(IUniswapV3Pool _uniswapPool) {
+    constructor(IUniswapV3Pool _uniswapPool, IERC20 _mintAsset) {
         if (address(_uniswapPool) == address(0)) revert InvalidUniswapPool();
+
+        MINT_ASSET = _mintAsset;
 
         address token0 = _uniswapPool.token0();
         address token1 = _uniswapPool.token1();
 
-        if (token0 != address(WETH) && token1 != address(WETH)) {
+        if (token0 != address(MINT_ASSET) && token1 != address(MINT_ASSET)) {
             revert InvalidUniswapPool();
         }
-        if (token0 == address(WETH) && token1 == address(WETH)) {
+        if (token0 == address(MINT_ASSET) && token1 == address(MINT_ASSET)) {
             revert InvalidUniswapPool();
         }
 
         UNISWAP_POOL = _uniswapPool;
-        WETH_IS_TOKEN0 = token0 == address(WETH) ? true : false;
-        SPOT = POOL.spot(ILK_INDEX);
+        MINT_IS_TOKEN0 = token0 == address(MINT_ASSET) ? true : false;
+
+        address baseAsset = MINT_IS_TOKEN0 ? token1 : token0;
+
+        if (baseAsset != address(BASE)) revert InvalidUniswapPool();
     }
 
     /**
@@ -69,7 +71,7 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
      * @param maxResultingDebt in base asset terms. [WAD]
      * @param proof used to validate the user is whitelisted.
      */
-    function flashloanWethMintAndSwap(
+    function flashswapAndMint(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingDebt,
@@ -81,10 +83,10 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
         checkDeadline(deadline)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
-        _flashloanWethMintAndSwap(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
+        _flashswapAndMint(initialDeposit, resultingAdditionalCollateral, maxResultingDebt);
     }
 
-    function _flashloanWethMintAndSwap(
+    function _flashswapAndMint(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingDebt
@@ -95,7 +97,7 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
         addresses[0] = IERC20Balancer(address(WETH));
 
         uint256 amountLrt = resultingAdditionalCollateral - initialDeposit; // in collateral terms
-        uint256 amountWethToFlashloan = _getEthAmountInForLstAmountOut(amountLrt);
+        uint256 amountWethToFlashloan = _getAmountInForCollateralAmountOut(amountLrt);
 
         if (amountWethToFlashloan == 0) {
             // AmountToBorrow.IS_MAX because we don't want to create any new debt here
@@ -108,12 +110,12 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
         }
 
         // We want to swap for ETH here
-        bool zeroForOne = WETH_IS_TOKEN0 ? false : true;
+        bool zeroForOne = MINT_IS_TOKEN0 ? false : true;
         _initiateFlashSwap({
             zeroForOne: zeroForOne,
             amountOut: amountWethToFlashloan,
             recipient: address(this),
-            data: abi.encode(msg.sender, zeroForOne, resultingAdditionalCollateral, initialDeposit)
+            data: abi.encode(msg.sender, resultingAdditionalCollateral, initialDeposit)
         });
     }
 
@@ -152,24 +154,22 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
 
         // swaps entirely within 0-liquidity regions are not supported
         if (amount0Delta == 0 && amount1Delta == 0) revert InvalidZeroLiquidityRegionSwap();
-        (address user, bool zeroForOne, uint256 resultingAdditionalCollateral, uint256 initialDeposit) =
-            abi.decode(_data, (address, bool, uint256, uint256));
+        (address user, uint256 resultingAdditionalCollateral, uint256 initialDeposit) =
+            abi.decode(_data, (address, uint256, uint256));
 
-        (address tokenIn, address tokenOut) =
-            zeroForOne ? (address(WETH), address(WSTETH_ADDRESS)) : (address(WSTETH_ADDRESS), address(WETH));
-
-        // Code below this if statement will always assume token0 is WETH. If it
+        // Code below this if statement will always assume token0 is MINT_ASSET. If it
         // is not actually the case, we will flip the vars
-        if (!WETH_IS_TOKEN0) {
+        if (!MINT_IS_TOKEN0) {
             (amount0Delta, amount1Delta) = (amount1Delta, amount0Delta);
-            tokenIn = tokenOut;
         }
 
-        // Sanity check that Uniswap is sending WETH
+        address tokenIn = address(BASE);
+
+        // Sanity check that Uniswap is sending MINT_ASSET
         assert(amount0Delta < 0 && amount1Delta > 0);
 
-        // Flashloaned WETH needs to be converted into collateral asset
-        uint256 collateralFromDeposit = _depositWethForLrt(uint256(-amount0Delta));
+        // MINT_ASSET needs to be converted into collateral asset
+        uint256 collateralFromDeposit = _mintCollateralAsset(uint256(-amount0Delta));
 
         // Sanity check
         assert(collateralFromDeposit + initialDeposit == resultingAdditionalCollateral);
@@ -183,13 +183,17 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
         IERC20(tokenIn).safeTransfer(msg.sender, uint256(amount1Delta));
     }
 
-    function _depositWethForLrt(uint256 amountWeth) internal virtual returns (uint256);
+    /**
+     * @notice Deposits the mint asset into the a provider's collateral asset.
+     * @param amountMintAsset amount of "mint asset" to deposit. [WAD]
+     */
+    function _mintCollateralAsset(uint256 amountMintAsset) internal virtual returns (uint256);
 
     /**
      * @notice Calculates the amount of eth required to receive `amountLrt`.
      * @dev Calculates the amount of eth required to receive `amountLrt`.
      * @param amountLrt Desired output amount. [WAD]
-     * @return Eth required for desired lst output. [WAD]
+     * @return Amount mint asset required for desired output. [WAD]
      */
-    function _getEthAmountInForLstAmountOut(uint256 amountLrt) internal view virtual returns (uint256);
+    function _getAmountInForCollateralAmountOut(uint256 amountLrt) internal view virtual returns (uint256);
 }

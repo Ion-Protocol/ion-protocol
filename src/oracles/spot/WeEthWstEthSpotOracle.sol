@@ -6,7 +6,6 @@ import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
 import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED } from "../../Constants.sol";
 import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
-import { IRedstonePriceFeed } from "../../interfaces/IRedstone.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
 

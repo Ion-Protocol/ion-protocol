@@ -5,9 +5,6 @@ import { IWeEth, IEEth, IEtherFiLiquidityPool } from "../interfaces/ProviderInte
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { WadRayMath } from "./math/WadRayMath.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 using Math for uint256;
 using WadRayMath for uint256;
@@ -20,6 +17,8 @@ using WadRayMath for uint256;
  * @custom:security-contact security@molecularlabs.io
  */
 library EtherFiLibrary {
+    error NoAmountInFound();
+
     function getEthAmountInForLstAmountOut(IWeEth weEth, uint256 lrtAmount) internal view returns (uint256) {
         IEtherFiLiquidityPool pool = IEtherFiLiquidityPool(weEth.liquidityPool());
         IEEth eEth = IEEth(weEth.eETH());
@@ -38,7 +37,7 @@ library EtherFiLibrary {
         }
 
         // Let's be defensive. If the rounding cannot be solved... create a DOS.
-        revert("EtherFiLibrary: getEthAmountInForLstAmountOut: no solution found");
+        revert NoAmountInFound();
     }
 
     function getLstAmountOutForEthAmountIn(IWeEth weEth, uint256 ethAmount) internal view returns (uint256) {

@@ -18,12 +18,7 @@ struct Config {
 abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is WeEthIonHandler_ForkBase {
     Config ufdmConfig;
 
-    function testForkFuzz_FlashloanWethMintAndSwap(
-        uint256 initialDeposit,
-        uint256 resultingCollateralMultiplier
-    )
-        public
-    {
+    function testForkFuzz_FlashswapAndMint(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         initialDeposit = bound(initialDeposit, ufdmConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
         uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
@@ -32,7 +27,7 @@ abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is WeEthIonHandler_
         weth.approve(address(_getTypedUFDMHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFDMHandler()));
 
-        _getTypedUFDMHandler().flashloanWethMintAndSwap(
+        _getTypedUFDMHandler().flashswapAndMint(
             initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
         );
 
@@ -56,7 +51,7 @@ abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is WeEthIonHandler_
 abstract contract UniswapFlashswapDirectMintHandler_WithRateChange_FuzzTest is
     UniswapFlashswapDirectMintHandler_FuzzTest
 {
-    function testForkFuzz_WithRateChange_FlashloanWethMintAndSwap(
+    function testForkFuzz_WithRateChange_FlashswapAndMint(
         uint256 initialDeposit,
         uint256 resultingCollateralMultiplier,
         uint104 rate
@@ -65,6 +60,6 @@ abstract contract UniswapFlashswapDirectMintHandler_WithRateChange_FuzzTest is
     {
         rate = uint104(bound(rate, 1e27, 10e27));
         ionPool.setRate(_getIlkIndex(), rate);
-        super.testForkFuzz_FlashloanWethMintAndSwap(initialDeposit, resultingCollateralMultiplier);
+        super.testForkFuzz_FlashswapAndMint(initialDeposit, resultingCollateralMultiplier);
     }
 }
