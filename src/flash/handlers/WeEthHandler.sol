@@ -33,7 +33,7 @@ contract WeEthHandler is UniswapFlashswapDirectMintHandler {
         return WEETH_ADDRESS.depositForLrt(amountWeth);
     }
 
-    function _getAmountInForCollateralAmountOut(uint256 amountLrt) internal view override returns (uint256) {
-        return WEETH_ADDRESS.getEthAmountInForLstAmountOut(amountLrt);
+    function _getAmountInForCollateralAmountOut(uint256 amountOut) internal view override returns (uint256) {
+        return WEETH_ADDRESS.getEthAmountInForLstAmountOut(amountOut);
     }
 }
