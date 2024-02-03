@@ -23,6 +23,10 @@ contract MockLido {
     function setNewRate(uint256 newRate) external {
         _exchangeRate = newRate;
     }
+
+    function getRate() external view returns (uint256) {
+        return _exchangeRate;
+    }
 }
 
 contract MockStader {

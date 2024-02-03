@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "./IonPool.sol";
-import { IWstEth, IStaderStakePoolsManager, ISwEth } from "./interfaces/ProviderInterfaces.sol";
+import { IWeEth, IStaderStakePoolsManager, ISwEth } from "./interfaces/ProviderInterfaces.sol";
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
 
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -84,14 +84,14 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
      * @notice Creates a new `YieldOracle` instance.
      * @param _historicalExchangeRates An intitial set of values for the
      * historical exchange rates matrix.
-     * @param _wstEth Address of the wstETH contract.
+     * @param _weEth Address of the weETH contract.
      * @param _stader Address of the Stader deposit contract.
      * @param _swell Address of the Swell Eth contract.
      * @param owner Admin address.
      */
     constructor(
         uint64[ILK_COUNT][LOOK_BACK] memory _historicalExchangeRates,
-        address _wstEth,
+        address _weEth,
         address _stader,
         address _swell,
         address owner
@@ -112,7 +112,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
             unchecked { ++i; }
         }
 
-        ADDRESS0 = _wstEth;
+        ADDRESS0 = _weEth;
         ADDRESS1 = _stader;
         ADDRESS2 = _swell;
 
@@ -209,8 +209,8 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
      */
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            IWstEth wstEth = IWstEth(ADDRESS0);
-            exchangeRate = wstEth.stEthPerToken().toUint64();
+            IWeEth weEth = IWeEth(ADDRESS0); 
+            exchangeRate = weEth.getRate().toUint64();
         } else if (ilkIndex == 1) {
             IStaderStakePoolsManager stader = IStaderStakePoolsManager(ADDRESS1);
             exchangeRate = stader.getExchangeRate().toUint64();
