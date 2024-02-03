@@ -4,8 +4,10 @@ pragma solidity 0.8.21;
 
 import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
 import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
-import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED } from "../../Constants.sol";
+import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED, ETH_PER_STETH_CHAINLINK } from "../../Constants.sol";
 import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
+
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
 
@@ -16,6 +18,7 @@ uint8 constant REDSTONE_DECIMALS = 8;
  */
 contract WeEthWstEthSpotOracle is SpotOracle {
     using WadRayMath for uint256;
+    using SafeCast for int256;
 
     uint256 maxTimeFromLastUpdate; // seconds
 
@@ -36,20 +39,30 @@ contract WeEthWstEthSpotOracle is SpotOracle {
     }
 
     /**
-     * @notice Gets the price of weETH in wstETH. ETH / weETH * wstETH / stETH = wstETH / weETH
+     * @notice Gets the price of weETH in wstETH.
+     * (ETH / weETH) / (ETH / stETH) * (wstETH / stETH) = wstETH / weETH
      * @dev Redstone oracle returns ETH per weETH with 8 decimals. This
      * needs to be converted to wstETH per weETH denomination.
      * @return wstEthPerWeEth price of weETH in wstETH. [WAD]
      */
     function getPrice() public view override returns (uint256) {
-        (, int256 answer,, uint256 updatedAt,) = REDSTONE_WEETH_ETH_PRICE_FEED.latestRoundData(); // ETH
+        (, int256 ethPerWeEth,, uint256 ethPerWeEthUpdatedAt,) = REDSTONE_WEETH_ETH_PRICE_FEED.latestRoundData(); // ETH
             // / weETH [8 decimals]
-        if (block.timestamp - updatedAt > maxTimeFromLastUpdate) {
+        (, int256 ethPerStEth,, uint256 ethPerStEthUpdatedAt,) = ETH_PER_STETH_CHAINLINK.latestRoundData(); // price
+            // of stETH denominated in ETH
+
+        if (
+            block.timestamp - ethPerWeEthUpdatedAt > maxTimeFromLastUpdate
+                || block.timestamp - ethPerStEthUpdatedAt > maxTimeFromLastUpdate
+        ) {
             return 0; // collateral valuation is zero if oracle data is stale
         } else {
-            uint256 wstEthPerStEth = IWstEth(WSTETH_ADDRESS).tokensPerStEth(); // wstETH / stETH [18 decimals]
-            return uint256(answer).scaleUpToWad(REDSTONE_DECIMALS).wadMulDown(wstEthPerStEth); // wstETH / weETH [18
-                // decimals]
+            // (ETH / weETH) / (ETH / stETH) = stETH / weETH
+            uint256 stEthPerWeEth =
+                ethPerWeEth.toUint256().scaleUpToWad(REDSTONE_DECIMALS).wadDivDown(ethPerStEth.toUint256()); // [wad]
+
+            uint256 wstEthPerStEth = IWstEth(WSTETH_ADDRESS).tokensPerStEth(); // [wad]
+            return stEthPerWeEth.wadMulDown(wstEthPerStEth); // [wad]
         }
     }
 }

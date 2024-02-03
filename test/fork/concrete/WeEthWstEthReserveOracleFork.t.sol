@@ -14,7 +14,7 @@ import { ETHER_FI_LIQUIDITY_POOL_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "sr
 // fork tests for integrating with external contracts
 contract WeEthWstEthReserveOracleForkTest is ReserveOracleSharedSetup {
     function setUp() public override {
-        setBlockNumber(19_079_925);
+        blockNumber = 19_079_925;
         super.setUp();
     }
 

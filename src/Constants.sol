@@ -13,6 +13,7 @@ import {
     IEtherFiLiquidityPool
 } from "./interfaces/ProviderInterfaces.sol";
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
+import { IChainlink } from "./interfaces/IChainlink.sol";
 
 IWETH9 constant WETH_ADDRESS = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
@@ -35,3 +36,6 @@ IEtherFiLiquidityPool constant ETHER_FI_LIQUIDITY_POOL_ADDRESS =
 IWeEth constant WEETH_ADDRESS = IWeEth(0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee);
 IRedstonePriceFeed constant REDSTONE_WEETH_ETH_PRICE_FEED =
     IRedstonePriceFeed(0x8751F736E94F6CD167e8C5B97E245680FbD9CC36);
+
+// Chainlink
+IChainlink constant ETH_PER_STETH_CHAINLINK = IChainlink(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
