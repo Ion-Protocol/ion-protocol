@@ -6,8 +6,6 @@ import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
 import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED, ETH_PER_STETH_CHAINLINK } from "../../Constants.sol";
 import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
-import { IChainlink } from "../../interfaces/IChainlink.sol";
-import { IRedstonePriceFeed } from "../../interfaces/IRedstone.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -48,10 +46,9 @@ contract WeEthWstEthSpotOracle is SpotOracle {
      * @return wstEthPerWeEth price of weETH in wstETH. [WAD]
      */
     function getPrice() public view override returns (uint256) {
-        (, int256 ethPerWeEth,, uint256 ethPerWeEthUpdatedAt,) =
-            IRedstonePriceFeed(REDSTONE_WEETH_ETH_PRICE_FEED).latestRoundData(); // ETH
+        (, int256 ethPerWeEth,, uint256 ethPerWeEthUpdatedAt,) = REDSTONE_WEETH_ETH_PRICE_FEED.latestRoundData(); // ETH
             // / weETH [8 decimals]
-        (, int256 ethPerStEth,, uint256 ethPerStEthUpdatedAt,) = IChainlink(ETH_PER_STETH_CHAINLINK).latestRoundData(); // price
+        (, int256 ethPerStEth,, uint256 ethPerStEthUpdatedAt,) = ETH_PER_STETH_CHAINLINK.latestRoundData(); // price
             // of stETH denominated in ETH
 
         if (

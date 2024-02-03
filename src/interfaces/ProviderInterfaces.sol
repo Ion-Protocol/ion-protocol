@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-interface IStEth {
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IStEth is IERC20 {
     function submit(address _referral) external payable returns (uint256);
 
     function getTotalPooledEther() external view returns (uint256);
@@ -15,7 +17,7 @@ interface IStEth {
     function approve(address spender, uint256 value) external returns (bool);
 }
 
-interface IWstEth {
+interface IWstEth is IERC20 {
     function wrap(uint256 _stETHAmount) external returns (uint256);
 
     /**
@@ -76,6 +78,8 @@ interface IStaderOracle {
     function getExchangeRate() external view returns (ExchangeRate memory);
 }
 
+interface IETHx is IERC20 { }
+
 interface ISwEth {
     function deposit() external payable;
 
@@ -86,16 +90,28 @@ interface ISwEth {
     function getRate() external view returns (uint256);
 }
 
-interface IWeEth {
+interface IWeEth is IERC20 {
     function getRate() external view returns (uint256);
     function getEETHByWeETH(uint256) external view returns (uint256);
+
+    // Official function technically returns the interface but we won't type it
+    // here
+    function eETH() external view returns (address);
+    function liquidityPool() external view returns (address);
+    function wrap(uint256 _eETHAmount) external returns (uint256);
+    function unwrap(uint256 _weETHAmount) external returns (uint256);
 }
 
-interface IEEth {
+interface IEEth is IERC20 {
     function totalShares() external view returns (uint256);
 }
 
 interface IEtherFiLiquidityPool {
     function totalValueOutOfLp() external view returns (uint128);
     function totalValueInLp() external view returns (uint128);
+    function amountForShare(uint256 _share) external view returns (uint256);
+    function sharesForAmount(uint256 _amount) external view returns (uint256);
+    function deposit() external payable returns (uint256);
+    function getTotalPooledEther() external view returns (uint256);
+    function getTotalEtherClaimOf(address _user) external view returns (uint256);
 }
