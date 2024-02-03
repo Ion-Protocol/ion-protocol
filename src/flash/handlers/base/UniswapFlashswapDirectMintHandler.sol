@@ -17,6 +17,13 @@ import { WSTETH_ADDRESS } from "../../../Constants.sol";
 
 /**
  * @notice This contract allows for easy creation of leverge positions through a
+ * Uniswap flashswap and direct mint of the collateral from the provider. This
+ * will be used when the collateral cannot be minted directly with the base
+ * asset but can be directly minted by a token that the base asset has a
+ * UniswapV3 pool with.
+ *
+ * This contract is to be used when there exists a UniswapV3 pool between the
+ * base asset and the mint asset.
  *
  * @custom:security-contact security@molecularlabs.io
  */
@@ -41,6 +48,11 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
     IERC20 public immutable MINT_ASSET;
     bool private immutable MINT_IS_TOKEN0;
 
+    /**
+     * @notice Creates a new `UniswapFlashswapDirectMintHandler` instance.
+     * @param _uniswapPool Pool to perform the flashswap on.
+     * @param _mintAsset The asset used to mint the collateral.
+     */
     constructor(IUniswapV3Pool _uniswapPool, IERC20 _mintAsset) {
         if (address(_uniswapPool) == address(0)) revert InvalidUniswapPool();
 
@@ -65,7 +77,10 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
     }
 
     /**
-     * @notice
+     * @notice Transfer collateral from user -> Initiate flashswap between from
+     * base asset to mint asset -> Use the mint asset to mint the collateral ->
+     * Deposit all collateral into `IonPool` -> Borrow the base asset -> Close
+     * the flashswap by sending the base asset to the Uniswap pool.
      * @param initialDeposit in collateral terms. [WAD]
      * @param resultingAdditionalCollateral in collateral terms. [WAD]
      * @param maxResultingDebt in base asset terms. [WAD]
@@ -149,6 +164,20 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
         if (amountOutReceived != amountOut) revert OutputAmountNotReceived(amountOutReceived, amountOut);
     }
 
+    /**
+     * @notice From the perspective of the pool i.e. Negative amount means pool is
+     * sending. This function is intended to never be called directly. It should
+     * only be called by the Uniswap pool during a swap initiated by this
+     * contract.
+     *
+     * @dev One thing to note from a security perspective is that the pool only calls
+     * the callback on `msg.sender`. So a theoretical attacker cannot call this
+     * function by directing where to call the callback.
+     *
+     * @param amount0Delta change in token0
+     * @param amount1Delta change in token1
+     * @param _data arbitrary data
+     */
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external override {
         if (msg.sender != address(UNISWAP_POOL)) revert CallbackOnlyCallableByPool(msg.sender);
 
