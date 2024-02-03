@@ -4,12 +4,10 @@ pragma solidity 0.8.21;
 
 import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
 import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
-import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED, ETH_PER_STETH_CHAINLINK } from "../../Constants.sol";
+import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED, ETH_PER_STETH_CHAINLINK, REDSTONE_DECIMALS } from "../../Constants.sol";
 import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
-uint8 constant REDSTONE_DECIMALS = 8;
 
 /**
  * @notice The weETH spot oracle denominated in wstETH
@@ -20,7 +18,7 @@ contract WeEthWstEthSpotOracle is SpotOracle {
     using WadRayMath for uint256;
     using SafeCast for int256;
 
-    uint256 maxTimeFromLastUpdate; // seconds
+    uint256 public immutable MAX_TIME_FROM_LAST_UPDATE; // seconds
 
     /**
      * @notice Creates a new `WeEthWstEthSpotOracle` instance.
@@ -35,7 +33,7 @@ contract WeEthWstEthSpotOracle is SpotOracle {
     )
         SpotOracle(_ltv, _reserveOracle)
     {
-        maxTimeFromLastUpdate = _maxTimeFromLastUpdate;
+        MAX_TIME_FROM_LAST_UPDATE = _maxTimeFromLastUpdate;
     }
 
     /**
@@ -52,8 +50,8 @@ contract WeEthWstEthSpotOracle is SpotOracle {
             // of stETH denominated in ETH
 
         if (
-            block.timestamp - ethPerWeEthUpdatedAt > maxTimeFromLastUpdate
-                || block.timestamp - ethPerStEthUpdatedAt > maxTimeFromLastUpdate
+            block.timestamp - ethPerWeEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE
+                || block.timestamp - ethPerStEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE
         ) {
             return 0; // collateral valuation is zero if oracle data is stale
         } else {

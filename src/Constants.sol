@@ -15,6 +15,8 @@ import {
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
 import { IChainlink } from "./interfaces/IChainlink.sol";
 
+uint8 constant REDSTONE_DECIMALS = 8;
+
 IWETH9 constant WETH_ADDRESS = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
 // StETH
