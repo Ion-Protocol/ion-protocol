@@ -126,6 +126,7 @@ jobs:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           MAINNET_ETHERSCAN_URL: ${{ secrets.MAINNET_ETHERSCAN_URL }}
           CHAIN_ID: ${{ secrets.CHAIN_ID }}
+          FOUNDRY_PROFILE: ci
         run: |
           curl -fsSL https://bun.sh/install | bash
           export PATH="$HOME/.bun/bin/:$PATH"
@@ -150,3 +151,40 @@ jobs:
         run: |
           yarn install
           yarn solhint
+
+  slither:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        node_version:
+          - 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          wget https://github.com/ethereum/solidity/releases/download/v0.8.7/solc-static-linux
+          chmod +x solc-static-linux
+          sudo mv solc-static-linux /usr/local/bin/solc
+          pip3 install slither-analyzer
+          pip3 inspect
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Run Slither
+        run: |
+          slither src

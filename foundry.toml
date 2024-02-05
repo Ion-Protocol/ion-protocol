@@ -27,6 +27,13 @@ depth = 1536
 # fail_on_revert = true
 call_override = false   # reentrancy-check
 
+[profile.ci.fuzz]
+runs = 50
+
+[profile.ci.invariant]
+runs = 10
+depth = 5
+
 [fmt]
 bracket_spacing = true
 int_types = "long"
