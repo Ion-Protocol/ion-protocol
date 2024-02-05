@@ -5,7 +5,7 @@
   "scripts": {
     "prettier": "prettier --write '**/*.{md,yml,yaml,ts,js}'",
     "coverage": "./coverage.sh",
-    "solhint": "solhint 'src/**/*.sol'",
+    "solhint": "solhint -w 0 'src/**/*.sol'",
     "slither": "slither src",
     "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPool_Echidna",
     "simulate": "rm -f report.csv; REPORT=1 forge test --mt 'invariantFoundry_report'",

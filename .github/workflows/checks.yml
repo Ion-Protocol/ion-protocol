@@ -143,4 +143,5 @@ jobs:
 
       - name: Run solhint
         run: |
-          npx solhint 'src/**/*.sol'
+          yarn install
+          yarn solhint
