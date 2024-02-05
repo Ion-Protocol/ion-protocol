@@ -1,4 +1,4 @@
-on: [push, pull_request, workflow_dispatch]
+on: [pull_request, workflow_dispatch]
 
 concurrency:
   group: ${{github.workflow}}-${{github.ref}}
@@ -26,8 +26,35 @@ jobs:
       - name: Run Prettier
         run: npx prettier -c '**/*.{md,yml,yaml}'
 
-      - name: Format Solidity code
-        run: forge fmt
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Check Solidity formatting with forge fmt
+        run: |
+          # Stash changes from the checkout step to ignore in the formatting check
+          git stash -u
+
+          # Remember the current HEAD commit
+          BEFORE_FMT=$(git rev-parse HEAD)
+
+          # Run forge fmt to format Solidity files
+          forge fmt
+
+          # Check if there are any changes by comparing the current HEAD to the tree after running forge fmt
+          if [ -n "$(git diff $BEFORE_FMT)" ]; then
+            echo "Solidity files are not formatted correctly. Please run 'forge fmt' locally and commit the changes."
+            git diff $BEFORE_FMT
+            exit 1
+          else
+            echo "All Solidity files are formatted correctly."
+          fi
+
+      # Optional: Revert changes made by forge fmt to leave the working directory clean
+      - name: Revert formatting changes
+        if: failure()
+        run: git reset --hard $BEFORE_FMT
 
   codespell:
     runs-on: ${{ matrix.os }}
