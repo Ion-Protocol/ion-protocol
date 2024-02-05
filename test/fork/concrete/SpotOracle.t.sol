@@ -9,7 +9,7 @@ import { EthXSpotOracle } from "../../../src/oracles/spot/EthXSpotOracle.sol";
 import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
 import { SwEthReserveOracle } from "../../../src/oracles/reserve/SwEthReserveOracle.sol";
 import { WstEthReserveOracle } from "../../../src/oracles/reserve/WstEthReserveOracle.sol";
-import { EthXReserveOracle } from "../../../src/oracles/reserve/EthxReserveOracle.sol";
+import { EthXReserveOracle } from "../../../src/oracles/reserve/EthXReserveOracle.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
