@@ -82,7 +82,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
 
     /**
      * @notice Creates a new `YieldOracle` instance.
-     * @param _historicalExchangeRates An intitial set of values for the
+     * @param _historicalExchangeRates An initial set of values for the
      * historical exchange rates matrix.
      * @param _wstEth Address of the wstETH contract.
      * @param _stader Address of the Stader deposit contract.

@@ -71,8 +71,8 @@ jobs:
         uses: codespell-project/actions-codespell@v2.0
         with:
           check_filenames: true
-          ignore_words_list: wee
-          skip: ./.git
+          ignore_words_list: we
+          skip: ./.git,./lib,./certora
 
   validate-links:
     runs-on: ${{ matrix.os }}
