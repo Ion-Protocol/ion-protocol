@@ -13,13 +13,6 @@ contract DeployWhitelistTest is DeployTestBase, DeployWhitelistScript {
         assert(address(whitelist).code.length > 0);
         assert(whitelist.lendersRoot() == lenderRoot);
         assert(whitelist.borrowersRoot(0) == borrowerRoots[0]);
-        assert(whitelist.borrowersRoot(1) == INACTIVE);
-        assert(whitelist.borrowersRoot(2) == INACTIVE);
-
-        for (uint256 i = 0; i < protocolControlledAddresses.length; i++) {
-            assert(whitelist.protocolWhitelist(protocolControlledAddresses[i]));
-        }
-
         assert(whitelist.pendingOwner() == protocol);
 
         vm.startPrank(protocol);

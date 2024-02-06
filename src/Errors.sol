@@ -40,4 +40,10 @@ contract Errors {
     // AccessControl Errors
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
     error AccessControlBadConfirmation();
+
+    // UniswapFlashswapDirectMintHandler
+    error InvalidUniswapPool();
+    error InvalidZeroLiquidityRegionSwap();
+    error CallbackOnlyCallableByPool(address unauthorizedCaller);
+    error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
 }

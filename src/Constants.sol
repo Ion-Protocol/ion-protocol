@@ -14,6 +14,7 @@ import {
 } from "./interfaces/ProviderInterfaces.sol";
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
 import { IChainlink } from "./interfaces/IChainlink.sol";
+import { ICreateX } from "./interfaces/ICreateX.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
@@ -50,3 +51,7 @@ IRedstonePriceFeed constant MAINNET_USD_PER_ETHX_REDSTONE =
 
 // Uniswap
 IUniswapV3Pool constant MAINNET_SWETH_ETH_UNISWAP_01 = IUniswapV3Pool(0x30eA22C879628514f1494d4BBFEF79D21A6B49A2);
+IUniswapV3Pool constant MAINNET_WSTETH_WETH_UNISWAP = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
+
+// CreateX
+ICreateX constant CREATEX = ICreateX(0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed);

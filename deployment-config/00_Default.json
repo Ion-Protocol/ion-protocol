@@ -1,5 +1,6 @@
 {
-    "defaultAdmin": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "protocol": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "ilkAddress": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+    "initialDefaultAdmin": "0x01bd9aBD70D74D8eC70D338bD6099ca29DA3F9B4",
+    "protocol": "0x6450311D9A60c744b8Db774A6B9898938A0fD3eA",
+    "ilkAddress": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+    "marketId": "0"
 }

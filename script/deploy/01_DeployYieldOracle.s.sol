@@ -1,42 +1,47 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { Errors } from "../../src/Errors.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { YieldOracle, LOOK_BACK, PROVIDER_PRECISION, APY_PRECISION, ILK_COUNT } from "../../src/YieldOracle.sol";
 
 import { BaseScript } from "../Base.s.sol";
+import { DeployScript } from "../Deploy.s.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 import { console2 } from "forge-std/Script.sol";
 
-contract DeployYieldOracleScript is BaseScript, Errors {
+contract DeployYieldOracleScript is DeployScript {
     using WadRayMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
 
-    string defaultConfigPath = "./deployment-config/00_Default.json";
-    string defaultConfig = vm.readFile(defaultConfigPath);
-
     string configPath = "./deployment-config/01_DeployYieldOracle.json";
-    string config = vm.readFile(configPath);
-
-    string[] configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
-    address defaultAdminAddress = vm.parseJsonAddress(defaultConfig, ".defaultAdmin");
-
-    uint256[] weEthRates = vm.parseJsonUintArray(config, ".exchangeRateData.weETH.historicalExchangeRates");
-    uint256[] staderRates = vm.parseJsonUintArray(config, ".exchangeRateData.stader.historicalExchangeRates");
-    uint256[] swellRates = vm.parseJsonUintArray(config, ".exchangeRateData.swell.historicalExchangeRates");
-
-    address weEthExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.weETH.address");
-    address staderExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.stader.address");
-    address swellExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.swell.address");
+    string config;
+    string[] configKeys;
+    uint256[] weEthRates;
+    uint256[] staderRates;
+    uint256[] swellRates;
+    address weEthExchangeRateAddress;
+    address staderExchangeRateAddress;
+    address swellExchangeRateAddress;
 
     function run() public broadcast returns (YieldOracle yieldOracle) {
+        config = vm.readFile(configPath);
+
+        configKeys = vm.parseJsonKeys(config, ".exchangeRateData");
+
+        weEthRates = vm.parseJsonUintArray(config, ".exchangeRateData.weETH.historicalExchangeRates");
+        staderRates = vm.parseJsonUintArray(config, ".exchangeRateData.stader.historicalExchangeRates");
+        swellRates = vm.parseJsonUintArray(config, ".exchangeRateData.swell.historicalExchangeRates");
+
+        weEthExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.weETH.address");
+        staderExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.stader.address");
+        swellExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.swell.address");
+
         assert(configKeys.length == ILK_COUNT);
-        require(defaultAdminAddress != address(0), "Default admin address is zero");
+        require(initialDefaultAdmin != address(0), "Default admin address is zero");
 
         // wstETH is replaced with weETH to not break compatibility.
 
@@ -57,22 +62,17 @@ contract DeployYieldOracleScript is BaseScript, Errors {
             weEthExchangeRateAddress,
             staderExchangeRateAddress,
             swellExchangeRateAddress,
-            defaultAdminAddress
+            initialDefaultAdmin
         );
     }
 
     function configureDeployment() public {
-        string[] memory inputs = new string[](4);
-        inputs[0] = "CHAIN_ID=1";
-        inputs[1] = "bun";
-        inputs[2] = "run";
-        inputs[3] = "offchain/scrapePastExchangeRates.ts";
+        string[] memory inputs = new string[](3);
+        inputs[0] = "bun";
+        inputs[1] = "run";
+        inputs[2] = "offchain/scrapePastExchangeRates.ts";
 
         bytes memory res = vm.ffi(inputs);
-
-        if (!vm.exists(configPath)) {
-            vm.writeFile(configPath, string(""));
-        }
         vm.writeJson(string(res), configPath);
     }
 }

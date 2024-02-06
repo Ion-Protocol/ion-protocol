@@ -8,16 +8,18 @@ import { Test } from "forge-std/Test.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
+address constant CREATEX_PUBLIC_KEY = 0x01bd9aBD70D74D8eC70D338bD6099ca29DA3F9B4;
+
 contract DeployIonPoolTest is DeployTestBase, DeployIonPoolScript {
     function checkState(IonPool ionPool) public {
-        assert(address(ionPool).code.length > 0);
-        assert(ionPool.owner() == initialDefaultAdmin);
-        assert(ionPool.defaultAdmin() == initialDefaultAdmin);
-        assert(address(ionPool.underlying()) == underlying);
-        assert(ionPool.treasury() == treasury);
-        assert(ionPool.decimals() == 18);
-        assert(ionPool.interestRateModule() == address(interestRateModule));
-        assert(ionPool.whitelist() == address(whitelist));
+        assertGt(address(ionPool).code.length, 0, "code");
+        assertEq(ionPool.owner(), initialDefaultAdmin, "owner");
+        assertEq(ionPool.defaultAdmin(), initialDefaultAdmin, "initial default admin");
+        assertEq(address(ionPool.underlying()), underlying, "underlying");
+        assertEq(ionPool.treasury(), treasury, "treasury");
+        assertEq(ionPool.decimals(), 18, "decimals");
+        assertEq(ionPool.interestRateModule(), address(interestRateModule), "interest rate module");
+        assertEq(ionPool.whitelist(), address(whitelist), "whitelist");
 
         vm.startPrank(initialDefaultAdmin);
         ionPool.beginDefaultAdminTransfer(protocol);
@@ -35,6 +37,10 @@ contract DeployIonPoolTest is DeployTestBase, DeployIonPoolScript {
     }
 
     function test_PreExecution() public {
-        checkState(super.run());
+        vm.startPrank(CREATEX_PUBLIC_KEY);
+        IonPool ionPool = super.runWithoutBroadcast();
+        vm.stopPrank();
+        console2.log(address(ionPool));
+        checkState(ionPool);
     }
 }

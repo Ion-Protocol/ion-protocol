@@ -11,7 +11,7 @@ bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 contract DeployAdminTransferTest is DeployTestBase, DeployAdminTransferScript {
     function checkState() public {
         // pending admin transfer
-        assertEq(ionPool.defaultAdmin(), defaultAdmin, "default admin");
+        assertEq(ionPool.defaultAdmin(), initialDefaultAdmin, "default admin");
 
         (address newAdmin, uint48 addressSchedule) = ionPool.pendingDefaultAdmin();
         assertEq(newAdmin, protocol, "pending default admin");
@@ -31,7 +31,7 @@ contract DeployAdminTransferTest is DeployTestBase, DeployAdminTransferScript {
         assertEq(newAdminPostTransfer, address(0), "pending default admin");
         assertEq(ionPool.defaultAdmin(), protocol, "new default admin");
         assertEq(ionPool.hasRole(DEFAULT_ADMIN_ROLE, protocol), true, "new admin role");
-        assertEq(ionPool.hasRole(DEFAULT_ADMIN_ROLE, defaultAdmin), false, "reset previous admin role");
+        assertEq(ionPool.hasRole(DEFAULT_ADMIN_ROLE, initialDefaultAdmin), false, "reset previous admin role");
     }
 
     function test_PreExecution() public {

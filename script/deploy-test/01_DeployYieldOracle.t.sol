@@ -24,8 +24,4 @@ contract DeployYieldOracleTest is DeployTestBase, DeployYieldOracleScript {
         super.configureDeployment();
         checkState(super.run());
     }
-
-    // function test_PostExecution(address yieldOracle) public {
-    //     checkState(YieldOracle(yieldOracle));
-    // }
 }

@@ -31,4 +31,6 @@ contract DeployInterestRateModuleTest is DeployTestBase, DeployInterestRateScrip
     function test_PreExecution() public {
         checkState(super.run());
     }
+
+    function test_PostExecution() public { }
 }

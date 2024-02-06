@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { DeployScript } from "../Deploy.s.sol";
 import { InterestRate, IlkData } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
-
 import { LibString } from "solady/src/utils/LibString.sol";
 
 import { BaseScript } from "../Base.s.sol";
@@ -31,7 +31,7 @@ import { console2 } from "forge-std/console2.sol";
 //     uint96 minimumAboveKinkSlope; // 27 decimals
 // }
 
-contract DeployInterestRateScript is BaseScript {
+contract DeployInterestRateScript is DeployScript {
     using SafeCast for *;
     using StdJson for string;
     using LibString for string;
@@ -40,7 +40,7 @@ contract DeployInterestRateScript is BaseScript {
     string configPath = "./deployment-config/02_DeployInterestRateModule.json";
     string config = vm.readFile(configPath);
 
-    IYieldOracle yieldOracle = IYieldOracle(config.readAddress(".YieldOracleAddress"));
+    IYieldOracle yieldOracle = IYieldOracle(config.readAddress(".yieldOracleAddress"));
 
     uint16 constant DISTRIBUTION_FACTOR = 10_000; // should always be 1, 100%
 
@@ -54,16 +54,6 @@ contract DeployInterestRateScript is BaseScript {
     uint96 minimumAboveKinkSlope = config.readUint(".ilkData.minimumAboveKinkSlope").toUint96();
 
     function run() public broadcast returns (InterestRate interestRateModule) {
-        console2.log(adjustedProfitMargin);
-        console2.log(minimumKinkRate);
-        console2.log(reserveFactor);
-        console2.log(adjustedBaseRate);
-        console2.log(minimumBaseRate);
-        console2.log(optimalUtilizationRate);
-        // console2.log(distributionFactor);
-        console2.log(adjustedAboveKinkSlope);
-        console2.log(minimumAboveKinkSlope);
-
         IlkData memory ilkData;
         ilkData.adjustedProfitMargin = adjustedProfitMargin;
         ilkData.minimumKinkRate = minimumKinkRate;

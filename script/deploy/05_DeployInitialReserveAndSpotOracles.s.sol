@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
+import { DeployScript } from "../Deploy.s.sol";
 import { RAY } from "../../src/libraries/math/WadRayMath.sol";
 import { WeEthWstEthReserveOracle } from "../../src/oracles/reserve/WeEthWstEthReserveOracle.sol";
 import { WeEthWstEthSpotOracle } from "../../src/oracles/spot/WeEthWstEthSpotOracle.sol";
@@ -16,7 +17,7 @@ import { BaseScript } from "../Base.s.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-contract DeployInitialReserveAndSpotOraclesScript is BaseScript {
+contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
     using StdJson for string;
 
     string configPath = "./deployment-config/05_DeployInitialReserveAndSpotOracles.json";
@@ -45,20 +46,5 @@ contract DeployInitialReserveAndSpotOraclesScript is BaseScript {
         // Needs to change per asset
         reserveOracle = address(new WeEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
         spotOracle = address(new WeEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
-
-        // wstEthReserveOracle = new WstEthReserveOracle(WST_ETH, STETH_ILK_INDEX, new address[](3), 0, MAX_CHANGE);
-        // ethXReserveOracle =
-        //     new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ETHX_ILK_INDEX, new address[](3), 0, MAX_CHANGE);
-        // swEthReserveOracle = new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, new address[](3), 0, MAX_CHANGE);
-
-        // wstEthSpotOracle = new WstEthSpotOracle(
-        //     WST_ETH_LTV, address(wstEthReserveOracle), MAINNET_ETH_PER_STETH_CHAINLINK, MAINNET_WSTETH
-        // );
-        // ethXSpotOracle = new EthXSpotOracle(
-        //     ETHX_LTV, address(ethXReserveOracle), MAINNET_USD_PER_ETHX_REDSTONE, MAINNET_USD_PER_ETH_CHAINLINK
-        // );
-        // swEthSpotOracle =
-        //     new SwEthSpotOracle(SWETH_LTV, address(swEthReserveOracle), MAINNET_SWETH_ETH_UNISWAP_01,
-        // SWETH_SECONDS_AGO);
     }
 }

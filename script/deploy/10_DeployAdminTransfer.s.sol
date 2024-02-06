@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { BaseScript } from "../Base.s.sol";
-import { Liquidation } from "../../src/Liquidation.sol";
+import { DeployScript } from "../Deploy.s.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { IonPool } from "../../src/IonPool.sol";
 
@@ -13,19 +12,14 @@ import { console2 } from "forge-std/console2.sol";
 
 uint32 constant ILK_COUNT = 1;
 
-contract DeployAdminTransferScript is BaseScript {
+contract DeployAdminTransferScript is DeployScript {
     using WadRayMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
 
-    string defaultConfigPath = "./deployment-config/00_Default.json";
-    string defaultConfig = vm.readFile(defaultConfigPath);
-
     string configPath = "./deployment-config/10_DeployAdminTransfer.json";
     string config = vm.readFile(configPath);
 
-    address defaultAdmin = defaultConfig.readAddress(".defaultAdmin");
-    address protocol = defaultConfig.readAddress(".protocol");
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));
 
     function run() public broadcast {

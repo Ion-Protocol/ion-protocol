@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.21;
 
-import { BaseScript } from "../Base.s.sol";
+import { DeployScript } from "../Deploy.s.sol";
 import { Liquidation } from "../../src/Liquidation.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { IonPool } from "../../src/IonPool.sol";
@@ -13,13 +13,10 @@ import { console2 } from "forge-std/console2.sol";
 
 uint32 constant ILK_COUNT = 1;
 
-contract DeployLiquidationScript is BaseScript {
+contract DeployLiquidationScript is DeployScript {
     using WadRayMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;
-
-    string defaultConfigPath = "./deployment-config/00_Default.json";
-    string defaultConfig = vm.readFile(defaultConfigPath);
 
     string configPath = "./deployment-config/09_DeployLiquidation.json";
     string config = vm.readFile(configPath);
@@ -27,11 +24,10 @@ contract DeployLiquidationScript is BaseScript {
     uint256 targetHealth = config.readUint(".targetHealth");
     uint256 liquidationThreshold = config.readUint(".liquidationThreshold");
     uint256 maxDiscount = config.readUint(".maxDiscount");
-    address reserveOracle = config.readAddress(".reserveOracle");
     uint256 reserveFactor = config.readUint(".reserveFactor");
 
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));
-    address protocol = config.readAddress(".protocol");
+    address reserveOracle = config.readAddress(".reserveOracle");
 
     function run() public broadcast returns (Liquidation liquidation) {
         // NOTE: Liquidation contract reads the ilkCount() of the IonPool which

@@ -1,5 +1,4 @@
 {
-  "name": "WstEth",
   "ilkData": {
     "adjustedProfitMargin": "70677685926057170",
     "minimumKinkRate": "911013579023514400",
@@ -11,5 +10,6 @@
     "adjustedAboveKinkSlope": "25017682370176442000",
     "minimumAboveKinkSlope": "26390655175013278000"
   },
-  "YieldOracleAddress": "0x28227B230d3945e580eD3B1c6c8ea1df658A7AA9"
+  "yieldOracleAddress": "0xCfe866039Cd2a34cC19E8ba6900664FC947322Db",
+  "YieldOracleAddress": "0xCfe866039Cd2a34cC19E8ba6900664FC947322Db"
 }

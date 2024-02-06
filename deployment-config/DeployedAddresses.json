@@ -1,9 +1,9 @@
 {
-    "interestRate": "0x82A9286dB983093Ff234cefCea1d8fA66382876B",
-    "ionPool": "0xF67e26649037695DdFAB19f4E22d5c9Fd1564592",
-    "ionZapper": "0x3A906C603F080D96dc08f81CF2889dAB6FF299dE",  
-    "whitelist": "0x41219a0a9C0b86ED81933c788a6B63Dfef8f17eE", 
-    "wstEthHandler": "0x3C2BafebbB0c8c58f39A976e725cD20D611d01e9",
-    "ethXHandler": "0x5f246ADDCF057E0f778CD422e20e413be70f9a0c",
-    "swEthHandler": "0xaD82Ecf79e232B0391C5479C7f632aA1EA701Ed1"
+    "interestRate": "",
+    "ionPool": "",
+    "ionZapper": "",  
+    "whitelist": "", 
+    "wstEthHandler": "",
+    "ethXHandler": "",
+    "swEthHandler": ""
 }
