@@ -6,15 +6,12 @@ import { IonPool } from "../../src/IonPool.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { InterestRate } from "../../src/InterestRate.sol";
 import { CREATEX } from "../../src/Constants.sol";
-import { ICreateX } from "../../src/interfaces/ICreateX.sol";
-
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { TransparentUpgradeableProxy } from "../../src/admin/TransparentUpgradeableProxy.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
-
-import { console2 } from "forge-std/console2.sol";
 
 contract DeployIonPoolScript is DeployScript {
     using StdJson for string;
@@ -32,7 +29,24 @@ contract DeployIonPoolScript is DeployScript {
     Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
     bytes32 salt = config.readBytes32(".salt");
 
-    function createX() public returns (IonPool ionPool) {
+    function createX() public returns (IonPool ionImpl, IonPool ionPool) {
+        require(underlying.code.length > 0, "No code at underlying address");
+        // Test interface
+        IERC20(underlying).totalSupply();
+        IERC20(underlying).balanceOf(address(this));
+        IERC20(underlying).allowance(address(this), address(this));
+
+        require(address(interestRateModule).code.length > 0, "No code at InterestRate address");
+        // Test interface
+        interestRateModule.COLLATERAL_COUNT();
+        interestRateModule.YIELD_ORACLE();
+        interestRateModule.calculateInterestRate(0, 0, 0);
+
+        require(address(whitelist).code.length > 0, "No code at Whitelist address");
+        // Test interface
+        whitelist.lendersRoot();
+        whitelist.borrowersRoot(0);
+
         bytes memory initData = abi.encodeWithSelector(
             IonPool.initialize.selector,
             underlying,
@@ -45,7 +59,7 @@ contract DeployIonPoolScript is DeployScript {
             whitelist
         );
 
-        IonPool ionImpl = new IonPool();
+        ionImpl = new IonPool();
 
         bytes memory initCode = type(TransparentUpgradeableProxy).creationCode;
 
@@ -56,12 +70,12 @@ contract DeployIonPoolScript is DeployScript {
     }
 
     // broadcasts with
-    function run() public broadcast returns (IonPool ionPool) {
+    function run() public broadcast returns (IonPool ionImpl, IonPool ionPool) {
         return createX();
     }
 
     // runs without broadcast to test with vm.prank as the createX public key
-    function runWithoutBroadcast() public returns (IonPool ionPool) {
+    function runWithoutBroadcast() public returns (IonPool ionImpl, IonPool ionPool) {
         return createX();
     }
 }

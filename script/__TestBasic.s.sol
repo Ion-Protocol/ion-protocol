@@ -6,8 +6,6 @@ import { IWETH9 } from "../src/interfaces/IWETH9.sol";
 
 import { BaseScript } from "./Base.s.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 // TODO: consolidate constants
 IWETH9 constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant ADDRESS_1 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
@@ -39,14 +37,6 @@ contract Supply is Addresses {
 
 contract Withdraw is Addresses {
     function run() public broadcastFrom(ADDRESS_1) {
-        // pool.withdraw(ADDRESS_1, 500 ether, new bytes32[](0));
-    }
-}
-
-contract View is Addresses {
-    function run() public view {
-        // console2.log("supply cap: ", pool.supplyCap());
-        console2.log("rewardToken Balance: ", pool.balanceOf(ADDRESS_1));
-        console2.log("weth: ", pool.weth());
+        pool.withdraw(ADDRESS_1, 500 ether);
     }
 }

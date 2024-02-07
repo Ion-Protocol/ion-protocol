@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity >=0.8.19 <=0.9.0;
 
-import { Script, stdJson } from "forge-std/Script.sol";
-import { console2 } from "forge-std/console2.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+
+import { Script, stdJson } from "forge-std/Script.sol";
 
 abstract contract BaseScript is Script {
     using stdJson for string;
@@ -39,7 +39,6 @@ abstract contract BaseScript is Script {
     }
 
     modifier broadcast() {
-        console2.log("broadcast: ", broadcaster);
         vm.startBroadcast(broadcaster);
         _;
         vm.stopBroadcast();

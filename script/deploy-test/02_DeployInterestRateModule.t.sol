@@ -4,9 +4,6 @@ pragma solidity 0.8.21;
 import { DeployTestBase } from "./00_DeployTestBase.t.sol";
 import { InterestRate, IlkData } from "../../src/InterestRate.sol";
 import { DeployInterestRateScript } from "../deploy/02_DeployInterestRateModule.s.sol";
-import { Test } from "forge-std/Test.sol";
-
-import { console2 } from "forge-std/console2.sol";
 
 contract DeployInterestRateModuleTest is DeployTestBase, DeployInterestRateScript {
     function checkState(InterestRate interestRate) public view {
@@ -31,6 +28,4 @@ contract DeployInterestRateModuleTest is DeployTestBase, DeployInterestRateScrip
     function test_PreExecution() public {
         checkState(super.run());
     }
-
-    function test_PostExecution() public { }
 }

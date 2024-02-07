@@ -15,9 +15,7 @@ contract DeployMockProvidersScript is DeployScript {
     using SafeCast for uint256;
     using StdJson for string;
 
-    function run() public broadcast {
-        new MockLido();
-        new MockStader();
-        new MockSwell();
+    function run() public broadcast returns (MockLido, MockStader, MockSwell) {
+        return (new MockLido(), new MockStader(), new MockSwell());
     }
 }

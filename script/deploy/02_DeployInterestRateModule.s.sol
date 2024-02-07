@@ -6,13 +6,9 @@ import { InterestRate, IlkData } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
 import { LibString } from "solady/src/utils/LibString.sol";
 
-import { BaseScript } from "../Base.s.sol";
-
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
-
-import { console2 } from "forge-std/console2.sol";
 
 // struct IlkData {
 //     // Word 1
@@ -40,7 +36,8 @@ contract DeployInterestRateScript is DeployScript {
     string configPath = "./deployment-config/02_DeployInterestRateModule.json";
     string config = vm.readFile(configPath);
 
-    IYieldOracle yieldOracle = IYieldOracle(config.readAddress(".yieldOracleAddress"));
+    address yieldOracleAddress = config.readAddress(".yieldOracleAddress");
+    IYieldOracle yieldOracle = IYieldOracle(yieldOracleAddress);
 
     uint16 constant DISTRIBUTION_FACTOR = 10_000; // should always be 1, 100%
 
@@ -54,6 +51,9 @@ contract DeployInterestRateScript is DeployScript {
     uint96 minimumAboveKinkSlope = config.readUint(".ilkData.minimumAboveKinkSlope").toUint96();
 
     function run() public broadcast returns (InterestRate interestRateModule) {
+        require(yieldOracleAddress.code.length > 0, "No code at YieldOracle address");
+        yieldOracle.apys(0); // Test the function works
+
         IlkData memory ilkData;
         ilkData.adjustedProfitMargin = adjustedProfitMargin;
         ilkData.minimumKinkRate = minimumKinkRate;

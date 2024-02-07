@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "../../src/IonPool.sol";
 import { DeployTestBase } from "./00_DeployTestBase.t.sol";
-import { DeployAdminTransferScript } from "../deploy/10_DeployAdminTransfer.s.sol";
-import { console2 } from "forge-std/console2.sol";
+import { AdminTransferScript } from "../deploy/10_AdminTransfer.s.sol";
 
 bytes32 constant DEFAULT_ADMIN_ROLE = 0x00;
 
-contract DeployAdminTransferTest is DeployTestBase, DeployAdminTransferScript {
+contract DeployAdminTransferTest is DeployTestBase, AdminTransferScript {
     function checkState() public {
         // pending admin transfer
         assertEq(ionPool.defaultAdmin(), initialDefaultAdmin, "default admin");
@@ -16,9 +14,6 @@ contract DeployAdminTransferTest is DeployTestBase, DeployAdminTransferScript {
         (address newAdmin, uint48 addressSchedule) = ionPool.pendingDefaultAdmin();
         assertEq(newAdmin, protocol, "pending default admin");
         assertLe(addressSchedule, block.timestamp, "address schedule");
-
-        console2.log("block.timestamp: ", block.timestamp);
-        console2.log("delay: ", ionPool.defaultAdminDelay());
 
         vm.warp(block.timestamp + 1);
         // accepting the transferd

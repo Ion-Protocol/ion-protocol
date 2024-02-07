@@ -5,11 +5,11 @@ import { DeployScript } from "../Deploy.s.sol";
 import { Liquidation } from "../../src/Liquidation.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { IonPool } from "../../src/IonPool.sol";
+import { CREATEX } from "../../src/Constants.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-import { console2 } from "forge-std/console2.sol";
+import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 uint32 constant ILK_COUNT = 1;
 
@@ -28,6 +28,7 @@ contract DeployLiquidationScript is DeployScript {
 
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));
     address reserveOracle = config.readAddress(".reserveOracle");
+    bytes32 salt = config.readBytes32(".salt");
 
     function run() public broadcast returns (Liquidation liquidation) {
         // NOTE: Liquidation contract reads the ilkCount() of the IonPool which
@@ -42,8 +43,24 @@ contract DeployLiquidationScript is DeployScript {
         maxDiscounts[0] = maxDiscount;
         reserveOracles[0] = reserveOracle;
 
-        liquidation = new Liquidation{ salt: bytes32(abi.encode(0)) }(
-            address(ionPool), protocol, reserveOracles, liquidationThresholds, targetHealth, reserveFactor, maxDiscounts
+        bytes memory initCode = type(Liquidation).creationCode;
+
+        liquidation = Liquidation(
+            CREATEX.deployCreate3(
+                salt,
+                abi.encodePacked(
+                    initCode,
+                    abi.encode(
+                        address(ionPool),
+                        protocol,
+                        reserveOracles,
+                        liquidationThresholds,
+                        targetHealth,
+                        reserveFactor,
+                        maxDiscounts
+                    )
+                )
+            )
         );
 
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));

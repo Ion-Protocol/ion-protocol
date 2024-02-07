@@ -8,11 +8,9 @@ import { IonPool } from "../../src/IonPool.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 uint32 constant ILK_COUNT = 1;
 
-contract DeployAdminTransferScript is DeployScript {
+contract AdminTransferScript is DeployScript {
     using WadRayMath for uint256;
     using SafeCast for uint256;
     using StdJson for string;

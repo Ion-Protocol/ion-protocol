@@ -5,15 +5,11 @@ import { DeployScript } from "../Deploy.s.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { SpotOracle } from "../../src/oracles/spot/SpotOracle.sol";
 
-import { BaseScript } from "../Base.s.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-import { WEETH_ADDRESS } from "../../src/Constants.sol";
-
-import { console2 } from "forge-std/console2.sol";
-
-contract DeployInitialCollateralsSetUpScript is DeployScript {
+contract SetupCollateralScript is DeployScript {
     using StdJson for string;
 
     string configPath = "./deployment-config/06_DeployInitialCollateralsSetUp.json";
@@ -25,6 +21,22 @@ contract DeployInitialCollateralsSetUpScript is DeployScript {
     uint256 dust = config.readUint(".dust");
 
     function run() public broadcast {
+        require(ilkAddress.code.length > 0, "ilk address must have code");
+        IERC20(ilkAddress).balanceOf(address(this));
+        IERC20(ilkAddress).totalSupply();
+
+        require(address(ionPool).code.length > 0, "ionPool address must have code");
+        ionPool.balanceOf(address(this));
+        ionPool.debt();
+        ionPool.isOperator(address(this), address(this));
+
+        require(address(spotOracle).code.length > 0, "spotOracle address must have code");
+        spotOracle.getPrice();
+        spotOracle.getSpot();
+
+        require(debtCeiling == 0 || debtCeiling >= 1e45, "debt ceiling is nominated in RAD");
+        require(dust == 0 || dust >= 1e45, "dust is nominated in RAD");
+
         // this deployer address needs to have the ION role.
         ionPool.initializeIlk(ilkAddress);
         ionPool.updateIlkSpot(0, spotOracle);

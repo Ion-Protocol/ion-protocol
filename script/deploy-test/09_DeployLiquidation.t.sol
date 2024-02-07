@@ -4,8 +4,7 @@ pragma solidity 0.8.21;
 import { Liquidation } from "../../src/Liquidation.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { DeployTestBase } from "./00_DeployTestBase.t.sol";
-import { DeployLiquidationScript, ILK_COUNT } from "../deploy/09_DeployLiquidation.s.sol";
-import { console2 } from "forge-std/console2.sol";
+import { DeployLiquidationScript } from "../deploy/09_DeployLiquidation.s.sol";
 
 contract DeployLiquidationTest is DeployTestBase, DeployLiquidationScript {
     function checkState(Liquidation liquidation) public {

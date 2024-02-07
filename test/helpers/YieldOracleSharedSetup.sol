@@ -20,6 +20,10 @@ contract MockLido {
         return _exchangeRate;
     }
 
+    function tokensPerStEth() external view returns (uint256) {
+        return _exchangeRate;
+    }
+
     function setNewRate(uint256 newRate) external {
         _exchangeRate = newRate;
     }

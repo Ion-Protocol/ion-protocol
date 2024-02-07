@@ -7,12 +7,15 @@
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 balancer-v2-monorepo/=lib/balancer-v2-monorepo/
 chainlink/=lib/chainlink/
-ds-test/=lib/forge-std/lib/ds-test/src/
+ds-test/=lib/forge-safe/lib/ds-test/src/
 erc4626-tests/=lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/
+forge-safe/=lib/forge-safe/src/
 forge-std/=lib/forge-std/src/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 solady/=lib/solady/
+solidity-stringutils/=lib/forge-safe/lib/surl/lib/solidity-stringutils/
+solmate/=lib/forge-safe/lib/solmate/src/
+surl/=lib/forge-safe/lib/surl/
 v3-core/=lib/v3-core/
 v3-periphery/=lib/v3-periphery/contracts/
-forge-safe/=lib/forge-safe/src/

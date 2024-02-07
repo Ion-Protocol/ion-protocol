@@ -4,11 +4,7 @@ pragma solidity 0.8.21;
 import { DeployScript } from "../Deploy.s.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 
-import { BaseScript } from "../Base.s.sol";
-
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
-
-import { console2 } from "forge-std/console2.sol";
 
 contract DeployWhitelistScript is DeployScript {
     using StdJson for string;

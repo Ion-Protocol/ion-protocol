@@ -9,8 +9,6 @@ import { Whitelist } from "../../src/Whitelist.sol";
 import { IonHandlerBase } from "../../src/flash/handlers/base/IonHandlerBase.sol";
 import { WeEthHandler } from "../../src/flash/handlers/WeEthHandler.sol";
 
-import { BaseScript } from "../Base.s.sol";
-
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 // NOTE: Different handlers will have different constructor parameters.
@@ -26,9 +24,20 @@ contract DeployInitialHandlersScript is DeployScript {
         GemJoin gemJoin = GemJoin(config.readAddress(".gemJoin"));
         Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
-        require(address(ionPool) != address(0), "ionPool address cannot be zero");
-        require(address(gemJoin) != address(0), "gemJoin address cannot be zero");
-        require(address(whitelist) != address(0), "whitelist address cannot be zero");
+        require(address(ionPool).code.length > 0, "ionPool address must have code");
+        // Test the interface
+        ionPool.balanceOf(address(this));
+        ionPool.debt();
+        ionPool.isOperator(address(this), address(this));
+
+        require(address(gemJoin).code.length > 0, "gemJoin address must have code");
+        // Test the interface
+        gemJoin.totalGem();
+
+        require(address(whitelist).code.length > 0, "whitelist address must have code");
+        // Test interface
+        whitelist.lendersRoot();
+        whitelist.borrowersRoot(0);
 
         handler = new WeEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
 

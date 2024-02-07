@@ -3,8 +3,9 @@ pragma solidity >=0.8.19 <=0.9.0;
 
 import { Errors } from "../src/Errors.sol";
 import { BaseScript } from "./Base.s.sol";
-import { console2 } from "forge-std/console2.sol";
+
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 abstract contract DeployScript is BaseScript, Errors {
