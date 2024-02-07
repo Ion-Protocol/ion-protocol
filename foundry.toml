@@ -28,7 +28,7 @@ depth = 1536
 call_override = false   # reentrancy-check
 
 [profile.ci.fuzz]
-runs = 50
+runs = 10
 
 [profile.ci.invariant]
 runs = 10

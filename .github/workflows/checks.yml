@@ -188,3 +188,29 @@ jobs:
       - name: Run Slither
         run: |
           slither src
+
+  storage-check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        node_version:
+          - 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: Install Foundry
+        uses: onbjerg/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Check storage layout
+        uses: Rubilmax/foundry-storage-check@v3.7
+        with:
+          contract: src/IonPool.sol:IonPool
+          address: "0x00000000005a1de4c0eb34609e211ad8831707e0" # the address at which the contract check is deployed
