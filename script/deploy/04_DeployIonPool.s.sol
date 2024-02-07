@@ -30,22 +30,9 @@ contract DeployIonPoolScript is DeployScript {
     bytes32 salt = config.readBytes32(".salt");
 
     function createX() public returns (IonPool ionImpl, IonPool ionPool) {
-        require(underlying.code.length > 0, "No code at underlying address");
-        // Test interface
-        IERC20(underlying).totalSupply();
-        IERC20(underlying).balanceOf(address(this));
-        IERC20(underlying).allowance(address(this), address(this));
-
-        require(address(interestRateModule).code.length > 0, "No code at InterestRate address");
-        // Test interface
-        interestRateModule.COLLATERAL_COUNT();
-        interestRateModule.YIELD_ORACLE();
-        interestRateModule.calculateInterestRate(0, 0, 0);
-
-        require(address(whitelist).code.length > 0, "No code at Whitelist address");
-        // Test interface
-        whitelist.lendersRoot();
-        whitelist.borrowersRoot(0);
+        _validateInterface(IERC20(underlying));
+        _validateInterface(interestRateModule);
+        _validateInterface(whitelist);
 
         bytes memory initData = abi.encodeWithSelector(
             IonPool.initialize.selector,

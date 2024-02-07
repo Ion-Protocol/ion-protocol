@@ -18,16 +18,10 @@ contract DeployInitialGemJoinsScript is DeployScript {
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));
 
     function run() public broadcast returns (GemJoin gemJoin) {
-        require(address(ionPool).code.length > 0, "ionPool address must have code");
-        // Test the interface
-        ionPool.balanceOf(address(this));
-        ionPool.debt();
-        ionPool.isOperator(address(this), address(this));
-
         IERC20 ilkERC20 = IERC20(ilkAddress);
-        ilkERC20.balanceOf(address(this));
-        ilkERC20.totalSupply();
-        ilkERC20.allowance(address(this), address(this));
+
+        _validateInterface(ionPool);
+        _validateInterface(ilkERC20);
 
         gemJoin = new GemJoin(ionPool, ilkERC20, 0, protocol);
         ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin));

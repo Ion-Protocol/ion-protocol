@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
 import { MAINNET_WSTETH_WETH_UNISWAP } from "../../src/Constants.sol";
@@ -24,20 +24,9 @@ contract DeployInitialHandlersScript is DeployScript {
         GemJoin gemJoin = GemJoin(config.readAddress(".gemJoin"));
         Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
-        require(address(ionPool).code.length > 0, "ionPool address must have code");
-        // Test the interface
-        ionPool.balanceOf(address(this));
-        ionPool.debt();
-        ionPool.isOperator(address(this), address(this));
-
-        require(address(gemJoin).code.length > 0, "gemJoin address must have code");
-        // Test the interface
-        gemJoin.totalGem();
-
-        require(address(whitelist).code.length > 0, "whitelist address must have code");
-        // Test interface
-        whitelist.lendersRoot();
-        whitelist.borrowersRoot(0);
+        _validateInterface(ionPool);
+        _validateInterface(gemJoin);
+        _validateInterface(whitelist);
 
         handler = new WeEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
 

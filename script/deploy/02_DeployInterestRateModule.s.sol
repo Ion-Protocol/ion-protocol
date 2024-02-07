@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { DeployScript } from "../Deploy.s.sol";
 import { InterestRate, IlkData } from "../../src/InterestRate.sol";
-import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
+import { YieldOracle } from "../../src/YieldOracle.sol";
 import { LibString } from "solady/src/utils/LibString.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -36,8 +36,7 @@ contract DeployInterestRateScript is DeployScript {
     string configPath = "./deployment-config/02_DeployInterestRateModule.json";
     string config = vm.readFile(configPath);
 
-    address yieldOracleAddress = config.readAddress(".yieldOracleAddress");
-    IYieldOracle yieldOracle = IYieldOracle(yieldOracleAddress);
+    YieldOracle yieldOracle = YieldOracle(config.readAddress(".yieldOracleAddress"));
 
     uint16 constant DISTRIBUTION_FACTOR = 10_000; // should always be 1, 100%
 
@@ -51,8 +50,7 @@ contract DeployInterestRateScript is DeployScript {
     uint96 minimumAboveKinkSlope = config.readUint(".ilkData.minimumAboveKinkSlope").toUint96();
 
     function run() public broadcast returns (InterestRate interestRateModule) {
-        require(yieldOracleAddress.code.length > 0, "No code at YieldOracle address");
-        yieldOracle.apys(0); // Test the function works
+        _validateInterface(yieldOracle);
 
         IlkData memory ilkData;
         ilkData.adjustedProfitMargin = adjustedProfitMargin;

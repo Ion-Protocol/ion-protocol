@@ -6,6 +6,7 @@ import { Liquidation } from "../../src/Liquidation.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { CREATEX } from "../../src/Constants.sol";
+import { ReserveOracle } from "../../src/oracles/reserve/ReserveOracle.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -31,6 +32,9 @@ contract DeployLiquidationScript is DeployScript {
     bytes32 salt = config.readBytes32(".salt");
 
     function run() public broadcast returns (Liquidation liquidation) {
+        _validateInterface(ionPool);
+        _validateInterface(ReserveOracle(reserveOracle));
+
         // NOTE: Liquidation contract reads the ilkCount() of the IonPool which
         // should always be 1.
         require(ionPool.ilkCount() == ILK_COUNT, "ionPool ilk count");

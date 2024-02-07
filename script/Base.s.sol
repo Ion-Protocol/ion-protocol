@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity >=0.8.19 <=0.9.0;
 
+import { ValidateInterface } from "./ValidateInterface.s.sol";
+
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { Script, stdJson } from "forge-std/Script.sol";
 
-abstract contract BaseScript is Script {
+abstract contract BaseScript is Script, ValidateInterface {
     using stdJson for string;
     using Strings for uint256;
 
