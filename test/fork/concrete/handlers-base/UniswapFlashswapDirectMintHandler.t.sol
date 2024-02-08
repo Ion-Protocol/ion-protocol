@@ -16,7 +16,7 @@ using WadRayMath for uint256;
 abstract contract UniswapFlashswapDirectMintHandler_Test is WeEthIonHandler_ForkBase {
     function testFork_FlashswapAndMint() public virtual {
         uint256 initialDeposit = 1e18;
-        uint256 resultingAdditionalCollateral = 5e18;
+        uint256 resultingAdditionalCollateral = 5.239573295673902613e18;
         uint256 maxResultingDebt =
             _getProviderLibrary().getEthAmountInForLstAmountOut(resultingAdditionalCollateral - initialDeposit);
 
@@ -46,7 +46,7 @@ abstract contract UniswapFlashswapDirectMintHandler_Test is WeEthIonHandler_Fork
             maxResultingDebt + roundingError
         );
         assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())), 0);
-        assertLe(weth.balanceOf(address(_getTypedUFDMHandler())), roundingError);
+        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError);
         assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral);
     }
 

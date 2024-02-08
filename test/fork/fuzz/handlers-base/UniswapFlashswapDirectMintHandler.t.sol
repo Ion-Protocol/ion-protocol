@@ -36,7 +36,7 @@ abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is WeEthIonHandler_
 
         assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral);
         assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())), 0);
-        assertLe(weth.balanceOf(address(_getTypedUFDMHandler())), roundingError);
+        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), 0);
         assertLt(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
             maxResultingDebt

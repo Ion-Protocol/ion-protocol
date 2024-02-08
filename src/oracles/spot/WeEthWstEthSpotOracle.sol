@@ -4,7 +4,12 @@ pragma solidity 0.8.21;
 
 import { SpotOracle } from "../../oracles/spot/SpotOracle.sol";
 import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
-import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED, ETH_PER_STETH_CHAINLINK, REDSTONE_DECIMALS } from "../../Constants.sol";
+import {
+    WSTETH_ADDRESS,
+    REDSTONE_WEETH_ETH_PRICE_FEED,
+    ETH_PER_STETH_CHAINLINK,
+    REDSTONE_DECIMALS
+} from "../../Constants.sol";
 import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
