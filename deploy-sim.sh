@@ -23,8 +23,6 @@ else
     chain_name='tenderly'
     chain_id=$TENDERLY_CHAIN_ID
     private_key=$PRIVATE_KEY
-    # TODO: Tenderly wallet also needs to be funded
-    # TODO: Tenderly create3 deployment needs to be reset
 fi
 echo "" 
 echo "===== Env Variables in Use ======"
