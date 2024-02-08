@@ -11,22 +11,19 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
  * @notice The liquidation module for the `IonPool`.
- *
- * Liquidations at Ion operate a little differently than traditional liquidation schemes. Usually, liquidations are a
- * function of the market price of an asset. However, the liquidation module is function of the reserve oracle price
- * which reflects a rate based on **beacon-chain balances**.
- *
+ * 
+ * Liquidations at Ion operate a little differently than traditional liquidation schemes. Usually, liquidations are a function of the market price of an asset. However, the liquidation module is function of the reserve oracle price which reflects a rate based on **beacon-chain balances**. 
+ * 
  * There are 3 different types of liquidations that can take place:
  * - Partial Liquidation: The liquidator pays off a portion of the debt and receives a portion of the collateral.
- * - Dust Liquidation: The liquidator pays off all of the debt and receives some or all of the collateral.
- * - Protocol Liquidation: The liquidator transfers the position's debt and collateral onto the protocol's balance
- * sheet.
- *
+ * - Dust Liquidation: The liquidator pays off all of the debt and receives some or all of the collateral. 
+ * - Protocol Liquidation: The liquidator transfers the position's debt and collateral onto the protocol's balance sheet.
+ * 
  * NOTE: Protocol liqudations are unlikely to ever be executed since there is
  * no profit incentive for a liquidator to do so. They exist solely as a
  * fallback if a liquidator were to ever execute a liquidation onto a vault that
  * had fallen into bad debt.
- *
+ * 
  * @custom:security-contact security@molecularlabs.io
  */
 contract Liquidation {
@@ -49,13 +46,19 @@ contract Liquidation {
     uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
     uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
 
-    uint256 public immutable MAX_DISCOUNT; // [ray] ex) 0.2e27 is 20%
+    uint256 public immutable MAX_DISCOUNT_0; // [ray] ex) 0.2e27 is 20%
+    uint256 public immutable MAX_DISCOUNT_1;
+    uint256 public immutable MAX_DISCOUNT_2;
 
     // liquidation thresholds
-    uint256 public immutable LIQUIDATION_THRESHOLD; // [ray] liquidation threshold for ilkIndex 0
+    uint256 public immutable LIQUIDATION_THRESHOLD_0; // [ray] liquidation threshold for ilkIndex 0
+    uint256 public immutable LIQUIDATION_THRESHOLD_1; // [ray]
+    uint256 public immutable LIQUIDATION_THRESHOLD_2; // [ray]
 
     // exchange rates
-    address public immutable RESERVE_ORACLE; // reserve oracle providing exchange rate for ilkIndex 0
+    address public immutable RESERVE_ORACLE_0; // reserve oracle providing exchange rate for ilkIndex 0
+    address public immutable RESERVE_ORACLE_1;
+    address public immutable RESERVE_ORACLE_2;
 
     address public immutable PROTOCOL; // receives confiscated vault debt and collateral
 
@@ -133,15 +136,22 @@ contract Liquidation {
 
         TARGET_HEALTH = _targetHealth;
         BASE_DISCOUNT = _reserveFactor;
-        MAX_DISCOUNT = _maxDiscounts[0];
+
+        MAX_DISCOUNT_0 = _maxDiscounts[0];
+        MAX_DISCOUNT_1 = _maxDiscounts[1];
+        MAX_DISCOUNT_2 = _maxDiscounts[2];
 
         IERC20 underlying = ionPool_.underlying();
         underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
         UNDERLYING = underlying;
 
-        LIQUIDATION_THRESHOLD = _liquidationThresholds[0];
+        LIQUIDATION_THRESHOLD_0 = _liquidationThresholds[0];
+        LIQUIDATION_THRESHOLD_1 = _liquidationThresholds[1];
+        LIQUIDATION_THRESHOLD_2 = _liquidationThresholds[2];
 
-        RESERVE_ORACLE = _reserveOracles[0];
+        RESERVE_ORACLE_0 = _reserveOracles[0];
+        RESERVE_ORACLE_1 = _reserveOracles[1];
+        RESERVE_ORACLE_2 = _reserveOracles[2];
     }
 
     struct Configs {
@@ -152,12 +162,27 @@ contract Liquidation {
 
     /**
      * @notice Returns the exchange rate, liquidation threshold, and max
-     * discount for the ilk.
+     * discount for the given ilk.
+     * @param ilkIndex The index of the ilk.
      */
-    function _getConfig() internal view returns (Configs memory configs) {
-        configs.reserveOracle = RESERVE_ORACLE;
-        configs.liquidationThreshold = LIQUIDATION_THRESHOLD;
-        configs.maxDiscount = MAX_DISCOUNT;
+    function _getConfigs(uint8 ilkIndex)
+        internal
+        view
+        returns (Configs memory configs)
+    {
+        if (ilkIndex == 0) {
+            configs.reserveOracle = RESERVE_ORACLE_0;
+            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
+            configs.maxDiscount = MAX_DISCOUNT_0;
+        } else if (ilkIndex == 1) {
+            configs.reserveOracle = RESERVE_ORACLE_1;
+            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_1;
+            configs.maxDiscount = MAX_DISCOUNT_1;
+        } else if (ilkIndex == 2) {
+            configs.reserveOracle = RESERVE_ORACLE_2;
+            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_2;
+            configs.maxDiscount = MAX_DISCOUNT_2;
+        }
     }
 
     /**
@@ -168,7 +193,7 @@ contract Liquidation {
      * @return repay The amount of WETH necessary to liquidate the vault.
      */
     function getRepayAmt(uint8 ilkIndex, address vault) public view returns (uint256 repay) {
-        Configs memory configs = _getConfig();
+        Configs memory configs = _getConfigs(ilkIndex);
 
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         uint256 exchangeRate = uint256(ReserveOracle(configs.reserveOracle).currentExchangeRate()).scaleUpToRay(18);
@@ -187,19 +212,18 @@ contract Liquidation {
         // healthRatio = [rad] * RAY / [rad] = [ray]
         // round down in protocol favor
         uint256 collateralValue = (collateral * exchangeRate).rayMulDown(configs.liquidationThreshold);
-
+    
         uint256 healthRatio = collateralValue.rayDivDown(normalizedDebt * rate); // round down in protocol favor
         if (healthRatio >= RAY) {
             revert VaultIsNotUnsafe(healthRatio);
         }
 
         uint256 discount = BASE_DISCOUNT + (RAY - healthRatio); // [ray] + ([ray] - [ray])
-        discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount
-            // favor
+        discount = discount <= configs.maxDiscount ? discount : configs.maxDiscount; // cap discount to maxDiscount favor
         uint256 repayRad = _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
 
         repay = (repayRad / RAY);
-        if (repayRad % RAY > 0) ++repay;
+        if (repayRad % RAY > 0) ++repay; 
     }
 
     /**
@@ -248,17 +272,10 @@ contract Liquidation {
      * @return repayAmount The amount of WETH paid to close the position.
      * @return gemOut The amount of collateral received from the liquidation.
      */
-    function liquidate(
-        uint8 ilkIndex,
-        address vault,
-        address kpr
-    )
-        external
-        returns (uint256 repayAmount, uint256 gemOut)
-    {
+    function liquidate(uint8 ilkIndex, address vault, address kpr) external returns (uint256 repayAmount, uint256 gemOut) {
         LiquidateArgs memory liquidateArgs;
 
-        Configs memory configs = _getConfig();
+        Configs memory configs = _getConfigs(ilkIndex);
 
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         uint256 exchangeRate = ReserveOracle(configs.reserveOracle).currentExchangeRate().scaleUpToRay(18);
