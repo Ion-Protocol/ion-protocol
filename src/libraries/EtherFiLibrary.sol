@@ -32,6 +32,8 @@ library EtherFiLibrary {
      * @return Amount of ETH required to obtain the given amount of weETH. [WAD]
      */
     function getEthAmountInForLstAmountOut(IWeEth weEth, uint256 lrtAmount) internal view returns (uint256) {
+        if (lrtAmount == 0) return 0;
+
         IEtherFiLiquidityPool pool = IEtherFiLiquidityPool(weEth.liquidityPool());
         IEEth eEth = IEEth(weEth.eETH());
 
