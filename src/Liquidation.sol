@@ -47,18 +47,12 @@ contract Liquidation {
     uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
 
     uint256 public immutable MAX_DISCOUNT_0; // [ray] ex) 0.2e27 is 20%
-    uint256 public immutable MAX_DISCOUNT_1;
-    uint256 public immutable MAX_DISCOUNT_2;
 
     // liquidation thresholds
     uint256 public immutable LIQUIDATION_THRESHOLD_0; // [ray] liquidation threshold for ilkIndex 0
-    uint256 public immutable LIQUIDATION_THRESHOLD_1; // [ray]
-    uint256 public immutable LIQUIDATION_THRESHOLD_2; // [ray]
 
     // exchange rates
     address public immutable RESERVE_ORACLE_0; // reserve oracle providing exchange rate for ilkIndex 0
-    address public immutable RESERVE_ORACLE_1;
-    address public immutable RESERVE_ORACLE_2;
 
     address public immutable PROTOCOL; // receives confiscated vault debt and collateral
 
@@ -136,22 +130,15 @@ contract Liquidation {
 
         TARGET_HEALTH = _targetHealth;
         BASE_DISCOUNT = _reserveFactor;
-
         MAX_DISCOUNT_0 = _maxDiscounts[0];
-        MAX_DISCOUNT_1 = _maxDiscounts[1];
-        MAX_DISCOUNT_2 = _maxDiscounts[2];
 
         IERC20 underlying = ionPool_.underlying();
         underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
         UNDERLYING = underlying;
 
         LIQUIDATION_THRESHOLD_0 = _liquidationThresholds[0];
-        LIQUIDATION_THRESHOLD_1 = _liquidationThresholds[1];
-        LIQUIDATION_THRESHOLD_2 = _liquidationThresholds[2];
 
         RESERVE_ORACLE_0 = _reserveOracles[0];
-        RESERVE_ORACLE_1 = _reserveOracles[1];
-        RESERVE_ORACLE_2 = _reserveOracles[2];
     }
 
     struct Configs {
@@ -163,26 +150,11 @@ contract Liquidation {
     /**
      * @notice Returns the exchange rate, liquidation threshold, and max
      * discount for the given ilk.
-     * @param ilkIndex The index of the ilk.
      */
-    function _getConfigs(uint8 ilkIndex)
-        internal
-        view
-        returns (Configs memory configs)
-    {
-        if (ilkIndex == 0) {
-            configs.reserveOracle = RESERVE_ORACLE_0;
-            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
-            configs.maxDiscount = MAX_DISCOUNT_0;
-        } else if (ilkIndex == 1) {
-            configs.reserveOracle = RESERVE_ORACLE_1;
-            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_1;
-            configs.maxDiscount = MAX_DISCOUNT_1;
-        } else if (ilkIndex == 2) {
-            configs.reserveOracle = RESERVE_ORACLE_2;
-            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_2;
-            configs.maxDiscount = MAX_DISCOUNT_2;
-        }
+    function _getConfig() internal view returns (Configs memory configs) {
+        configs.reserveOracle = RESERVE_ORACLE_0;
+        configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
+        configs.maxDiscount = MAX_DISCOUNT_0;
     }
 
     /**
@@ -193,7 +165,7 @@ contract Liquidation {
      * @return repay The amount of WETH necessary to liquidate the vault.
      */
     function getRepayAmt(uint8 ilkIndex, address vault) public view returns (uint256 repay) {
-        Configs memory configs = _getConfigs(ilkIndex);
+        Configs memory configs = _getConfig();
 
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         uint256 exchangeRate = uint256(ReserveOracle(configs.reserveOracle).currentExchangeRate()).scaleUpToRay(18);
@@ -275,7 +247,7 @@ contract Liquidation {
     function liquidate(uint8 ilkIndex, address vault, address kpr) external returns (uint256 repayAmount, uint256 gemOut) {
         LiquidateArgs memory liquidateArgs;
 
-        Configs memory configs = _getConfigs(ilkIndex);
+        Configs memory configs = _getConfig();
 
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         uint256 exchangeRate = ReserveOracle(configs.reserveOracle).currentExchangeRate().scaleUpToRay(18);

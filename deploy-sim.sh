@@ -8,36 +8,30 @@
 source .env
 
 # Env Variables
+echo "===== Current Env Variables ====="
 echo "ETH_FROM: " $ETH_FROM
-echo "PRIVATE_KEY: " $PRIVATE_KEY
-echo "RPC_URL: " $DEPLOY_SIM_RPC_URL
-echo "CHAIN_ID: " $CHAIN_ID
+echo "DEPLOY_SIM_CHAIN: " $DEPLOY_SIM_CHAIN
 # Set Chain ID based on deployment route
-if [ $DEPLOY_SIM_RPC_URL == "http://localhost:8545" ]; then
+if [ $DEPLOY_SIM_CHAIN == 'anvil' ]; then
     chain_name='anvil'
     chain_id=31337
-    export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" # anvil private key
-    export ANVIL_RPC_URL="http://localhost:8545"
+    # Fund the ETH_FROM address with gas token (for anvil or tenderly) 
+    echo "Fund Wallet..."
+    curl http://localhost:8545 -X POST -H "Content-Type: application/json" --data "{\"method\":\"anvil_setBalance\",\"params\":[\"$ETH_FROM\", \"0x021e19e0c9bab2400000\"],\"id\":1,\"jsonrpc\":\"2.0\"}"
+    echo "" 
 else
     chain_name='tenderly'
     chain_id=$TENDERLY_CHAIN_ID
     private_key=$PRIVATE_KEY
+    # TODO: Tenderly wallet also needs to be funded
+    # TODO: Tenderly create3 deployment needs to be reset
 fi
-
-echo "ETH_FROM: " $ETH_FROM
-echo "PRIVATE_KEY: " $PRIVATE_KEY
-echo "RPC_URL: " $DEPLOY_SIM_RPC_URL
-echo "CHAIN_ID: " $CHAIN_ID
-
-# sanity check all required variables
-
+echo "" 
+echo "===== Env Variables in Use ======"
 echo -e "chain_name: $chain_name"
 echo -e "chain_id: $chain_id"
-echo -e "private_key: $private_key\n"
-
-# Start anvil and run with tests if specified
-# Clear code at the IonPool CreateX Address
-# Fund the ETH_FROM address with gas token
+echo ""
+echo "===== Simulate Deployment ======="
 
 # Deploy YieldOracle
 echo "DEPLOYING YIELD ORACLE..."

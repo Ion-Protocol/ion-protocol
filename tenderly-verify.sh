@@ -3,7 +3,7 @@ source .env
 account_slug=$TENDERLY_ACCOUNT
 project_slug=$TENDERLY_PROJECT
 RID=$TENDERLY_RID
-chain_id=$CHAIN_ID 
+chain_id=$TENDERLY_CHAIN_ID 
 
 # Function to verify contract
 verify_contract() {

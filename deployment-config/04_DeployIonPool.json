@@ -6,5 +6,5 @@
   "symbol": "iWETH",
   "whitelist": "0x437CC840e234C2127f54CD59B0B18aF59c586760",
   "interestRateModule": "0x04D05c317A1CaDC35f9657F9aA88019F25543a66",
-  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b40029697edb13babb02065045"
+  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b40029697edb13babb02065046"
 }
