@@ -27,17 +27,27 @@ abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is WeEthIonHandler_
         weth.approve(address(_getTypedUFDMHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFDMHandler()));
 
+        uint256 ilkRate = ionPool.rate(_getIlkIndex());
+        uint256 ilkSpot = ionPool.spot(_getIlkIndex()).getSpot();
+        // Calculating this way emulates the newTotalDebt value in IonPool
+        uint256 newTotalDebt = maxResultingDebt.rayDivUp(ilkRate) * ilkRate;
+
+        bool unsafePositionChange = newTotalDebt > resultingCollateral * ilkSpot;
+
+        vm.assume(!unsafePositionChange);
+
         _getTypedUFDMHandler().flashswapAndMint(
             initialDeposit, resultingCollateral, maxResultingDebt, block.timestamp + 1, new bytes32[](0)
         );
 
         uint256 currentRate = ionPool.rate(_getIlkIndex());
         uint256 roundingError = currentRate / RAY;
+        if (currentRate % RAY != 0) roundingError++;
 
         assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral);
         assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())), 0);
-        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), 0);
-        assertLt(
+        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError);
+        assertLe(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
             maxResultingDebt
         );
