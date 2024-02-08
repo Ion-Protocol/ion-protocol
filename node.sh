@@ -1,23 +1,23 @@
-# Run 
+# Run
 # 1. Set up testnet
-#    - via `anvil --fork-url $MAINNET_ARCHIVE_RPC_URL --chain-id 31337` or Tenderly Devnet. 
-# 2. Set the env variables. 
-# 3. Run `bash node.sh` 
-# 4. forge script script/__TestFlashLeverage.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY 
+#    - via `anvil --fork-url $MAINNET_ARCHIVE_RPC_URL --chain-id 31337` or Tenderly Devnet.
+# 2. Set the env variables.
+# 3. Run `bash node.sh`
+# 4. forge script script/__TestFlashLeverage.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 
 source .env
 
 # Env Variables
 echo "ETH_FROM: " $ETH_FROM
-echo "PRIVATE_KEY: " $PRIVATE_KEY  
+echo "PRIVATE_KEY: " $PRIVATE_KEY
 echo "RPC_URL: " $RPC_URL
 echo "CHAIN_ID: " $CHAIN_ID
-# Set Chain ID based on deployment route 
+# Set Chain ID based on deployment route
 if [ $RPC_URL == "http://localhost:8545" ]; then
     chain_id=31337
     private_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" # anvil private key
-    initial_admin="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # anvil public key
-else 
+    initial_admin="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"                       # anvil public key
+else
     chain_id=$CHAIN_ID
     private_key=$PRIVATE_KEY
     initial_admin=$ETH_FROM
@@ -62,17 +62,16 @@ spot_oracle=$(jq '.returns.spotOracle.value' "broadcast/05_DeployInitialReserveA
 # ethx_spot=$(jq '.returns.ethXSpotOracle.value' "broadcast/05_DeployInitialReserveAndSpotOracles.s.sol/$chain_id/run-latest.json" | xargs)
 # sw_eth_spot=$(jq '.returns.swEthSpotOracle.value' "broadcast/05_DeployInitialReserveAndSpotOracles.s.sol/$chain_id/run-latest.json" | xargs)
 
-jq --arg ionpool_addr "$ionpool_addr" --arg spot_oracle "$spot_oracle" '. + { "ionPool": $ionpool_addr, "spotOracle": $spot_oracle }' deployment-config/06_DeployInitialCollateralsSetUp.json >temp.json && mv temp.json deployment-config/06_DeployInitialCollateralsSetUp.json
+jq --arg ionpool_addr "$ionpool_addr" --arg spot_oracle "$spot_oracle" '. + { "ionPool": $ionpool_addr, "spotOracle": $spot_oracle }' deployment-config/06_SetupCollateral.json >temp.json && mv temp.json deployment-config/06_SetupCollateral.json
 # jq --arg ionpool_addr "$ionpool_addr" --arg wst_eth_spot "$wst_eth_spot" --arg ethx_spot "$ethx_spot" --arg sw_eth_spot "$sw_eth_spot" '. + { "ionPool": $ionpool_addr, "wstEthSpot": $wst_eth_spot, "ethXSpot": $ethx_spot, "swEthSpot": $sw_eth_spot }' deployment-config/06_SetupInitialCollaterals.json >temp.json && mv temp.json deployment-config/06_SetupInitialCollaterals.json
 
 # Setup initial collaterals
-forge script script/deploy/06_DeployInitialCollateralsSetUp.s.sol --rpc-url $RPC_URL --private-key $private_key --broadcast --slow
+forge script script/deploy/06_SetupCollateral.s.sol --rpc-url $RPC_URL --private-key $private_key --broadcast --slow
 
 jq --arg ionpool_addr "$ionpool_addr" --arg initial_admin "$initial_admin" '. + { "ionPool": $ionpool_addr, "owner": $initial_admin }' deployment-config/07_DeployInitialGemJoins.json >temp.json && mv temp.json deployment-config/07_DeployInitialGemJoins.json
 
 # Deploy GemJoins
 forge script script/deploy/07_DeployInitialGemJoins.s.sol --rpc-url $RPC_URL --private-key $private_key --broadcast --slow
-
 
 gem_join_addr=$(jq '.returns.gemJoin.value' "broadcast/07_DeployInitialGemJoins.s.sol/$chain_id/run-latest.json" | xargs)
 # wst_eth_join_addr=$(jq '.returns.wstEthGemJoin.value' "broadcast/07_DeployInitialGemJoins.s.sol/$chain_id/run-latest.json" | xargs)
@@ -94,12 +93,10 @@ reserve_oracle=$(jq '.returns.reserveOracle.value' "broadcast/05_DeployInitialRe
 # sw_eth_reserve=$(jq '.returns.swEthReserveOracle.value' "broadcast/05_DeployInitialReserveAndSpotOracles.s.sol/$chain_id/run-latest.json" | xargs)
 
 jq --arg ionpool_addr "$ionpool_addr" \
---arg protocol_addr "$protocol_addr" \
---arg reserve_oracle "$reserve_oracle" \
-# --arg wst_eth_reserve "$wst_eth_reserve" \
---arg ethx_reserve "0x0000000000000000000000000000000000000000" \
---arg sw_eth_reserve "0x0000000000000000000000000000000000000000" \
-'. + { "ionPool": $ionpool_addr, "protocol": $protocol_addr, "reserveOracles": [$reserve_oracle, $ethx_reserve, $sw_eth_reserve] }' deployment-config/09_Liquidation.json > temp.json && mv temp.json deployment-config/09_Liquidation.json
+    --arg protocol_addr "$protocol_addr" \
+    --arg reserve_oracle "$reserve_oracle"--arg ethx_reserve "0x0000000000000000000000000000000000000000" \
+    --arg sw_eth_reserve "0x0000000000000000000000000000000000000000" \
+    '. + { "ionPool": $ionpool_addr, "protocol": $protocol_addr, "reserveOracles": [$reserve_oracle, $ethx_reserve, $sw_eth_reserve] }' deployment-config/09_Liquidation.json >temp.json && mv temp.json deployment-config/09_Liquidation.json
 
 forge script script/deploy/09_DeployLiquidation.s.sol --rpc-url $RPC_URL --private-key $private_key --broadcast --slow
 
@@ -112,20 +109,18 @@ wst_eth_addr="0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
 wst_eth_join_addr=$(jq '.returns.wstEthGemJoin.value' "broadcast/07_DeployInitialGemJoins.s.sol/$chain_id/run-latest.json" | xargs)
 whitelist_addr=$(jq '.returns.whitelist.value' "broadcast/03_DeployWhitelist.s.sol/$chain_id/run-latest.json" | xargs)
 
-jq --arg ionpool_addr "$ionpool_addr" \
-# --arg weth_addr "$weth_addr" \
---arg st_eth_addr "$st_eth_addr" \
---arg wst_eth_addr "$wst_eth_addr" \
---arg wst_eth_join_addr "$wst_eth_join_addr" \
---arg whitelist_addr "$whitelist_addr" \
-'. + {
+jq --arg ionpool_addr "$ionpool_addr"--arg st_eth_addr "$st_eth_addr" \
+    --arg wst_eth_addr "$wst_eth_addr" \
+    --arg wst_eth_join_addr "$wst_eth_join_addr" \
+    --arg whitelist_addr "$whitelist_addr" \
+    '. + {
     "ionPool": $ionpool_addr,
     "weth": $weth_addr,
     "stEth": $st_eth_addr,
     "wstEth": $wst_eth_addr,
     "wstEthJoin": $wst_eth_join_addr,
     "whitelist": $whitelist_addr
-}' deployment-config/10_IonZapper.json > temp.json && mv temp.json deployment-config/10_IonZapper.json
+}' deployment-config/10_IonZapper.json >temp.json && mv temp.json deployment-config/10_IonZapper.json
 
 forge script script/deploy/10_DeployIonZapper.s.sol --rpc-url $RPC_URL --private-key $private_key --broadcast --slow --tc DeployIonZapperScript
 
@@ -143,6 +138,6 @@ echo "{
     \"wstEthHandler\": \"$wst_eth_handler_addr\",
     \"ethXHandler\": \"$eth_x_handler_addr\",
     \"swEthHandler\": \"$sw_eth_handler_addr\"
-}" > ./deployment-config/DeployedAddresses.json
+}" >./deployment-config/DeployedAddresses.json
 
-bash gen-env.sh 
+bash gen-env.sh
