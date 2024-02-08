@@ -57,7 +57,7 @@ contract UnpauseGemJoin is BaseScript, BatchScript {
 }
 
 /**
- * @notice Assumes there is only one GemJoin 
+ * @notice Assumes there is only one GemJoin
  */
 contract PauseSystem is BaseScript, BatchScript {
     function run(bool send, GemJoin gemJoin) public broadcast {
@@ -78,7 +78,7 @@ contract PauseSystem is BaseScript, BatchScript {
 }
 
 /**
- * @notice Assumes there is only one GemJoin 
+ * @notice Assumes there is only one GemJoin
  */
 contract UnpauseSystem is BaseScript, BatchScript {
     function run(bool send, GemJoin gemJoin) public broadcast {

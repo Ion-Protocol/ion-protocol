@@ -15,7 +15,7 @@ contract AdminTransferScript is DeployScript {
     using SafeCast for uint256;
     using StdJson for string;
 
-    string configPath = "./deployment-config/10_DeployAdminTransfer.json";
+    string configPath = "./deployment-config/10_AdminTransfer.json";
     string config = vm.readFile(configPath);
 
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));

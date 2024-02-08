@@ -5,7 +5,7 @@ import { DeployTestBase } from "./00_DeployTestBase.t.sol";
 
 import { SetupCollateralScript } from "../deploy/06_SetupCollateral.s.sol";
 
-contract DeployInitialCollateralsSetUpTest is DeployTestBase, SetupCollateralScript {
+contract SetupCollateralTest is DeployTestBase, SetupCollateralScript {
     function checkState() public {
         assertEq(ionPool.ilkCount(), 1, "ilk count");
         assertEq(ionPool.getIlkIndex(ilkAddress), 0, "ilk index");

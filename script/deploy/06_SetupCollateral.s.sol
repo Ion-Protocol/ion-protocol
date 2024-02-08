@@ -12,7 +12,7 @@ import { stdJson as StdJson } from "forge-std/StdJson.sol";
 contract SetupCollateralScript is DeployScript {
     using StdJson for string;
 
-    string configPath = "./deployment-config/06_DeployInitialCollateralsSetUp.json";
+    string configPath = "./deployment-config/06_SetupCollateral.json";
     string config = vm.readFile(configPath);
 
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));
