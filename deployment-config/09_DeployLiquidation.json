@@ -3,7 +3,7 @@
   "liquidationThreshold": "920000000000000000000000000",
   "maxDiscount": "200000000000000000000000000",
   "reserveFactor": "0",
-  "ionPool": "0xD5cc8c4F91DD671172fe6265C5A6d9F22694B21f",
-  "reserveOracle": "0x4Aed7ab3a8a7f5E24667CFE9B89479e5508Cc799",
-  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b4003fe35cc6d4ddea018a8875"
+  "ionPool": "0x00000000005a1De4c0eb34609e211AD8831707E0",
+  "reserveOracle": "0xf440f7cc97f029D8619842ea7bEcd26400a259F9",
+  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b4003fe35cc6d4ddea018a8874"
 }

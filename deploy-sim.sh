@@ -15,16 +15,16 @@ echo "DEPLOY_SIM_CHAIN: " $DEPLOY_SIM_CHAIN
 if [ $DEPLOY_SIM_CHAIN == 'anvil' ]; then
     chain_name='anvil'
     chain_id=31337
-    # Fund the ETH_FROM address with gas token (for anvil or tenderly) 
+    # Fund the ETH_FROM address with gas token (for anvil or tenderly)
     echo "Fund Wallet..."
     curl http://localhost:8545 -X POST -H "Content-Type: application/json" --data "{\"method\":\"anvil_setBalance\",\"params\":[\"$ETH_FROM\", \"0x021e19e0c9bab2400000\"],\"id\":1,\"jsonrpc\":\"2.0\"}"
-    echo "" 
+    echo ""
 else
     chain_name='tenderly'
     chain_id=$TENDERLY_CHAIN_ID
     private_key=$PRIVATE_KEY
 fi
-echo "" 
+echo ""
 echo "===== Env Variables in Use ======"
 echo -e "chain_name: $chain_name"
 echo -e "chain_id: $chain_id"
@@ -103,6 +103,7 @@ echo "{
     \"interestRate\": \"$interest_rate_addr\",
     \"whitelist\": \"$whitelist_addr\",
     \"ionPool\": \"$ionpool_addr\",
+    \"gemJoin\": \"$gem_join_addr\",
     \"weEthReserveOracle\": \"$reserve_oracle\",
     \"weEthSpotOracle\": \"$spot_oracle\",
     \"weEthHandler\": \"$weeth_handler_addr\",
