@@ -46,13 +46,13 @@ contract Liquidation {
     uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
     uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
 
-    uint256 public immutable MAX_DISCOUNT_0; // [ray] ex) 0.2e27 is 20%
+    uint256 public immutable MAX_DISCOUNT; // [ray] ex) 0.2e27 is 20%
 
     // liquidation thresholds
-    uint256 public immutable LIQUIDATION_THRESHOLD_0; // [ray] liquidation threshold for ilkIndex 0
+    uint256 public immutable LIQUIDATION_THRESHOLD; // [ray] liquidation threshold for ilkIndex 0
 
     // exchange rates
-    address public immutable RESERVE_ORACLE_0; // reserve oracle providing exchange rate for ilkIndex 0
+    address public immutable RESERVE_ORACLE; // reserve oracle providing exchange rate for ilkIndex 0
 
     address public immutable PROTOCOL; // receives confiscated vault debt and collateral
 
@@ -130,15 +130,15 @@ contract Liquidation {
 
         TARGET_HEALTH = _targetHealth;
         BASE_DISCOUNT = _reserveFactor;
-        MAX_DISCOUNT_0 = _maxDiscounts[0];
+        MAX_DISCOUNT = _maxDiscounts[0];
 
         IERC20 underlying = ionPool_.underlying();
         underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
         UNDERLYING = underlying;
 
-        LIQUIDATION_THRESHOLD_0 = _liquidationThresholds[0];
+        LIQUIDATION_THRESHOLD = _liquidationThresholds[0];
 
-        RESERVE_ORACLE_0 = _reserveOracles[0];
+        RESERVE_ORACLE = _reserveOracles[0];
     }
 
     struct Configs {
@@ -152,9 +152,9 @@ contract Liquidation {
      * discount for the given ilk.
      */
     function _getConfig() internal view returns (Configs memory configs) {
-        configs.reserveOracle = RESERVE_ORACLE_0;
-        configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
-        configs.maxDiscount = MAX_DISCOUNT_0;
+        configs.reserveOracle = RESERVE_ORACLE;
+        configs.liquidationThreshold = LIQUIDATION_THRESHOLD;
+        configs.maxDiscount = MAX_DISCOUNT;
     }
 
     /**

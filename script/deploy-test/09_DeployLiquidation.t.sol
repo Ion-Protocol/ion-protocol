@@ -12,11 +12,11 @@ contract DeployLiquidationTest is DeployTestBase, DeployLiquidationScript {
         assertEq(liquidation.TARGET_HEALTH(), targetHealth, "targetHealth");
         assertEq(liquidation.BASE_DISCOUNT(), reserveFactor, "baseDiscount");
 
-        assertEq(liquidation.MAX_DISCOUNT_0(), maxDiscount, "maxDiscount");
+        assertEq(liquidation.MAX_DISCOUNT(), maxDiscount, "maxDiscount");
 
-        assertEq(liquidation.LIQUIDATION_THRESHOLD_0(), liquidationThreshold, "liquidationThreshold");
+        assertEq(liquidation.LIQUIDATION_THRESHOLD(), liquidationThreshold, "liquidationThreshold");
 
-        assertEq(liquidation.RESERVE_ORACLE_0(), reserveOracle, "reserveOracles");
+        assertEq(liquidation.RESERVE_ORACLE(), reserveOracle, "reserveOracles");
 
         assertEq(liquidation.PROTOCOL(), protocol, "protocol");
 
