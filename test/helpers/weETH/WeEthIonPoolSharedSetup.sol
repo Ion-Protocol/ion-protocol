@@ -9,7 +9,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 abstract contract WeEthIonPoolSharedSetup is IonPoolSharedSetup {
-    function setUp() public override {
+    function setUp() public override virtual {
         for (uint256 i = 0; i < 2; i++) {
             minimumProfitMargins.pop();
             adjustedReserveFactors.pop();
