@@ -15,7 +15,13 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
 optimizer_runs = 400
 no_match_contract = "Echidna"
+<<<<<<< Updated upstream
 gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist"]
+=======
+no_match_path = "script/**/*.sol"
+gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist", "WeEthHandler"]
+evm_version = "paris"
+>>>>>>> Stashed changes
 
 [profile.default.fuzz]
 runs = 10000
