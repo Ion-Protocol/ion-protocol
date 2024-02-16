@@ -12,9 +12,22 @@ import { WEETH_ADDRESS, WETH_ADDRESS, EETH_ADDRESS } from "../../Constants.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
+/**
+ * @notice Handler for the weETH collateral.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract WeEthHandler is UniswapFlashswapDirectMintHandler {
     using EtherFiLibrary for IWeEth;
 
+    /**
+     * @notice Creates a new `WeEthHandler` instance.
+     * @param _ilkIndex Ilk index of the pool.
+     * @param _ionPool address.
+     * @param _gemJoin address.
+     * @param _whitelist address.
+     * @param _wstEthUniswapPool address of the wstETH/WETH Uniswap pool (0.01% fee).
+     */
     constructor(
         uint8 _ilkIndex,
         IonPool _ionPool,
@@ -28,11 +41,17 @@ contract WeEthHandler is UniswapFlashswapDirectMintHandler {
         EETH_ADDRESS.approve(address(WEETH_ADDRESS), type(uint256).max);
     }
 
+    /**
+     * @inheritdoc UniswapFlashswapDirectMintHandler
+     */
     function _mintCollateralAsset(uint256 amountWeth) internal override returns (uint256) {
         WETH.withdraw(amountWeth);
         return WEETH_ADDRESS.depositForLrt(amountWeth);
     }
 
+    /**
+     * @inheritdoc UniswapFlashswapDirectMintHandler
+     */
     function _getAmountInForCollateralAmountOut(uint256 amountOut) internal view override returns (uint256) {
         return WEETH_ADDRESS.getEthAmountInForLstAmountOut(amountOut);
     }

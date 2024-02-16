@@ -14,8 +14,6 @@ import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 contract WeEthWstEthReserveOracle is ReserveOracle {
     using WadRayMath for uint256;
 
-    address public immutable PROTOCOL_FEED;
-
     /**
      * @notice Creates a new `weEthwstEthReserveOracle` instance. Provides
      * the amount of wstETH equal to one weETH.
@@ -40,8 +38,8 @@ contract WeEthWstEthReserveOracle is ReserveOracle {
     }
 
     /**
-     * @notice Returns the exchange rate between ETH and weETH.
-     * @return Exchange rate between ETH and weETH.
+     * @notice Returns the exchange rate between wstETH and weETH.
+     * @return Exchange rate between wstETH and weETH.
      */
     function _getProtocolExchangeRate() internal view override returns (uint256) {
         // eETH / weETH * wstETH / stETH = wstETH / weETH
