@@ -28,10 +28,10 @@ To learn more about the protocol's technical details, please visit:
 > Please report any white hat findings for potential vulnerabilities to security@molecularlabs.io
 
 - OpenZeppelin Audit December 2023
-  - [Report to be released soon]
+  - [Open Zepplin Audit Report](https://blog.openzeppelin.com/ion-protocol-audit)
 - [Hats Finance January 2024](https://app.hats.finance/audit-competitions)
   - Regular Audit and Formal Verification Competition with Certora
-  - [Competition Ongoing]
+  - [Competition Completed]
 
 ## Community
 
