@@ -28,7 +28,7 @@ contract SwEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHan
      * @param _ionPool `IonPool` contract address.
      * @param _gemJoin `GemJoin` contract address associated with swETH.
      * @param _whitelist Address of the `Whitelist` contract.
-     * @param _swEthPool Adderess of the swETH/ETH Uniswap V3 pool.
+     * @param _swEthPool Address of the swETH/ETH Uniswap V3 pool.
      */
     constructor(
         uint8 _ilkIndex,

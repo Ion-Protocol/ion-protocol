@@ -1,5 +1,8 @@
 {
   "filter_paths": "lib",
+  "detectors_to_exclude": "naming-convention,pragma,assembly,equality",
+  "exclude_informational": true,
+  "exclude_low": true,
   "solc_remaps": [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "@balancer-labs/v2-interfaces/=lib/balancer-v2-monorepo/pkg/interfaces/",

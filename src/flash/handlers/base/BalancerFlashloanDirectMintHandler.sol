@@ -167,7 +167,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
 
         // It is technically possible to accrue slight dust amounts more of debt
         // than maxResultingDebt because you may need to borrow slightly more at
-        // the IonPool level to receieve the desired amount of WETH. This is
+        // the IonPool level to receive the desired amount of WETH. This is
         // because the IonPool will round in its favor and always gives out dust
         // amounts less of WETH than the debt accrued to the position. However,
         // this will always be bounded by the rate of the ilk at the time

@@ -126,7 +126,7 @@ abstract contract ReserveOracle {
     }
 
     /**
-     * @notice Intializes the `currentExchangeRate` state variable.
+     * @notice Initializes the `currentExchangeRate` state variable.
      * @dev Called once during construction.
      */
     function _initializeExchangeRate() internal {

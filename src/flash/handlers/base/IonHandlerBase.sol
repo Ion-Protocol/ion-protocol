@@ -13,7 +13,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 /**
  * @notice The base handler contract for simpler interactions with the `IonPool`
  * core contract. It combines various individual interactions into one compound
- * interaction to faciliate reaching user end-goals in atomic fashion.
+ * interaction to facilitate reaching user end-goals in atomic fashion.
  *
  * @dev To actually borrow from `IonPool`, a user must submit a "normalized" borrow
  * amount. This contract is designed to be user-intuitive and, thus, allows a user

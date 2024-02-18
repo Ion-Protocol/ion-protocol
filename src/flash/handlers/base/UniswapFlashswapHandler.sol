@@ -76,7 +76,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     }
 
     /**
-     * @notice Transfer collateral from user -> initate swap for collateral from
+     * @notice Transfer collateral from user -> initiate swap for collateral from
      * WETH on Uniswap (contract will receive collateral first) -> deposit all
      * collateral into `IonPool` -> borrow WETH from `IonPool` -> complete swap
      * by sending WETH to Uniswap.
@@ -201,7 +201,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     }
 
     /**
-     * @notice Handles swap intiation logic. This function can only initiate
+     * @notice Handles swap initiation logic. This function can only initiate
      * exact output swaps.
      * @param zeroForOne Direction of the swap.
      * @param amountOut Desired amount of output.

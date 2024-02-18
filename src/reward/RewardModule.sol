@@ -208,10 +208,11 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         uint256 _supplyFactor = $.supplyFactor;
         address _treasury = $.treasury;
 
-        // Compared to the normal mint, we don't check for rounding errors.
-        // The amount to mint can easily be very small since it is a fraction of the interest accrued.
-        // In that case, the treasury will experience a (very small) loss, but it
-        // wont cause potentially valid transactions to fail.
+        // Compared to the normal mint, we don't check for rounding errors. The
+        // amount to mint can easily be very small since it is a fraction of the
+        // interest accrued. In that case, the treasury will experience a (very
+        // small) loss, but it won't cause potentially valid transactions to
+        // fail.
         _mintNormalized(_treasury, amount.rayDivDown(_supplyFactor));
 
         emit Transfer(address(0), _treasury, amount);
