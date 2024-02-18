@@ -60,7 +60,7 @@ contract YieldOracle_ForkTest is Test {
     // day is reached. We run tests on these changes to make sure the expected
     // behavior takes place.
     function setUp() public {
-        string[] memory inputs = new string[](5);
+        string[] memory inputs = new string[](4);
         vm.setEnv("CHAIN_ID", "1");
         inputs[0] = "bun";
         inputs[1] = "run";

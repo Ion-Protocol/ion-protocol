@@ -10,7 +10,7 @@ import { WeEthWstEthSpotOracle } from "../../../src/oracles/spot/WeEthWstEthSpot
 import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
 import { SwEthReserveOracle } from "../../../src/oracles/reserve/SwEthReserveOracle.sol";
 import { WstEthReserveOracle } from "../../../src/oracles/reserve/WstEthReserveOracle.sol";
-import { EthXReserveOracle } from "../../../src/oracles/reserve/EthxReserveOracle.sol";
+import { EthXReserveOracle } from "../../../src/oracles/reserve/EthXReserveOracle.sol";
 import { WeEthWstEthReserveOracle } from "../../../src/oracles/reserve/WeEthWstEthReserveOracle.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 

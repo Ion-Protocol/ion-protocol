@@ -29,7 +29,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
      * @param _ionPool `IonPool` contract address.
      * @param _gemJoin `GemJoin` contract address associated with wstETH.
      * @param _whitelist Address of the `Whitelist` contract.
-     * @param _wstEthUniswapPool Adderess of the wstETH/ETH Uniswap V3 pool.
+     * @param _wstEthUniswapPool Address of the wstETH/ETH Uniswap V3 pool.
      */
     constructor(
         uint8 _ilkIndex,
