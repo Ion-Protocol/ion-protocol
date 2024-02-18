@@ -120,18 +120,18 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
             return;
         }
 
-        if (amountWethToFlashloan > maxResultingDebt) {
-            revert FlashloanRepaymentTooExpensive(amountWethToFlashloan, maxResultingDebt);
-        }
-
         // We want to swap for ETH here
         bool zeroForOne = MINT_IS_TOKEN0 ? false : true;
-        _initiateFlashSwap({
+        uint256 baseAssetSwappedIn = _initiateFlashSwap({
             zeroForOne: zeroForOne,
             amountOut: amountWethToFlashloan,
             recipient: address(this),
             data: abi.encode(msg.sender, resultingAdditionalCollateral, initialDeposit)
         });
+
+        if (baseAssetSwappedIn > maxResultingDebt) {
+            revert FlashloanRepaymentTooExpensive(amountWethToFlashloan, maxResultingDebt);
+        }
     }
 
     /**
