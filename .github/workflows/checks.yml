@@ -33,23 +33,7 @@ jobs:
 
       - name: Check Solidity formatting with forge fmt
         run: |
-          # Stash changes from the checkout step to ignore in the formatting check
-          git stash -u
-
-          # Remember the current HEAD commit
-          BEFORE_FMT=$(git rev-parse HEAD)
-
-          # Run forge fmt to format Solidity files
-          forge fmt
-
-          # Check if there are any changes by comparing the current HEAD to the tree after running forge fmt
-          if [ -n "$(git diff $BEFORE_FMT)" ]; then
-            echo "Solidity files are not formatted correctly. Please run 'forge fmt' locally and commit the changes."
-            git diff $BEFORE_FMT
-            exit 1
-          else
-            echo "All Solidity files are formatted correctly."
-          fi
+          forge fmt --check
 
       # Optional: Revert changes made by forge fmt to leave the working directory clean
       - name: Revert formatting changes
