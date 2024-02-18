@@ -99,6 +99,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
 
     bytes32 public constant GEM_JOIN_ROLE = keccak256("GEM_JOIN_ROLE");
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
 
     address private immutable ADDRESS_THIS = address(this);
 
@@ -318,8 +319,15 @@ contract IonPool is PausableUpgradeable, RewardModule {
 
     /**
      * @dev Pause actions but accrue interest as well.
+     *
+     * Under certain protocol conditions, we want to be able to pause the
+     * protocol automatically through monitoring systems. So we want to be able
+     * to grant the PAUSE_ROLE to those private keys. In the case of a
+     * compromised private key, we can revoke the PAUSE_ROLE from that private
+     * key and grant it to a new private key. Unpausing will remain a multisig
+     * operation.
      */
-    function pause() external onlyRole(ION) {
+    function pause() external onlyRole(PAUSE_ROLE) {
         _accrueInterest();
         _pause();
     }
@@ -851,7 +859,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
      * @param usr user
      * @param wad amount to add or remove
      */
-    function mintAndBurnGem(uint8 ilkIndex, address usr, int256 wad) external onlyRole(GEM_JOIN_ROLE) {
+    function mintAndBurnGem(uint8 ilkIndex, address usr, int256 wad) external onlyRole(GEM_JOIN_ROLE) whenNotPaused {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         $.gem[ilkIndex][usr] = _add($.gem[ilkIndex][usr], wad);

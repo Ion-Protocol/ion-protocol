@@ -156,7 +156,7 @@ contract InterestRate {
             if (ilkDataList[i].optimalUtilizationRate == 0) {
                 revert InvalidOptimalUtilizationRate(ilkDataList[i].optimalUtilizationRate);
             }
-            if (ilkDataList[i].reserveFactor > RAY) {
+            if (ilkDataList[i].reserveFactor > 1e4) {
                 revert InvalidReserveFactor(ilkDataList[i].reserveFactor);
             }
 
@@ -335,8 +335,8 @@ contract InterestRate {
                 slopeNumerator = collateralApyRayInSeconds - ilkData.adjustedProfitMargin - ilkData.adjustedBaseRate;
             }
 
-            // Underflow occured
-            // If underflow occured, then the Apy was too low or the profitMargin was too high and
+            // Underflow occurred
+            // If underflow occurred, then the Apy was too low or the profitMargin was too high and
             // we would want to switch to minimum borrow rate. Set slopeNumerator to zero such
             // that adjusted borrow rate is below the minimum borrow rate.
             if (slopeNumerator > collateralApyRayInSeconds) {

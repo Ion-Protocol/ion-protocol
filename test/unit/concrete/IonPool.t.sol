@@ -1381,7 +1381,9 @@ contract IonPool_AdminTest is IonPoolSharedSetup {
 
     function test_Pause() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.ION())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, NON_ADMIN, ionPool.PAUSE_ROLE()
+            )
         );
         vm.prank(NON_ADMIN);
         ionPool.pause();

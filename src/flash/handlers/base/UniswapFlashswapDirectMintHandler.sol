@@ -35,8 +35,6 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
     error CallbackOnlyCallableByPool(address unauthorizedCaller);
     error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
 
-    uint256 private flashloanInitiated = 1;
-
     /// @dev The minimum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MIN_TICK)
     uint160 internal constant MIN_SQRT_RATIO = 4_295_128_739;
     /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
@@ -106,9 +104,6 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
     )
         internal
     {
-        IERC20Balancer[] memory addresses = new IERC20Balancer[](1);
-        addresses[0] = IERC20Balancer(address(WETH));
-
         uint256 amountLrt = resultingAdditionalCollateral - initialDeposit; // in collateral terms
         uint256 amountWethToFlashloan = _getAmountInForCollateralAmountOut(amountLrt);
 
@@ -211,14 +206,16 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
     }
 
     /**
-     * @notice Deposits the mint asset into the a provider's collateral asset.
+     * @notice Deposits the mint asset into the provider's collateral-asset
+     * deposit contract.
      * @param amountMintAsset amount of "mint asset" to deposit. [WAD]
      */
     function _mintCollateralAsset(uint256 amountMintAsset) internal virtual returns (uint256);
 
     /**
-     * @notice Calculates the amount of eth required to receive `amountLrt`.
-     * @dev Calculates the amount of eth required to receive `amountLrt`.
+     * @notice Calculates the amount of mint asset required to receive
+     * `amountLrt`.
+     * @dev Calculates the amount of mint asset required to receive `amountLrt`.
      * @param amountLrt Desired output amount. [WAD]
      * @return Amount mint asset required for desired output. [WAD]
      */

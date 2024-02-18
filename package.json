@@ -3,8 +3,9 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
+    "prettier": "prettier --write '**/*.{md,yml,yaml,ts,js}'",
     "coverage": "./coverage.sh",
-    "solhint": "solhint 'src/**/*.sol'",
+    "solhint": "solhint -w 0 'src/**/*.sol'",
     "slither": "slither src",
     "echidna": "echidna test/invariant/IonPool/IonPoolEchidna.sol  --config echidna-config.yaml --contract IonPool_Echidna",
     "simulate": "rm -f report.csv; REPORT=1 forge test --mt 'invariantFoundry_report'",
@@ -64,12 +65,14 @@
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.7.1",
+    "prettier": "^3.2.5",
     "solhint": "^3.6.2",
     "viem": "^1.14.0",
     "web3": "^4.1.2"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "husky": "^9.0.11"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

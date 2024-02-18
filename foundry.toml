@@ -17,7 +17,7 @@ optimizer = true
 optimizer_runs = 300
 no_match_contract = "Echidna"
 no_match_path = "script/**/*.sol"
-gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist"]
+gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist", "WeEthHandler"]
 evm_version = "paris"
 
 [profile.default.fuzz]
@@ -29,6 +29,13 @@ runs = 20
 depth = 1536
 # fail_on_revert = true
 call_override = false   # reentrancy-check
+
+[profile.ci.fuzz]
+runs = 10
+
+[profile.ci.invariant]
+runs = 10
+depth = 5
 
 [fmt]
 bracket_spacing = true

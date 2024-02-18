@@ -241,6 +241,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         );
 
         ionPool.grantRole(ionPool.ION(), address(this));
+        ionPool.grantRole(ionPool.PAUSE_ROLE(), address(this));
         ionPool.updateSupplyCap(type(uint256).max);
 
         for (uint8 i = 0; i < collaterals.length; i++) {

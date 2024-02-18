@@ -6,18 +6,18 @@ dotenv.config();
 
 const LOOK_BACK = 7;
 
-// Always look for mainnet values when instantiating YieldOracle. 
+// Always look for mainnet values when instantiating YieldOracle.
 // CHAIN_ID = 31337 is also possible but this should always be a mainnet fork
 // and should thus always use the mainnet addresses
 const CHAIN_ID = "1";
-const CHAIN = mainnet; 
-const ETHERSCAN_URL = process.env.MAINNET_ETHERSCAN_URL; 
-const RPC_URL = process.env.MAINNET_ARCHIVE_RPC_URL; 
+const CHAIN = mainnet;
+const ETHERSCAN_URL = process.env.MAINNET_ETHERSCAN_URL;
+const RPC_URL = process.env.MAINNET_ARCHIVE_RPC_URL;
 
 const exchangeRateAddresses = {
   weETH: {
-    "1": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee", 
-    "5": "", 
+    "1": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+    "5": "",
   },
   // lido: {
   //   "1": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",

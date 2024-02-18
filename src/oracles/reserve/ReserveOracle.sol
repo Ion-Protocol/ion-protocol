@@ -7,7 +7,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // should equal to the number of feeds available in the contract
 uint8 constant FEED_COUNT = 3;
-uint256 constant UPDATE_COOLDOWN = 1 hours;
+uint256 constant UPDATE_COOLDOWN = 58 minutes;
 
 /**
  * @notice Reserve oracles are used to determine the LST provider exchange rate
@@ -126,7 +126,7 @@ abstract contract ReserveOracle {
     }
 
     /**
-     * @notice Intializes the `currentExchangeRate` state variable.
+     * @notice Initializes the `currentExchangeRate` state variable.
      * @dev Called once during construction.
      */
     function _initializeExchangeRate() internal {
