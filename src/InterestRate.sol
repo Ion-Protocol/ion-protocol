@@ -156,7 +156,7 @@ contract InterestRate {
             if (ilkDataList[i].optimalUtilizationRate == 0) {
                 revert InvalidOptimalUtilizationRate(ilkDataList[i].optimalUtilizationRate);
             }
-            if (ilkDataList[i].reserveFactor > RAY) {
+            if (ilkDataList[i].reserveFactor > 1e4) {
                 revert InvalidReserveFactor(ilkDataList[i].reserveFactor);
             }
 
