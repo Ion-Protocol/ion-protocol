@@ -209,7 +209,7 @@ contract YieldOracle is IYieldOracle, Ownable2Step {
      */
     function _getExchangeRate(uint256 ilkIndex) internal view returns (uint64 exchangeRate) {
         if (ilkIndex == 0) {
-            IWeEth weEth = IWeEth(ADDRESS0); 
+            IWeEth weEth = IWeEth(ADDRESS0);
             exchangeRate = weEth.getRate().toUint64();
         } else if (ilkIndex == 1) {
             IStaderStakePoolsManager stader = IStaderStakePoolsManager(ADDRESS1);
