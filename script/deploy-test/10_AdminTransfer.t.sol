@@ -16,7 +16,7 @@ contract DeployAdminTransferTest is DeployTestBase, AdminTransferScript {
         assertLe(addressSchedule, block.timestamp, "address schedule");
 
         vm.warp(block.timestamp + 1);
-        // accepting the transferd
+        // accepting the transfer
         vm.startPrank(protocol);
         ionPool.acceptDefaultAdminTransfer();
         vm.stopPrank();
