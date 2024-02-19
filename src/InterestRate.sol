@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
-import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
+import { WadRayMath } from "./libraries/math/WadRayMath.sol";
 
 // forgefmt: disable-start
 
