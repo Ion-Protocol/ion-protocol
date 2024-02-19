@@ -319,7 +319,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
 
     /**
      * @dev Pause actions but accrue interest as well.
-     * 
+     *
      * Under certain protocol conditions, we want to be able to pause the
      * protocol automatically through monitoring systems. So we want to be able
      * to grant the PAUSE_ROLE to those private keys. In the case of a
