@@ -70,7 +70,7 @@ abstract contract IonHandlerBase {
     }
 
     IERC20 public immutable BASE;
-    // Will keep WETH for compatability with other strategies. But this should
+    // Will keep WETH for compatibility with other strategies. But this should
     // be removed eventually to remove dependence on WETH as a base asset.
     IWETH9 public immutable WETH;
     uint8 public immutable ILK_INDEX;

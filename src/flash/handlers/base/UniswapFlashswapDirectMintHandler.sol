@@ -7,8 +7,6 @@ import { IWETH9 } from "../../../interfaces/IWETH9.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IUniswapV3SwapCallback } from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
 
-import { IERC20 as IERC20Balancer } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
-
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -128,7 +126,7 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
     }
 
     /**
-     * @notice Handles swap intiation logic. This function can only initiate
+     * @notice Handles swap initiation logic. This function can only initiate
      * exact output swaps.
      * @param zeroForOne Direction of the swap.
      * @param amountOut Desired amount of output.
