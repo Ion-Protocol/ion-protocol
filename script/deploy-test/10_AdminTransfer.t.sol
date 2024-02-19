@@ -17,7 +17,6 @@ contract DeployAdminTransferTest is DeployTestBase, AdminTransferScript {
 
         assertEq(yieldOracle.pendingOwner(), protocol, "yield oracle pending owner");
         assertEq(whitelist.pendingOwner(), protocol, "whitelist pending owner");
-        assertEq(gemJoin.pendingOwner(), protocol, "gem join pending owner");
         assertEq(proxyAdmin.pendingOwner(), protocol, "proxy admin pending owner");
 
         vm.warp(block.timestamp + 1);

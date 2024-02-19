@@ -22,8 +22,5 @@ contract DeployWhitelistScript is DeployScript {
 
         require(borrowerRoots.length == 1, "borrower root length should be one");
         whitelist = new Whitelist(borrowerRoots, lenderRoot);
-
-        // initiate Ownable2Step transfer
-        whitelist.transferOwnership(protocol);
     }
 }

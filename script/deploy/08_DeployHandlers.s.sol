@@ -13,10 +13,10 @@ import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 // NOTE: Different handlers will have different constructor parameters.
 // This script should be reconfigured on each handler deployment.
-contract DeployInitialHandlersScript is DeployScript {
+contract DeployHandlersScript is DeployScript {
     using StdJson for string;
 
-    string configPath = "./deployment-config/08_DeployInitialHandlers.json";
+    string configPath = "./deployment-config/08_DeployHandlers.json";
     string config = vm.readFile(configPath);
 
     function run() public broadcast returns (IonHandlerBase handler) {

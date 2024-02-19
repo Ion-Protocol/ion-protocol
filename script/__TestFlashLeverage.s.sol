@@ -38,7 +38,7 @@ contract FlashLeverageScript is BaseScript {
         pool.addOperator(address(weEthHandler));
 
         uint256 initialDeposit = 1 ether; // in collateral terms
-        uint256 resultingAdditionalCollateral = 3 ether; // in colllateral terms
+        uint256 resultingAdditionalCollateral = 3 ether; // in collateral terms
         uint256 maxResultingDebt = 3 ether;
 
         WEETH_ADDRESS.approve(address(weEthHandler), type(uint256).max);

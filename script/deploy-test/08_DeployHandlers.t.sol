@@ -2,13 +2,12 @@
 pragma solidity 0.8.21;
 
 import { DeployTestBase } from "./00_DeployTestBase.t.sol";
-import { DeployInitialHandlersScript } from "../deploy/08_DeployInitialHandlers.s.sol";
+import { DeployHandlersScript } from "../deploy/08_DeployHandlers.s.sol";
 import { IonHandlerBase } from "../../src/flash/handlers/base/IonHandlerBase.sol";
 
-contract DeployInitialHandlers is DeployTestBase, DeployInitialHandlersScript {
+contract DeployHandlersTest is DeployTestBase, DeployHandlersScript {
     function checkState(IonHandlerBase handler) public {
         assertGt(address(handler).code.length, 0, "handler code");
-        // TODO: Test for UniswapDirectMintHandler
     }
 
     function test_PreExecution() public {

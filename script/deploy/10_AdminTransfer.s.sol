@@ -25,13 +25,16 @@ contract AdminTransferScript is DeployScript {
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));
     YieldOracle yieldOracle = YieldOracle(config.readAddress(".yieldOracle"));
     Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
-    GemJoin gemJoin = GemJoin(config.readAddress(".gemJoin"));
     ProxyAdmin proxyAdmin = ProxyAdmin(config.readAddress(".proxyAdmin"));
 
     function run() public broadcast {
         require(address(protocol) != address(0), "protocol address");
 
         _validateInterface(ionPool);
+        _validateInterface(yieldOracle);
+        _validateInterface(whitelist);
+
+        require(proxyAdmin.owner() == initialDefaultAdmin, "proxy admin owner");
 
         // Move the default admin role to the protocol
         // 1. initialDefaultAdmin calls beginDefaultAdminTransfer
@@ -41,7 +44,6 @@ contract AdminTransferScript is DeployScript {
         ionPool.beginDefaultAdminTransfer(protocol);
         yieldOracle.transferOwnership(protocol);
         whitelist.transferOwnership(protocol);
-        gemJoin.transferOwnership(protocol);
         proxyAdmin.transferOwnership(protocol);
     }
 }

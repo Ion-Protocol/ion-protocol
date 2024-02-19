@@ -3,9 +3,9 @@ pragma solidity 0.8.21;
 
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { DeployTestBase } from "./00_DeployTestBase.t.sol";
-import { DeployInitialGemJoinsScript } from "../deploy/07_DeployInitialGemJoins.s.sol";
+import { DeployGemJoinScript } from "../deploy/07_DeployGemJoin.s.sol";
 
-contract DeployGemJoinTest is DeployTestBase, DeployInitialGemJoinsScript {
+contract DeployGemJoinTest is DeployTestBase, DeployGemJoinScript {
     function checkState(GemJoin gemJoin) public {
         assertGt(address(gemJoin).code.length, 0, "gem join code");
         assertTrue(ionPool.hasRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin)), "gem join role");

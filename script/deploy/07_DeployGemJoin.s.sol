@@ -9,10 +9,10 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-contract DeployInitialGemJoinsScript is DeployScript {
+contract DeployGemJoinScript is DeployScript {
     using StdJson for string;
 
-    string configPath = "./deployment-config/07_DeployInitialGemJoins.json";
+    string configPath = "./deployment-config/07_DeployGemJoin.json";
     string config = vm.readFile(configPath);
 
     IonPool ionPool = IonPool(config.readAddress(".ionPool"));

@@ -300,6 +300,8 @@ contract InterestRate {
      * @param ilkIndex Index of the collateral.
      * @param totalIlkDebt Total debt of the collateral. [RAD]
      * @param totalEthSupply Total eth supply of the system. [WAD]
+     * @return The borrow rate for the collateral. [RAY]
+     * @return The reserve factor for the collateral. [RAY]
      */
     function calculateInterestRate(
         uint256 ilkIndex,

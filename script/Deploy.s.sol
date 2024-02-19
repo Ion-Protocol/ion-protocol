@@ -21,5 +21,4 @@ abstract contract DeployScript is BaseScript, Errors {
     address initialDefaultAdmin = vm.parseJsonAddress(defaultConfig, ".initialDefaultAdmin");
     address protocol = vm.parseJsonAddress(defaultConfig, ".protocol");
     address ilkAddress = vm.parseJsonAddress(defaultConfig, ".ilkAddress");
-    string marketId = defaultConfig.readString(".marketId");
 }
