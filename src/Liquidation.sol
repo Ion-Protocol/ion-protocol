@@ -72,76 +72,49 @@ contract Liquidation {
      * @param _ionPool The address of the `IonPool` contract.
      * @param _protocol The address that will represent the protocol balance
      * sheet (for protocol liquidation purposes).
-     * @param _reserveOracles List of reserve oracle addresses for each ilk.
-     * @param _liquidationThresholds List of liquidation thresholds for each
-     * ilk.
+     * @param _reserveOracle Reserve oracle for the ilk.
+     * @param _liquidationThreshold Liquidation threshold for the ilk.
      * @param _targetHealth The target health ratio for positions.
      * @param _reserveFactor Base discount for collateral.
-     * @param _maxDiscounts List of max discounts for each ilk.
+     * @param _maxDiscount Max discount for the ilk.
      */
     constructor(
         address _ionPool,
         address _protocol,
-        address[] memory _reserveOracles,
-        uint256[] memory _liquidationThresholds,
+        address _reserveOracle,
+        uint256 _liquidationThreshold,
         uint256 _targetHealth,
         uint256 _reserveFactor,
-        uint256[] memory _maxDiscounts
+        uint256 _maxDiscount
     ) {
         IonPool ionPool_ = IonPool(_ionPool);
         POOL = ionPool_;
         PROTOCOL = _protocol;
 
-        uint256 ilkCount = POOL.ilkCount();
+        if (_maxDiscount >= RAY) revert InvalidMaxDiscount(_maxDiscount);
 
-        uint256 maxDiscountsLength = _maxDiscounts.length;
-        if (maxDiscountsLength != ilkCount) {
-            revert InvalidMaxDiscountsLength(_maxDiscounts.length);
-        }
+        if (_liquidationThreshold == 0) revert InvalidLiquidationThreshold(_liquidationThreshold);
 
-        if (_reserveOracles.length != ilkCount) {
-            revert InvalidReserveOraclesLength(_reserveOracles.length);
-        }
-
-        uint256 liquidationThresholdsLength = _liquidationThresholds.length;
-        if (liquidationThresholdsLength != ilkCount) {
-            revert InvalidLiquidationThresholdsLength(_liquidationThresholds.length);
-        }
-
-        for (uint256 i = 0; i < maxDiscountsLength;) {
-            if (_maxDiscounts[i] >= RAY) revert InvalidMaxDiscount(_maxDiscounts[i]);
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
-
-        for (uint256 i = 0; i < liquidationThresholdsLength;) {
-            if (_liquidationThresholds[i] == 0) revert InvalidLiquidationThreshold(_liquidationThresholds[i]);
-
-            // This invariant must hold otherwise all liquidations will revert
-            // when discount == configs.maxDiscount within the _getRepayAmt
-            // function.
-            if (_targetHealth < _liquidationThresholds[i].rayDivUp(RAY - _maxDiscounts[i])) {
-                revert InvalidTargetHealth(_targetHealth);
-            }
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
+        // This invariant must hold otherwise all liquidations will revert
+        // when discount == configs.maxDiscount within the _getRepayAmt
+        // function.
+        if (_targetHealth < _liquidationThreshold.rayDivUp(RAY - _maxDiscount)) {
+            revert InvalidTargetHealth(_targetHealth);
         }
 
         if (_targetHealth < RAY) revert InvalidTargetHealth(_targetHealth);
 
         TARGET_HEALTH = _targetHealth;
         BASE_DISCOUNT = _reserveFactor;
-        MAX_DISCOUNT = _maxDiscounts[0];
+        MAX_DISCOUNT = _maxDiscount;
 
         IERC20 underlying = ionPool_.underlying();
         underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
         UNDERLYING = underlying;
 
-        LIQUIDATION_THRESHOLD = _liquidationThresholds[0];
+        LIQUIDATION_THRESHOLD = _liquidationThreshold;
 
-        RESERVE_ORACLE = _reserveOracles[0];
+        RESERVE_ORACLE = _reserveOracle;
     }
 
     struct Configs {

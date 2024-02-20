@@ -20,11 +20,11 @@ contract DeployLiquidationScript is BaseScript {
     function run() public broadcast returns (Liquidation liquidation) {
         address ionPool = vm.parseJsonAddress(config, ".ionPool");
         address protocol = vm.parseJsonAddress(config, ".protocol");
-        address[] memory reserveOracles = vm.parseJsonAddressArray(config, ".reserveOracles");
-        uint256[] memory liquidationThresholds = vm.parseJsonUintArray(config, ".liquidationThresholds");
+        address reserveOracles = vm.parseJsonAddress(config, ".reserveOracle");
+        uint256 liquidationThresholds = vm.parseJsonUint(config, ".liquidationThreshold");
         uint256 targetHealth = vm.parseJsonUint(config, ".targetHealth");
         uint256 reserveFactor = vm.parseJsonUint(config, ".reserveFactor");
-        uint256[] memory maxDiscounts = vm.parseJsonUintArray(config, ".maxDiscounts");
+        uint256 maxDiscounts = vm.parseJsonUint(config, ".maxDiscount");
 
         // TODO: after import constants
         // assert(reserveOracles.length == ILK_COUNT);

@@ -92,25 +92,14 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad]
         ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
 
-        // liquidations contract
-        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
-        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
-        }
-
-        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount());
-        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            maxDiscounts[i] = deploymentArgs.maxDiscount;
-        }
-
         liquidation = new Liquidation(
             address(ionPool),
             protocol,
-            exchangeRateOracles,
-            liquidationThresholds,
+            exchangeRateOracles[0],
+            deploymentArgs.liquidationThreshold,
             deploymentArgs.targetHealth,
             deploymentArgs.reserveFactor,
-            maxDiscounts
+            deploymentArgs.maxDiscount
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
@@ -199,25 +188,14 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
         deploymentArgs.dust = stateArgs.normalizedDebt * stateArgs.rate / DUST_PERCENTAGE; // [rad]
         ionPool.updateIlkDust(ILK_INDEX, deploymentArgs.dust);
 
-        // liquidations contract
-        uint256[] memory liquidationThresholds = new uint256[](ionPool.ilkCount());
-        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            liquidationThresholds[i] = deploymentArgs.liquidationThreshold;
-        }
-
-        uint256[] memory maxDiscounts = new uint256[](ionPool.ilkCount());
-        for (uint256 i = 0; i < ionPool.ilkCount(); i++) {
-            maxDiscounts[i] = deploymentArgs.maxDiscount;
-        }
-
         liquidation = new Liquidation(
             address(ionPool),
             protocol,
-            exchangeRateOracles,
-            liquidationThresholds,
+            exchangeRateOracles[0],
+            deploymentArgs.liquidationThreshold,
             deploymentArgs.targetHealth,
             deploymentArgs.reserveFactor,
-            maxDiscounts
+            deploymentArgs.maxDiscount
         );
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
 
