@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { YieldOracle } from "../../../src/YieldOracle.sol";
+import { IYieldOracle } from "../../../src/interfaces/IYieldOracle.sol";
+import { YieldOracleNull } from "../../../src/YieldOracleNull.sol";
 import { WeEthIonPoolSharedSetup } from "../../helpers/weETH/WeEthIonPoolSharedSetup.sol";
 import { Whitelist } from "../../../src/Whitelist.sol";
 import { WSTETH_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "../../../src/Constants.sol";
@@ -265,6 +266,10 @@ contract WeEthIonPool_IntegrationTest is WeEthIonPoolSharedSetup {
             normalizedDebtABefore - borrowerBRepayOnBehalfOfAAmount,
             "borrowerA normalized debt after repayment from B on behalf of borrowerA"
         );
+    }
+
+    function _getYieldOracle() internal virtual override returns (IYieldOracle) {
+        return new YieldOracleNull();
     }
 
     function _getSpot() internal view override returns (uint256) {
