@@ -72,6 +72,8 @@ abstract contract YieldOracleSharedSetup is Test {
     MockStader staderOracle;
     MockSwell swellOracle;
 
+    IonPool mockIonPool;
+
     uint64[ILK_COUNT][LOOK_BACK] historicalExchangeRatesInitial;
 
     function setUp() public virtual {
@@ -93,7 +95,7 @@ abstract contract YieldOracleSharedSetup is Test {
             historicalExchangeRatesInitial[i] = baseRates;
         }
 
-        IonPool mockIonPool = IonPool(address(new MockIonPool()));
+        mockIonPool = IonPool(address(new MockIonPool()));
 
         oracle = new YieldOracle(
             historicalExchangeRatesInitial,

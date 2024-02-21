@@ -11,15 +11,16 @@ import { safeconsole as console } from "forge-std/safeconsole.sol";
 abstract contract WeEthIonPoolSharedSetup is IonPoolSharedSetup {
     function setUp() public virtual override {
         for (uint256 i = 0; i < 2; i++) {
-            minimumProfitMargins.pop();
-            adjustedReserveFactors.pop();
-            optimalUtilizationRates.pop();
-            distributionFactors.pop();
+            config.minimumProfitMargins.pop();
+            config.reserveFactors.pop();
+            config.optimalUtilizationRates.pop();
+            config.distributionFactors.pop();
             debtCeilings.pop();
-            adjustedAboveKinkSlopes.pop();
-            minimumAboveKinkSlopes.pop();
+            config.adjustedAboveKinkSlopes.pop();
+            config.minimumAboveKinkSlopes.pop();
         }
-        distributionFactors[0] = 1e4;
+        config.distributionFactors[0] = 1e4;
+
         super.setUp();
     }
 

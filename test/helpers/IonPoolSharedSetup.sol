@@ -12,6 +12,8 @@ import { SpotOracle } from "../../src/oracles/spot/SpotOracle.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { YieldOracleSharedSetup } from "../helpers/YieldOracleSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
+import { YieldOracle } from "../../src/YieldOracle.sol";
+import { Solarray } from "solarray/Solarray.sol";
 
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
@@ -38,7 +40,11 @@ using WadRayMath for uint16;
 // }
 
 contract MockYieldOracle is IYieldOracle {
-    uint32 APY = 3.45e6;
+    uint32 immutable APY;
+
+    constructor(uint32 apy) {
+        APY = apy;
+    }
 
     function apys(uint256) external view returns (uint32) {
         return APY;
@@ -95,7 +101,21 @@ contract MockReserveOracle {
     }
 }
 
+struct Config {
+    uint128[] minimumProfitMargins;
+    uint128[] minimumKinkRates;
+    uint16[] reserveFactors;
+    uint128[] adjustedBaseRates;
+    uint128[] minimumBaseRates;
+    uint16[] optimalUtilizationRates;
+    uint16[] distributionFactors;
+    uint128[] adjustedAboveKinkSlopes;
+    uint128[] minimumAboveKinkSlopes;
+}
+
 abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
+    Config config;
+
     IonPoolExposed ionPool;
     IonPoolExposed ionPoolImpl;
     IonRegistry ionRegistry;
@@ -157,23 +177,29 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     uint256 internal wstEthDebtCeiling = 20e45;
     uint256 internal ethXDebtCeiling = 40e45;
     uint256 internal swEthDebtCeiling = 40e45;
+    uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
 
     IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
     MockSpotOracle[] internal spotOracles;
 
-    uint96[] internal minimumProfitMargins =
-        [wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin];
-    uint16[] internal adjustedReserveFactors =
-        [wstEthAdjustedReserveFactor, ethXAdjustedReserveFactor, swEthAdjustedReserveFactor];
-    uint16[] internal optimalUtilizationRates =
-        [wstEthOptimalUtilizationRate, ethXOptimalUtilizationRate, swEthOptimalUtilizationRate];
-    uint16[] internal distributionFactors = [wstEthDistributionFactor, ethXDistributionFactor, swEthDistributionFactor];
-    uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
-    uint96[] internal adjustedAboveKinkSlopes =
-        [wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope];
-    uint96[] internal minimumAboveKinkSlopes =
-        [wstEthMinimumAboveKinkSlope, ethXMinimumAboveKinkSlope, swEthMinimumAboveKinkSlope];
+    constructor() {
+        config.minimumProfitMargins =
+            Solarray.uint128s(wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin);
+        config.minimumKinkRates = Solarray.uint16s(0, 0, 0);
+        config.reserveFactors =
+            Solarray.uint16s(wstEthAdjustedReserveFactor, ethXAdjustedReserveFactor, swEthAdjustedReserveFactor);
+        config.adjustedBaseRates = Solarray.uint128s(0, 0, 0);
+        config.minimumBaseRates = Solarray.uint128s(0, 0, 0);
+        config.optimalUtilizationRates =
+            Solarray.uint16s(wstEthOptimalUtilizationRate, ethXOptimalUtilizationRate, swEthOptimalUtilizationRate);
+        config.distributionFactors =
+            Solarray.uint16s(wstEthDistributionFactor, ethXDistributionFactor, swEthDistributionFactor);
+        config.adjustedAboveKinkSlopes =
+            Solarray.uint128s(wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope);
+        config.minimumAboveKinkSlopes =
+            Solarray.uint128s(wstEthMinimumAboveKinkSlope, ethXMinimumAboveKinkSlope, swEthMinimumAboveKinkSlope);
+    }
 
     IlkData[] ilkConfigs;
 
@@ -182,34 +208,34 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         address[] memory depositContracts = _getDepositContracts();
 
         assert(
-            collaterals.length == adjustedReserveFactors.length
-                && adjustedReserveFactors.length == optimalUtilizationRates.length
-                && optimalUtilizationRates.length == distributionFactors.length
-                && distributionFactors.length == debtCeilings.length
+            collaterals.length == config.reserveFactors.length
+                && config.reserveFactors.length == config.optimalUtilizationRates.length
+                && config.optimalUtilizationRates.length == config.distributionFactors.length
+                && config.distributionFactors.length == debtCeilings.length
         );
         BaseTestSetup.setUp();
         YieldOracleSharedSetup.setUp();
-        apyOracle = new MockYieldOracle();
+        apyOracle = _getYieldOracle();
 
         uint256 distributionFactorSum;
 
         IlkData memory ilkConfig;
         for (uint256 i = 0; i < collaterals.length; i++) {
             ilkConfig = IlkData({
-                adjustedProfitMargin: minimumProfitMargins[i],
-                minimumKinkRate: 0,
-                reserveFactor: adjustedReserveFactors[i],
-                adjustedBaseRate: 0,
-                minimumBaseRate: 0,
-                optimalUtilizationRate: optimalUtilizationRates[i],
-                distributionFactor: distributionFactors[i],
-                adjustedAboveKinkSlope: adjustedAboveKinkSlopes[i],
-                minimumAboveKinkSlope: minimumAboveKinkSlopes[i]
+                adjustedProfitMargin: uint96(config.minimumProfitMargins[i]),
+                minimumKinkRate: uint96(config.minimumKinkRates[i]),
+                reserveFactor: config.reserveFactors[i],
+                adjustedBaseRate: uint96(config.adjustedBaseRates[i]),
+                minimumBaseRate: uint96(config.minimumBaseRates[i]),
+                optimalUtilizationRate: config.optimalUtilizationRates[i],
+                distributionFactor: config.distributionFactors[i],
+                adjustedAboveKinkSlope: uint96(config.adjustedAboveKinkSlopes[i]),
+                minimumAboveKinkSlope: uint96(config.minimumAboveKinkSlopes[i])
             });
 
             ilkConfigs.push(ilkConfig);
 
-            distributionFactorSum += distributionFactors[i];
+            distributionFactorSum += config.distributionFactors[i];
         }
 
         assert(distributionFactorSum == 1e4);
@@ -217,7 +243,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         interestRateModule = new InterestRate(ilkConfigs, apyOracle);
 
         // whitelist
-        whitelist = address(new Whitelist(new bytes32[](0), bytes32(0)));
+        whitelist = address(_getWhitelist());
 
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
@@ -246,11 +272,10 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         for (uint8 i = 0; i < collaterals.length; i++) {
             ionPool.initializeIlk(address(collaterals[i]));
-            MockReserveOracle reserveOracle = new MockReserveOracle(EXCHANGE_RATE);
-            MockSpotOracle spotOracle = new MockSpotOracle(LTV, address(reserveOracle), PRICE);
-            spotOracles.push(spotOracle);
+            SpotOracle spotOracle = _getSpotOracle();
+            spotOracles.push(MockSpotOracle(address(spotOracle)));
             ionPool.updateIlkSpot(i, spotOracle);
-            ionPool.updateIlkDebtCeiling(i, debtCeilings[i]);
+            ionPool.updateIlkDebtCeiling(i, _getDebtCeiling(i));
 
             gemJoins.push(new GemJoin(ionPool, collaterals[i], i, address(this)));
 
@@ -308,17 +333,17 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
             // assertEq(reserveFactor, adjustedReserveFactors[i].scaleUpToRay(4));
 
             IlkData memory ilkConfig = interestRateModule.unpackCollateralConfig(i);
-            assertEq(ilkConfig.adjustedProfitMargin, minimumProfitMargins[i], "minimum profit margin");
-            assertEq(ilkConfig.minimumKinkRate, 0, "minimum kink rate");
+            assertEq(ilkConfig.adjustedProfitMargin, config.minimumProfitMargins[i], "minimum profit margin");
+            assertEq(ilkConfig.minimumKinkRate, config.minimumKinkRates[i], "minimum kink rate");
 
-            assertEq(ilkConfig.reserveFactor, adjustedReserveFactors[i], "reserve factor");
-            assertEq(ilkConfig.adjustedBaseRate, 0, "adjusted base rate");
-            assertEq(ilkConfig.minimumBaseRate, 0, "minimum base rate");
-            assertEq(ilkConfig.optimalUtilizationRate, optimalUtilizationRates[i], "optimal utilization rate");
-            assertEq(ilkConfig.distributionFactor, distributionFactors[i], "distribution factor");
+            assertEq(ilkConfig.reserveFactor, config.reserveFactors[i], "reserve factor");
+            assertEq(ilkConfig.adjustedBaseRate, config.adjustedBaseRates[i], "adjusted base rate");
+            assertEq(ilkConfig.minimumBaseRate, config.minimumBaseRates[i], "minimum base rate");
+            assertEq(ilkConfig.optimalUtilizationRate, config.optimalUtilizationRates[i], "optimal utilization rate");
+            assertEq(ilkConfig.distributionFactor, config.distributionFactors[i], "distribution factor");
 
-            assertEq(ilkConfig.adjustedAboveKinkSlope, adjustedAboveKinkSlopes[i], "adjusted above kink slope");
-            assertEq(ilkConfig.minimumAboveKinkSlope, minimumAboveKinkSlopes[i], "minimum above kink slope");
+            assertEq(ilkConfig.adjustedAboveKinkSlope, config.adjustedAboveKinkSlopes[i], "adjusted above kink slope");
+            assertEq(ilkConfig.minimumAboveKinkSlope, config.minimumAboveKinkSlopes[i], "minimum above kink slope");
         }
 
         assertEq(interestRateModule.COLLATERAL_COUNT(), collaterals.length, "collateral count");
@@ -334,6 +359,18 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         _collaterals[0] = IERC20(address(wstEth));
         _collaterals[1] = IERC20(address(ethX));
         _collaterals[2] = IERC20(address(swEth));
+    }
+
+    function _getYieldOracle() internal virtual returns (IYieldOracle) {
+        return new MockYieldOracle(3.45e6);
+    }
+
+    function _getSpotOracle() internal virtual returns (SpotOracle) {
+        return new MockSpotOracle(LTV, address(new MockReserveOracle(EXCHANGE_RATE)), PRICE);
+    }
+
+    function _getWhitelist() internal virtual returns (Whitelist) {
+        return new Whitelist(new bytes32[](0), bytes32(0));
     }
 
     function _getSpot() internal view virtual returns (uint256) {

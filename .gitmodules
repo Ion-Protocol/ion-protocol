@@ -25,3 +25,6 @@
 [submodule "lib/forge-safe"]
 	path = lib/forge-safe
 	url = https://github.com/ind-igo/forge-safe
+[submodule "lib/solarray"]
+	path = lib/solarray
+	url = https://github.com/evmcheb/solarray
