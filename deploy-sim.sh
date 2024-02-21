@@ -65,22 +65,21 @@ ionpool_addr=$(jq '.returns.ionPool.value' "broadcast/04_DeployIonPool.s.sol/$ch
 spot_oracle=$(jq '.returns.spotOracle.value' "broadcast/05_DeployInitialReserveAndSpotOracles.s.sol/$chain_id/run-latest.json" | xargs)
 
 jq --arg ionpool_addr "$ionpool_addr" --arg spot_oracle "$spot_oracle" '. + { "ionPool": $ionpool_addr, "spotOracle": $spot_oracle }' deployment-config/06_SetupCollateral.json >temp.json && mv temp.json deployment-config/06_SetupCollateral.json
-# jq --arg ionpool_addr "$ionpool_addr" --arg wst_eth_spot "$wst_eth_spot" --arg ethx_spot "$ethx_spot" --arg sw_eth_spot "$sw_eth_spot" '. + { "ionPool": $ionpool_addr, "wstEthSpot": $wst_eth_spot, "ethXSpot": $ethx_spot, "swEthSpot": $sw_eth_spot }' deployment-config/06_SetupInitialCollaterals.json >temp.json && mv temp.json deployment-config/06_SetupInitialCollaterals.json
 
 # Setup initial collaterals
 bun run 06_SetupCollateral:deployment:deploy:$chain_name --broadcast
 
-jq --arg ionpool_addr "$ionpool_addr" '. + { "ionPool": $ionpool_addr }' deployment-config/07_DeployInitialGemJoins.json >temp.json && mv temp.json deployment-config/07_DeployInitialGemJoins.json
+jq --arg ionpool_addr "$ionpool_addr" '. + { "ionPool": $ionpool_addr }' deployment-config/07_DeployGemJoin.json >temp.json && mv temp.json deployment-config/07_DeployGemJoin.json
 
 # Deploy GemJoins
-bun run 07_DeployInitialGemJoins:deployment:deploy:$chain_name --broadcast
+bun run 07_DeployGemJoin:deployment:deploy:$chain_name --broadcast
 
-gem_join_addr=$(jq '.returns.gemJoin.value' "broadcast/07_DeployInitialGemJoins.s.sol/$chain_id/run-latest.json" | xargs)
+gem_join_addr=$(jq '.returns.gemJoin.value' "broadcast/07_DeployGemJoin.s.sol/$chain_id/run-latest.json" | xargs)
 
-jq --arg ionpool_addr "$ionpool_addr" --arg gem_join "$gem_join_addr" --arg whitelist "$whitelist_addr" '. + { "ionPool": $ionpool_addr, "gemJoin": $gem_join, whitelist: $whitelist }' deployment-config/08_DeployInitialHandlers.json >temp.json && mv temp.json deployment-config/08_DeployInitialHandlers.json
+jq --arg ionpool_addr "$ionpool_addr" --arg gem_join "$gem_join_addr" --arg whitelist "$whitelist_addr" '. + { "ionPool": $ionpool_addr, "gemJoin": $gem_join, whitelist: $whitelist }' deployment-config/08_DeployHandlers.json >temp.json && mv temp.json deployment-config/08_DeployHandlers.json
 
 # Deploy Handlers
-bun run 08_DeployInitialHandlers:deployment:deploy:$chain_name --broadcast
+bun run 08_DeployHandlers:deployment:deploy:$chain_name --broadcast
 
 # Deploy Liquidation
 echo "DEPLOYING LIQUIDATION..."
@@ -95,7 +94,7 @@ bun run 09_DeployLiquidation:deployment:deploy:$chain_name --broadcast
 # AdminTransfer and tests
 
 # write all the deployed addresses to json
-weeth_handler_addr=$(jq '.returns.handler.value' "broadcast/08_DeployInitialHandlers.s.sol/$chain_id/run-latest.json" | xargs)
+weeth_handler_addr=$(jq '.returns.handler.value' "broadcast/08_DeployHandlers.s.sol/$chain_id/run-latest.json" | xargs)
 liquidation=$(jq '.returns.liquidation.value' "broadcast/09_DeployLiquidation.s.sol/$chain_id/run-latest.json" | xargs)
 
 echo "{
