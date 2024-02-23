@@ -13,6 +13,11 @@ contract EthXReserveOracleForkTest is ReserveOracleSharedSetup {
 
     // --- ETHx Reserve Oracle Test ---
 
+    function setUp() public override {
+        blockNumber = 18_372_927;
+        super.setUp();
+    }
+
     function test_RevertWhen_UpdateIsOnCooldown() public {
         uint256 maxChange = 3e25; // 0.03 3%
         address[] memory feeds = new address[](3);

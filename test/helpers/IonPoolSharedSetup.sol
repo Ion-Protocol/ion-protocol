@@ -18,6 +18,8 @@ import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 using WadRayMath for uint16;
 
 // struct IlkData {
@@ -166,6 +168,8 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     IERC20[] internal collaterals;
     GemJoin[] internal gemJoins;
+    MockSpotOracle[] internal spotOracles;
+
     uint96[] internal minimumProfitMargins =
         [wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin];
     uint16[] internal adjustedReserveFactors =
@@ -174,8 +178,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         [wstEthOptimalUtilizationRate, ethXOptimalUtilizationRate, swEthOptimalUtilizationRate];
     uint16[] internal distributionFactors = [wstEthDistributionFactor, ethXDistributionFactor, swEthDistributionFactor];
     uint256[] internal debtCeilings = [wstEthDebtCeiling, ethXDebtCeiling, swEthDebtCeiling];
-    MockSpotOracle[] internal spotOracles;
-
     uint96[] internal adjustedAboveKinkSlopes =
         [wstEthAdjustedAboveKinkSlope, ethXAdjustedAboveKinkSlope, swEthAdjustedAboveKinkSlope];
     uint96[] internal minimumAboveKinkSlopes =
@@ -227,6 +229,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
         // Instantiate upgradeable IonPool
         ProxyAdmin ionProxyAdmin = new ProxyAdmin(address(this));
+
         // Instantiate upgradeable IonPool
         ionPoolImpl = new IonPoolExposed();
 
@@ -246,6 +249,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         );
 
         ionPool.grantRole(ionPool.ION(), address(this));
+        ionPool.grantRole(ionPool.PAUSE_ROLE(), address(this));
         ionPool.updateSupplyCap(type(uint256).max);
 
         for (uint8 i = 0; i < collaterals.length; i++) {

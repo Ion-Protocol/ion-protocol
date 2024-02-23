@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IYieldOracle } from "./interfaces/IYieldOracle.sol";
-import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
+import { WadRayMath } from "./libraries/math/WadRayMath.sol";
 
 // forgefmt: disable-start
 
@@ -156,7 +156,7 @@ contract InterestRate {
             if (ilkDataList[i].optimalUtilizationRate == 0) {
                 revert InvalidOptimalUtilizationRate(ilkDataList[i].optimalUtilizationRate);
             }
-            if (ilkDataList[i].reserveFactor > RAY) {
+            if (ilkDataList[i].reserveFactor > 1e4) {
                 revert InvalidReserveFactor(ilkDataList[i].reserveFactor);
             }
 

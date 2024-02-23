@@ -15,11 +15,13 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
 optimizer_runs = 400
 no_match_contract = "Echidna"
-gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist"]
+no_match_path = "script/**/*.sol"
+gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist", "WeEthHandler"]
+evm_version = "paris"
 
 [profile.default.fuzz]
 runs = 10000
-max_test_rejects = 65536  
+max_test_rejects = 655360  
 
 [profile.default.invariant]
 runs = 20

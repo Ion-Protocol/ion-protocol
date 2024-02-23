@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { ETHER_FI_LIQUIDITY_POOL_ADDRESS } from "../../src/Constants.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
-import { IWstEth, IStaderStakePoolsManager } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderStakePoolsManager, IEtherFiLiquidityPool } from "../../src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
@@ -36,19 +37,25 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     bytes32 constant STADER_ORACLE_TOTAL_SUPPLY_SLOT =
         0x0000000000000000000000000000000000000000000000000000000000000104;
 
+    bytes32 constant EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT =
+        0x00000000000000000000000000000000000000000000000000000000000000cf; // uint128 totalValueInLp, uint128
+        // totalValueOutOfLp
+    bytes32 constant EETH_TOTAL_VALUE_MASK = 0x00000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+
     // fork configs
 
     string public MAINNET_RPC_URL = vm.envString("MAINNET_ARCHIVE_RPC_URL");
 
     uint256 constant BLOCK_NUMBER = 18_372_927;
 
+    uint256 public blockNumber;
+
     uint256 mainnetFork;
 
     ERC20PresetMinterPauser mockToken;
 
     function setUp() public virtual override {
-        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL); // specify blockheight?
-        vm.rollFork(BLOCK_NUMBER);
+        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL, blockNumber);
 
         super.setUp();
 
@@ -76,5 +83,19 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     function changeSwEthExchangeRate(uint256 exchangeRate) internal {
         // set swETH exchange rate to be lower
         vm.store(SWETH, SWETH_TO_ETH_RATE_SLOT, bytes32(exchangeRate));
+    }
+
+    function changeWeEthLpBalance(uint256 lpBalanceDiff) internal {
+        uint256 totalValueOutOfLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueOutOfLp();
+        uint256 totalValueInLp = ETHER_FI_LIQUIDITY_POOL_ADDRESS.totalValueInLp();
+
+        bytes32 newTotalValueInLp = bytes32(totalValueInLp) << 128;
+
+        bytes32 newTotalValueOutOfLp = bytes32(uint256(totalValueOutOfLp - lpBalanceDiff));
+
+        bytes32 newTotalValue = newTotalValueInLp | newTotalValueOutOfLp;
+
+        // reduce rebase share values in EtherFi
+        vm.store(address(ETHER_FI_LIQUIDITY_POOL_ADDRESS), EETH_LIQUIDITY_POOL_TOTAL_VALUE_SLOT, bytes32(newTotalValue));
     }
 }

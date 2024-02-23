@@ -23,6 +23,10 @@ contract MockLido {
     function setNewRate(uint256 newRate) external {
         _exchangeRate = newRate;
     }
+
+    function getRate() external view returns (uint256) {
+        return _exchangeRate;
+    }
 }
 
 contract MockStader {
@@ -68,6 +72,7 @@ abstract contract YieldOracleSharedSetup is Test {
 
     function setUp() public virtual {
         // Warp to reasonable timestamp
+        uint256 currBlockTimeStamp = block.timestamp;
         vm.warp(1_696_181_435);
 
         lidoOracle = new MockLido();
@@ -95,6 +100,8 @@ abstract contract YieldOracleSharedSetup is Test {
         );
 
         oracle.updateIonPool(mockIonPool);
+
+        vm.warp(currBlockTimeStamp); // go back to original time after instantiatign YieldOracle
     }
 
     function test_SetUp() public virtual {

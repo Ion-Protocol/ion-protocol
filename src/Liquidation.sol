@@ -49,19 +49,13 @@ contract Liquidation {
     uint256 public immutable TARGET_HEALTH; // [ray] ex) 1.25e27 is 125%
     uint256 public immutable BASE_DISCOUNT; // [ray] ex) 0.02e27 is 2%
 
-    uint256 public immutable MAX_DISCOUNT_0; // [ray] ex) 0.2e27 is 20%
-    uint256 public immutable MAX_DISCOUNT_1;
-    uint256 public immutable MAX_DISCOUNT_2;
+    uint256 public immutable MAX_DISCOUNT; // [ray] ex) 0.2e27 is 20%
 
     // liquidation thresholds
-    uint256 public immutable LIQUIDATION_THRESHOLD_0; // [ray] liquidation threshold for ilkIndex 0
-    uint256 public immutable LIQUIDATION_THRESHOLD_1; // [ray]
-    uint256 public immutable LIQUIDATION_THRESHOLD_2; // [ray]
+    uint256 public immutable LIQUIDATION_THRESHOLD; // [ray] liquidation threshold for ilkIndex 0
 
     // exchange rates
-    address public immutable RESERVE_ORACLE_0; // reserve oracle providing exchange rate for ilkIndex 0
-    address public immutable RESERVE_ORACLE_1;
-    address public immutable RESERVE_ORACLE_2;
+    address public immutable RESERVE_ORACLE; // reserve oracle providing exchange rate for ilkIndex 0
 
     address public immutable PROTOCOL; // receives confiscated vault debt and collateral
 
@@ -78,83 +72,49 @@ contract Liquidation {
      * @param _ionPool The address of the `IonPool` contract.
      * @param _protocol The address that will represent the protocol balance
      * sheet (for protocol liquidation purposes).
-     * @param _reserveOracles List of reserve oracle addresses for each ilk.
-     * @param _liquidationThresholds List of liquidation thresholds for each
-     * ilk.
+     * @param _reserveOracle Reserve oracle for the ilk.
+     * @param _liquidationThreshold Liquidation threshold for the ilk.
      * @param _targetHealth The target health ratio for positions.
      * @param _reserveFactor Base discount for collateral.
-     * @param _maxDiscounts List of max discounts for each ilk.
+     * @param _maxDiscount Max discount for the ilk.
      */
     constructor(
         address _ionPool,
         address _protocol,
-        address[] memory _reserveOracles,
-        uint256[] memory _liquidationThresholds,
+        address _reserveOracle,
+        uint256 _liquidationThreshold,
         uint256 _targetHealth,
         uint256 _reserveFactor,
-        uint256[] memory _maxDiscounts
+        uint256 _maxDiscount
     ) {
         IonPool ionPool_ = IonPool(_ionPool);
         POOL = ionPool_;
         PROTOCOL = _protocol;
 
-        uint256 ilkCount = POOL.ilkCount();
+        if (_maxDiscount >= RAY) revert InvalidMaxDiscount(_maxDiscount);
 
-        uint256 maxDiscountsLength = _maxDiscounts.length;
-        if (maxDiscountsLength != ilkCount) {
-            revert InvalidMaxDiscountsLength(_maxDiscounts.length);
-        }
+        if (_liquidationThreshold == 0) revert InvalidLiquidationThreshold(_liquidationThreshold);
 
-        if (_reserveOracles.length != ilkCount) {
-            revert InvalidReserveOraclesLength(_reserveOracles.length);
-        }
-
-        uint256 liquidationThresholdsLength = _liquidationThresholds.length;
-        if (liquidationThresholdsLength != ilkCount) {
-            revert InvalidLiquidationThresholdsLength(_liquidationThresholds.length);
-        }
-
-        for (uint256 i = 0; i < maxDiscountsLength;) {
-            if (_maxDiscounts[i] >= RAY) revert InvalidMaxDiscount(_maxDiscounts[i]);
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
-        }
-
-        for (uint256 i = 0; i < liquidationThresholdsLength;) {
-            if (_liquidationThresholds[i] == 0) revert InvalidLiquidationThreshold(_liquidationThresholds[i]);
-
-            // This invariant must hold otherwise all liquidations will revert
-            // when discount == configs.maxDiscount within the _getRepayAmt
-            // function.
-            if (_targetHealth < _liquidationThresholds[i].rayDivUp(RAY - _maxDiscounts[i])) {
-                revert InvalidTargetHealth(_targetHealth);
-            }
-
-            // forgefmt: disable-next-line
-            unchecked { ++i; }
+        // This invariant must hold otherwise all liquidations will revert
+        // when discount == configs.maxDiscount within the _getRepayAmt
+        // function.
+        if (_targetHealth < _liquidationThreshold.rayDivUp(RAY - _maxDiscount)) {
+            revert InvalidTargetHealth(_targetHealth);
         }
 
         if (_targetHealth < RAY) revert InvalidTargetHealth(_targetHealth);
 
         TARGET_HEALTH = _targetHealth;
         BASE_DISCOUNT = _reserveFactor;
-
-        MAX_DISCOUNT_0 = _maxDiscounts[0];
-        MAX_DISCOUNT_1 = _maxDiscounts[1];
-        MAX_DISCOUNT_2 = _maxDiscounts[2];
+        MAX_DISCOUNT = _maxDiscount;
 
         IERC20 underlying = ionPool_.underlying();
         underlying.approve(address(ionPool_), type(uint256).max); // approve ionPool to transfer the UNDERLYING asset
         UNDERLYING = underlying;
 
-        LIQUIDATION_THRESHOLD_0 = _liquidationThresholds[0];
-        LIQUIDATION_THRESHOLD_1 = _liquidationThresholds[1];
-        LIQUIDATION_THRESHOLD_2 = _liquidationThresholds[2];
+        LIQUIDATION_THRESHOLD = _liquidationThreshold;
 
-        RESERVE_ORACLE_0 = _reserveOracles[0];
-        RESERVE_ORACLE_1 = _reserveOracles[1];
-        RESERVE_ORACLE_2 = _reserveOracles[2];
+        RESERVE_ORACLE = _reserveOracle;
     }
 
     struct Configs {
@@ -166,22 +126,11 @@ contract Liquidation {
     /**
      * @notice Returns the exchange rate, liquidation threshold, and max
      * discount for the given ilk.
-     * @param ilkIndex The index of the ilk.
      */
-    function _getConfigs(uint8 ilkIndex) internal view returns (Configs memory configs) {
-        if (ilkIndex == 0) {
-            configs.reserveOracle = RESERVE_ORACLE_0;
-            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_0;
-            configs.maxDiscount = MAX_DISCOUNT_0;
-        } else if (ilkIndex == 1) {
-            configs.reserveOracle = RESERVE_ORACLE_1;
-            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_1;
-            configs.maxDiscount = MAX_DISCOUNT_1;
-        } else if (ilkIndex == 2) {
-            configs.reserveOracle = RESERVE_ORACLE_2;
-            configs.liquidationThreshold = LIQUIDATION_THRESHOLD_2;
-            configs.maxDiscount = MAX_DISCOUNT_2;
-        }
+    function _getConfig() internal view returns (Configs memory configs) {
+        configs.reserveOracle = RESERVE_ORACLE;
+        configs.liquidationThreshold = LIQUIDATION_THRESHOLD;
+        configs.maxDiscount = MAX_DISCOUNT;
     }
 
     /**
@@ -192,7 +141,7 @@ contract Liquidation {
      * @return repay The amount of WETH necessary to liquidate the vault.
      */
     function getRepayAmt(uint8 ilkIndex, address vault) public view returns (uint256 repay) {
-        Configs memory configs = _getConfigs(ilkIndex);
+        Configs memory configs = _getConfig();
 
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         uint256 exchangeRate = uint256(ReserveOracle(configs.reserveOracle).currentExchangeRate()).scaleUpToRay(18);
@@ -222,8 +171,10 @@ contract Liquidation {
             // favor
         uint256 repayRad = _getRepayAmt(normalizedDebt * rate, collateralValue, configs.liquidationThreshold, discount);
 
-        repay = (repayRad / RAY);
-        if (repayRad % RAY > 0) ++repay;
+        if (repayRad > normalizedDebt * rate) return 0;
+        else if (normalizedDebt * rate - repayRad < POOL.dust(ilkIndex)) repayRad = normalizedDebt * rate;
+
+        return repayRad % RAY > 0 ? repayRad / RAY + 1 : repayRad / RAY;
     }
 
     /**
@@ -282,7 +233,7 @@ contract Liquidation {
     {
         LiquidateArgs memory liquidateArgs;
 
-        Configs memory configs = _getConfigs(ilkIndex);
+        Configs memory configs = _getConfig();
 
         // exchangeRate is reported in uint72 in [wad], but should be converted to uint256 [ray]
         uint256 exchangeRate = ReserveOracle(configs.reserveOracle).currentExchangeRate().scaleUpToRay(18);

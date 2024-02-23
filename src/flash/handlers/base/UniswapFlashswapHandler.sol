@@ -50,7 +50,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
     bool private immutable WETH_IS_TOKEN0;
 
     /**
-     * @notice Creates a new `UniswapFlashSwapHandler` instance.
+     * @notice Creates a new `UniswapFlashswapHandler` instance.
      * @param _pool Pool to perform the flashswap on.
      * @param _wethIsToken0 Whether WETH is token0 or token1 in the pool.
      */
