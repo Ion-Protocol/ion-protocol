@@ -10,10 +10,11 @@ remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
                 "@balancer-labs/v2-pool-stable/=lib/balancer-v2-monorepo/pkg/pool-stable/",
                 "@chainlink/contracts/=lib/chainlink/contracts/",
                 "@uniswap/v3-periphery/=lib/v3-periphery/",
-                "@uniswap/v3-core/=lib/v3-core/",]
+                "@uniswap/v3-core/=lib/v3-core/",
+                "forge-safe/=lib/forge-safe/src/"]
 fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
-optimizer_runs = 400
+optimizer_runs = 300
 no_match_contract = "Echidna"
 no_match_path = "script/**/*.sol"
 gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist", "WeEthHandler"]
@@ -48,5 +49,6 @@ wrap_comments = true
 
 [rpc_endpoints]
 goerli = "${GOERLI_RPC_URL}"
+sepolia = "${SEPOLIA_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

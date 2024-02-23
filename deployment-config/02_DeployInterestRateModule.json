@@ -1,0 +1,13 @@
+{
+  "ilkData": {
+    "adjustedProfitMargin": "0",
+    "minimumKinkRate": "4062570058138700000",
+    "reserveFactor": "0",
+    "adjustedBaseRate": "0",
+    "minimumBaseRate": "1580630071273960000",
+    "optimalUtilizationRate": "8500",
+    "adjustedAboveKinkSlope": "0",
+    "minimumAboveKinkSlope": "23863999665252300000"
+  },
+  "yieldOracleAddress": "0x31403b1e52051883f2Ce1B1b4C89f36034e1221D"
+}

@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity >=0.8.19 <=0.9.0;
 
-import { Script } from "forge-std/Script.sol";
-import { console2 } from "forge-std/console2.sol";
+import { ValidateInterface } from "./ValidateInterface.s.sol";
 
-abstract contract BaseScript is Script {
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+
+import { Script, stdJson } from "forge-std/Script.sol";
+
+abstract contract BaseScript is Script, ValidateInterface {
+    using stdJson for string;
+    using Strings for uint256;
+
     /// @dev Included to enable compilation of the script without a $MNEMONIC environment variable.
     string internal constant TEST_MNEMONIC = "test test test test test test test test test test test junk";
 

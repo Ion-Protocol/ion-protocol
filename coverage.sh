@@ -1,6 +1,6 @@
 rm -rf coverage
 rm -f lcov.info
-forge coverage --report lcov
+forge coverage --report lcov --ffi
 
 delete=false
 

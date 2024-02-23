@@ -5,7 +5,11 @@ coverage/
 
 # Ignores development broadcast logs
 broadcast/*/*
-!broadcast/*/1/ 
+!broadcast/*/1/
+
+# Ignores development deployment logs 
+deployment/*/*/*/
+!deployment/*/*/1/
 
 # Dependency directories
 node_modules/

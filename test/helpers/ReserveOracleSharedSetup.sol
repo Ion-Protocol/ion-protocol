@@ -8,6 +8,8 @@ import { IWstEth, IStaderStakePoolsManager, IEtherFiLiquidityPool } from "../../
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 
+import { ETHER_FI_LIQUIDITY_POOL_ADDRESS } from "src/Constants.sol";
+
 // fork tests for integrating with external contracts
 contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     using WadRayMath for *;

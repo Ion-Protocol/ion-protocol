@@ -69,11 +69,11 @@ contract YieldOracle_ForkTest is Test {
 
         string memory config = string(vm.ffi(inputs));
 
-        uint256[] memory lidoRates = vm.parseJsonUintArray(config, ".exchangeRateData.lido.historicalExchangeRates");
+        uint256[] memory lidoRates = vm.parseJsonUintArray(config, ".exchangeRateData.weETH.historicalExchangeRates");
         uint256[] memory staderRates = vm.parseJsonUintArray(config, ".exchangeRateData.stader.historicalExchangeRates");
         uint256[] memory swellRates = vm.parseJsonUintArray(config, ".exchangeRateData.swell.historicalExchangeRates");
 
-        address lidoExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.lido.address");
+        address lidoExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.weETH.address");
         address staderExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.stader.address");
         address swellExchangeRateAddress = vm.parseJsonAddress(config, ".exchangeRateData.swell.address");
 

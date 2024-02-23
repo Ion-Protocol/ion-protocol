@@ -39,6 +39,13 @@ contract YieldOracle_UnitTest is YieldOracleSharedSetup {
         }
     }
 
+    function test_UpdateWhenIonPoolPaused() external {
+        vm.warp(block.timestamp + 1 days);
+
+        mockIonPool.pause();
+        oracle.updateAll();
+    }
+
     function test_UpdatingWithChangingExchangeRates() external {
         uint256 increaseInExchangeRate = 0.072935829352e18;
         uint256 amountOfUpdatesToTest = 10;

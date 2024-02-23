@@ -190,7 +190,8 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         }
 
         for (uint256 i = 0; i < AMOUNT_LENDERS; i++) {
-            LenderHandler lender = new LenderHandler(ionPool, ionRegistry, underlying, distributionFactors, log, report);
+            LenderHandler lender =
+                new LenderHandler(ionPool, ionRegistry, underlying, config.distributionFactors, log, report);
             lenders.push(lender);
             underlying.grantRole(underlying.MINTER_ROLE(), address(lender));
 
@@ -200,7 +201,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
 
         for (uint256 i = 0; i < AMOUNT_BORROWERS; i++) {
             BorrowerHandler borrower = new BorrowerHandler(
-                ionPool, ionRegistry, underlying, mintableCollaterals, distributionFactors, log, report
+                ionPool, ionRegistry, underlying, mintableCollaterals, config.distributionFactors, log, report
             );
             borrowers.push(borrower);
             for (uint8 j = 0; j < collaterals.length; j++) {
