@@ -9,6 +9,7 @@ import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol"
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 
 import { ETHER_FI_LIQUIDITY_POOL_ADDRESS } from "src/Constants.sol";
+import { console2 } from "forge-std/console2.sol";
 
 // fork tests for integrating with external contracts
 contract ReserveOracleSharedSetup is IonPoolSharedSetup {
@@ -50,6 +51,8 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
 
     uint256 constant BLOCK_NUMBER = 18_372_927;
 
+    address[] emptyFeeds = new address[](3);
+
     uint256 public blockNumber;
 
     uint256 mainnetFork;
@@ -57,8 +60,11 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     ERC20PresetMinterPauser mockToken;
 
     function setUp() public virtual override {
-        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL, blockNumber);
-
+        if (blockNumber == 0) {
+            vm.createSelectFork(MAINNET_RPC_URL); 
+        } else {
+            mainnetFork = vm.createSelectFork(MAINNET_RPC_URL, blockNumber);
+        } 
         super.setUp();
 
         mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");

@@ -18,7 +18,7 @@ optimizer_runs = 300
 no_match_contract = "Echidna"
 no_match_path = "script/**/*.sol"
 gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist", "WeEthHandler"]
-evm_version = "paris"
+evm_version = "shanghai"
 
 [profile.default.fuzz]
 runs = 10000
