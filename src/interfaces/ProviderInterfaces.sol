@@ -116,15 +116,13 @@ interface IEtherFiLiquidityPool {
     function getTotalEtherClaimOf(address _user) external view returns (uint256);
 }
 
-interface IRsEth is IERC20 {
-}
+interface IRsEth is IERC20 { }
 
 interface ILRTOracle {
-    function rsETHPrice() external view returns (uint256); 
+    function rsETHPrice() external view returns (uint256);
 }
 
 interface ILRTConfig {
-
     function rsETH() external view returns (address);
 
     function assetStrategy(address asset) external view returns (address);

@@ -6,12 +6,13 @@ import { ReserveOracle } from "./ReserveOracle.sol";
 import { WEETH_ADDRESS, WSTETH_ADDRESS, RSETH_LRT_ORACLE, RSETH, RSETH_LRT_CONFIG } from "../../Constants.sol";
 import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
 import { console2 } from "forge-std/console2.sol";
-import {IERC20} from "./../../../lib/forge-safe/lib/forge-std/src/interfaces/IERC20.sol";
+import { IERC20 } from "./../../../lib/forge-safe/lib/forge-std/src/interfaces/IERC20.sol";
 /**
  * @notice Reserve oracle for rsETH.
  *
  * @custom:security-contact security@molecularlabs.io
  */
+
 contract RsEthWstEthReserveOracle is ReserveOracle {
     using WadRayMath for uint256;
 
@@ -40,7 +41,7 @@ contract RsEthWstEthReserveOracle is ReserveOracle {
      * @notice Returns the exchange rate between wstETH and rsETH.
      * @return Exchange rate between wstETH and rsETH.
      */
-    function _getProtocolExchangeRate() internal view override returns (uint256) {        
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
         return RSETH_LRT_ORACLE.rsETHPrice().wadMulDown(IWstEth(WSTETH_ADDRESS).tokensPerStEth());
     }
 }

@@ -49,8 +49,8 @@ contract RsEthWstEthSpotOracle is SpotOracle {
      * @return wstEthPerRsEth price of rsETH in wstETH. [WAD]
      */
     function getPrice() public view override returns (uint256) {
-        (, int256 ethPerRsEth,, uint256 ethPerRsEthUpdatedAt,) = REDSTONE_RSETH_ETH_PRICE_FEED.latestRoundData(); 
-            // ETH / weETH [8 decimals]
+        (, int256 ethPerRsEth,, uint256 ethPerRsEthUpdatedAt,) = REDSTONE_RSETH_ETH_PRICE_FEED.latestRoundData();
+        // ETH / weETH [8 decimals]
         (, int256 ethPerStEth,, uint256 ethPerStEthUpdatedAt,) = ETH_PER_STETH_CHAINLINK.latestRoundData(); // price
             // of stETH denominated in ETH
 
