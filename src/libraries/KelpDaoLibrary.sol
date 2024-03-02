@@ -29,6 +29,6 @@ library KelpDaoLibrary {
     }
 
     function getLstAmountOutForEthAmountIn(IRsEth rsEth, uint256 ethAmount) internal view returns (uint256) {
-       return RSETH_LRT_DEPOSIT_POOL.getRsETHAmountToMint(ETH_ADDRESS, ethAmount); 
+        return RSETH_LRT_DEPOSIT_POOL.getRsETHAmountToMint(ETH_ADDRESS, ethAmount);
     }
 }

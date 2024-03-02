@@ -33,11 +33,14 @@ echo "===== Simulate Deployment ======="
 
 # Deploy YieldOracle
 echo "DEPLOYING YIELD ORACLE..."
-bun run 01_DeployYieldOracle:deployment:configure
-bun run 01_DeployYieldOracle:deployment:deploy:$chain_name --broadcast
+# bun run 01_DeployYieldOracle:deployment:configure
+# bun run 01_DeployYieldOracle:deployment:deploy:$chain_name --broadcast
+bun run 01a_DeployYieldOracleNull:deployment:deploy:$chain_name --broadcast
 
 # Copy YieldOracle address from latest deployment and dump it into InterestRate deployment config
-yield_oracle_addr=$(jq '.returns.yieldOracle.value' "broadcast/01_DeployYieldOracle.s.sol/$chain_id/run-latest.json" | xargs)
+# yield_oracle_addr=$(jq '.returns.yieldOracle.value' "broadcast/01_DeployYieldOracle.s.sol/$chain_id/run-latest.json" | xargs)
+yield_oracle_addr=$(jq '.returns.yieldOracle.value' "broadcast/01a_DeployYieldOracleNull.s.sol/$chain_id/run-latest.json" | xargs)
+
 jq --arg address "$yield_oracle_addr" '. + { "yieldOracleAddress": $address }' deployment-config/02_DeployInterestRateModule.json >temp.json && mv temp.json deployment-config/02_DeployInterestRateModule.json
 
 # Deploy InterestRate module and whitelist

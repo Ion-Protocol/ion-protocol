@@ -2,9 +2,9 @@
   "underlying": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
   "treasury": "0x0000000000417626Ef34D62C4DC189b021603f2F",
   "decimals": "18",
-  "name": "Ion weETH wstETH Token",
-  "symbol": "iweETH-wstETH",
-  "whitelist": "0xf440f7cc97f029D8619842ea7bEcd26400a259F9",
-  "interestRateModule": "0x184Cbe1CeF3452A66C4D09Ba30E1ff5d92A3229B",
-  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b40029697edb13babb02065045"
+  "name": "Ion rsETH wstETH Token",
+  "symbol": "irsETH-wstETH",
+  "whitelist": "0x40f5CCdfe546c417e42dFbe33144C4FD3De039AF",
+  "interestRateModule": "0xEf238a27bC267Da3f11d826346DD4181FA175527",
+  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b40033ad7cec4737d3002ba152"
 }

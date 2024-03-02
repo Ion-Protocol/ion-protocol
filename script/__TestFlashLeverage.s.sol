@@ -2,13 +2,13 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "../src/IonPool.sol";
-import { WeEthHandler } from "../src/flash/handlers/WeEthHandler.sol";
+import { RsEthHandler } from "../src/flash/handlers/RsEthHandler.sol";
 import { Whitelist } from "../src/Whitelist.sol";
-import { IWstEth, IWeEth } from "../src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IWeEth, IRsEth } from "../src/interfaces/ProviderInterfaces.sol";
 import { IWETH9 } from "../src/interfaces/IWETH9.sol";
-import { WSTETH_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "../src/Constants.sol";
-import { EtherFiLibrary } from "../src/libraries/EtherFiLibrary.sol";
+import { WSTETH_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS, RSETH } from "../src/Constants.sol";
 import { LidoLibrary } from "../src/libraries/LidoLibrary.sol";
+import { KelpDaoLibrary } from "./../src/libraries/KelpDaoLibrary.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
@@ -17,7 +17,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { BaseScript } from "./Base.s.sol";
 
 using LidoLibrary for IWstEth;
-using EtherFiLibrary for IWeEth;
+using KelpDaoLibrary for IRsEth;
 
 contract FlashLeverageScript is BaseScript {
     string configPath = "./deployment-config/DeployedAddresses.json";
@@ -25,9 +25,9 @@ contract FlashLeverageScript is BaseScript {
 
     function run() public broadcast {
         IonPool pool = IonPool(vm.parseJsonAddress(config, ".ionPool"));
-        WeEthHandler weEthHandler = WeEthHandler(payable(vm.parseJsonAddress(config, ".weEthHandler")));
+        RsEthHandler rsEthHandler = RsEthHandler(payable(vm.parseJsonAddress(config, ".rsEthHandler")));
         Whitelist whitelist = Whitelist(vm.parseJsonAddress(config, ".whitelist"));
-        whitelist.approveProtocolWhitelist(address(weEthHandler));
+        whitelist.approveProtocolWhitelist(address(rsEthHandler));
         whitelist.approveProtocolWhitelist(broadcaster);
 
         pool.updateSupplyCap(1000 ether);
@@ -35,17 +35,17 @@ contract FlashLeverageScript is BaseScript {
         WSTETH_ADDRESS.approve(address(pool), type(uint256).max);
         pool.supply(address(this), WSTETH_ADDRESS.balanceOf(broadcaster), new bytes32[](0));
 
-        pool.addOperator(address(weEthHandler));
+        pool.addOperator(address(rsEthHandler));
 
         uint256 initialDeposit = 1 ether; // in collateral terms
         uint256 resultingAdditionalCollateral = 3 ether; // in collateral terms
         uint256 maxResultingDebt = 3 ether;
 
-        WEETH_ADDRESS.approve(address(weEthHandler), type(uint256).max);
-        EETH_ADDRESS.approve(address(WEETH_ADDRESS), type(uint256).max);
-        WEETH_ADDRESS.depositForLrt(initialDeposit * 2);
+        RSETH.approve(address(rsEthHandler), type(uint256).max);
+        // EETH_ADDRESS.approve(address(WEETH_ADDRESS), type(uint256).max);
+        RSETH.depositForLrt(initialDeposit * 2);
 
-        weEthHandler.flashswapAndMint(
+        rsEthHandler.flashswapAndMint(
             initialDeposit,
             resultingAdditionalCollateral,
             maxResultingDebt,
