@@ -20,7 +20,7 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     uint8 constant ETHX_ILK_INDEX = 2;
 
     // default reserve oracle configs
-    uint256 constant MAX_CHANGE = 1e27; // 100%
+    uint256 constant DEFAULT_MAX_CHANGE = 1e27; // 100%
     uint8 constant ILK_INDEX = 0;
     uint8 constant QUORUM = 0;
 

@@ -47,11 +47,12 @@ contract SpotOracleForkTest is ReserveOracleSharedSetup {
 
         // instantiate reserve oracles
         address[] memory feeds = new address[](3);
-        stEthReserveOracle = new WstEthReserveOracle(WSTETH, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
+        stEthReserveOracle = new WstEthReserveOracle(WSTETH, ILK_INDEX, feeds, QUORUM, DEFAULT_MAX_CHANGE);
 
-        ethXReserveOracle = new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
+        ethXReserveOracle =
+            new EthXReserveOracle(STADER_STAKE_POOLS_MANAGER, ILK_INDEX, feeds, QUORUM, DEFAULT_MAX_CHANGE);
 
-        swEthReserveOracle = new SwEthReserveOracle(SWETH, ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
+        swEthReserveOracle = new SwEthReserveOracle(SWETH, ILK_INDEX, feeds, QUORUM, DEFAULT_MAX_CHANGE);
     }
 
     // --- stETH Spot Oracle Test ---
@@ -213,7 +214,7 @@ contract WeEthWstEthSpotOracleForkTest is ReserveOracleSharedSetup {
 
         // instantiate reserve oracles
         address[] memory feeds = new address[](3);
-        weEthWstEthReserveOracle = new WeEthWstEthReserveOracle(ILK_INDEX, feeds, QUORUM, MAX_CHANGE);
+        weEthWstEthReserveOracle = new WeEthWstEthReserveOracle(ILK_INDEX, feeds, QUORUM, DEFAULT_MAX_CHANGE);
     }
 
     function test_WeEthWstEthSpotOracleViewPrice() public {

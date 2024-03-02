@@ -15,7 +15,7 @@ import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
- * @notice The weETH spot oracle denominated in wstETH
+ * @notice The rsETH spot oracle denominated in wstETH
  *
  * @custom:security-contact security@molecularlabs.io
  */
@@ -49,10 +49,10 @@ contract RsEthWstEthSpotOracle is SpotOracle {
      * @return wstEthPerRsEth price of rsETH in wstETH. [WAD]
      */
     function getPrice() public view override returns (uint256) {
+        // ETH / rsETH [8 decimals]
         (, int256 ethPerRsEth,, uint256 ethPerRsEthUpdatedAt,) = REDSTONE_RSETH_ETH_PRICE_FEED.latestRoundData();
-        // ETH / weETH [8 decimals]
-        (, int256 ethPerStEth,, uint256 ethPerStEthUpdatedAt,) = ETH_PER_STETH_CHAINLINK.latestRoundData(); // price
-            // of stETH denominated in ETH
+        // ETH / stETH [18 decimals]
+        (, int256 ethPerStEth,, uint256 ethPerStEthUpdatedAt,) = ETH_PER_STETH_CHAINLINK.latestRoundData();
 
         if (
             block.timestamp - ethPerRsEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE
@@ -60,7 +60,7 @@ contract RsEthWstEthSpotOracle is SpotOracle {
         ) {
             return 0; // collateral valuation is zero if oracle data is stale
         } else {
-            // (ETH / weETH) / (ETH / stETH) = stETH / weETH
+            // (ETH / rsETH) / (ETH / stETH) = stETH / rsETH
             uint256 stEthPerRsEth =
                 ethPerRsEth.toUint256().scaleUpToWad(REDSTONE_DECIMALS).wadDivDown(ethPerStEth.toUint256()); // [wad]
 

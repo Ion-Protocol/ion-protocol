@@ -13,7 +13,8 @@ import {
     IRsEth,
     ILRTOracle,
     ILRTConfig,
-    IEtherFiLiquidityPool
+    IEtherFiLiquidityPool,
+    ILRTDepositPool
 } from "./interfaces/ProviderInterfaces.sol";
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
 import { IChainlink } from "./interfaces/IChainlink.sol";
@@ -52,7 +53,7 @@ IRedstonePriceFeed constant REDSTONE_RSETH_ETH_PRICE_FEED =
 IRsEth constant RSETH = IRsEth(0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7);
 ILRTOracle constant RSETH_LRT_ORACLE = ILRTOracle(0x349A73444b1a310BAe67ef67973022020d70020d);
 ILRTConfig constant RSETH_LRT_CONFIG = ILRTConfig(0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7);
-address constant RSETH_LRT_DEPOSIT_POOL = 0x036676389e48133B63a802f8635AD39E752D375D;
+ILRTDepositPool constant RSETH_LRT_DEPOSIT_POOL = ILRTDepositPool(0x036676389e48133B63a802f8635AD39E752D375D);
 
 // ezETH
 IRedstonePriceFeed constant REDSTONE_EZETH_ETH_PRICE_FEED =

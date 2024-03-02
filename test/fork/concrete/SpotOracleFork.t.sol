@@ -13,6 +13,8 @@ import { console2 } from "forge-std/console2.sol";
 abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     using WadRayMath for uint256;
 
+    bytes32 constant CURRENT_EXCHANGE_RATE_SLOT = 0;
+
     ReserveOracle reserveOracle;
     SpotOracle spotOracle;
 
@@ -32,16 +34,39 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     }
 
     function testFork_UsesPriceAsMin() public {
-        // manipulate currentExchangeRate up
+        uint256 price = spotOracle.getPrice();
+        uint256 ltv = spotOracle.LTV();
+        uint256 higherExchangeRate = price.wadMulDown(1.5e18);
+        uint256 expectedSpot = ltv.wadMulDown(price);
+
+        setCurrentExchangeRate(higherExchangeRate);
+        assertEq(spotOracle.getSpot(), expectedSpot, "uses price as min");
     }
 
-    function testFork_PriceIncreasesUsesExchangeRateAsMin() public { }
+    function testFork_UsesExchangeRateAsMin() public {
+        uint256 price = spotOracle.getPrice();
+        uint256 ltv = spotOracle.LTV();
+        uint256 lowerExchangeRate = price.wadMulDown(0.5e18);
+        uint256 expectedSpot = ltv.wadMulDown(lowerExchangeRate);
 
-    function testFork_ExchangeRateDecreasesUsesExchangeRateAsMin() public { }
+        setCurrentExchangeRate(lowerExchangeRate);
+        assertEq(spotOracle.getSpot(), expectedSpot, "uses exchange rate as min");
+    }
 
-    function testFork_MaxTimeFromLastUpdateExceeded() public { }
+    function testFork_MaxTimeFromLastUpdateExceeded() public {
+        assertGt(spotOracle.getPrice(), 0, "time fromt last update not exceeded price should not be zero");
+        assertGt(spotOracle.getSpot(), 0, "time fromt last update not exceeded spot should not be zero");
 
-    function testFork_MaxTimeFromLastUpdateNotExceeded() public { }
+        vm.warp(block.timestamp + 2 days);
+
+        assertEq(spotOracle.getPrice(), 0, "time from last update exceeded price should be zero");
+        assertEq(spotOracle.getSpot(), 0, "time from last update exceeded spot should be zero");
+    }
+
+    function setCurrentExchangeRate(uint256 exchangeRate) public {
+        vm.store(address(reserveOracle), CURRENT_EXCHANGE_RATE_SLOT, bytes32(exchangeRate));
+        require(reserveOracle.currentExchangeRate() == exchangeRate, "set current exchange rate");
+    }
 }
 
 contract RsEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
@@ -50,7 +75,7 @@ contract RsEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
 
     function setUp() public override {
         super.setUp();
-        reserveOracle = new RsEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE);
+        reserveOracle = new RsEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE);
         spotOracle = new RsEthWstEthSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE);
     }
 }

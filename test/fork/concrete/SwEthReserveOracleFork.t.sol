@@ -164,7 +164,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[0] = address(reserveFeed);
         uint8 quorum = 1;
         SwEthReserveOracle swEthReserveOracle =
-            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, MAX_CHANGE);
+            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, DEFAULT_MAX_CHANGE);
 
         swEthReserveOracle.updateExchangeRate();
 
@@ -186,7 +186,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[1] = address(reserveFeed2);
         uint8 quorum = 2;
         SwEthReserveOracle swEthReserveOracle =
-            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, MAX_CHANGE);
+            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, DEFAULT_MAX_CHANGE);
 
         swEthReserveOracle.updateExchangeRate();
 
@@ -213,7 +213,7 @@ contract SwEthReserveOracleForkTest is ReserveOracleSharedSetup {
         feeds[1] = address(reserveFeed2);
         uint8 quorum = 2;
         SwEthReserveOracle swEthReserveOracle =
-            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, MAX_CHANGE);
+            new SwEthReserveOracle(SWETH, SWETH_ILK_INDEX, feeds, quorum, DEFAULT_MAX_CHANGE);
 
         swEthReserveOracle.updateExchangeRate();
 

@@ -120,6 +120,12 @@ interface IRsEth is IERC20 { }
 
 interface ILRTOracle {
     function rsETHPrice() external view returns (uint256);
+    function updateRSETHPrice() external;
+}
+
+interface ILRTDepositPool {
+    function getTotalAssetDeposits(address asset) external view returns (uint256);
+    function getAssetDistributionData(address asset) external view returns (uint256, uint256, uint256);
 }
 
 interface ILRTConfig {
