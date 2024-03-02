@@ -28,7 +28,8 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
         uint256 maxTimeFromLastUpdate = config.readUint(".maxTimeFromLastUpdate");
 
         // Needs to change per asset
-        reserveOracle = address(new WeEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
-        spotOracle = address(new WeEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+        reserveOracle = address(new WeEthWstEthReserveOracle{ salt: DEFAULT_SALT }(0, new address[](3), 0, maxChange));
+        spotOracle =
+            address(new WeEthWstEthSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate));
     }
 }

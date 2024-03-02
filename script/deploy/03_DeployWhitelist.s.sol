@@ -21,6 +21,6 @@ contract DeployWhitelistScript is DeployScript {
         borrowerRoots[0] = borrowerRoot;
 
         require(borrowerRoots.length == 1, "borrower root length should be one");
-        whitelist = new Whitelist(borrowerRoots, lenderRoot);
+        whitelist = new Whitelist{ salt: DEFAULT_SALT }(borrowerRoots, lenderRoot);
     }
 }
