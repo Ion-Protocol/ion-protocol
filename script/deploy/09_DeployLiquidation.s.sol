@@ -12,6 +12,8 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
+import { console2 } from "forge-std/console2.sol";
+
 uint32 constant ILK_COUNT = 1;
 
 contract DeployLiquidationScript is DeployScript {
@@ -38,6 +40,7 @@ contract DeployLiquidationScript is DeployScript {
         require(targetHealth >= RAY, "target health lower");
         require(targetHealth < 1.5e27, "target health upper");
 
+        console2.log('liquidationThreshold', liquidationThreshold); 
         require(liquidationThreshold < RAY, "liquidation threshold upper");
         require(liquidationThreshold > 0.5e27, "liquidation threshold lower");
 
@@ -50,14 +53,6 @@ contract DeployLiquidationScript is DeployScript {
         // should always be 1.
         require(ionPool.ilkCount() == ILK_COUNT, "ionPool ilk count");
 
-        uint256[] memory liquidationThresholds = new uint256[](ILK_COUNT);
-        uint256[] memory maxDiscounts = new uint256[](ILK_COUNT);
-        address[] memory reserveOracles = new address[](ILK_COUNT);
-
-        liquidationThresholds[0] = liquidationThreshold;
-        maxDiscounts[0] = maxDiscount;
-        reserveOracles[0] = reserveOracle;
-
         bytes memory initCode = type(Liquidation).creationCode;
 
         liquidation = Liquidation(
@@ -68,15 +63,17 @@ contract DeployLiquidationScript is DeployScript {
                     abi.encode(
                         address(ionPool),
                         protocol,
-                        reserveOracles,
-                        liquidationThresholds,
+                        reserveOracle,
+                        liquidationThreshold,
                         targetHealth,
                         reserveFactor,
-                        maxDiscounts
+                        maxDiscount
                     )
                 )
             )
         );
+
+        console2.log('threshold', liquidation.LIQUIDATION_THRESHOLD());
 
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
     }

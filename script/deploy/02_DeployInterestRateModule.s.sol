@@ -73,7 +73,7 @@ contract DeployInterestRateScript is DeployScript {
         // If the ilks array is expanded beyond length one via calling initializeIlk() more than once,
         // all _accrueInterest() would revert as interest rate config only exists for ilkIndex 0.
         // TODO: When calling initializeIlk(), always verify that the length is still zero
-        interestRateModule = new InterestRate{ salt: DEFAULT_SALT }(ilkDataList, yieldOracle);
+        interestRateModule = new InterestRate(ilkDataList, yieldOracle);
 
         // Get the borrow rate at a 100% utilization rate
         (uint256 borrowRate,) = interestRateModule.calculateInterestRate(0, 100e45, 100e18);

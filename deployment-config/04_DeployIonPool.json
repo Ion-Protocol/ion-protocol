@@ -4,7 +4,7 @@
   "decimals": "18",
   "name": "Ion rsETH wstETH Token",
   "symbol": "irsETH-wstETH",
-  "whitelist": "0x40f5CCdfe546c417e42dFbe33144C4FD3De039AF",
-  "interestRateModule": "0xEf238a27bC267Da3f11d826346DD4181FA175527",
-  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b40033ad7cec4737d3002ba152"
+  "whitelist": "0xa9e11D1bF42429cd324a8CE18F14338D8eEBfdA6",
+  "interestRateModule": "0x4bf8a053947faB5eA99aD5A5ce75D1564330ebe2",
+  "salt": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b40033ad7cec4737d3002ba155"
 }

@@ -7,6 +7,6 @@ import { DeployScript } from "../Deploy.s.sol";
 
 contract DeployYieldOracleNull is DeployScript {
     function run() public broadcast returns (YieldOracleNull yieldOracle) {
-        yieldOracle = new YieldOracleNull{ salt: DEFAULT_SALT }();
+        yieldOracle = new YieldOracleNull();
     }
 }
