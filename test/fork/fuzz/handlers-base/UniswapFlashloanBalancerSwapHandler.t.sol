@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonHandler_ForkBase } from "../../../helpers/IonHandlerForkBase.sol";
+import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UniswapFlashloanBalancerSwapHandler } from
     "../../../../src/flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
@@ -16,7 +16,7 @@ struct Config {
     uint256 initialDepositLowerBound;
 }
 
-abstract contract UniswapFlashloanBalancerSwapHandler_FuzzTest is IonHandler_ForkBase {
+abstract contract UniswapFlashloanBalancerSwapHandler_FuzzTest is LstHandler_ForkBase {
     Config ufbsConfig;
 
     function testForkFuzz_flashLeverageWethAndSwap(

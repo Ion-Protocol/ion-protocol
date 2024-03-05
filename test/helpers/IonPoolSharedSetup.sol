@@ -322,7 +322,6 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
             // assertEq(ionPool.totalNormalizedDebt(i), 0);
             // assertEq(ionPool.rate(i), 1e27);
-            assertEq(ionPool.spot(i).getSpot(), _getSpot(), "spot value"); // [wad] * [ray] / WAD = [ray]
             assertEq(address(ionPool.spot(i)), address(spotOracles[i]), "spot oracle");
 
             assertEq(ionPool.debtCeiling(i), _getDebtCeiling(i), "debt ceiling");

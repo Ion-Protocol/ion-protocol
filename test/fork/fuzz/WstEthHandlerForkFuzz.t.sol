@@ -2,10 +2,10 @@
 pragma solidity 0.8.21;
 
 import { WstEthHandler_ForkBase } from "../../fork/concrete/WstEthHandlerFork.t.sol";
-import { IonHandler_ForkBase } from "../../helpers/IonHandlerForkBase.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import { LstHandler_ForkBase } from "../../helpers/handlers/LstHandlerForkBase.sol";
 import { WadRayMath, RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import { IWstEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 import { LidoLibrary } from "../../../src/libraries/LidoLibrary.sol";
@@ -25,7 +25,7 @@ abstract contract WstEthHandler_ForkFuzzTest is
     BalancerFlashloanDirectMintHandler_FuzzTest,
     UniswapFlashswapHandler_FuzzTest
 {
-    function setUp() public virtual override(IonHandler_ForkBase, WstEthHandler_ForkBase) {
+    function setUp() public virtual override(LstHandler_ForkBase, WstEthHandler_ForkBase) {
         super.setUp();
     }
 }
@@ -196,7 +196,7 @@ contract WstEthHandler_WithRateChange_ForkFuzzTest is
     BalancerFlashloanDirectMintHandler_WithRateChange_FuzzTest,
     UniswapFlashswapHandler_WithRateChange_FuzzTest
 {
-    function setUp() public virtual override(IonHandler_ForkBase, WstEthHandler_ForkBase) {
+    function setUp() public virtual override(LstHandler_ForkBase, WstEthHandler_ForkBase) {
         super.setUp();
         ufConfig.initialDepositLowerBound = 1e13;
         bfdmConfig.initialDepositLowerBound = 4 wei;

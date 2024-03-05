@@ -125,9 +125,16 @@ interface ILRTOracle {
 
 interface ILRTDepositPool {
     function getTotalAssetDeposits(address asset) external view returns (uint256);
+
     function getAssetDistributionData(address asset) external view returns (uint256, uint256, uint256);
+
     function depositETH(uint256 minRSETHAmountExpected, string calldata referralId) external payable;
+
     function getRsETHAmountToMint(address asset, uint256 amount) external view returns (uint256);
+
+    function minAmountToDeposit() external view returns (uint256);
+
+    function getAssetCurrentLimit(address asset) external view returns (uint256);
 }
 
 interface ILRTConfig {
