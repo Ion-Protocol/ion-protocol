@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonHandler_ForkBase } from "../../../helpers/IonHandlerForkBase.sol";
+import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 import {
     BalancerFlashloanDirectMintHandler,
@@ -18,7 +18,7 @@ import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint256;
 
-abstract contract BalancerFlashloanDirectMintHandler_Test is IonHandler_ForkBase {
+abstract contract BalancerFlashloanDirectMintHandler_Test is LstHandler_ForkBase {
     function testFork_FlashloanCollateral() public virtual {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5e18;

@@ -10,7 +10,7 @@ import { IonHandlerBase } from "../../../src/flash/handlers/base/IonHandlerBase.
 
 import { BalancerFlashloanDirectMintHandler_Test } from "./handlers-base/BalancerFlashloanDirectMintHandler.t.sol";
 import { UniswapFlashswapHandler_Test } from "./handlers-base/UniswapFlashswapHandler.t.sol";
-import { IonHandler_ForkBase } from "../../helpers/IonHandlerForkBase.sol";
+import { LstHandler_ForkBase } from "../../helpers/handlers/LstHandlerForkBase.sol";
 import { IProviderLibraryExposed } from "../../helpers/IProviderLibraryExposed.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -36,7 +36,7 @@ contract LidoLibraryExposed is IProviderLibraryExposed {
     }
 }
 
-contract WstEthHandler_ForkBase is IonHandler_ForkBase {
+abstract contract WstEthHandler_ForkBase is LstHandler_ForkBase {
     uint8 internal constant ilkIndex = 0;
     WstEthHandler wstEthHandler;
     IProviderLibraryExposed providerLibrary;
@@ -86,7 +86,7 @@ contract WstEthHandler_ForkTest is
     BalancerFlashloanDirectMintHandler_Test,
     UniswapFlashswapHandler_Test
 {
-    function setUp() public virtual override(WstEthHandler_ForkBase, IonHandler_ForkBase) {
+    function setUp() public virtual override(WstEthHandler_ForkBase, LstHandler_ForkBase) {
         super.setUp();
 
         // If price of the pool ends up being larger than the exchange rate,

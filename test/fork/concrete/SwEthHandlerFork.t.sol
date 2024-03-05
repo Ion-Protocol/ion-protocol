@@ -6,7 +6,7 @@ import { SwEthHandler } from "../../../src/flash/handlers/SwEthHandler.sol";
 import { SwellLibrary } from "../../../src/libraries/SwellLibrary.sol";
 import { Whitelist } from "../../../src/Whitelist.sol";
 
-import { IonHandler_ForkBase } from "../../helpers/IonHandlerForkBase.sol";
+import { LstHandler_ForkBase } from "../../helpers/handlers/LstHandlerForkBase.sol";
 import { IProviderLibraryExposed } from "../../helpers/IProviderLibraryExposed.sol";
 import { BalancerFlashloanDirectMintHandler_Test } from "./handlers-base/BalancerFlashloanDirectMintHandler.t.sol";
 import { UniswapFlashswapHandler_Test } from "./handlers-base/UniswapFlashswapHandler.t.sol";
@@ -32,7 +32,7 @@ contract SwellLibraryExposed is IProviderLibraryExposed {
     }
 }
 
-contract SwEthHandler_ForkBase is IonHandler_ForkBase {
+abstract contract SwEthHandler_ForkBase is LstHandler_ForkBase {
     uint8 internal constant ilkIndex = 2;
     SwEthHandler swEthHandler;
     SwellLibraryExposed providerLibrary;
@@ -72,7 +72,7 @@ contract SwEthHandler_ForkTest is
     BalancerFlashloanDirectMintHandler_Test,
     UniswapFlashswapHandler_Test
 {
-    function setUp() public virtual override(IonHandler_ForkBase, SwEthHandler_ForkBase) {
+    function setUp() public virtual override(LstHandler_ForkBase, SwEthHandler_ForkBase) {
         super.setUp();
 
         // If price of the pool ends up being larger than the exchange rate,

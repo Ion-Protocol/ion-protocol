@@ -2,11 +2,10 @@
 pragma solidity 0.8.21;
 
 import { EthXHandler_ForkBase } from "../../fork/concrete/EthXHandlerFork.t.sol";
-
+import { LstHandler_ForkBase } from "../../helpers/handlers/LstHandlerForkBase.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 import { IStaderStakePoolsManager } from "../../../src/interfaces/ProviderInterfaces.sol";
 import { StaderLibrary } from "../../../src/libraries/StaderLibrary.sol";
-import { IonHandler_ForkBase } from "../../helpers/IonHandlerForkBase.sol";
 import {
     BalancerFlashloanDirectMintHandler_FuzzTest,
     BalancerFlashloanDirectMintHandler_WithRateChange_FuzzTest
@@ -33,7 +32,7 @@ abstract contract EthXHandler_ForkFuzzTest is
     uint256 minDeposit;
     uint256 maxDeposit;
 
-    function setUp() public virtual override(EthXHandler_ForkBase, IonHandler_ForkBase) {
+    function setUp() public virtual override(EthXHandler_ForkBase, LstHandler_ForkBase) {
         super.setUp();
 
         minDeposit = MAINNET_STADER.staderConfig().getMinDepositAmount();
@@ -47,7 +46,7 @@ contract EthXHandler_WithRateChange_ForkFuzzTest is
     UniswapFlashloanBalancerSwapHandler_WithRateChange_FuzzTest,
     UniswapFlashswapHandler_WithRateChange_FuzzTest
 {
-    function setUp() public override(EthXHandler_ForkFuzzTest, IonHandler_ForkBase) {
+    function setUp() public override(EthXHandler_ForkFuzzTest, LstHandler_ForkBase) {
         super.setUp();
         ufbsConfig.initialDepositLowerBound = minDeposit;
         ufConfig.initialDepositLowerBound = minDeposit;

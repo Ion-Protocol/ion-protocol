@@ -42,9 +42,9 @@ contract RsEthHandler is UniswapFlashswapDirectMintHandler {
     /**
      * @inheritdoc UniswapFlashswapDirectMintHandler
      */
-    function _mintCollateralAsset(uint256 amountWeth) internal override returns (uint256 rsEthAmountToMint) {
+    function _mintCollateralAsset(uint256 amountWeth) internal override returns (uint256) {
         WETH.withdraw(amountWeth);
-        RSETH.depositForLrt(amountWeth);
+        return RSETH.depositForLrt(amountWeth);
     }
 
     /**

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonHandler_ForkBase } from "../../../helpers/IonHandlerForkBase.sol";
+import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UniswapFlashswapHandler } from "../../../../src/flash/handlers/base/UniswapFlashswapHandler.sol";
 import { IonHandlerBase } from "../../../../src/flash/handlers/base/IonHandlerBase.sol";
@@ -14,7 +14,7 @@ import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint256;
 
-abstract contract UniswapFlashswapHandler_Test is IonHandler_ForkBase {
+abstract contract UniswapFlashswapHandler_Test is LstHandler_ForkBase {
     uint160 sqrtPriceLimitX96;
 
     function testFork_FlashswapLeverage() external {
