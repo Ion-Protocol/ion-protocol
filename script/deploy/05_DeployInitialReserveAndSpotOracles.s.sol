@@ -29,7 +29,6 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
 
         // Needs to change per asset
         reserveOracle = address(new RsEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
-        spotOracle =
-            address(new RsEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+        spotOracle = address(new RsEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
     }
 }

@@ -12,8 +12,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 uint32 constant ILK_COUNT = 1;
 
 contract DeployLiquidationScript is DeployScript {
@@ -40,7 +38,6 @@ contract DeployLiquidationScript is DeployScript {
         require(targetHealth >= RAY, "target health lower");
         require(targetHealth < 1.5e27, "target health upper");
 
-        console2.log('liquidationThreshold', liquidationThreshold); 
         require(liquidationThreshold < RAY, "liquidation threshold upper");
         require(liquidationThreshold > 0.5e27, "liquidation threshold lower");
 
@@ -72,8 +69,6 @@ contract DeployLiquidationScript is DeployScript {
                 )
             )
         );
-
-        console2.log('threshold', liquidation.LIQUIDATION_THRESHOLD());
 
         ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
     }

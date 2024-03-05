@@ -28,9 +28,7 @@ contract DeployHandlersScript is DeployScript {
         _validateInterface(gemJoin);
         _validateInterface(whitelist);
 
-        handler = new RsEthHandler(
-            ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP
-        );
+        handler = new RsEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
 
         // whitelist handler address for protocol controlled addresses
         whitelist.approveProtocolWhitelist(address(handler));
