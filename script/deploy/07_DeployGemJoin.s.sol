@@ -23,7 +23,11 @@ contract DeployGemJoinScript is DeployScript {
         _validateInterface(ionPool);
         _validateInterface(ilkERC20);
 
-        gemJoin = new GemJoin(ionPool, ilkERC20, 0, protocol);
+        if (deployCreate2) {
+            gemJoin = new GemJoin{ salt: DEFAULT_SALT }(ionPool, ilkERC20, 0, protocol);
+        } else {
+            gemJoin = new GemJoin(ionPool, ilkERC20, 0, protocol);
+        }
         ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin));
     }
 }

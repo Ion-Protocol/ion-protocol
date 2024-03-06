@@ -57,13 +57,23 @@ contract DeployYieldOracleScript is DeployScript {
             historicalExchangeRates[i] = exchangesRates;
         }
 
-        yieldOracle = new YieldOracle(
-            historicalExchangeRates,
-            weEthExchangeRateAddress,
-            staderExchangeRateAddress,
-            swellExchangeRateAddress,
-            initialDefaultAdmin
-        );
+        if (deployCreate2) {
+            yieldOracle = new YieldOracle{ salt: DEFAULT_SALT }(
+                historicalExchangeRates,
+                weEthExchangeRateAddress,
+                staderExchangeRateAddress,
+                swellExchangeRateAddress,
+                initialDefaultAdmin
+            );
+        } else {
+            yieldOracle = new YieldOracle(
+                historicalExchangeRates,
+                weEthExchangeRateAddress,
+                staderExchangeRateAddress,
+                swellExchangeRateAddress,
+                initialDefaultAdmin
+            );
+        }
     }
 
     function configureDeployment() public {

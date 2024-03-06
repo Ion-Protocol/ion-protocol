@@ -27,8 +27,15 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
         // Specific to using Redstone Oracles
         uint256 maxTimeFromLastUpdate = config.readUint(".maxTimeFromLastUpdate");
 
-        // Needs to change per asset
-        reserveOracle = address(new RsEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
-        spotOracle = address(new RsEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+        if (deployCreate2) {
+            reserveOracle =
+                address(new RsEthWstEthReserveOracle{ salt: DEFAULT_SALT }(0, new address[](3), 0, maxChange));
+            spotOracle = address(
+                new RsEthWstEthSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate)
+            );
+        } else {
+            reserveOracle = address(new RsEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
+            spotOracle = address(new RsEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+        }
     }
 }
