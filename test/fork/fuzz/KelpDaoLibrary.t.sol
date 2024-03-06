@@ -3,8 +3,7 @@ pragma solidity 0.8.21;
 
 import { KelpDaoLibrary } from "../../../src/libraries/KelpDaoLibrary.sol";
 import { IRsEth } from "../../../src/interfaces/ProviderInterfaces.sol";
-import { RSETH, RSETH_LRT_DEPOSIT_POOL, ETH_ADDRESS, RSETH_LRT_CONFIG } from "../../../src/Constants.sol";
-import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { RSETH, RSETH_LRT_DEPOSIT_POOL, ETH_ADDRESS } from "../../../src/Constants.sol";
 
 import { Test } from "forge-std/Test.sol";
 

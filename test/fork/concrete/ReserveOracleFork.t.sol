@@ -3,22 +3,15 @@
 pragma solidity 0.8.21;
 
 import { ReserveOracle } from "./../../../src/oracles/reserve/ReserveOracle.sol";
-import { RsEthWstEthSpotOracle } from "./../../../src/oracles/spot/rsEthWstEthSpotOracle.sol";
 import { RsEthWstEthReserveOracle } from "./../../../src/oracles/reserve/RsEthWstEthReserveOracle.sol";
 import { WadRayMath } from "./../../../src/libraries/math/WadRayMath.sol";
 import { UPDATE_COOLDOWN } from "./../../../src/oracles/reserve/ReserveOracle.sol";
 import {
-    RSETH_LRT_ORACLE,
-    RSETH_LRT_DEPOSIT_POOL,
-    WSTETH_ADDRESS,
-    RSETH,
-    STETH_ADDRESS,
-    ETHX_ADDRESS
+    RSETH_LRT_ORACLE, RSETH_LRT_DEPOSIT_POOL, WSTETH_ADDRESS, RSETH, ETHX_ADDRESS
 } from "../../../src/Constants.sol";
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 import { StdStorage, stdStorage } from "./../../../lib/forge-safe/lib/forge-std/src/StdStorage.sol";
 import { IERC20 } from "./../../../lib/forge-safe/lib/forge-std/src/interfaces/IERC20.sol";
-import { console2 } from "forge-std/console2.sol";
 
 uint256 constant LTV = 0.9e27;
 uint256 constant MAX_CHANGE = 0.03e27;
@@ -137,7 +130,7 @@ contract RsEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
     function decreaseExchangeRate() public override returns (uint256 newPrice) {
         uint256 prevPrice = RSETH_LRT_ORACLE.rsETHPrice();
 
-        // effectivly halves the exchange rate by doubling the rsETH total supply
+        // effectively halves the exchange rate by doubling the rsETH total supply
         uint256 newTotalSupply = RSETH.totalSupply() * 2;
         vm.store(address(RSETH), RSETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
 

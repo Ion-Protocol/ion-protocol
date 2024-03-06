@@ -4,15 +4,10 @@ pragma solidity 0.8.21;
 import { IonPool } from "../src/IonPool.sol";
 import { RsEthHandler } from "../src/flash/handlers/RsEthHandler.sol";
 import { Whitelist } from "../src/Whitelist.sol";
-import { IWstEth, IWeEth, IRsEth } from "../src/interfaces/ProviderInterfaces.sol";
-import { IWETH9 } from "../src/interfaces/IWETH9.sol";
-import { WSTETH_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS, RSETH } from "../src/Constants.sol";
+import { IWstEth, IRsEth } from "../src/interfaces/ProviderInterfaces.sol";
+import { WSTETH_ADDRESS, RSETH } from "../src/Constants.sol";
 import { LidoLibrary } from "../src/libraries/LidoLibrary.sol";
 import { KelpDaoLibrary } from "./../src/libraries/KelpDaoLibrary.sol";
-
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { BaseScript } from "./Base.s.sol";
 

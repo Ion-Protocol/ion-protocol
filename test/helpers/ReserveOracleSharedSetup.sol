@@ -3,13 +3,12 @@ pragma solidity 0.8.21;
 
 import { ETHER_FI_LIQUIDITY_POOL_ADDRESS } from "../../src/Constants.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
-import { IWstEth, IStaderStakePoolsManager, IEtherFiLiquidityPool } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderStakePoolsManager } from "../../src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
 
 import { ETHER_FI_LIQUIDITY_POOL_ADDRESS } from "src/Constants.sol";
-import { console2 } from "forge-std/console2.sol";
 
 // fork tests for integrating with external contracts
 contract ReserveOracleSharedSetup is IonPoolSharedSetup {

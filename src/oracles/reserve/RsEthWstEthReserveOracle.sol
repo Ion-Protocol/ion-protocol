@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IRsEth, IWstEth, ILRTConfig } from "../../interfaces/ProviderInterfaces.sol";
+import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "./ReserveOracle.sol";
-import { WEETH_ADDRESS, WSTETH_ADDRESS, RSETH_LRT_ORACLE, RSETH, RSETH_LRT_CONFIG } from "../../Constants.sol";
+import { WSTETH_ADDRESS, RSETH_LRT_ORACLE } from "../../Constants.sol";
 import { WadRayMath } from "../../libraries/math/WadRayMath.sol";
-import { console2 } from "forge-std/console2.sol";
-import { IERC20 } from "./../../../lib/forge-safe/lib/forge-std/src/interfaces/IERC20.sol";
+
 /**
  * @notice Reserve oracle for rsETH.
  *
  * @custom:security-contact security@molecularlabs.io
  */
-
 contract RsEthWstEthReserveOracle is ReserveOracle {
     using WadRayMath for uint256;
 

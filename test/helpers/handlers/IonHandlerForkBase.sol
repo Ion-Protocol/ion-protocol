@@ -12,8 +12,6 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     uint256 constant INITIAL_THIS_UNDERLYING_BALANCE = 20e18;
 

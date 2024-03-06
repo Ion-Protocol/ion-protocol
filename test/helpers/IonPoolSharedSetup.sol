@@ -12,15 +12,12 @@ import { SpotOracle } from "../../src/oracles/spot/SpotOracle.sol";
 import { BaseTestSetup } from "../helpers/BaseTestSetup.sol";
 import { YieldOracleSharedSetup } from "../helpers/YieldOracleSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
-import { YieldOracle } from "../../src/YieldOracle.sol";
 import { Solarray } from "solarray/Solarray.sol";
 
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 using WadRayMath for uint16;
 

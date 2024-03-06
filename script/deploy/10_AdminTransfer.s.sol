@@ -6,7 +6,6 @@ import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { YieldOracle } from "../../src/YieldOracle.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
-import { GemJoin } from "../../src/join/GemJoin.sol";
 import { ProxyAdmin } from "../../src/admin/ProxyAdmin.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";

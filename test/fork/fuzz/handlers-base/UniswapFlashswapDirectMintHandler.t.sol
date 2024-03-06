@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPoolSharedSetup } from "../../../helpers/IonPoolSharedSetup.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { UniswapFlashswapDirectMintHandler } from
     "../../../../src/flash/handlers/base/UniswapFlashswapDirectMintHandler.sol";

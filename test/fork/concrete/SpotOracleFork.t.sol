@@ -54,8 +54,8 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     }
 
     function testFork_MaxTimeFromLastUpdateExceeded() public {
-        assertGt(spotOracle.getPrice(), 0, "time fromt last update not exceeded price should not be zero");
-        assertGt(spotOracle.getSpot(), 0, "time fromt last update not exceeded spot should not be zero");
+        assertGt(spotOracle.getPrice(), 0, "time from last update not exceeded price should not be zero");
+        assertGt(spotOracle.getSpot(), 0, "time from last update not exceeded spot should not be zero");
 
         vm.warp(block.timestamp + 2 days);
 

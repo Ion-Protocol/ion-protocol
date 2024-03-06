@@ -6,8 +6,6 @@ import { WEETH_ADDRESS, WSTETH_ADDRESS } from "../../../src/Constants.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 abstract contract WeEthIonPoolSharedSetup is IonPoolSharedSetup {
     function setUp() public virtual override {
         for (uint256 i = 0; i < 2; i++) {
