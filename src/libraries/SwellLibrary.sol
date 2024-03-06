@@ -20,7 +20,7 @@ library SwellLibrary {
      * @param lstAmount Desired output amount. [WAD]
      */
     function getEthAmountInForLstAmountOut(ISwEth swEth, uint256 lstAmount) internal view returns (uint256) {
-        return lstAmount.wadDivUp(swEth.ethToSwETHRate());
+        return lstAmount.wadMulUp(swEth.swETHToETHRate());
     }
 
     /**
@@ -30,7 +30,7 @@ library SwellLibrary {
      */
     function getLstAmountOutForEthAmountIn(ISwEth swEth, uint256 ethAmount) internal view returns (uint256) {
         // lstToken and depositContract are same
-        return swEth.ethToSwETHRate().wadMulDown(ethAmount);
+        return ethAmount.wadMulDown(uint256(1e18)).wadDivDown(swEth.swETHToETHRate());
     }
 
     /**

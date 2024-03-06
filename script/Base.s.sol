@@ -23,6 +23,8 @@ abstract contract BaseScript is Script, ValidateInterface {
     /// @dev Used to derive the broadcaster's address if $ETH_FROM is not defined.
     string internal mnemonic;
 
+    bool internal deployCreate2;
+
     /// @dev Initializes the transaction broadcaster like this:
     ///
     /// - If $ETH_FROM is defined, use it.
@@ -31,6 +33,7 @@ abstract contract BaseScript is Script, ValidateInterface {
     ///
     /// The use case for $ETH_FROM is to specify the broadcaster key and its address via the command line.
     constructor() {
+        deployCreate2 = vm.envOr({ name: "CREATE2", defaultValue: true });
         address from = vm.envOr({ name: "ETH_FROM", defaultValue: address(0) });
         if (from != address(0)) {
             broadcaster = from;

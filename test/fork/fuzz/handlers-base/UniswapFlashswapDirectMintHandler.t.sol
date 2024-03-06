@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WeEthIonHandler_ForkBase } from "../../../helpers/weETH/WeEthIonHandlerForkBase.sol";
+import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { UniswapFlashswapDirectMintHandler } from
     "../../../../src/flash/handlers/base/UniswapFlashswapDirectMintHandler.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
@@ -15,20 +15,20 @@ struct Config {
 }
 
 // TODO: The base contracts are currently not market agnostic
-abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is WeEthIonHandler_ForkBase {
+abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is LrtHandler_ForkBase {
     Config ufdmConfig;
 
     function testForkFuzz_FlashswapAndMint(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         initialDeposit = bound(initialDeposit, ufdmConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
-        uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
-            // skip protecting for this in the test
 
         weth.approve(address(_getTypedUFDMHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFDMHandler()));
 
         uint256 ilkRate = ionPool.rate(_getIlkIndex());
         uint256 ilkSpot = ionPool.spot(_getIlkIndex()).getSpot();
+
+        uint256 maxResultingDebt = resultingCollateral * ilkSpot / 1e27;
         // Calculating this way emulates the newTotalDebt value in IonPool
         uint256 newTotalDebt = maxResultingDebt.rayDivUp(ilkRate) * ilkRate;
 
@@ -49,7 +49,7 @@ abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is WeEthIonHandler_
         assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError);
         assertLe(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
-            maxResultingDebt
+            maxResultingDebt + roundingError
         );
     }
 

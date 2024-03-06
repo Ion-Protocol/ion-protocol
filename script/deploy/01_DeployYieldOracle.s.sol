@@ -3,8 +3,6 @@ pragma solidity 0.8.21;
 
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { YieldOracle, LOOK_BACK, ILK_COUNT } from "../../src/YieldOracle.sol";
-import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
-import { YieldOracleNull } from "../../src/YieldOracleNull.sol";
 
 import { DeployScript } from "../Deploy.s.sol";
 
@@ -57,13 +55,23 @@ contract DeployYieldOracleScript is DeployScript {
             historicalExchangeRates[i] = exchangesRates;
         }
 
-        yieldOracle = new YieldOracle(
-            historicalExchangeRates,
-            weEthExchangeRateAddress,
-            staderExchangeRateAddress,
-            swellExchangeRateAddress,
-            initialDefaultAdmin
-        );
+        if (deployCreate2) {
+            yieldOracle = new YieldOracle{ salt: DEFAULT_SALT }(
+                historicalExchangeRates,
+                weEthExchangeRateAddress,
+                staderExchangeRateAddress,
+                swellExchangeRateAddress,
+                initialDefaultAdmin
+            );
+        } else {
+            yieldOracle = new YieldOracle(
+                historicalExchangeRates,
+                weEthExchangeRateAddress,
+                staderExchangeRateAddress,
+                swellExchangeRateAddress,
+                initialDefaultAdmin
+            );
+        }
     }
 
     function configureDeployment() public {

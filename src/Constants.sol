@@ -10,7 +10,11 @@ import {
     ISwEth,
     IEEth,
     IWeEth,
-    IEtherFiLiquidityPool
+    IRsEth,
+    ILRTOracle,
+    ILRTConfig,
+    IEtherFiLiquidityPool,
+    ILRTDepositPool
 } from "./interfaces/ProviderInterfaces.sol";
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
 import { IChainlink } from "./interfaces/IChainlink.sol";
@@ -18,6 +22,8 @@ import { ICreateX } from "./interfaces/ICreateX.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
+
+address constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
 IWETH9 constant WETH_ADDRESS = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
@@ -40,6 +46,18 @@ IEtherFiLiquidityPool constant ETHER_FI_LIQUIDITY_POOL_ADDRESS =
 IWeEth constant WEETH_ADDRESS = IWeEth(0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee);
 IRedstonePriceFeed constant REDSTONE_WEETH_ETH_PRICE_FEED =
     IRedstonePriceFeed(0x8751F736E94F6CD167e8C5B97E245680FbD9CC36);
+
+// rsETH
+IRedstonePriceFeed constant REDSTONE_RSETH_ETH_PRICE_FEED =
+    IRedstonePriceFeed(0xA736eAe8805dDeFFba40cAB8c99bCB309dEaBd9B);
+IRsEth constant RSETH = IRsEth(0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7);
+ILRTOracle constant RSETH_LRT_ORACLE = ILRTOracle(0x349A73444b1a310BAe67ef67973022020d70020d);
+ILRTConfig constant RSETH_LRT_CONFIG = ILRTConfig(0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7);
+ILRTDepositPool constant RSETH_LRT_DEPOSIT_POOL = ILRTDepositPool(0x036676389e48133B63a802f8635AD39E752D375D);
+
+// ezETH
+IRedstonePriceFeed constant REDSTONE_EZETH_ETH_PRICE_FEED =
+    IRedstonePriceFeed(0xF4a3e183F59D2599ee3DF213ff78b1B3b1923696);
 
 // Chainlink
 IChainlink constant ETH_PER_STETH_CHAINLINK = IChainlink(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);

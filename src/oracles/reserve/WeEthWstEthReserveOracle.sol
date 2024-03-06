@@ -17,7 +17,7 @@ contract WeEthWstEthReserveOracle is ReserveOracle {
     /**
      * @notice Creates a new `weEthwstEthReserveOracle` instance. Provides
      * the amount of wstETH equal to one weETH.
-     * wstETH / wETH = eETH / weETH * ETH / eETH * wstETH / ETH.
+     * wstETH / weETH = eETH / weETH * ETH / eETH * wstETH / ETH.
      * ETH / eETH is 1 since eETH is rebasing. Depeg here would reflect in eETH / wETH
      * exchange rate.
      * @dev The value of weETH denominated in wstETH by the provider.

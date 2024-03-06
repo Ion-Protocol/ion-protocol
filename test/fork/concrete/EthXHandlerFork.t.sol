@@ -8,7 +8,7 @@ import { Whitelist } from "../../../src/Whitelist.sol";
 
 import { BalancerFlashloanDirectMintHandler_Test } from "./handlers-base/BalancerFlashloanDirectMintHandler.t.sol";
 import { UniswapFlashloanBalancerSwapHandler_Test } from "./handlers-base/UniswapFlashloanBalancerSwapHandler.t.sol";
-import { IonHandler_ForkBase } from "../../helpers/IonHandlerForkBase.sol";
+import { LstHandler_ForkBase } from "../../helpers/handlers/LstHandlerForkBase.sol";
 import { IProviderLibraryExposed } from "../../helpers/IProviderLibraryExposed.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -31,7 +31,7 @@ contract StaderLibraryExposed is IProviderLibraryExposed {
     }
 }
 
-contract EthXHandler_ForkBase is IonHandler_ForkBase {
+abstract contract EthXHandler_ForkBase is LstHandler_ForkBase {
     uint8 internal constant ilkIndex = 1;
     EthXHandler ethXHandler;
     StaderLibraryExposed staderLibraryExposed;
@@ -83,7 +83,7 @@ contract EthXHandler_ForkTest is
     BalancerFlashloanDirectMintHandler_Test,
     UniswapFlashloanBalancerSwapHandler_Test
 {
-    function setUp() public virtual override(EthXHandler_ForkBase, IonHandler_ForkBase) {
+    function setUp() public virtual override(EthXHandler_ForkBase, LstHandler_ForkBase) {
         super.setUp();
     }
 }

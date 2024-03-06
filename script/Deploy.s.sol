@@ -12,6 +12,7 @@ abstract contract DeployScript is BaseScript, Errors {
     using StdJson for string;
     using Strings for uint256;
 
+    bytes32 constant DEFAULT_SALT = bytes32(abi.encodePacked(uint256(1)));
     uint8 constant ILK_INDEX_ZERO = 0;
 
     string defaultConfigPath = "./deployment-config/00_Default.json";

@@ -2,12 +2,11 @@
 pragma solidity 0.8.21;
 
 import { EtherFiLibrary } from "../../../src/libraries/EtherFiLibrary.sol";
-import { IWeEth, IEEth, IEtherFiLiquidityPool } from "../../../src/interfaces/ProviderInterfaces.sol";
+import { IWeEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 import { WEETH_ADDRESS, EETH_ADDRESS } from "../../../src/Constants.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 import { Test } from "forge-std/Test.sol";
 
 contract EtherFiLibrary_FuzzTest is Test {

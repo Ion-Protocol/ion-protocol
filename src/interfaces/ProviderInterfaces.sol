@@ -115,3 +115,40 @@ interface IEtherFiLiquidityPool {
     function getTotalPooledEther() external view returns (uint256);
     function getTotalEtherClaimOf(address _user) external view returns (uint256);
 }
+
+interface IRsEth is IERC20 { }
+
+interface ILRTOracle {
+    function rsETHPrice() external view returns (uint256);
+    function updateRSETHPrice() external;
+}
+
+interface ILRTDepositPool {
+    function getTotalAssetDeposits(address asset) external view returns (uint256);
+
+    function getAssetDistributionData(address asset) external view returns (uint256, uint256, uint256);
+
+    function depositETH(uint256 minRSETHAmountExpected, string calldata referralId) external payable;
+
+    function getRsETHAmountToMint(address asset, uint256 amount) external view returns (uint256);
+
+    function minAmountToDeposit() external view returns (uint256);
+
+    function getAssetCurrentLimit(address asset) external view returns (uint256);
+}
+
+interface ILRTConfig {
+    function rsETH() external view returns (address);
+
+    function assetStrategy(address asset) external view returns (address);
+
+    function isSupportedAsset(address asset) external view returns (bool);
+
+    function getLSTToken(bytes32 tokenId) external view returns (address);
+
+    function getContract(bytes32 contractId) external view returns (address);
+
+    function getSupportedAssetList() external view returns (address[] memory);
+
+    function depositLimitByAsset(address asset) external view returns (uint256);
+}

@@ -7,7 +7,7 @@ import { IonPool } from "../../src/IonPool.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { IonHandlerBase } from "../../src/flash/handlers/base/IonHandlerBase.sol";
-import { WeEthHandler } from "../../src/flash/handlers/WeEthHandler.sol";
+import { RsEthHandler } from "../../src/flash/handlers/RsEthHandler.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
@@ -28,9 +28,12 @@ contract DeployHandlersScript is DeployScript {
         _validateInterface(gemJoin);
         _validateInterface(whitelist);
 
-        handler = new WeEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
-
-        // whitelist handler address for protocol controlled addresses
-        whitelist.approveProtocolWhitelist(address(handler));
+        if (deployCreate2) {
+            handler = new RsEthHandler{ salt: DEFAULT_SALT }(
+                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP
+            );
+        } else {
+            handler = new RsEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
+        }
     }
 }

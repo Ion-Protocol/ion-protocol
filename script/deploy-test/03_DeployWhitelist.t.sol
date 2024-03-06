@@ -8,9 +8,14 @@ import { Whitelist } from "../../src/Whitelist.sol";
 contract DeployWhitelistTest is DeployTestBase, DeployWhitelistScript {
     function checkState(Whitelist whitelist) public {
         assert(address(whitelist).code.length > 0);
+        // assertEq(whitelist.owner(), initialDefaultAdmin, "initial owner");
         assertEq(whitelist.lendersRoot(), lenderRoot, "lendersRoot");
         assertEq(whitelist.borrowersRoot(0), borrowerRoots[0], "borrowersRoot(0)");
         assertEq(whitelist.pendingOwner(), protocol, "pendingOwner");
+
+        vm.startPrank(initialDefaultAdmin);
+        whitelist.transferOwnership(protocol);
+        vm.stopPrank();
 
         vm.startPrank(protocol);
         whitelist.acceptOwnership();

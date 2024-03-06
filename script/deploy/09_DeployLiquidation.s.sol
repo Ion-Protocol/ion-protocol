@@ -50,14 +50,6 @@ contract DeployLiquidationScript is DeployScript {
         // should always be 1.
         require(ionPool.ilkCount() == ILK_COUNT, "ionPool ilk count");
 
-        uint256[] memory liquidationThresholds = new uint256[](ILK_COUNT);
-        uint256[] memory maxDiscounts = new uint256[](ILK_COUNT);
-        address[] memory reserveOracles = new address[](ILK_COUNT);
-
-        liquidationThresholds[0] = liquidationThreshold;
-        maxDiscounts[0] = maxDiscount;
-        reserveOracles[0] = reserveOracle;
-
         bytes memory initCode = type(Liquidation).creationCode;
 
         liquidation = Liquidation(
@@ -68,11 +60,11 @@ contract DeployLiquidationScript is DeployScript {
                     abi.encode(
                         address(ionPool),
                         protocol,
-                        reserveOracles,
-                        liquidationThresholds,
+                        reserveOracle,
+                        liquidationThreshold,
                         targetHealth,
                         reserveFactor,
-                        maxDiscounts
+                        maxDiscount
                     )
                 )
             )

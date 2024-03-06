@@ -46,7 +46,11 @@ contract DeployIonPoolScript is DeployScript {
             whitelist
         );
 
-        ionImpl = new IonPool();
+        if (deployCreate2) {
+            ionImpl = new IonPool{ salt: DEFAULT_SALT }();
+        } else {
+            ionImpl = new IonPool();
+        }
 
         bytes memory initCode = type(TransparentUpgradeableProxy).creationCode;
 

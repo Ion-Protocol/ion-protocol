@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { UniswapFlashswapDirectMintHandler } from
     "../../../../src/flash/handlers/base/UniswapFlashswapDirectMintHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
-import { WeEthIonHandler_ForkBase } from "../../../helpers/weETH/WeEthIonHandlerForkBase.sol";
+import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -13,7 +13,7 @@ import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint256;
 
-abstract contract UniswapFlashswapDirectMintHandler_Test is WeEthIonHandler_ForkBase {
+abstract contract UniswapFlashswapDirectMintHandler_Test is LrtHandler_ForkBase {
     function testFork_FlashswapAndMint() public virtual {
         uint256 initialDeposit = 1e18;
         uint256 resultingAdditionalCollateral = 5.239573295673902613e18;

@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 import { DeployScript } from "../Deploy.s.sol";
 import { RAY } from "../../src/libraries/math/WadRayMath.sol";
-import { WeEthWstEthReserveOracle } from "../../src/oracles/reserve/WeEthWstEthReserveOracle.sol";
-import { WeEthWstEthSpotOracle } from "../../src/oracles/spot/WeEthWstEthSpotOracle.sol";
+import { RsEthWstEthReserveOracle } from "../../src/oracles/reserve/RsEthWstEthReserveOracle.sol";
+import { RsEthWstEthSpotOracle } from "../../src/oracles/spot/RsEthWstEthSpotOracle.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
@@ -27,8 +27,15 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
         // Specific to using Redstone Oracles
         uint256 maxTimeFromLastUpdate = config.readUint(".maxTimeFromLastUpdate");
 
-        // Needs to change per asset
-        reserveOracle = address(new WeEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
-        spotOracle = address(new WeEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+        if (deployCreate2) {
+            reserveOracle =
+                address(new RsEthWstEthReserveOracle{ salt: DEFAULT_SALT }(0, new address[](3), 0, maxChange));
+            spotOracle = address(
+                new RsEthWstEthSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate)
+            );
+        } else {
+            reserveOracle = address(new RsEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
+            spotOracle = address(new RsEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+        }
     }
 }

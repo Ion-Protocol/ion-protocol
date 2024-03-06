@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { ETHER_FI_LIQUIDITY_POOL_ADDRESS } from "../../src/Constants.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
-import { IWstEth, IStaderStakePoolsManager, IEtherFiLiquidityPool } from "../../src/interfaces/ProviderInterfaces.sol";
+import { IWstEth, IStaderStakePoolsManager } from "../../src/interfaces/ProviderInterfaces.sol";
 
 import { ERC20PresetMinterPauser } from "../helpers/ERC20PresetMinterPauser.sol";
 import { IonPoolSharedSetup } from "../helpers/IonPoolSharedSetup.sol";
@@ -19,7 +19,7 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     uint8 constant ETHX_ILK_INDEX = 2;
 
     // default reserve oracle configs
-    uint256 constant MAX_CHANGE = 1e27; // 100%
+    uint256 constant DEFAULT_MAX_CHANGE = 1e27; // 100%
     uint8 constant ILK_INDEX = 0;
     uint8 constant QUORUM = 0;
 
@@ -50,6 +50,8 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
 
     uint256 constant BLOCK_NUMBER = 18_372_927;
 
+    address[] emptyFeeds = new address[](3);
+
     uint256 public blockNumber;
 
     uint256 mainnetFork;
@@ -57,8 +59,11 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
     ERC20PresetMinterPauser mockToken;
 
     function setUp() public virtual override {
-        mainnetFork = vm.createSelectFork(MAINNET_RPC_URL, blockNumber);
-
+        if (blockNumber == 0) {
+            vm.createSelectFork(MAINNET_RPC_URL);
+        } else {
+            mainnetFork = vm.createSelectFork(MAINNET_RPC_URL, blockNumber);
+        }
         super.setUp();
 
         mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");

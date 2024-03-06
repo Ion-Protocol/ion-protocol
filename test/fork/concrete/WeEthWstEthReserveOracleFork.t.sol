@@ -5,7 +5,7 @@ import { RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import { WeEthWstEthReserveOracle } from "../../../src/oracles/reserve/WeEthWstEthReserveOracle.sol";
 import { ReserveFeed } from "../../../src/oracles/reserve/ReserveFeed.sol";
 import { ReserveOracle } from "../../../src/oracles/reserve/ReserveOracle.sol";
-import { IWeEth, IEEth, IEtherFiLiquidityPool } from "../../../src/interfaces/ProviderInterfaces.sol";
+import { IWeEth, IEEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 
 import { ReserveOracleSharedSetup } from "../../helpers/ReserveOracleSharedSetup.sol";
 
