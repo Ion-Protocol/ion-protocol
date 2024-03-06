@@ -25,10 +25,7 @@ contract FlashLeverageScript is BaseScript {
 
     function run() public broadcast {
         IonPool pool = IonPool(vm.parseJsonAddress(config, ".ionPool"));
-        RsEthHandler rsEthHandler = RsEthHandler(payable(vm.parseJsonAddress(config, ".rsEthHandler")));
-        Whitelist whitelist = Whitelist(vm.parseJsonAddress(config, ".whitelist"));
-        whitelist.approveProtocolWhitelist(address(rsEthHandler));
-        whitelist.approveProtocolWhitelist(broadcaster);
+        RsEthHandler rsEthHandler = RsEthHandler(payable(vm.parseJsonAddress(config, ".handler")));
 
         pool.updateSupplyCap(1000 ether);
         WSTETH_ADDRESS.depositForLst(500 ether);
@@ -37,9 +34,9 @@ contract FlashLeverageScript is BaseScript {
 
         pool.addOperator(address(rsEthHandler));
 
-        uint256 initialDeposit = 1 ether; // in collateral terms
-        uint256 resultingAdditionalCollateral = 3 ether; // in collateral terms
-        uint256 maxResultingDebt = 3 ether;
+        uint256 initialDeposit = 2 ether; // in collateral terms
+        uint256 resultingAdditionalCollateral = 8 ether; // in collateral terms
+        uint256 maxResultingDebt = 15 ether;
 
         RSETH.approve(address(rsEthHandler), type(uint256).max);
         // EETH_ADDRESS.approve(address(WEETH_ADDRESS), type(uint256).max);

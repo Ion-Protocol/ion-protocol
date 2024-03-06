@@ -35,8 +35,5 @@ contract DeployHandlersScript is DeployScript {
         } else {
             handler = new RsEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
         }
-
-        // whitelist handler address for protocol controlled addresses
-        whitelist.approveProtocolWhitelist(address(handler));
     }
 }
