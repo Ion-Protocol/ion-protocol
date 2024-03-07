@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Test } from "forge-std/Test.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract IonPool_FrobBooleanTest is Test {

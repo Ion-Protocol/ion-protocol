@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 import { DeployScript } from "../Deploy.s.sol";
 import { RAY } from "../../src/libraries/math/WadRayMath.sol";
-import { RsEthWstEthReserveOracle } from "../../src/oracles/reserve/RsEthWstEthReserveOracle.sol";
-import { RsEthWstEthSpotOracle } from "../../src/oracles/spot/RsEthWstEthSpotOracle.sol";
+import { RsEthWstEthReserveOracle } from "../../src/oracles/reserve/lrt/RsEthWstEthReserveOracle.sol";
+import { RsEthWstEthSpotOracle } from "../../src/oracles/spot/lrt/RsEthWstEthSpotOracle.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 

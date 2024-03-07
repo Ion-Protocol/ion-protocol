@@ -5,7 +5,7 @@ import { IonHandler_ForkBase } from "./IonHandlerForkBase.sol";
 import { WSTETH_ADDRESS, REDSTONE_WEETH_ETH_PRICE_FEED, WSTETH_ADDRESS } from "../../../src/Constants.sol";
 import { IonPoolSharedSetup } from "../IonPoolSharedSetup.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
-import { LidoLibrary } from "../../../src/libraries/LidoLibrary.sol";
+import { LidoLibrary } from "../../../src/libraries/lst/LidoLibrary.sol";
 import { IWstEth } from "../../../src/interfaces/ProviderInterfaces.sol";
 
 using LidoLibrary for IWstEth;

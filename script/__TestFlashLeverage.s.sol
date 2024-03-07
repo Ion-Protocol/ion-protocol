@@ -2,12 +2,12 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "../src/IonPool.sol";
-import { RsEthHandler } from "../src/flash/handlers/RsEthHandler.sol";
+import { RsEthHandler } from "../src/flash/lrt/RsEthHandler.sol";
 import { Whitelist } from "../src/Whitelist.sol";
 import { IWstEth, IRsEth } from "../src/interfaces/ProviderInterfaces.sol";
 import { WSTETH_ADDRESS, RSETH } from "../src/Constants.sol";
-import { LidoLibrary } from "../src/libraries/LidoLibrary.sol";
-import { KelpDaoLibrary } from "./../src/libraries/KelpDaoLibrary.sol";
+import { LidoLibrary } from "../src/libraries/lst/LidoLibrary.sol";
+import { KelpDaoLibrary } from "../src/libraries/lrt/KelpDaoLibrary.sol";
 
 import { BaseScript } from "./Base.s.sol";
 
