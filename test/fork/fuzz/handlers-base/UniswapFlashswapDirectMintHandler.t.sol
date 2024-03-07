@@ -2,8 +2,7 @@
 pragma solidity 0.8.21;
 
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
-import { UniswapFlashswapDirectMintHandler } from
-    "../../../../src/flash/handlers/base/UniswapFlashswapDirectMintHandler.sol";
+import { UniswapFlashswapDirectMintHandler } from "../../../../src/flash/UniswapFlashswapDirectMintHandler.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

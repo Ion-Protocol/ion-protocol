@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { UniswapFlashswapDirectMintHandler } from
-    "../../../../src/flash/handlers/base/UniswapFlashswapDirectMintHandler.sol";
+import { UniswapFlashswapDirectMintHandler } from "../../../../src/flash/UniswapFlashswapDirectMintHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";

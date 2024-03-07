@@ -3,8 +3,7 @@ pragma solidity 0.8.21;
 
 import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.sol";
-import { UniswapFlashloanBalancerSwapHandler } from
-    "../../../../src/flash/handlers/base/UniswapFlashloanBalancerSwapHandler.sol";
+import { UniswapFlashloanBalancerSwapHandler } from "../../../../src/flash/UniswapFlashloanBalancerSwapHandler.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 

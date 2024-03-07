@@ -7,11 +7,11 @@ import { WeEthIonPoolSharedSetup } from "../../helpers/weETH/WeEthIonPoolSharedS
 import { Whitelist } from "../../../src/Whitelist.sol";
 import { WSTETH_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "../../../src/Constants.sol";
 import { IWstEth, IWeEth } from "../../../src/interfaces/ProviderInterfaces.sol";
-import { LidoLibrary } from "../../../src/libraries/LidoLibrary.sol";
-import { EtherFiLibrary } from "../../../src/libraries/EtherFiLibrary.sol";
+import { LidoLibrary } from "../../../src/libraries/lst/LidoLibrary.sol";
+import { EtherFiLibrary } from "../../../src/libraries/lrt/EtherFiLibrary.sol";
 import { SpotOracle } from "../../../src/oracles/spot/SpotOracle.sol";
-import { WeEthWstEthReserveOracle } from "../../../src/oracles/reserve/WeEthWstEthReserveOracle.sol";
-import { WeEthWstEthSpotOracle } from "../../../src/oracles/spot/WeEthWstEthSpotOracle.sol";
+import { WeEthWstEthReserveOracle } from "../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
+import { WeEthWstEthSpotOracle } from "../../../src/oracles/spot/lrt/WeEthWstEthSpotOracle.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 

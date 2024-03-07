@@ -6,8 +6,8 @@ import { DeployScript } from "../Deploy.s.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
-import { IonHandlerBase } from "../../src/flash/handlers/base/IonHandlerBase.sol";
-import { RsEthHandler } from "../../src/flash/handlers/RsEthHandler.sol";
+import { IonHandlerBase } from "../../src/flash/IonHandlerBase.sol";
+import { RsEthHandler } from "../../src/flash/lrt/RsEthHandler.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
