@@ -21,11 +21,11 @@ using EtherFiLibrary for IWeEth;
 using KelpDaoLibrary for IRsEth;
 
 contract TestFlashLeverage is Test {
-    IonPool weEthPool;
-    WeEthHandler weEthHandler;
-
     IonPool rswEthPool;
     RswEthHandler rswEthHandler;
+
+    IonPool weEthPool;
+    WeEthHandler weEthHandler;
 
     IonPool rsEthPool;
     RsEthHandler rsEthHandler;
@@ -39,6 +39,7 @@ contract TestFlashLeverage is Test {
     function setUp() public {
         vm.pauseGasMetering();
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
+
         weEthPool = IonPool(0x0000000000eaEbd95dAfcA37A39fd09745739b78);
         weEthHandler = WeEthHandler(payable(0xAB3c6236327FF77159B37f18EF85e8AC58034479));
 
