@@ -15,7 +15,10 @@ import {
     ILRTOracle,
     ILRTConfig,
     IEtherFiLiquidityPool,
-    ILRTDepositPool
+    ILRTDepositPool,
+    IEzEth,
+    IRenzoOracle,
+    IRestakeManager
 } from "./interfaces/ProviderInterfaces.sol";
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
 import { IChainlink } from "./interfaces/IChainlink.sol";
@@ -64,6 +67,9 @@ IRswEth constant RSWETH = IRswEth(0xFAe103DC9cf190eD75350761e95403b7b8aFa6c0);
 // ezETH
 IRedstonePriceFeed constant REDSTONE_EZETH_ETH_PRICE_FEED =
     IRedstonePriceFeed(0xF4a3e183F59D2599ee3DF213ff78b1B3b1923696);
+IEzEth constant EZETH = IEzEth(0xbf5495Efe5DB9ce00f80364C8B423567e58d2110);
+IRenzoOracle constant RENZO_ORACLE = IRenzoOracle(0x5a12796f7e7EBbbc8a402667d266d2e65A814042);
+IRestakeManager constant RENZO_RESTAKE_MANAGER = IRestakeManager(0x74a09653A083691711cF8215a6ab074BB4e99ef5);
 
 // Chainlink
 IChainlink constant ETH_PER_STETH_CHAINLINK = IChainlink(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
