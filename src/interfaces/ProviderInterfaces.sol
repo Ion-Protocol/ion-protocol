@@ -159,3 +159,58 @@ interface ILRTConfig {
 
     function depositLimitByAsset(address asset) external view returns (uint256);
 }
+
+// Renzo
+
+interface IEzEth is IERC20 { }
+
+interface IRenzoOracle {
+    function lookupTokenValue(IERC20 _token, uint256 _balance) external view returns (uint256);
+    function lookupTokenAmountFromValue(IERC20 _token, uint256 _value) external view returns (uint256);
+    function lookupTokenValues(IERC20[] memory _tokens, uint256[] memory _balances) external view returns (uint256);
+    function calculateMintAmount(
+        uint256 _currentValueInProtocol,
+        uint256 _newValueAdded,
+        uint256 _existingEzETHSupply
+    )
+        external
+        pure
+        returns (uint256);
+    function calculateRedeemAmount(
+        uint256 _ezETHBeingBurned,
+        uint256 _existingEzETHSupply,
+        uint256 _currentValueInProtocol
+    )
+        external
+        pure
+        returns (uint256);
+}
+
+interface IOperatorDelegator {
+    function getTokenBalanceFromStrategy(IERC20 token) external view returns (uint256);
+
+    function deposit(IERC20 _token, uint256 _tokenAmount) external returns (uint256 shares);
+
+    function startWithdrawal(IERC20 _token, uint256 _tokenAmount) external returns (bytes32);
+
+    function getStakedETHBalance() external view returns (uint256);
+
+    function stakeEth(bytes calldata pubkey, bytes calldata signature, bytes32 depositDataRoot) external payable;
+
+    function pendingUnstakedDelayedWithdrawalAmount() external view returns (uint256);
+}
+
+interface IRestakeManager {
+    function stakeEthInOperatorDelegator(
+        IOperatorDelegator operatorDelegator,
+        bytes calldata pubkey,
+        bytes calldata signature,
+        bytes32 depositDataRoot
+    )
+        external
+        payable;
+    function depositTokenRewardsFromProtocol(IERC20 _token, uint256 _amount) external;
+
+    function calculateTVLs() external view returns (uint256[][] memory, uint256[] memory, uint256);
+    function depositETH(uint256 _referralId) external payable;
+}
