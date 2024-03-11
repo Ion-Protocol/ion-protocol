@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RENZO_ORACLE, RENZO_RESTAKE_MANAGER, EZETH } from "../../Constants.sol";
-import { IEzEth } from "../../interfaces/ProviderInterfaces.sol";
+import { RENZO_RESTAKE_MANAGER, EZETH } from "../../Constants.sol";
 import { WadRayMath, WAD, RAY } from "../math/WadRayMath.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-
-import { safeconsole as console } from "forge-std/safeconsole.sol";
 
 using Math for uint256;
 using WadRayMath for uint256;
@@ -18,7 +15,7 @@ using WadRayMath for uint256;
  * @notice A helper library for Renzo-related conversions.
  *
  * @dev The behaviour in minting ezETH is quite strange, so for the sake of the
- * maintanence of this code, we document the behaviour at block 19387902.
+ * maintenence of this code, we document the behaviour at block 19387902.
  *
  * The following function is invoked to calculate the amount of ezETH to mint
  * given an `ethAmount` to deposit:
@@ -91,7 +88,7 @@ library RenzoLibrary {
      * @dev The goal here is to mint at least `minAmountOut` ezETH. So first, we
      * must find the "mint amount" right above `minAmountOut`. This ensures that
      * we mint at least `minAmountOut`. Then we find the minimum amount of ETH
-     * required to mint that "mint amount". Essentialy, we want to find the
+     * required to mint that "mint amount". Essentially, we want to find the
      * lower bound of the "mint range" of the "mint amount" right above
      * `minAmountOut`.
      *
@@ -114,7 +111,21 @@ library RenzoLibrary {
         // that maps to the "mint range" of the `minAmountOut`. (Technically,
         // the `minAmountOut` is unlikely to have its own "mint range" since it
         // probably won't be a "mint amount," but we can find the mint range of
-        // the "mint amount" below `minAmountOut".)
+        // the "mint amount" below `minAmountOut`".)
+        //
+        // To understand the reason for using `minAmountOut - 1`, consider the
+        // case where `minAmountOut` is a "mint amount". Continuing with the
+        // example from block 19387902, if `minAmountOut` is `226218`, the
+        // `inflationPercentage` below would be 0. It would then be incremented
+        // to 1 and then when deriving the the true `amountOut` from the
+        // incremented `inflationPercentage`, it would get `amountOut = 226219`.
+        // However, if `minAmountOut` is `226219`, the `inflationPercentage`
+        // below would be 1 and it would be incremented to 2. Then, true
+        // `amountOut` would then be `452438` which is unecessarily minting more
+        // when the initial "mint amount" was perfect. So we map "mint amount"s
+        // to "mint range"s below themselves by substracting 1. Underflow
+        // avoided by the check for `minAmountOut == 0` at the start of the
+        // function.
         uint256 ethAmount = _calculateDepositAmount(totalTVL, minAmountOut - 1);
         if (ethAmount == 0) return (0, 0);
         uint256 inflationPercentage = WAD * ethAmount / (totalTVL + ethAmount);

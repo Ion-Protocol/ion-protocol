@@ -12,8 +12,8 @@ uint256 constant SCALE_FACTOR = 1e18;
 
 contract RenzoLibrary_FuzzTest is Test {
     function setUp() public {
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 19_387_902);
-        // vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
+        // vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 19387902);
+        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
     }
 
     function testForkFuzz_GetEthAmountInForLstAmountOut(uint128 minLrtAmount) external {
