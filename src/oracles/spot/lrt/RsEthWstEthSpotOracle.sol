@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { SpotOracle } from "../../../oracles/spot/SpotOracle.sol";
+import { SpotOracle } from "../SpotOracle.sol";
 import { WadRayMath } from "../../../libraries/math/WadRayMath.sol";
 import {
     WSTETH_ADDRESS,
