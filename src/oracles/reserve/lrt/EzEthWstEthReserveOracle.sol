@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WadRayMath, WAD } from "../../../libraries/math/WadRayMath.sol";
+import { WadRayMath } from "../../../libraries/math/WadRayMath.sol";
 import { ReserveOracle } from "../ReserveOracle.sol";
 import { RENZO_RESTAKE_MANAGER, EZETH, WSTETH_ADDRESS } from "../../../Constants.sol";
 
