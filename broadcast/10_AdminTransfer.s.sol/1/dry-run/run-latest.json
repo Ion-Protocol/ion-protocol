@@ -1,0 +1,56 @@
+{
+  "transactions": [
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0x0000000000E33e35EE6052fae87bfcFac61b1da9",
+      "function": "beginDefaultAdminTransfer(address)",
+      "arguments": [
+        "0x0000000000417626Ef34D62C4DC189b021603f2F"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b4",
+        "to": "0x0000000000e33e35ee6052fae87bfcfac61b1da9",
+        "gas": "0x12cb7",
+        "value": "0x0",
+        "data": "0x634e93da0000000000000000000000000000000000417626ef34d62c4dc189b021603f2f",
+        "nonce": "0x25",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    },
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": "ProxyAdmin",
+      "contractAddress": "0x7FB5486dAE3FA417DAC3Be2bE49466C99d17EBd2",
+      "function": "transferOwnership(address)",
+      "arguments": [
+        "0x0000000000417626Ef34D62C4DC189b021603f2F"
+      ],
+      "transaction": {
+        "type": "0x02",
+        "from": "0x01bd9abd70d74d8ec70d338bd6099ca29da3f9b4",
+        "to": "0x7fb5486dae3fa417dac3be2be49466c99d17ebd2",
+        "gas": "0x10197",
+        "value": "0x0",
+        "data": "0xf2fde38b0000000000000000000000000000000000417626ef34d62c4dc189b021603f2f",
+        "nonce": "0x26",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [],
+  "returns": {},
+  "timestamp": 1709863299,
+  "chain": 1,
+  "multi": false,
+  "commit": "1c42b94"
+}

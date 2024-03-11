@@ -41,8 +41,8 @@ contract AdminTransferScript is DeployScript {
         // Can't begin and accept atomically in the same block
 
         ionPool.beginDefaultAdminTransfer(protocol);
-        yieldOracle.transferOwnership(protocol);
-        whitelist.transferOwnership(protocol);
+        // yieldOracle.transferOwnership(protocol);
+        // whitelist.transferOwnership(protocol);
         proxyAdmin.transferOwnership(protocol);
     }
 }

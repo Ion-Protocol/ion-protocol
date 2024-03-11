@@ -9,6 +9,8 @@ address constant CREATEX_PUBLIC_KEY = 0x01bd9aBD70D74D8eC70D338bD6099ca29DA3F9B4
 
 contract DeployIonPoolTest is DeployTestBase, DeployIonPoolScript {
     function checkState(IonPool ionPool) public {
+        _validateInterface(ionPool);
+
         assertGt(address(ionPool).code.length, 0, "code");
         assertEq(ionPool.owner(), initialDefaultAdmin, "owner");
         assertEq(ionPool.defaultAdmin(), initialDefaultAdmin, "initial default admin");
