@@ -11,13 +11,17 @@ import {
     RSETH_LRT_DEPOSIT_POOL,
     WSTETH_ADDRESS,
     RSETH,
-    ETHX_ADDRESS
+    ETHX_ADDRESS,
+    EZETH,
+    RENZO_ORACLE,
+    RENZO_RESTAKE_MANAGER
 } from "../../../../src/Constants.sol";
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 import { StdStorage, stdStorage } from "../../../../lib/forge-safe/lib/forge-std/src/StdStorage.sol";
 import { IERC20 } from "../../../../lib/forge-safe/lib/forge-std/src/interfaces/IERC20.sol";
 import { RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 import { WeEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
+import { EzEthWstEthReserveOracle } from "./../../../../src/oracles/reserve/lrt/EzEthWstEthReserveOracle.sol";
 import { ReserveFeed } from "../../../../src/oracles/reserve/ReserveFeed.sol";
 import { ReserveOracle } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 import { IWeEth, IEEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
@@ -117,6 +121,9 @@ abstract contract ReserveOracle_ForkTest is ReserveOracleSharedSetup {
      */
     function _convertToEth(uint256 amt) internal virtual returns (uint256);
 
+    /**
+     * @dev The expected protocol exchange rate in lender asset denomination
+     */
     function _getProtocolExchangeRate() internal virtual returns (uint256);
 }
 
@@ -164,6 +171,50 @@ contract RsEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
 
     function _getProtocolExchangeRate() internal view override returns (uint256) {
         return RSETH_LRT_ORACLE.rsETHPrice().wadMulDown(WSTETH_ADDRESS.tokensPerStEth());
+    }
+}
+
+contract EzEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
+    using WadRayMath for uint256;
+
+    bytes32 constant EZETH_TOTAL_SUPPLY_SLOT = 0x0000000000000000000000000000000000000000000000000000000000000035;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new EzEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE);
+    }
+
+    function _increaseExchangeRate() internal override returns (uint256 newPrice) {
+        uint256 prevExchangeRate = _getProtocolExchangeRate();
+        // effectively doubles the exchange rate by halving the total supply of ezETH
+        uint256 existingEzETHSupply = EZETH.totalSupply();
+        uint256 newTotalSupply = existingEzETHSupply / 2;
+        vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
+        uint256 newExchangeRate = _getProtocolExchangeRate();
+
+        require(newExchangeRate > prevExchangeRate, "exchange rate should increase");
+    }
+
+    function _decreaseExchangeRate() internal override returns (uint256 newPrice) {
+        uint256 prevExchangeRate = _getProtocolExchangeRate();
+        // effectively halves the exchange rate by doubling the total supply of ezETH
+        uint256 existingEzETHSupply = EZETH.totalSupply();
+        uint256 newTotalSupply = existingEzETHSupply * 2;
+        vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
+        uint256 newExchangeRate = _getProtocolExchangeRate();
+
+        require(newExchangeRate < prevExchangeRate, "exchange rate should decrease");
+    }
+
+    function _convertToEth(uint256 amt) internal view override returns (uint256) {
+        return WSTETH_ADDRESS.getStETHByWstETH(amt);
+    }
+
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
+        (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
+        uint256 totalSupply = EZETH.totalSupply();
+        uint256 exchangeRateInEth = totalTVL.wadDivDown(totalSupply);
+        return exchangeRateInEth.wadMulDown(WSTETH_ADDRESS.tokensPerStEth());
     }
 }
 

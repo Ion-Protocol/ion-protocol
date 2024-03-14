@@ -90,3 +90,10 @@ contract RsEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
         spotOracle = new RsEthWstEthSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE);
     }
 }
+
+// contract EzEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
+//     function setUp() public override {
+//         super.setUp();
+
+//     }
+// }
