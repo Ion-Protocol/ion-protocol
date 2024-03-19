@@ -117,9 +117,8 @@ abstract contract UniswapFlashswapDirectMintHandlerWithDust is IonHandlerBase, I
         internal
     {
         uint256 amountLrt = resultingAdditionalCollateral - initialDeposit; // in collateral terms
-        console2.log("amountLrt: ", amountLrt);
         uint256 amountWethToFlashloan = _getAmountInForCollateralAmountOut(amountLrt);
-        console2.log("amountWethToFlashloan: ", amountWethToFlashloan);
+
         if (amountWethToFlashloan == 0) {
             // AmountToBorrow.IS_MAX because we don't want to create any new debt here
             _depositAndBorrow(msg.sender, address(this), resultingAdditionalCollateral, 0, AmountToBorrow.IS_MAX);
@@ -134,7 +133,6 @@ abstract contract UniswapFlashswapDirectMintHandlerWithDust is IonHandlerBase, I
             recipient: address(this),
             data: abi.encode(msg.sender, resultingAdditionalCollateral, initialDeposit)
         });
-        console2.log("baseAssetSwappedIn: ", baseAssetSwappedIn);
 
         if (baseAssetSwappedIn > maxResultingDebt) {
             revert FlashloanRepaymentTooExpensive(amountWethToFlashloan, maxResultingDebt);

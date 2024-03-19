@@ -32,14 +32,13 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     }
 
     function testFork_ViewSpot() public {
-        uint256 ltv = spotOracle.LTV();
-
         uint256 price = spotOracle.getPrice();
-        uint256 currentExchangeRate = reserveOracle.currentExchangeRate();
+        uint256 exchangeRate = reserveOracle.currentExchangeRate();
+        uint256 value = price <= exchangeRate ? price : exchangeRate;
 
-        uint256 min = Math.min(price, currentExchangeRate);
+        uint256 ltv = spotOracle.LTV();
+        uint256 expectedSpot = ltv.wadMulDown(value);
 
-        uint256 expectedSpot = ltv.wadMulDown(min);
         uint256 spot = spotOracle.getSpot();
 
         assertEq(spot, expectedSpot, "spot");
