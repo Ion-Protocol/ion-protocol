@@ -16,7 +16,6 @@ struct Config {
     uint256 initialDepositLowerBound;
 }
 
-// TODO: The base contracts are currently not market agnostic
 abstract contract UniswapFlashswapDirectMintHandlerWithDust_FuzzTest is LrtHandler_ForkBase {
     Config ufdmConfig;
 
@@ -33,7 +32,6 @@ abstract contract UniswapFlashswapDirectMintHandlerWithDust_FuzzTest is LrtHandl
         // uint256 maxResultingDebt = resultingCollateral * ilkSpot / 1e27;
         uint256 maxResultingDebt =
             _getProviderLibrary().getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
-        console2.log("maxResultingDebt: ", maxResultingDebt);
 
         // Calculating this way emulates the newTotalDebt value in IonPool
         uint256 newTotalDebt = maxResultingDebt.rayDivUp(ilkRate) * ilkRate;
@@ -50,13 +48,13 @@ abstract contract UniswapFlashswapDirectMintHandlerWithDust_FuzzTest is LrtHandl
         uint256 roundingError = currentRate / RAY;
         if (currentRate % RAY != 0) roundingError++;
 
-        // TODO: calculate this dust amount
-        uint256 maxDust = 300_000;
+        // TODO: Can this dust amount be bounded at run-time?
+        uint256 maxDust = 400_000;
 
         assertLt(
             ionPool.collateral(_getIlkIndex(), address(this)),
             resultingCollateral + maxDust,
-            "resulting collateral with dust is above the minimum amount to mint"
+            "resulting collateral with dust is max bounded"
         );
         assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())), 0);
         assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError);

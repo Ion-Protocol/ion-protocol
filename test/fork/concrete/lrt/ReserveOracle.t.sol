@@ -184,24 +184,24 @@ contract EzEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
         reserveOracle = new EzEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE);
     }
 
-    function _increaseExchangeRate() internal override returns (uint256 newPrice) {
+    function _increaseExchangeRate() internal override returns (uint256 newExchangeRate) {
         uint256 prevExchangeRate = _getProtocolExchangeRate();
         // effectively doubles the exchange rate by halving the total supply of ezETH
         uint256 existingEzETHSupply = EZETH.totalSupply();
         uint256 newTotalSupply = existingEzETHSupply / 2;
         vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
-        uint256 newExchangeRate = _getProtocolExchangeRate();
+        newExchangeRate = _getProtocolExchangeRate();
 
         require(newExchangeRate > prevExchangeRate, "exchange rate should increase");
     }
 
-    function _decreaseExchangeRate() internal override returns (uint256 newPrice) {
+    function _decreaseExchangeRate() internal override returns (uint256 newExchangeRate) {
         uint256 prevExchangeRate = _getProtocolExchangeRate();
         // effectively halves the exchange rate by doubling the total supply of ezETH
         uint256 existingEzETHSupply = EZETH.totalSupply();
         uint256 newTotalSupply = existingEzETHSupply * 2;
         vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
-        uint256 newExchangeRate = _getProtocolExchangeRate();
+        newExchangeRate = _getProtocolExchangeRate();
 
         require(newExchangeRate < prevExchangeRate, "exchange rate should decrease");
     }

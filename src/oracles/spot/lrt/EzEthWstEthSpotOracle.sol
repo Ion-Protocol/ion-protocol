@@ -47,14 +47,13 @@ contract EzEthWstEthSpotOracle is SpotOracle {
         (, int256 ethPerEzEth,, uint256 ethPerEzEthUpdatedAt,) = REDSTONE_EZETH_ETH_PRICE_FEED.latestRoundData();
         // ETH / stETH [18 decimals]
         (, int256 ethPerStEth,, uint256 ethPerStEthUpdatedAt,) = ETH_PER_STETH_CHAINLINK.latestRoundData();
-
         if (
             block.timestamp - ethPerEzEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE
                 || block.timestamp - ethPerStEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE
         ) {
             return 0; // collateral valuation is zero if oracle data is stale
         } else {
-            // (ETH / ezETH) / (ETH / ezETH) = stETH / ezETH
+            // (ETH / ezETH) / (ETH / stETH) = stETH / ezETH
             uint256 stEthPerEzEth =
                 ethPerEzEth.toUint256().scaleUpToWad(REDSTONE_DECIMALS).wadDivDown(ethPerStEth.toUint256()); // [wad]
 

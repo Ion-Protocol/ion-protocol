@@ -177,6 +177,7 @@ interface IRenzoOracle {
         external
         pure
         returns (uint256);
+    function calculateTVLs() external view returns (uint256[][] memory, uint256[] memory, uint256);
 }
 
 interface IOperatorDelegator {
