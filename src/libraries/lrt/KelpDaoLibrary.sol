@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.21;
+pragma solidity ^0.8.21;
 
 import { IRsEth } from "../../interfaces/ProviderInterfaces.sol";
 import { RSETH_LRT_DEPOSIT_POOL, RSETH_LRT_ORACLE, ETH_ADDRESS } from "../../Constants.sol";
