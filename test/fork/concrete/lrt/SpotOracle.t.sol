@@ -6,12 +6,12 @@ import { ReserveOracle } from "../../../../src/oracles/reserve/ReserveOracle.sol
 import { SpotOracle } from "../../../../src/oracles/spot/SpotOracle.sol";
 import { RsEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RsEthWstEthReserveOracle.sol";
 import { RsEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/rsEthWstEthSpotOracle.sol";
-import { WeEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
-import { WeEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/weEthWstEthSpotOracle.sol";
 import { RswEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RswEthWstEthReserveOracle.sol";
 import { RswEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/rswEthWstEthSpotOracle.sol";
-import { EzEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/EzEthWstEthReserveOracle.sol";
-import { EzEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/ezEthWstEthSpotOracle.sol";
+import { WeEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
+import { WeEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/weEthWstEthSpotOracle.sol";
+import { EzEthWstEthReserveOracle } from "./../../../../src/oracles/reserve/lrt/EzEthWstEthReserveOracle.sol";
+import { EzEthWstEthSpotOracle } from "./../../../../src/oracles/spot/lrt/EzEthWstEthSpotOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
@@ -32,14 +32,13 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     }
 
     function testFork_ViewSpot() public {
-        uint256 ltv = spotOracle.LTV();
-
         uint256 price = spotOracle.getPrice();
-        uint256 currentExchangeRate = reserveOracle.currentExchangeRate();
+        uint256 exchangeRate = reserveOracle.currentExchangeRate();
+        uint256 value = price <= exchangeRate ? price : exchangeRate;
 
-        uint256 min = Math.min(price, currentExchangeRate);
+        uint256 ltv = spotOracle.LTV();
+        uint256 expectedSpot = ltv.wadMulDown(value);
 
-        uint256 expectedSpot = ltv.wadMulDown(min);
         uint256 spot = spotOracle.getSpot();
 
         assertEq(spot, expectedSpot, "spot");
