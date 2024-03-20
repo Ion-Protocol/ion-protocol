@@ -11,32 +11,34 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { console2 } from "forge-std/console2.sol";
+
 /**
  * @notice This contract is forked off of the UniswapFlashswapDirectMintHandler,
  * with one distinction that it handles potential dust collateral amounts that
- * can accrue when the contract ends up minting more collateral than originally intended.
- * This situation can occur when the user has a desired leverage amount and thus an exact
- * resulting collateral amount, but due to rounding errors in the minting contract, the handler
- * is forced to mint a dust amount more than the desired collateral amount.
- * In this contract, the dust is added to the total final deposit amount and ends up in the
- * user's vault as additional collateral.
+ * can accrue when the contract ends up minting more collateral than originally
+ * intended. This situation can occur when the user has a desired leverage
+ * amount and thus an exact resulting collateral amount, but due to rounding
+ * errors in the minting contract, the handler is forced to mint a dust amount
+ * more than the desired collateral amount. In this contract, the dust is added
+ * to the total final deposit amount and ends up in the user's vault as
+ * additional collateral.
  *
- * The key difference between this contract and `UniswapFlashswapDirectMintHandler1 is a
- * relaxed bound in comparing the sum of initiail user deposit and additionally minted collateral
- * to the caller's requested resulting additional collateral amount.
+ * The key difference between this contract and
+ * `UniswapFlashswapDirectMintHandler` is a relaxed bound in comparing the sum
+ * of initial user deposit and additionally minted collateral to the caller's
+ * requested resulting additional collateral amount.
  *
- * This contract allows for easy creation of leverge positions through a
- * Uniswap flashswap and direct mint of the collateral from the provider. This
- * will be used when the collateral cannot be minted directly with the base
- * asset but can be directly minted by a token that the base asset has a
- * UniswapV3 pool with.
+ * This contract allows for easy creation of leverge positions through a Uniswap
+ * flashswap and direct mint of the collateral from the provider. This will be
+ * used when the collateral cannot be minted directly with the base asset but
+ * can be directly minted by a token that the base asset has a UniswapV3 pool
+ * with.
  *
  * This contract is to be used when there exists a UniswapV3 pool between the
  * base asset and the mint asset.
  *
  * @custom:security-contact security@molecularlabs.io
  */
-
 abstract contract UniswapFlashswapDirectMintHandlerWithDust is IonHandlerBase, IUniswapV3SwapCallback {
     using SafeERC20 for IERC20;
     using SafeERC20 for IWETH9;
