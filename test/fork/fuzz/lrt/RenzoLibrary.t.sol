@@ -16,7 +16,19 @@ contract RenzoLibrary_FuzzTest is Test {
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
     }
 
-    function testForkFuzz_GetEthAmountInForLstAmountOut(uint128 minLrtAmount) external {
+    function test_GetEthAmountInForLstAmountOut() public {
+        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 19_472_376);
+        uint128 minLrtAmount = 184_626_086_978_191_358;
+        testForkFuzz_GetEthAmountInForLstAmountOut(minLrtAmount);
+    }
+
+    function test_GetLstAmountOutForEthAmountIn() public {
+        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 19_472_376);
+        uint128 ethAmount = 185_854_388_659_820_839;
+        testForkFuzz_GetLstAmountOutForEthAmountIn(ethAmount);
+    }
+
+    function testForkFuzz_GetEthAmountInForLstAmountOut(uint128 minLrtAmount) public {
         (uint256 ethAmount, uint256 actualLrtAmount) = RenzoLibrary.getEthAmountInForLstAmountOut(minLrtAmount);
         assertGe(actualLrtAmount, minLrtAmount, "actualLrtAmount");
 
@@ -29,7 +41,7 @@ contract RenzoLibrary_FuzzTest is Test {
         assertEq(EZETH.balanceOf(address(this)), actualLrtAmount, "ezETH balance");
     }
 
-    function testForkFuzz_GetLstAmountOutForEthAmountIn(uint128 ethAmount) external {
+    function testForkFuzz_GetLstAmountOutForEthAmountIn(uint128 ethAmount) public {
         uint256 mintAmount = _calculateMintAmount(ethAmount);
 
         // Prevent revert
