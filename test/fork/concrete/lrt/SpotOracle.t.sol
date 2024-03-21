@@ -8,6 +8,8 @@ import { RsEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/Rs
 import { RsEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/rsEthWstEthSpotOracle.sol";
 import { WeEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
 import { WeEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/weEthWstEthSpotOracle.sol";
+import { EzEthWstEthReserveOracle } from "./../../../../src/oracles/reserve/lrt/EzEthWstEthReserveOracle.sol";
+import { EzEthWstEthSpotOracle } from "./../../../../src/oracles/spot/lrt/EzEthWstEthSpotOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
@@ -27,9 +29,14 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
 
     function testFork_ViewSpot() public {
         uint256 price = spotOracle.getPrice();
+        uint256 exchangeRate = reserveOracle.currentExchangeRate();
+        uint256 value = price <= exchangeRate ? price : exchangeRate;
+
         uint256 ltv = spotOracle.LTV();
-        uint256 expectedSpot = ltv.wadMulDown(price);
+        uint256 expectedSpot = ltv.wadMulDown(value);
+
         uint256 spot = spotOracle.getSpot();
+
         assertEq(spot, expectedSpot, "spot");
     }
 
@@ -88,5 +95,16 @@ contract RsEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
         super.setUp();
         reserveOracle = new RsEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE);
         spotOracle = new RsEthWstEthSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE);
+    }
+}
+
+contract EzEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
+    uint256 constant MAX_TIME_FROM_LAST_UPDATE = 87_000;
+    uint256 constant MAX_LTV = 0.8e27;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new EzEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE);
+        spotOracle = new EzEthWstEthSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE);
     }
 }
