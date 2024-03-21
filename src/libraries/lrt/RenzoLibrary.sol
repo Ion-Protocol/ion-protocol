@@ -15,7 +15,7 @@ using WadRayMath for uint256;
  * @notice A helper library for Renzo-related conversions.
  *
  * @dev The behaviour in minting ezETH is quite strange, so for the sake of the
- * maintenence of this code, we document the behaviour at block 19387902.
+ * maintenance of this code, we document the behaviour at block 19387902.
  *
  * The following function is invoked to calculate the amount of ezETH to mint
  * given an `ethAmount` to deposit:
@@ -69,8 +69,8 @@ using WadRayMath for uint256;
  * user should pay `227528` wei instead of any other value between `227528` and
  * `455054` wei.
  *
- * We will call a mintable amount of ezETH a "mint amount" (recall that at block
- * 19387902, a user cannot mint between `226219` and `452438` ezETH). So
+ * We will call a mintable amount of ezETH a "mintable amount" (recall that at
+ * block 19387902, a user cannot mint between `226219` and `452438` ezETH). So
  * `226219` and `452438` are mint amounts.
  *
  * We will call the range of values that produce the same amount of ezETH a
@@ -87,10 +87,10 @@ library RenzoLibrary {
      * depositing that amount of ETH.
      *
      * @dev The goal here is to mint at least `minAmountOut` ezETH. So first, we
-     * must find the "mint amount" right above `minAmountOut`. This ensures that
+     * must find the "mintable amount" right above `minAmountOut`. This ensures that
      * we mint at least `minAmountOut`. Then we find the minimum amount of ETH
-     * required to mint that "mint amount". Essentially, we want to find the
-     * lower bound of the "mint range" of the "mint amount" right above
+     * required to mint that "mintable amount". Essentially, we want to find the
+     * lower bound of the "mint range" of the "mintable amount" right above
      * `minAmountOut`.
      *
      * @param minAmountOut Minimum amount of ezETH to mint
@@ -108,33 +108,36 @@ library RenzoLibrary {
         (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
         uint256 totalSupply = EZETH.totalSupply();
 
-        // Each `inflationPercentage` maps to a "mint amount" and, therefore, a
-        // "mint range". We need to first calculate the `inflationPercentage`
-        // that maps to the "mint range" of the `minAmountOut`. (Technically,
-        // the `minAmountOut` is unlikely to have its own "mint range" since it
-        // probably won't be a "mint amount," but we can find the mint range of
-        // the "mint amount" below `minAmountOut`".)
+        // Each `inflationPercentage` maps to a "mintable amount" and, therefore,
+        // there exists a "mint range" that maps to a single
+        // `inflationPercentage` and a single "mint amount".
+
+        // We need to first calculate the `inflationPercentage` that maps to the
+        // "mint range" of the `minAmountOut`.
+
+        // Technically, the specified `minAmountOut` is unlikely to be mintable
+        // given the rounding errors. But we can find the mint range of the
+        // "mint amount" below `minAmountOut
         //
         // To understand the reason for using `minAmountOut - 1`, consider the
         // case where `minAmountOut` is a "mint amount". Continuing with the
         // example from block 19387902, if `minAmountOut` is `226218`, the
         // `inflationPercentage` below would be 0. It would then be incremented
-        // to 1 and then when deriving the the true `amountOut` from the
-        // incremented `inflationPercentage`, it would get `amountOut = 226219`.
-        // However, if `minAmountOut` is `226219`, the `inflationPercentage`
-        // below would be 1 and it would be incremented to 2. Then, true
-        // `amountOut` would then be `452438` which is unecessarily minting more
-        // when the initial "mint amount" was perfect. So we map "mint amount"s
-        // to "mint range"s below themselves by substracting 1. Underflow
-        // avoided by the check for `minAmountOut == 0` at the start of the
-        // function.
+        // to 1 and then when deriving the true `amountOut` from the incremented
+        // `inflationPercentage`, it would get `amountOut = 226219`. However, if
+        // `minAmountOut` is `226219`, the `inflationPercentage` below would be
+        // 1 and it would be incremented to 2. Then, true `amountOut` would then
+        // be `452438` which is unnecessarily minting more when the initial
+        // "mintable amount" was perfect. So we map "mintable amount"s to "mint
+        // range"s below themselves by subtracting 1. Underflow avoided by the
+        // check for `minAmountOut == 0` at the start of the function.
         uint256 ethAmount = _calculateDepositAmount(totalTVL, minAmountOut - 1, totalSupply);
         if (ethAmount == 0) return (0, 0);
         uint256 inflationPercentage = WAD * ethAmount / (totalTVL + ethAmount);
 
-        // Once we have the `inflationPercentage` mapping to the "mint amount"
+        // Once we have the `inflationPercentage` mapping to the "mintable amount"
         // below `minAmountOut`, we increment it to find the
-        // `inflationPercentage` mapping to the "mint amount" above
+        // `inflationPercentage` mapping to the "mintable amount" above
         // `minAmountOut".
         ++inflationPercentage;
 
@@ -204,7 +207,7 @@ library RenzoLibrary {
      *
      * @dev This function does NOT account for the rounding errors in the ezETH.
      * It simply performs the minting calculation in reverse. To use this
-     * function properly, `amountOut` should be a "mint amount" (an amount of
+     * function properly, `amountOut` should be a "mintable amount" (an amount of
      * ezETH that is actually possible to mint).
      *
      * @param totalTVL Total TVL in the system.
