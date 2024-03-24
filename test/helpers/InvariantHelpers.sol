@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { IIonLens } from "../../src/interfaces/IIonLens.sol";
+import { IIonPool } from "../../src/interfaces/IIonPool.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 
@@ -10,8 +12,9 @@ library InvariantHelpers {
     /**
      * @return utilizationRate in RAD
      */
-    function getUtilizationRate(IonPool ionPool) internal view returns (uint256 utilizationRate) {
-        utilizationRate = ionPool.debt().radDivDown(ionPool.normalizedTotalSupply() * ionPool.supplyFactor());
+    function getUtilizationRate(IonPool ionPool, IIonLens lens) internal view returns (uint256 utilizationRate) {
+        IIonPool iIonPool = IIonPool(address(ionPool));
+        utilizationRate = lens.debt(iIonPool).radDivDown(ionPool.normalizedTotalSupply() * ionPool.supplyFactor());
     }
 
     /**
@@ -19,6 +22,7 @@ library InvariantHelpers {
      */
     function getIlkSpecificUtilizationRate(
         IonPool ionPool,
+        IIonLens lens,
         uint16[] memory distributionFactors,
         uint8 ilkIndex
     )
@@ -26,11 +30,12 @@ library InvariantHelpers {
         view
         returns (uint256 utilizationRate)
     {
+        IIonPool iIonPool = IIonPool(address(ionPool));
         utilizationRate =
         // Prevent division by 0
         ionPool.totalSupply() == 0
             ? 0
-            : (ionPool.totalNormalizedDebt(ilkIndex) * ionPool.rate(ilkIndex))
+            : (lens.totalNormalizedDebt(iIonPool, ilkIndex) * ionPool.rate(ilkIndex))
                 / (ionPool.totalSupply().wadMulDown(distributionFactors[ilkIndex].scaleUpToWad(4)));
     }
 }

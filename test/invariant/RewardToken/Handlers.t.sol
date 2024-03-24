@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { RewardModuleExposed } from "../../helpers/RewardModuleSharedSetup.sol";
+import { RewardTokenExposed } from "../../helpers/RewardTokenSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
@@ -11,10 +11,10 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
 
 abstract contract Handler is CommonBase, StdCheats, StdUtils {
-    RewardModuleExposed public immutable REWARD_MODULE;
+    RewardTokenExposed public immutable REWARD_MODULE;
     ERC20PresetMinterPauser public immutable UNDERLYING;
 
-    constructor(RewardModuleExposed _rewardModule, ERC20PresetMinterPauser _underlying) {
+    constructor(RewardTokenExposed _rewardModule, ERC20PresetMinterPauser _underlying) {
         REWARD_MODULE = _rewardModule;
         UNDERLYING = _underlying;
     }
@@ -24,10 +24,10 @@ contract UserHandler is Handler {
     using WadRayMath for uint256;
 
     constructor(
-        RewardModuleExposed _rewardModule,
+        RewardTokenExposed _rewardModule,
         ERC20PresetMinterPauser _underlying
     )
-        Handler(RewardModuleExposed(_rewardModule), _underlying)
+        Handler(RewardTokenExposed(_rewardModule), _underlying)
     { }
 
     function mint(address account, uint256 amount) external {
@@ -56,10 +56,10 @@ contract SupplyFactorIncreaseHandler is Handler {
     using WadRayMath for uint256;
 
     constructor(
-        RewardModuleExposed _REWARD_MODULE,
+        RewardTokenExposed _REWARD_MODULE,
         ERC20PresetMinterPauser _UNDERLYING
     )
-        Handler(RewardModuleExposed(_REWARD_MODULE), _UNDERLYING)
+        Handler(RewardTokenExposed(_REWARD_MODULE), _UNDERLYING)
     { }
 
     function increaseSupplyFactor(uint256 amount) external {

@@ -49,7 +49,7 @@ abstract contract WstEthHandler_ForkBase is LstHandler_ForkBase {
         IERC20(address(MAINNET_WSTETH)).approve(address(wstEthHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 
@@ -469,7 +469,7 @@ contract WstEthHandlerWhitelist_ForkTest is WstEthHandler_ForkTest, WstEthHandle
         borrowerRoots[0] = borrowerWhitelistRoot;
 
         // update current whitelist with a new borrower root
-        Whitelist _whitelist = Whitelist(ionPool.whitelist());
+        Whitelist _whitelist = Whitelist(lens.whitelist(iIonPool));
         _whitelist.updateBorrowersRoot(ilkIndex, borrowerWhitelistRoot);
         _whitelist.approveProtocolWhitelist(address(wstEthHandler));
 

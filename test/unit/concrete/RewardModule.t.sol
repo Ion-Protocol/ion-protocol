@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModule } from "../../../src/reward/RewardModule.sol";
+import { RewardToken } from "../../../src/token/RewardToken.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { RewardModuleSharedSetup } from "../../helpers/RewardModuleSharedSetup.sol";
+import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
 
-contract RewardModule_UnitTest is RewardModuleSharedSetup {
+contract RewardToken_UnitTest is RewardTokenSharedSetup {
     using WadRayMath for uint256;
 
     uint256 internal constant INITIAL_UNDERYLING = 1000e18;
@@ -30,7 +30,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         uint256 amountOfRewards = 100e18;
 
         underlying.approve(address(rewardModule), INITIAL_UNDERYLING);
-        vm.expectRevert(abi.encodeWithSelector(RewardModule.InvalidReceiver.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(RewardToken.InvalidReceiver.selector, address(0)));
         rewardModule.mint(address(0), amountOfRewards);
         rewardModule.mint(address(this), amountOfRewards);
 
@@ -41,7 +41,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
 
     function test_RevertWhen_MintingZeroTokens() external {
         underlying.approve(address(rewardModule), INITIAL_UNDERYLING);
-        vm.expectRevert(RewardModule.InvalidMintAmount.selector);
+        vm.expectRevert(RewardToken.InvalidMintAmount.selector);
         rewardModule.mint(address(this), 0);
     }
 
@@ -61,7 +61,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewards);
 
-        vm.expectRevert(abi.encodeWithSelector(RewardModule.InvalidSender.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(RewardToken.InvalidSender.selector, address(0)));
         rewardModule.burn(address(0), address(this), amountOfRewards);
         rewardModule.burn(address(this), address(this), amountOfRewards);
 
@@ -108,7 +108,7 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
         _depositInterestGains(interestCreated);
         rewardModule.setSupplyFactor(supplyFactorSecondNew);
 
-        vm.expectRevert(RewardModule.InvalidMintAmount.selector);
+        vm.expectRevert(RewardToken.InvalidMintAmount.selector);
         rewardModule.mint(address(this), 1 wei);
     }
 
@@ -149,14 +149,14 @@ contract RewardModule_UnitTest is RewardModuleSharedSetup {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                RewardModule.InsufficientBalance.selector,
+                RewardToken.InsufficientBalance.selector,
                 address(this),
                 totalDepositsNormalized,
                 (totalValue + totalValue).rayDivDown(supplyFactorNew)
             )
         );
         rewardModule.burn(address(this), address(this), totalValue + totalValue);
-        vm.expectRevert(abi.encodeWithSelector(RewardModule.InvalidSender.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(RewardToken.InvalidSender.selector, address(0)));
         rewardModule.burn(address(0), address(this), totalDepositsNormalized);
         // vm.expectRevert(Reward.InvalidBurnAmount.selector);
         // rewardModule.burn(address(this), address(this), 1 wei);

@@ -57,7 +57,7 @@ abstract contract EthXHandler_ForkBase is LstHandler_ForkBase {
         IERC20(address(MAINNET_ETHX)).approve(address(ethXHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 

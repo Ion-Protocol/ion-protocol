@@ -3,14 +3,18 @@ pragma solidity 0.8.21;
 
 import { WadRayMath, RAY } from "../libraries/math/WadRayMath.sol";
 
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IERC20Errors } from "./IERC20Errors.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import { AccessControlDefaultAdminRulesUpgradeable } from
     "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
- * @title RewardModule
+ * @title RewardToken
  * @notice The supply-side reward accounting portion of the protocol. A lender's
  * balance is measured in two parts: a static balance and a dynamic "supply
  * factor". Their true balance is the product of the two values. The dynamic
@@ -18,7 +22,12 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  *
  * @custom:security-contact security@molecularlabs.io
  */
-abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminRulesUpgradeable {
+abstract contract RewardToken is
+    ContextUpgradeable,
+    AccessControlDefaultAdminRulesUpgradeable,
+    IERC20Errors,
+    IERC20Metadata
+{
     using WadRayMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -48,6 +57,22 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     error InvalidReceiver(address receiver);
 
     /**
+     * @dev Cannot transfer the token to address `self`
+     */
+    error SelfTransfer(address self);
+
+    /**
+     * @dev Signature cannot be submitted after `deadline` has passed. Designed to
+     * mitigate replay attacks.
+     */
+    error ERC2612ExpiredSignature(uint256 deadline);
+
+    /**
+     * @dev `signer` does not match the `owner` of the tokens. `owner` did not approve.
+     */
+    error ERC2612InvalidSigner(address signer, address owner);
+
+    /**
      * @dev Indicates an error related to the current `balance` of a `sender`. Used in transfers.
      * @param account Address whose token balance is insufficient.
      * @param balance Current balance for the interacting account.
@@ -61,14 +86,14 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      *
      * Note that `value` may be zero.
      */
-    event Transfer(address indexed from, address indexed to, uint256 value);
+    // event Transfer(address indexed from, address indexed to, uint256 value);
 
     event MintToTreasury(address indexed treasury, uint256 amount, uint256 supplyFactor);
 
     event TreasuryUpdate(address treasury);
 
-    /// @custom:storage-location erc7201:ion.storage.RewardModule
-    struct RewardModuleStorage {
+    /// @custom:storage-location erc7201:ion.storage.RewardToken
+    struct RewardTokenStorage {
         IERC20 underlying;
         uint8 decimals;
         // A user's true balance at any point will be the value in this mapping times the supplyFactor
@@ -78,18 +103,26 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         uint256 normalizedTotalSupply; // [WAD]
         uint256 supplyFactor; // [RAY]
         mapping(address account => uint256) _normalizedBalances; // [WAD]
+        mapping(address account => mapping(address spender => uint256)) _allowances;
+        mapping(address account => uint256) nonces;
     }
 
     bytes32 public constant ION = keccak256("ION");
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.RewardModule")) - 1)) & ~bytes32(uint256(0xff))
     // solhint-disable-next-line
-    bytes32 private constant RewardModuleStorageLocation =
+    bytes32 private constant RewardTokenStorageLocation =
         0xdb3a0d63a7808d7d0422c40bb62354f42bff7602a547c329c1453dbcbeef4900;
 
-    function _getRewardModuleStorage() private pure returns (RewardModuleStorage storage $) {
+    bytes private constant EIP712_REVISION = bytes("1");
+    bytes32 private constant EIP712_DOMAIN =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+    function _getRewardTokenStorage() private pure returns (RewardTokenStorage storage $) {
         assembly {
-            $.slot := RewardModuleStorageLocation
+            $.slot := RewardTokenStorageLocation
         }
     }
 
@@ -106,7 +139,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         if (_underlying == address(0)) revert InvalidUnderlyingAddress();
         if (_treasury == address(0)) revert InvalidTreasuryAddress();
 
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         $.underlying = IERC20(_underlying);
         $.treasury = _treasury;
@@ -125,7 +158,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param amount to burn
      */
     function _burn(address user, address receiverOfUnderlying, uint256 amount) internal returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
         uint256 amountScaled = amount.rayDivUp(_supplyFactor);
@@ -146,7 +179,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param amount of normalized tokens to burn
      */
     function _burnNormalized(address account, uint256 amount) private {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         if (account == address(0)) revert InvalidSender(address(0));
 
@@ -167,7 +200,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param amount of reward tokens to mint
      */
     function _mint(address user, address senderOfUnderlying, uint256 amount) internal returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
         uint256 amountScaled = amount.rayDivDown(_supplyFactor); // [WAD] * [RAY] / [RAY] = [WAD]
@@ -189,7 +222,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     function _mintNormalized(address account, uint256 amount) private {
         if (account == address(0)) revert InvalidReceiver(address(0));
 
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         $.normalizedTotalSupply += amount;
 
@@ -203,7 +236,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     function _mintToTreasury(uint256 amount) internal {
         if (amount == 0) return;
 
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _supplyFactor = $.supplyFactor;
         address _treasury = $.treasury;
@@ -218,9 +251,210 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
         emit Transfer(address(0), _treasury, amount);
         emit MintToTreasury(_treasury, amount, _supplyFactor);
     }
+    /**
+     *
+     * @param spender to approve
+     * @param amount to approve
+     */
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        _approve(_msgSender(), spender, amount);
+        return true;
+    }
+
+    /**
+     * @dev Front-running more likely to maintain user intent
+     * @param spender to increase allowance of
+     * @param increaseAmount to increase by
+     */
+    function increaseAllowance(address spender, uint256 increaseAmount) external returns (bool) {
+        _approve(_msgSender(), spender, allowance(_msgSender(), spender) + increaseAmount);
+        return true;
+    }
+
+    /**
+     *
+     * @param spender to decrease allowance of
+     * @param decreaseAmount to decrease by
+     */
+    function decreaseAllowance(address spender, uint256 decreaseAmount) public virtual returns (bool) {
+        uint256 currentAllowance = allowance(_msgSender(), spender);
+
+        if (currentAllowance < decreaseAmount) {
+            revert ERC20InsufficientAllowance(spender, currentAllowance, decreaseAmount);
+        }
+
+        uint256 newAllowance;
+        // Underflow impossible
+        unchecked {
+            newAllowance = currentAllowance - decreaseAmount;
+        }
+
+        _approve(_msgSender(), spender, newAllowance);
+        return true;
+    }
+
+    /**
+     *
+     * @param owner of tokens
+     * @param spender of tokens
+     * @param amount to approve
+     */
+    function _approve(address owner, address spender, uint256 amount) internal {
+        if (owner == address(0)) revert ERC20InvalidApprover(address(0));
+        if (spender == address(0)) revert ERC20InvalidSpender(address(0));
+
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        $._allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+
+    /**
+     * @dev Spends allowance
+     */
+    function _spendAllowance(address owner, address spender, uint256 amount) private {
+        uint256 currentAllowance = allowance(owner, spender);
+        if (currentAllowance < amount) {
+            revert ERC20InsufficientAllowance(spender, currentAllowance, amount);
+        }
+        uint256 newAllowance;
+        // Underflow impossible
+        unchecked {
+            newAllowance = currentAllowance - amount;
+        }
+
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        $._allowances[owner][spender] = newAllowance;
+    }
+
+    /**
+     * @dev Can only be called by owner of the tokens
+     * @param to transfer to
+     * @param amount to transfer
+     */
+    function transfer(address to, uint256 amount) public returns (bool) {
+        _transfer(_msgSender(), to, amount);
+        emit Transfer(_msgSender(), to, amount);
+        return true;
+    }
+
+    /**
+     * @dev For use with `approve()`
+     * @param from to transfer from
+     * @param to to transfer to
+     * @param amount to transfer
+     */
+    function transferFrom(address from, address to, uint256 amount) public returns (bool) {
+        _spendAllowance(from, _msgSender(), amount);
+        _transfer(from, to, amount);
+
+        emit Transfer(from, to, amount);
+        return true;
+    }
+
+    function _transfer(address from, address to, uint256 amount) private {
+        if (from == address(0)) revert ERC20InvalidSender(address(0));
+        if (to == address(0)) revert ERC20InvalidReceiver(address(0));
+        if (from == to) revert SelfTransfer(from);
+
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        uint256 _supplyFactor = $.supplyFactor;
+        uint256 amountNormalized = amount.rayDivDown(_supplyFactor);
+
+        uint256 oldSenderBalance = $._normalizedBalances[from];
+        if (oldSenderBalance < amountNormalized) {
+            revert ERC20InsufficientBalance(from, oldSenderBalance, amountNormalized);
+        }
+        // Underflow impossible
+        unchecked {
+            $._normalizedBalances[from] = oldSenderBalance - amountNormalized;
+        }
+        $._normalizedBalances[to] += amountNormalized;
+
+        emit Transfer(from, to, amountNormalized);
+    }
+
+    /**
+     * @dev implements the permit function as for
+     * https://github.com/ethereum/EIPs/blob/8a34d644aacf0f9f8f00815307fd7dd5da07655f/EIPS/eip-2612.md
+     * @param owner The owner of the funds
+     * @param spender The spender
+     * @param value The amount
+     * @param deadline The deadline timestamp, type(uint256).max for max deadline
+     * @param v Signature param
+     * @param s Signature param
+     * @param r Signature param
+     */
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    )
+        public
+        virtual
+    {
+        if (block.timestamp > deadline) {
+            revert ERC2612ExpiredSignature(deadline);
+        }
+
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline));
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                EIP712_DOMAIN, keccak256(bytes(name())), keccak256(EIP712_REVISION), block.chainid, address(this)
+            )
+        );
+
+        bytes32 hash = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        address signer = ECDSA.recover(hash, v, r, s);
+        if (signer != owner) {
+            revert ERC2612InvalidSigner(signer, owner);
+        }
+
+        _approve(owner, spender, value);
+    }
+
+    /**
+     * @dev Returns current allowance
+     * @param owner of tokens
+     * @param spender of tokens
+     */
+    function allowance(address owner, address spender) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._allowances[owner][spender];
+    }
+
+    function nonces(address owner) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $.nonces[owner];
+    }
+
+    /**
+     * @dev Consumes a nonce.
+     *
+     * Returns the current value and increments nonce.
+     */
+    function _useNonce(address owner) internal virtual returns (uint256) {
+        // For each account, the nonce has an initial value of 0, can only be incremented by one, and cannot be
+        // decremented or reset. This guarantees that the nonce never overflows.
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+
+        unchecked {
+            // It is important to do x++ and not ++x here.
+            return $.nonces[owner]++;
+        }
+    }
 
     function _setSupplyFactor(uint256 newSupplyFactor) internal {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         $.supplyFactor = newSupplyFactor;
     }
 
@@ -231,7 +465,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     function updateTreasury(address newTreasury) external onlyRole(ION) {
         if (newTreasury == address(0)) revert InvalidTreasuryAddress();
 
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         $.treasury = newTreasury;
 
         emit TreasuryUpdate(newTreasury);
@@ -243,7 +477,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Address of underlying asset
      */
     function underlying() public view returns (IERC20) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.underlying;
     }
 
@@ -251,7 +485,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Decimals of the position asset
      */
     function decimals() public view returns (uint8) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.decimals;
     }
 
@@ -260,7 +494,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param user to get balance of
      */
     function balanceOf(address user) public view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
 
@@ -272,7 +506,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @param user to get normalized balance of
      */
     function normalizedBalanceOf(address user) external view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $._normalizedBalances[user];
     }
 
@@ -280,7 +514,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Name of the position asset
      */
     function name() public view returns (string memory) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.name;
     }
 
@@ -288,7 +522,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Symbol of the position asset
      */
     function symbol() public view returns (string memory) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.symbol;
     }
 
@@ -296,12 +530,12 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Current treasury address
      */
     function treasury() public view returns (address) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.treasury;
     }
 
     function totalSupplyUnaccrued() public view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
 
@@ -316,7 +550,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Current total supply
      */
     function totalSupply() public view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
 
@@ -330,7 +564,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     }
 
     function normalizedTotalSupplyUnaccrued() public view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.normalizedTotalSupply;
     }
 
@@ -338,7 +572,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Current normalized total supply
      */
     function normalizedTotalSupply() public view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();
 
@@ -349,7 +583,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
     }
 
     function supplyFactorUnaccrued() public view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.supplyFactor;
     }
 
@@ -357,7 +591,7 @@ abstract contract RewardModule is ContextUpgradeable, AccessControlDefaultAdminR
      * @dev Current supply factor
      */
     function supplyFactor() public view returns (uint256) {
-        RewardModuleStorage storage $ = _getRewardModuleStorage();
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
 

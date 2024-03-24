@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModule } from "../../../src/reward/RewardModule.sol";
+import { RewardToken } from "../../../src/token/RewardToken.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { RewardModuleSharedSetup } from "../../helpers/RewardModuleSharedSetup.sol";
+import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
 
-contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
+contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
     using WadRayMath for uint256;
 
     function testFuzz_MintRewardBasic(uint256 amountOfRewards) external {
@@ -17,7 +17,7 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         underlying.mint(address(this), amountOfRewards);
 
         underlying.approve(address(rewardModule), amountOfRewards);
-        vm.expectRevert(abi.encodeWithSelector(RewardModule.InvalidReceiver.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(RewardToken.InvalidReceiver.selector, address(0)));
         rewardModule.mint(address(0), amountOfRewards);
         rewardModule.mint(address(this), amountOfRewards);
 
@@ -40,7 +40,7 @@ contract RewardModule_FuzzUnitTest is RewardModuleSharedSetup {
         assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), 0);
 
-        vm.expectRevert(abi.encodeWithSelector(RewardModule.InvalidSender.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(RewardToken.InvalidSender.selector, address(0)));
         rewardModule.burn(address(0), address(this), amountOfRewards);
         rewardModule.burn(address(this), address(this), amountOfRewards);
 

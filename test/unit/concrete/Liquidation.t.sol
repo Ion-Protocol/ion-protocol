@@ -277,17 +277,17 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(healthRatio / 1e9, dArgs.targetHealth / 1e9, "resulting health ratio");
 
         // no remaining bad debt, collateral, or ERC20 in liquidations contract
-        assertEq(ionPool.unbackedDebt(address(liquidation)), 0, "no unbacked debt left in liquidation contract");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
+        assertEq(lens.unbackedDebt(iIonPool, address(liquidation)), 0, "no unbacked debt left in liquidation contract");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in liquidation contract");
 
         // nothing went to protocol contract
-        assertEq(ionPool.unbackedDebt(protocol), 0, "no unbacked debt in protocol");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
+        assertEq(lens.unbackedDebt(iIonPool, protocol), 0, "no unbacked debt in protocol");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
     }
 
@@ -353,17 +353,17 @@ contract LiquidationTest is LiquidationSharedSetup {
             // precision
 
         // no remaining bad debt, collateral, or ERC20 in liquidations contract
-        assertEq(ionPool.unbackedDebt(address(liquidation)), 0, "no unbacked debt left in liquidation contract");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
+        assertEq(lens.unbackedDebt(iIonPool, address(liquidation)), 0, "no unbacked debt left in liquidation contract");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in liquidation contract");
 
         // nothing went to protocol contract
-        assertEq(ionPool.unbackedDebt(protocol), 0, "no unbacked debt in protocol");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
+        assertEq(lens.unbackedDebt(iIonPool, protocol), 0, "no unbacked debt in protocol");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
     }
 
@@ -431,17 +431,17 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(healthRatio / 1e9, dArgs.targetHealth / 1e9, "resulting health ratio");
 
         // no remaining bad debt, collateral, or ERC20 in liquidations contract
-        assertEq(ionPool.unbackedDebt(address(liquidation)), 0, "no unbacked debt left in liquidation contract");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
+        assertEq(lens.unbackedDebt(iIonPool, address(liquidation)), 0, "no unbacked debt left in liquidation contract");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in liquidation contract");
 
         // nothing went to protocol contract
-        assertEq(ionPool.unbackedDebt(protocol), 0, "no unbacked debt in protocol");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
+        assertEq(lens.unbackedDebt(iIonPool, protocol), 0, "no unbacked debt in protocol");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
     }
 
@@ -503,12 +503,12 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertEq(actualResultingNormalizedDebt, 0, "resulting normalized debt");
 
         // protocol takes on position
-        assertEq(ionPool.unbackedDebt(protocol), sArgs.normalizedDebt * sArgs.rate, "protocol unbacked debt");
-        assertEq(ionPool.gem(ILK_INDEX, protocol), sArgs.collateral, "protocol gem");
+        assertEq(lens.unbackedDebt(iIonPool, protocol), sArgs.normalizedDebt * sArgs.rate, "protocol unbacked debt");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, protocol), sArgs.collateral, "protocol gem");
 
         // keeper is untouched
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying, "keeper underlying balance");
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), 0, "keeper gem");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, keeper1), 0, "keeper gem");
     }
 
     /**
@@ -572,17 +572,17 @@ contract LiquidationTest is LiquidationSharedSetup {
         assertTrue(actualResultingCollateral >= results.collateral, "resulting collateral can be non-zero");
 
         // no remaining bad debt, collateral, or ERC20 in liquidations contract
-        assertEq(ionPool.unbackedDebt(address(liquidation)), 0, "no unbacked debt left in liquidation contract");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
+        assertEq(lens.unbackedDebt(iIonPool, address(liquidation)), 0, "no unbacked debt left in liquidation contract");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem left in liquidation contract");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in liquidation contract");
 
         // nothing went to protocol contract
-        assertEq(ionPool.unbackedDebt(protocol), 0, "no unbacked debt in protocol");
-        assertEq(ionPool.gem(ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
+        assertEq(lens.unbackedDebt(iIonPool, protocol), 0, "no unbacked debt in protocol");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, address(liquidation)), 0, "no gem in protocol");
         assertEq(ionPool.underlying().balanceOf(address(liquidation)), 0, "no weth left in protocol");
 
         // keeper gets the collaterals sold
-        assertEq(ionPool.gem(ILK_INDEX, keeper1), results.gemOut, "keeper gem");
+        assertEq(lens.gem(iIonPool, ILK_INDEX, keeper1), results.gemOut, "keeper gem");
         assertEq(ionPool.underlying().balanceOf(keeper1), keeperInitialUnderlying - expectedWethPaid, "keeper weth");
     }
 }

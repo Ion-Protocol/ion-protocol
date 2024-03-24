@@ -17,6 +17,7 @@ import {
     UniswapFlashswapHandler_FuzzTest,
     UniswapFlashswapHandler_WithRateChange_FuzzTest
 } from "../handlers-base/UniswapFlashswapHandler.t.sol";
+import { ISpotOracle } from "../../../../src/interfaces/ISpotOracle.sol";
 
 using LidoLibrary for IWstEth;
 
@@ -41,7 +42,7 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
         uint256 wstEthDepositAmount = MAINNET_WSTETH.getWstETHByStETH(stEthDepositAmount);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
-        uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
+        uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, ilkIndex)).getSpot();
         uint256 newTotalDebt = borrowAmount.rayDivDown(ilkRate) * ilkRate; // AmountToBorrow.IS_MAX for depositAndBorrow
 
         bool unsafePositionChange = newTotalDebt > wstEthDepositAmount * ilkSpot;
@@ -80,7 +81,7 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
             MAINNET_WSTETH.getEthAmountInForLstAmountOut(expectedResultingWstEthDeposit - expectedInitialWstEthDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
-        uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
+        uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, ilkIndex)).getSpot();
         // Calculating this way emulates the newTotalDebt value in IonPool
         uint256 newTotalDebt = resultingDebt.rayDivUp(ilkRate) * ilkRate;
 
@@ -123,7 +124,7 @@ contract WstEthHandler_ZapForkFuzzTest is WstEthHandler_ForkBase {
             MAINNET_WSTETH.getEthAmountInForLstAmountOut(expectedResultingWstEthDeposit - expectedInitialWstEthDeposit);
 
         uint256 ilkRate = ionPool.rate(ilkIndex);
-        uint256 ilkSpot = ionPool.spot(ilkIndex).getSpot();
+        uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, ilkIndex)).getSpot();
         uint256 newTotalDebt = resultingDebt.rayDivUp(ilkRate) * ilkRate;
 
         bool unsafePositionChange = newTotalDebt > expectedResultingWstEthDeposit * ilkSpot;
