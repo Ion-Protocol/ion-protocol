@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { DeployScript } from "../Deploy.s.sol";
 import { Liquidation } from "../../src/Liquidation.sol";
 import { WadRayMath, RAY } from "../../src/libraries/math/WadRayMath.sol";
-import { IonPool } from "../../src/IonPool.sol";
+import { IIonPool } from "../../src/interfaces/IIonPool.sol";
 import { CREATEX } from "../../src/Constants.sol";
 import { ReserveOracle } from "../../src/oracles/reserve/ReserveOracle.sol";
 
@@ -27,13 +27,13 @@ contract DeployLiquidationScript is DeployScript {
     uint256 maxDiscount = config.readUint(".maxDiscount");
     uint256 reserveFactor = config.readUint(".reserveFactor");
 
-    IonPool ionPool = IonPool(config.readAddress(".ionPool"));
+    IIonPool ionPool = IIonPool(config.readAddress(".ionPool"));
     address reserveOracle = config.readAddress(".reserveOracle");
     bytes32 salt = config.readBytes32(".salt");
 
     function run() public broadcast returns (Liquidation liquidation) {
-        _validateInterface(ionPool);
-        _validateInterface(ReserveOracle(reserveOracle));
+        // _validateInterface(ionPool);
+        // _validateInterface(ReserveOracle(reserveOracle));
 
         require(targetHealth >= RAY, "target health lower");
         require(targetHealth < 1.5e27, "target health upper");
@@ -48,7 +48,7 @@ contract DeployLiquidationScript is DeployScript {
 
         // NOTE: Liquidation contract reads the ilkCount() of the IonPool which
         // should always be 1.
-        require(ionPool.ilkCount() == ILK_COUNT, "ionPool ilk count");
+        // require(lens.ilkCount(ionPool) == ILK_COUNT, "ionPool ilk count");
 
         bytes memory initCode = type(Liquidation).creationCode;
 

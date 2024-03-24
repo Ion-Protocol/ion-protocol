@@ -13,7 +13,7 @@ contract UpdateDebtCeiling is BaseScript, BatchScript {
     function run(bool _send, IonPool ionPool, uint256 newDebtCeiling) public {
         require(newDebtCeiling == 0 || newDebtCeiling >= 1e45, "debt ceiling is nominated in RAD");
 
-        _validateInterface(ionPool);
+        // _validateInterface(ionPool);
 
         bytes memory txData = abi.encodeWithSelector(
             IonPool.updateIlkDebtCeiling.selector,

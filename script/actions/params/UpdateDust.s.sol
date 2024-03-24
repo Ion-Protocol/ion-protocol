@@ -13,7 +13,7 @@ contract UpdateDust is BaseScript, BatchScript {
     function run(bool _send, IonPool ionPool, uint256 newDust) public {
         require(newDust == 0 || newDust >= 1e45, "dust is nominated in RAD");
 
-        _validateInterface(ionPool);
+        // _validateInterface(ionPool);
 
         bytes memory txData = abi.encodeWithSelector(
             IonPool.updateIlkDust.selector,

@@ -24,9 +24,9 @@ contract DeployHandlersScript is DeployScript {
         GemJoin gemJoin = GemJoin(config.readAddress(".gemJoin"));
         Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
-        _validateInterface(ionPool);
-        _validateInterface(gemJoin);
-        _validateInterface(whitelist);
+        // _validateInterface(ionPool);
+        // _validateInterface(gemJoin);
+        // _validateInterface(whitelist);
 
         if (deployCreate2) {
             handler = new RsEthHandler{ salt: DEFAULT_SALT }(

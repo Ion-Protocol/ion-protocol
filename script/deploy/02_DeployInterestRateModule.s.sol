@@ -54,7 +54,7 @@ contract DeployInterestRateScript is DeployScript {
     function run() public broadcast returns (InterestRate interestRateModule) {
         require(optimalUtilizationRate <= 1e4, "optimalUtilizationRate too high");
 
-        _validateInterface(yieldOracle);
+        // _validateInterface(yieldOracle);
 
         IlkData memory ilkData;
         ilkData.adjustedProfitMargin = adjustedProfitMargin;

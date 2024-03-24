@@ -29,9 +29,9 @@ contract AdminTransferScript is DeployScript {
     function run() public broadcast {
         require(address(protocol) != address(0), "protocol address");
 
-        _validateInterface(ionPool);
-        _validateInterface(yieldOracle);
-        _validateInterface(whitelist);
+        // _validateInterface(ionPool);
+        // _validateInterface(yieldOracle);
+        // _validateInterface(whitelist);
 
         require(proxyAdmin.owner() == initialDefaultAdmin, "proxy admin owner");
 

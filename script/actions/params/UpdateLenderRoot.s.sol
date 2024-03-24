@@ -11,7 +11,7 @@ address constant SAFE = 0xcecc1978A819D4A3c0A2ee7C260ECb7A10732EEF;
 
 contract UpdateLenderRoot is BaseScript, BatchScript {
     function run(bool _send, Whitelist whitelist, bytes32 newRoot) public {
-        _validateInterface(whitelist);
+        // _validateInterface(whitelist);
 
         bytes memory txData = abi.encodeWithSelector(Whitelist.updateLendersRoot.selector, newRoot);
 

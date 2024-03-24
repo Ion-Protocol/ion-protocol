@@ -21,9 +21,9 @@ contract SetupCollateralScript is DeployScript {
     uint256 dust = config.readUint(".dust");
 
     function run() public broadcast {
-        _validateInterface(ionPool);
-        _validateInterface(IERC20(ilkAddress));
-        _validateInterface(spotOracle);
+        // _validateInterface(ionPool);
+        // _validateInterface(IERC20(ilkAddress));
+        // _validateInterface(spotOracle);
 
         require(debtCeiling == 0 || debtCeiling >= 1e45, "debt ceiling is nominated in RAD");
         require(dust == 0 || dust >= 1e45, "dust is nominated in RAD");

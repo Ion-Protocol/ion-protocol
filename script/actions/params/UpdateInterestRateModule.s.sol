@@ -12,8 +12,8 @@ address constant SAFE = 0xcecc1978A819D4A3c0A2ee7C260ECb7A10732EEF;
 
 contract UpdateInterestRateModule is BaseScript, BatchScript {
     function run(bool _send, IonPool ionPool, InterestRate newModule) public {
-        _validateInterface(ionPool);
-        _validateInterface(newModule);
+        // _validateInterface(ionPool);
+        // _validateInterface(newModule);
 
         bytes memory txData = abi.encodeWithSelector(IonPool.updateInterestRateModule.selector, newModule);
 

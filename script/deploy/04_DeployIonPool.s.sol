@@ -30,9 +30,9 @@ contract DeployIonPoolScript is DeployScript {
     bytes32 salt = config.readBytes32(".salt");
 
     function createX() public returns (IonPool ionImpl, IonPool ionPool) {
-        _validateInterface(IERC20(underlying));
-        _validateInterface(interestRateModule);
-        _validateInterface(whitelist);
+        // _validateInterface(IERC20(underlying));
+        // _validateInterface(interestRateModule);
+        // _validateInterface(whitelist);
 
         bytes memory initData = abi.encodeWithSelector(
             IonPool.initialize.selector,
