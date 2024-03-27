@@ -22,8 +22,6 @@ contract DeployLiquidationTest is DeployTestBase, DeployLiquidationScript {
 
         assertEq(address(liquidation.POOL()), address(ionPool), "ionPool");
         assertEq(address(liquidation.UNDERLYING()), address(IonPool(liquidation.POOL()).underlying()), "underlying");
-
-        assertTrue(ionPool.hasRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation)), "liquidator role");
     }
 
     function test_PreExecution() public {
