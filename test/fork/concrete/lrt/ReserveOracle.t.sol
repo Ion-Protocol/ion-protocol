@@ -20,13 +20,11 @@ import { StdStorage, stdStorage } from "../../../../lib/forge-safe/lib/forge-std
 import { IERC20 } from "../../../../lib/forge-safe/lib/forge-std/src/interfaces/IERC20.sol";
 import { RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 import { WeEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
-import { ReserveFeed } from "../../../../src/oracles/reserve/ReserveFeed.sol";
 import { ReserveOracle } from "../../../../src/oracles/reserve/ReserveOracle.sol";
-import { IWeEth, IEEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 
-import { ETHER_FI_LIQUIDITY_POOL_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "../../../../src/Constants.sol";
+import { ETHER_FI_LIQUIDITY_POOL_ADDRESS, WEETH_ADDRESS } from "../../../../src/Constants.sol";
 
 uint256 constant LTV = 0.9e27;
 uint256 constant MAX_CHANGE = 0.03e27;

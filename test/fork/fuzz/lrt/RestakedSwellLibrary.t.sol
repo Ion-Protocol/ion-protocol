@@ -5,8 +5,6 @@ import { RestakedSwellLibrary } from "../../../../src/libraries/lrt/RestakedSwel
 import { IRswEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
 import { RSWETH } from "../../../../src/Constants.sol";
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import { Test } from "forge-std/Test.sol";
 
 contract RestakedSwellLibraryTest is Test {

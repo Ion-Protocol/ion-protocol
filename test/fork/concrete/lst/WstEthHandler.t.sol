@@ -13,7 +13,6 @@ import { UniswapFlashswapHandler_Test } from "../handlers-base/UniswapFlashswapH
 import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 using WadRayMath for uint256;
@@ -88,8 +87,6 @@ contract WstEthHandler_ForkTest is
 {
     function setUp() public virtual override(WstEthHandler_ForkBase, LstHandler_ForkBase) {
         super.setUp();
-
-        uint256 exchangeRate = MAINNET_WSTETH.getStETHByWstETH(1 ether);
     }
 }
 
