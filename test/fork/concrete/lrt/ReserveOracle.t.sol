@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 
 import { ReserveOracle } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 import { RsEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RsEthWstEthReserveOracle.sol";
+import { RswEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RswEthWstEthReserveOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UPDATE_COOLDOWN } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 import {
@@ -11,7 +12,8 @@ import {
     RSETH_LRT_DEPOSIT_POOL,
     WSTETH_ADDRESS,
     RSETH,
-    ETHX_ADDRESS
+    ETHX_ADDRESS,
+    RSWETH
 } from "../../../../src/Constants.sol";
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 import { StdStorage, stdStorage } from "../../../../lib/forge-safe/lib/forge-std/src/StdStorage.sol";
@@ -167,7 +169,7 @@ contract RsEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
     }
 }
 
-contract WeEthWstEthReserveOracleForkTest is ReserveOracle_ForkTest {
+contract WeEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
     function setUp() public override {
         // blockNumber = 19_079_925;
         super.setUp();
@@ -293,5 +295,42 @@ contract WeEthWstEthReserveOracleForkTest is ReserveOracle_ForkTest {
 
     function _getProtocolExchangeRate() internal view override returns (uint256) {
         return WEETH_ADDRESS.getRate().wadMulDown(WSTETH_ADDRESS.tokensPerStEth());
+    }
+}
+
+contract RswEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
+    bytes32 constant RSWETH_RATE_FIXED_SLOT = 0x0000000000000000000000000000000000000000000000000000000000000095;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new RswEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE);
+    }
+
+    // --- Slashing Scenario ---
+    function _increaseExchangeRate() internal override returns (uint256 newPrice) {
+        uint256 prevPrice = RSWETH.getRate();
+
+        vm.store(address(RSWETH), RSWETH_RATE_FIXED_SLOT, bytes32(prevPrice * 2));
+
+        newPrice = RSWETH.getRate();
+        require(newPrice > prevPrice, "price should increase");
+    }
+
+    function _decreaseExchangeRate() internal override returns (uint256 newPrice) {
+        uint256 prevPrice = RSWETH.getRate();
+
+        vm.store(address(RSWETH), RSWETH_RATE_FIXED_SLOT, bytes32(prevPrice / 2));
+
+        newPrice = RSWETH.getRate();
+        require(newPrice < prevPrice, "price should decrease");
+    }
+
+    function _convertToEth(uint256 amt) internal view override returns (uint256) {
+        // wstETH * ETH / wstETH
+        return WSTETH_ADDRESS.getStETHByWstETH(amt);
+    }
+
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
+        return RSWETH.getRate().wadMulDown(WSTETH_ADDRESS.tokensPerStEth());
     }
 }

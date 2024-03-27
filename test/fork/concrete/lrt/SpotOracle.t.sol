@@ -8,6 +8,8 @@ import { RsEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/Rs
 import { RsEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/rsEthWstEthSpotOracle.sol";
 import { WeEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
 import { WeEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/weEthWstEthSpotOracle.sol";
+import { RswEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RswEthWstEthReserveOracle.sol";
+import { RswEthWstEthSpotOracle } from "../../../../src/oracles/spot/lrt/rswEthWstEthSpotOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
@@ -88,5 +90,16 @@ contract RsEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
         super.setUp();
         reserveOracle = new RsEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE);
         spotOracle = new RsEthWstEthSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE);
+    }
+}
+
+contract RswEthWstEthSpotOracle_ForkTest is SpotOracle_ForkTest {
+    uint256 constant MAX_TIME_FROM_LAST_UPDATE = 87_000;
+    uint256 constant MAX_LTV = 0.8e27;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new RswEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE);
+        spotOracle = new RswEthWstEthSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE);
     }
 }
