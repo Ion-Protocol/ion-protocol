@@ -53,4 +53,20 @@ contract RswEthHandler is UniswapFlashswapDirectMintHandler {
     function _getAmountInForCollateralAmountOut(uint256 amountOut) internal view override returns (uint256) {
         return RSWETH.getEthAmountInForLstAmountOut(amountOut);
     }
+
+    /**
+     * @notice Returns the amount of ETH needed to mint the given amount of rswETH.
+     * @param lstAmount Desired output amount. [WAD]
+     */
+    function getEthAmountInForLstAmountOut(uint256 lstAmount) external view returns (uint256) {
+        return RSWETH.getEthAmountInForLstAmountOut(lstAmount);
+    }
+
+    /**
+     * @notice Returns the amount of ETH needed to mint the given amount of rswETH.
+     * @param ethAmount Amount of ETH to deposit. [WAD]
+     */
+    function getLstAmountOutForEthAmountIn(uint256 ethAmount) external view returns (uint256) {
+        return RSWETH.getLstAmountOutForEthAmountIn(ethAmount);
+    }
 }
