@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IRswEth } from "../../../interfaces/ProviderInterfaces.sol";
 import { ReserveOracle } from "../ReserveOracle.sol";
 import { WSTETH_ADDRESS, RSWETH } from "../../../Constants.sol";
 import { WadRayMath } from "../../../libraries/math/WadRayMath.sol";
