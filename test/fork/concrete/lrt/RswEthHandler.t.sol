@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IRsEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
-import { KelpDaoLibrary } from "../../../../src/libraries/lrt/KelpDaoLibrary.sol";
-import { RsEthHandler } from "../../../../src/flash/lrt/RsEthHandler.sol";
+import { IRswEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
+import { RestakedSwellLibrary } from "../../../../src/libraries/lrt/RestakedSwellLibrary.sol";
+import { RswEthHandler } from "../../../../src/flash/lrt/RswEthHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
-import { RSETH, RSETH_LRT_DEPOSIT_POOL } from "../../../../src/Constants.sol";
+import { RSWETH } from "../../../../src/Constants.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
@@ -13,44 +13,44 @@ import { UniswapFlashswapDirectMintHandler_Test } from "../handlers-base/Uniswap
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-using KelpDaoLibrary for IRsEth;
+using RestakedSwellLibrary for IRswEth;
 
-contract KelpDaoLibraryExposed is IProviderLibraryExposed {
-    IRsEth rsEth;
+contract RestakedSwellLibraryExposed is IProviderLibraryExposed {
+    IRswEth rswEth;
 
-    constructor(IRsEth rsEth_) {
-        rsEth = rsEth_;
+    constructor(IRswEth rswEth_) {
+        rswEth = rswEth_;
     }
 
     function getEthAmountInForLstAmountOut(uint256 lstAmount) external view returns (uint256) {
-        return rsEth.getEthAmountInForLstAmountOut(lstAmount);
+        return rswEth.getEthAmountInForLstAmountOut(lstAmount);
     }
 
     function getLstAmountOutForEthAmountIn(uint256 ethAmount) external view returns (uint256) {
-        return rsEth.getLstAmountOutForEthAmountIn(ethAmount);
+        return rswEth.getLstAmountOutForEthAmountIn(ethAmount);
     }
 }
 
-abstract contract RsEthHandler_ForkBase is LrtHandler_ForkBase {
+abstract contract RswEthHandler_ForkBase is LrtHandler_ForkBase {
     uint8 internal constant ilkIndex = 0;
-    RsEthHandler rsEthHandler;
+    RswEthHandler rswEthHandler;
     IProviderLibraryExposed providerLibrary;
 
     function setUp() public virtual override {
         super.setUp();
-        rsEthHandler = new RsEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
+        rswEthHandler = new RswEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
 
-        RSETH.approve(address(rsEthHandler), type(uint256).max);
+        RSWETH.approve(address(rswEthHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 
-        providerLibrary = new KelpDaoLibraryExposed(RSETH);
+        providerLibrary = new RestakedSwellLibraryExposed(RSWETH);
 
         vm.deal(address(this), INITIAL_BORROWER_COLLATERAL_BALANCE);
-        RSETH.depositForLrt(INITIAL_BORROWER_COLLATERAL_BALANCE);
+        RSWETH.depositForLrt(INITIAL_BORROWER_COLLATERAL_BALANCE);
     }
 
     function _getIlkIndex() internal pure override returns (uint8) {
@@ -62,27 +62,27 @@ abstract contract RsEthHandler_ForkBase is LrtHandler_ForkBase {
     }
 
     function _getHandler() internal view override returns (address) {
-        return address(rsEthHandler);
+        return address(rswEthHandler);
     }
 }
 
-contract RsEthHandler_ForkTest is RsEthHandler_ForkBase, UniswapFlashswapDirectMintHandler_Test {
-    function setUp() public virtual override(RsEthHandler_ForkBase, LrtHandler_ForkBase) {
+contract RswEthHandler_ForkTest is RswEthHandler_ForkBase, UniswapFlashswapDirectMintHandler_Test {
+    function setUp() public virtual override(RswEthHandler_ForkBase, LrtHandler_ForkBase) {
         super.setUp();
     }
 
     function _getCollaterals() internal pure override returns (IERC20[] memory _collaterals) {
         _collaterals = new IERC20[](1);
-        _collaterals[0] = RSETH;
+        _collaterals[0] = RSWETH;
     }
 
     function _getDepositContracts() internal pure override returns (address[] memory depositContracts) {
         depositContracts = new address[](1);
-        depositContracts[0] = address(RSETH_LRT_DEPOSIT_POOL);
+        depositContracts[0] = address(RSWETH);
     }
 }
 
-contract RsEthHandlerWhitelist_ForkTest is RsEthHandler_ForkTest {
+contract RswEthHandlerWhitelist_ForkTest is RswEthHandler_ForkTest {
     // generate merkle root
     // ["0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496"],
     // ["0x2222222222222222222222222222222222222222"],
@@ -105,7 +105,7 @@ contract RsEthHandlerWhitelist_ForkTest is RsEthHandler_ForkTest {
 
         _whitelist = new Whitelist(borrowerRoots, bytes32(0));
         _whitelist.updateBorrowersRoot(ilkIndex, borrowerWhitelistRoot);
-        _whitelist.approveProtocolWhitelist(address(rsEthHandler));
+        _whitelist.approveProtocolWhitelist(address(rswEthHandler));
 
         ionPool.updateWhitelist(_whitelist);
 
@@ -113,7 +113,7 @@ contract RsEthHandlerWhitelist_ForkTest is RsEthHandler_ForkTest {
     }
 }
 
-contract RsEthHandler_WithRateChange_ForkTest is RsEthHandler_ForkTest {
+contract RswEthHandler_WithRateChange_ForkTest is RswEthHandler_ForkTest {
     function setUp() public virtual override {
         super.setUp();
 

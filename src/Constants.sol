@@ -11,6 +11,7 @@ import {
     IEEth,
     IWeEth,
     IRsEth,
+    IRswEth,
     ILRTOracle,
     ILRTConfig,
     IEtherFiLiquidityPool,
@@ -54,6 +55,11 @@ IRsEth constant RSETH = IRsEth(0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7);
 ILRTOracle constant RSETH_LRT_ORACLE = ILRTOracle(0x349A73444b1a310BAe67ef67973022020d70020d);
 ILRTConfig constant RSETH_LRT_CONFIG = ILRTConfig(0x947Cb49334e6571ccBFEF1f1f1178d8469D65ec7);
 ILRTDepositPool constant RSETH_LRT_DEPOSIT_POOL = ILRTDepositPool(0x036676389e48133B63a802f8635AD39E752D375D);
+
+// rswETH
+IRedstonePriceFeed constant REDSTONE_RSWETH_ETH_PRICE_FEED =
+    IRedstonePriceFeed(0x3A236F67Fce401D87D7215695235e201966576E4);
+IRswEth constant RSWETH = IRswEth(0xFAe103DC9cf190eD75350761e95403b7b8aFa6c0);
 
 // ezETH
 IRedstonePriceFeed constant REDSTONE_EZETH_ETH_PRICE_FEED =

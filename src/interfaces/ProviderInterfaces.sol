@@ -118,6 +118,13 @@ interface IEtherFiLiquidityPool {
 
 interface IRsEth is IERC20 { }
 
+interface IRswEth is IERC20 {
+    function deposit() external payable;
+    function ethToRswETHRate() external view returns (uint256);
+    function getRate() external view returns (uint256);
+    function rswETHToETHRate() external view returns (uint256);
+}
+
 interface ILRTOracle {
     function rsETHPrice() external view returns (uint256);
     function updateRSETHPrice() external;

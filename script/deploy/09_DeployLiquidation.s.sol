@@ -69,7 +69,5 @@ contract DeployLiquidationScript is DeployScript {
                 )
             )
         );
-
-        ionPool.grantRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation));
     }
 }

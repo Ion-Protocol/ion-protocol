@@ -13,7 +13,6 @@ import { UniswapFlashswapHandler_Test } from "../handlers-base/UniswapFlashswapH
 import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 using WadRayMath for uint256;
@@ -88,11 +87,6 @@ contract WstEthHandler_ForkTest is
 {
     function setUp() public virtual override(WstEthHandler_ForkBase, LstHandler_ForkBase) {
         super.setUp();
-
-        // If price of the pool ends up being larger than the exchange rate,
-        // then a direct 1:1 contract mint is more favorable
-        uint256 exchangeRate = MAINNET_WSTETH.getStETHByWstETH(1 ether);
-        sqrtPriceLimitX96 = uint160(Math.sqrt(uint256(exchangeRate << 192) / 1e18));
     }
 }
 
