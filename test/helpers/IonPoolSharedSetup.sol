@@ -187,6 +187,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
 
     constructor() {
         lens = new IonLens();
+        vm.makePersistent(address(lens));
 
         config.minimumProfitMargins =
             Solarray.uint128s(wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin);
