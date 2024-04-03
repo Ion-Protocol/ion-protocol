@@ -77,8 +77,8 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
 
         uint256 expectedNormalizedMint1 = amountOfRewards.rayDivDown(supplyFactorOld);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
-        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.balanceOf(address(this)), expectedNormalizedMint1);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewards);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
@@ -96,8 +96,8 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
         uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), totalDepositsNormalized);
-        assertEq(rewardModule.balanceOf(address(this)), totalValue);
+        assertEq(rewardModule.balanceOf(address(this)), totalDepositsNormalized);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue);
         assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - totalDeposited);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
 
@@ -121,8 +121,8 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
 
         uint256 expectedNormalizedMint1 = amountOfRewards.rayDivDown(supplyFactorOld);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
-        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.balanceOf(address(this)), expectedNormalizedMint1);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - amountOfRewards);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
@@ -140,8 +140,8 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
         uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), totalDepositsNormalized);
-        assertEq(rewardModule.balanceOf(address(this)), totalValue);
+        assertEq(rewardModule.balanceOf(address(this)), totalDepositsNormalized);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue);
         assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - totalDeposited);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
 
@@ -162,11 +162,10 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
         // rewardModule.burn(address(this), address(this), 1 wei);
         rewardModule.burn(address(this), address(this), burnAmount);
 
-        assertEq(rewardModule.balanceOf(address(this)), totalValue - burnAmount);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue - burnAmount);
         assertEq(rewardModule.totalSupply(), totalValue - burnAmount);
         assertEq(
-            rewardModule.normalizedBalanceOf(address(this)),
-            totalDepositsNormalized - burnAmount.rayDivDown(supplyFactorNew)
+            rewardModule.balanceOf(address(this)), totalDepositsNormalized - burnAmount.rayDivDown(supplyFactorNew)
         );
         assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - totalDeposited + burnAmount);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated - burnAmount);

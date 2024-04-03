@@ -63,8 +63,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
 
         uint256 expectedNormalizedMint1 = amountOfRewards.rayDivDown(supplyFactorOld);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
-        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.balanceOf(address(this)), expectedNormalizedMint1);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
@@ -82,8 +82,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
         uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), totalDepositsNormalized);
-        assertEq(rewardModule.balanceOf(address(this)), totalValue);
+        assertEq(rewardModule.balanceOf(address(this)), totalDepositsNormalized);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
     }
@@ -104,8 +104,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
 
         uint256 expectedNormalizedMint1 = amountOfRewards.rayDivDown(supplyFactorOld);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
-        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.balanceOf(address(this)), expectedNormalizedMint1);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
@@ -123,8 +123,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
         uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
-        assertEq(rewardModule.normalizedBalanceOf(address(this)), totalDepositsNormalized);
-        assertEq(rewardModule.balanceOf(address(this)), totalValue);
+        assertEq(rewardModule.balanceOf(address(this)), totalDepositsNormalized);
+        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
 

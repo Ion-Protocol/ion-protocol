@@ -512,7 +512,7 @@ contract IonPool is PausableUpgradeable, RewardToken {
         newDebtIncrease = _totalNormalizedDebt * newRateIncrease; // [RAD]
 
         // Income distribution
-        uint256 _normalizedTotalSupply = normalizedTotalSupplyUnaccrued(); // [WAD]
+        uint256 _normalizedTotalSupply = totalSupplyUnaccrued(); // [WAD]
 
         // If there is no supply, then nothing is being lent out.
         supplyFactorIncrease = _normalizedTotalSupply == 0

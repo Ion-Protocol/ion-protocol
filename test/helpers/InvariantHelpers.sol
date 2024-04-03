@@ -14,7 +14,7 @@ library InvariantHelpers {
      */
     function getUtilizationRate(IonPool ionPool, IIonLens lens) internal view returns (uint256 utilizationRate) {
         IIonPool iIonPool = IIonPool(address(ionPool));
-        utilizationRate = lens.debt(iIonPool).radDivDown(ionPool.normalizedTotalSupply() * ionPool.supplyFactor());
+        utilizationRate = lens.debt(iIonPool).radDivDown(ionPool.totalSupply() * ionPool.supplyFactor());
     }
 
     /**

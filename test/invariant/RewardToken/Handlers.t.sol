@@ -43,7 +43,7 @@ contract UserHandler is Handler {
         uint256 currentSupplyFactor = REWARD_MODULE.supplyFactor();
 
         uint256 amountNormalized = amount.rayDivUp(currentSupplyFactor);
-        if (amountNormalized == 0 || amountNormalized > REWARD_MODULE.normalizedBalanceOf(account)) return;
+        if (amountNormalized == 0 || amountNormalized > REWARD_MODULE.balanceOf(account)) return;
         REWARD_MODULE.burn(account, account, amount);
     }
 
