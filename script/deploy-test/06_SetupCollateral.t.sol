@@ -13,7 +13,7 @@ contract SetupCollateralTest is DeployTestBase, SetupCollateralScript {
         assertTrue(ionPool.addressContains(ilkAddress), "address contains");
 
         assertEq(address(ionPool.spot(0)), address(spotOracle), "spot oracle");
-        assertEq(ionPool.debtCeiling(0), debtCeiling, "debt ceiling");
+        assertEq(ionPool.debtCeiling(0), 0, "debt ceiling must be zero on init");
         assertEq(ionPool.dust(0), dust, "dust");
     }
 

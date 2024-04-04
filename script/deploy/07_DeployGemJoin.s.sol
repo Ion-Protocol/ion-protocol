@@ -28,6 +28,5 @@ contract DeployGemJoinScript is DeployScript {
         } else {
             gemJoin = new GemJoin(ionPool, ilkERC20, 0, protocol);
         }
-        ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin));
     }
 }

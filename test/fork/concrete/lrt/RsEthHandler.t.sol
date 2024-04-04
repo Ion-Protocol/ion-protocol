@@ -116,5 +116,7 @@ contract RsEthHandlerWhitelist_ForkTest is RsEthHandler_ForkTest {
 contract RsEthHandler_WithRateChange_ForkTest is RsEthHandler_ForkTest {
     function setUp() public virtual override {
         super.setUp();
+
+        ionPool.setRate(ilkIndex, 3.5708923502395e27);
     }
 }
