@@ -364,7 +364,7 @@ contract IonPool is PausableUpgradeable, RewardToken {
     function _accrueInterest() internal returns (uint256 newTotalDebt) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        uint256 totalEthSupply = totalSupplyUnaccrued();
+        uint256 totalEthSupply = getTotalUnderlyingClaimsUnaccrued();
 
         uint256 totalSupplyFactorIncrease;
         uint256 totalTreasuryMintAmount;
@@ -419,7 +419,7 @@ contract IonPool is PausableUpgradeable, RewardToken {
         rateIncreases = new uint104[](ilksLength);
         timestampIncreases = new uint48[](ilksLength);
 
-        uint256 totalEthSupply = totalSupplyUnaccrued();
+        uint256 totalEthSupply = getTotalUnderlyingClaimsUnaccrued();
 
         for (uint8 i = 0; i < ilksLength;) {
             (
@@ -457,7 +457,7 @@ contract IonPool is PausableUpgradeable, RewardToken {
         returns (uint104 newRateIncrease, uint48 timestampIncrease)
     {
         (,, newRateIncrease,, timestampIncrease) =
-            _calculateRewardAndDebtDistributionForIlk(ilkIndex, totalSupplyUnaccrued());
+            _calculateRewardAndDebtDistributionForIlk(ilkIndex, getTotalUnderlyingClaimsUnaccrued());
     }
 
     function _calculateRewardAndDebtDistributionForIlk(
@@ -569,7 +569,8 @@ contract IonPool is PausableUpgradeable, RewardToken {
         uint256 _supplyFactor = _mint({ user: user, senderOfUnderlying: _msgSender(), amount: amount });
 
         uint256 _supplyCap = $.wethSupplyCap;
-        if (totalSupply() > _supplyCap) revert DepositSurpassesSupplyCap(amount, _supplyCap);
+
+        if (getTotalUnderlyingClaims() > _supplyCap) revert DepositSurpassesSupplyCap(amount, _supplyCap);
 
         emit Supply(user, _msgSender(), amount, _supplyFactor, newTotalDebt);
     }
@@ -953,7 +954,8 @@ contract IonPool is PausableUpgradeable, RewardToken {
     function getCurrentBorrowRate(uint8 ilkIndex) external view returns (uint256 borrowRate, uint256 reserveFactor) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        uint256 totalEthSupply = totalSupplyUnaccrued();
+        uint256 totalEthSupply = getTotalUnderlyingClaimsUnaccrued();
+
         uint256 _totalNormalizedDebt = $.ilks[ilkIndex].totalNormalizedDebt;
         uint256 _rate = $.ilks[ilkIndex].rate;
 

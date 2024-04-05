@@ -146,6 +146,7 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
 
         uint256 burnAmount = 150e18;
+        uint256 burnAmountNormalized = burnAmount.rayDivUp(supplyFactorNew);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -157,16 +158,17 @@ contract RewardToken_UnitTest is RewardTokenSharedSetup {
         );
         rewardModule.burn(address(this), address(this), totalValue + totalValue);
         vm.expectRevert(abi.encodeWithSelector(RewardToken.InvalidSender.selector, address(0)));
-        rewardModule.burn(address(0), address(this), totalDepositsNormalized);
-        // vm.expectRevert(Reward.InvalidBurnAmount.selector);
-        // rewardModule.burn(address(this), address(this), 1 wei);
+        rewardModule.burn(address(0), address(this), totalValue);
+
+        vm.expectRevert(RewardToken.InvalidBurnAmount.selector);
+        rewardModule.burn(address(this), address(this), 0 wei); // only 0 wei will revert with InvalidBurnAmount since
+            // RewardToken rounds up burn amount in protocol favor
+
         rewardModule.burn(address(this), address(this), burnAmount);
 
         assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue - burnAmount);
-        assertEq(rewardModule.totalSupply(), totalValue - burnAmount);
-        assertEq(
-            rewardModule.balanceOf(address(this)), totalDepositsNormalized - burnAmount.rayDivDown(supplyFactorNew)
-        );
+        assertEq(rewardModule.totalSupply(), totalDepositsNormalized - burnAmountNormalized, "total supply after burn");
+        assertEq(rewardModule.balanceOf(address(this)), totalDepositsNormalized - burnAmountNormalized);
         assertEq(underlying.balanceOf(address(this)), INITIAL_UNDERYLING - totalDeposited + burnAmount);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated - burnAmount);
     }
