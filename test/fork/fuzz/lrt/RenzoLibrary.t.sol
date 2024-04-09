@@ -4,8 +4,8 @@ pragma solidity 0.8.21;
 import { WAD, RAY, WadRayMath } from "./../../../../src/libraries/math/WadRayMath.sol";
 import { RenzoLibrary } from "../../../../src/libraries/lrt/RenzoLibrary.sol";
 import { EZETH, RENZO_RESTAKE_MANAGER } from "../../../../src/Constants.sol";
-import { EzEthHandler } from "./../../../../src/flash/lrt/EzEthHandler.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+
 import { Test } from "forge-std/Test.sol";
 import { console2 } from "forge-std/console2.sol";
 
@@ -14,7 +14,10 @@ using WadRayMath for uint256;
 
 uint256 constant SCALE_FACTOR = 1e18;
 
-library MockRenzoLibrary {
+/**
+ * Used for comparing different backcompute methods.
+ */
+library OldRenzoLibrary {
     error InvalidAmountOut(uint256 amountOut);
     error InvalidAmountIn(uint256 amountIn);
 
@@ -149,7 +152,7 @@ contract RenzoLibraryHelper {
         uint256 _currentValueInProtocol,
         uint256 ethAmountIn
     )
-        public
+        internal
         pure
         returns (uint256 mintAmount)
     {
@@ -166,7 +169,7 @@ contract RenzoLibraryHelper {
         uint256 _currentValueInProtocol,
         uint256 mintAmount
     )
-        public
+        internal
         pure
         returns (uint256)
     {
@@ -196,20 +199,24 @@ contract RenzoLibrary_Comparison_FuzzTest is RenzoLibraryHelper, Test {
      * - 420 runs have old method ethAmountIn greater than new method ethAmountIn.
      * - 2 runs have old method ethAmountIn less than new method ethAmountIn.
      */
-    function testFuzz_BackComputeComparison(uint256 _existingEzETHSupply, uint128 minMintAmount) public {
-        uint256 maxExistingEzETHSupply = 10_000_000e18;
+    function testFuzz_BackComputeComparison(
+        uint256 _existingEzETHSupply,
+        uint128 minMintAmount,
+        uint256 exchangeRate
+    )
+        public
+    {
+        uint256 maxExistingEzETHSupply = 120_000_000e18;
 
         _existingEzETHSupply = bound(_existingEzETHSupply, 1e18, maxExistingEzETHSupply);
 
-        uint256 _currentValueInProtocol = _existingEzETHSupply * 1.1e18 / 1e18; // backed 1:1
+        exchangeRate = bound(exchangeRate, 1e18, 3e18);
+
+        uint256 _currentValueInProtocol = _existingEzETHSupply * exchangeRate / 1e18; // backed 1:1
 
         minMintAmount = uint128(bound(uint256(minMintAmount), 1e9, _existingEzETHSupply));
 
-        console2.log("_existingEzETHSupply: ", _existingEzETHSupply);
-        console2.log("_currentValueInProtocol: ", _currentValueInProtocol);
-        console2.log("minMintAmount: ", minMintAmount);
-
-        (uint256 oldMethodEthAmountIn, uint256 actualLrtAmount) = MockRenzoLibrary.mockGetEthAmountInForLstAmountOut(
+        (uint256 oldMethodEthAmountIn, uint256 actualLrtAmount) = OldRenzoLibrary.mockGetEthAmountInForLstAmountOut(
             _currentValueInProtocol, _existingEzETHSupply, minMintAmount
         );
 
@@ -223,24 +230,13 @@ contract RenzoLibrary_Comparison_FuzzTest is RenzoLibraryHelper, Test {
         vm.assume(oldMethodActualMintAmountOut != 0);
         vm.assume(newMethodActualMintAmountOut != 0);
 
-        console2.log("oldMethodEthAmountIn: ", oldMethodEthAmountIn);
-        console2.log("newMethodEthAmountIn: ", newMethodEthAmountIn);
-        console2.log("oldMethodActualMintAmountOut: ", oldMethodActualMintAmountOut);
-        console2.log("newMethodActualMintAmountOut: ", newMethodActualMintAmountOut);
-
         assertGe(
             oldMethodActualMintAmountOut,
             newMethodActualMintAmountOut,
             "old method mint amount out is greater than or equal to new method mint amount out"
         );
-        if (oldMethodEthAmountIn > newMethodEthAmountIn) {
-            vm.writeLine("fuzz_out.txt", "OLD METHOD ETH AMOUNT IN IS GREATER");
-        } else if (oldMethodEthAmountIn == newMethodEthAmountIn) {
-            vm.writeLine("fuzz_out.txt", "OLD METHOD ETH AMOUNT IN IS EQUAL");
-        } else {
-            vm.writeLine("fuzz_out.txt", "OLD METHOD ETH AMOUNT IN IS LESS");
-        }
-        assertApproxEqAbs(oldMethodEthAmountIn, newMethodEthAmountIn, 1e9, "eth amount in approx eq");
+
+        assertApproxEqAbs(oldMethodEthAmountIn, newMethodEthAmountIn, 1e8, "eth amount in approx eq");
 
         uint256 oldMethodDust = oldMethodActualMintAmountOut - minMintAmount;
         uint256 newMethodDust = newMethodActualMintAmountOut - minMintAmount;
@@ -343,8 +339,8 @@ contract RenzoLibrary_FuzzTest is RenzoLibraryHelper, Test {
     {
         // There are 120M circulating ETH as of 4/9/2024.
         _existingEzETHSupply = bound(_existingEzETHSupply, WAD, 120_000_000e18);
-        // realistically, the exchangeRate will not more than double
-        exchangeRate = uint128(bound(exchangeRate, 1e18, 2e18));
+        // realistically, the exchangeRate will not more than triple
+        exchangeRate = uint128(bound(exchangeRate, 1e18, 3e18));
         // realistically, a single mint would not be double the entire supply
         minMintAmount = uint128(bound(uint256(minMintAmount), 0, _existingEzETHSupply * 2));
 
@@ -385,21 +381,6 @@ contract RenzoLibrary_FuzzTest is RenzoLibraryHelper, Test {
         uint256 mintAmountOutWithOneLess =
             forwardCompute(_currentValueInProtocol, _existingEzETHSupply, ethAmountIn - 1);
 
-        if (mintAmountOutWithOneLess < minMintAmount) {
-            vm.writeLine("fuzz_out.txt", "REDUCED MINT AMOUNT IS LESS");
-        } else if (mintAmountOutWithOneLess == minMintAmount) {
-            vm.writeLine("fuzz_out.txt", "REDUCED MINT AMOUNT IS EQUAL");
-        } else {
-            vm.writeLine("fuzz_out.txt", "REDUCED MINT AMOUNT IS GREATER");
-        }
-        // if (mintAmountOutWithOneLess < actualMintAmountOut) {
-        //     vm.writeLine("fuzz_out.txt", "REDUCED MINT AMOUNT IS LESS");
-        // } else if (mintAmountOutWithOneLess == actualMintAmountOut) {
-        //     vm.writeLine("fuzz_out.txt", "REDUCED MINT AMOUNT IS EQUAL");
-        // } else {
-        //     vm.writeLine("fuzz_out.txt", "REDUCED MINT AMOUNT IS GREATER");
-        // }
-
         assertLe(mintAmountOutWithOneLess, minMintAmount, "one less eth amount comopared to min mint amount");
         assertLe(mintAmountOutWithOneLess, actualMintAmountOut, "one less eth amount compared to actual mint amount");
 
@@ -413,17 +394,17 @@ contract RenzoLibrary_FuzzTest is RenzoLibraryHelper, Test {
 contract RenzoLibrary_ForkFuzzTest is RenzoLibraryHelper, Test {
     function setUp() public {
         // vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 19387902);
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
+        vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
     }
 
     function test_GetEthAmountInForLstAmountOut() public {
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 19_472_376);
+        vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), 19_472_376);
         uint128 minLrtAmount = 184_626_086_978_191_358;
         testForkFuzz_GetEthAmountInForLstAmountOut(minLrtAmount);
     }
 
     function test_GetLstAmountOutForEthAmountIn() public {
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 19_472_376);
+        vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), 19_472_376);
         uint128 ethAmount = 185_854_388_659_820_839;
         testForkFuzz_GetLstAmountOutForEthAmountIn(ethAmount);
     }
@@ -474,8 +455,8 @@ contract RenzoLibrary_ForkFuzzTest is RenzoLibraryHelper, Test {
     }
 
     /**
-     * The optimal amount should always be less than the original input amount.
-     * Depositing one less than the optimal amount should be below the necessary mint amount.
+     * The optimal amount outputted from this function should always be less
+     * than the original input amount.
      */
     function testForkFuzz_GetLstAmountOutForEthAmountInOptimalAmount(uint128 ethAmount) public {
         (uint256 amount, uint256 optimalAmount) = RenzoLibrary.getLstAmountOutForEthAmountIn(ethAmount);

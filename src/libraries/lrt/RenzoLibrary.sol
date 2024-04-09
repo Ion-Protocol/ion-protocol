@@ -94,6 +94,24 @@ library RenzoLibrary {
      * lower bound of the "mint range" of the "mintable amount" right above
      * `minAmountOut`.
      *
+     * There exists an edge case where `minAmountOut` is an exact "mintable amount". Continuing with the
+     * example from block 19387902, if `minAmountOut` is `226218`, the
+     * `inflationPercentage` below would be 0. It would then be incremented
+     * to 1 and then when deriving the true `amountOut` from the incremented
+     * `inflationPercentage`, it would get `amountOut = 226219`. However, if
+     * `minAmountOut` is `226219`, the `inflationPercentage` below would be
+     * 1 and it would be incremented to 2. Then, true `amountOut` would then
+     * be `452438` which is unnecessarily minting more when the initial
+     * "mintable amount" was perfect.
+     *
+     * In this case, the inflationPercentage that the
+     * `_calculateDepositAmount`'s `ethAmountIn` maps to may not be the most
+     * optimal and users may incur the cost of paying extra dust for the same
+     * mint amount. However, we have empirically observed via fuzzing that 90%
+     * of the time, the ethAmountIn calculated through this function will be the
+     * most optimal eth amount in, and one less the `ethAmountIn` will result in
+     * a mint amount out lower than the minimum.
+     *
      * @param minAmountOut Minimum amount of ezETH to mint
      * @return ethAmountIn Amount of ETH required to mint the desired amount of
      * ezETH
@@ -108,25 +126,6 @@ library RenzoLibrary {
 
         (,, uint256 _currentValueInProtocol) = RENZO_RESTAKE_MANAGER.calculateTVLs();
         uint256 _existingEzETHSupply = EZETH.totalSupply();
-
-        // There exists an edge case where `minAmountOut` is an exact "mintable amount". Continuing with the
-        // example from block 19387902, if `minAmountOut` is `226218`, the
-        // `inflationPercentage` below would be 0. It would then be incremented
-        // to 1 and then when deriving the true `amountOut` from the incremented
-        // `inflationPercentage`, it would get `amountOut = 226219`. However, if
-        // `minAmountOut` is `226219`, the `inflationPercentage` below would be
-        // 1 and it would be incremented to 2. Then, true `amountOut` would then
-        // be `452438` which is unnecessarily minting more when the initial
-        // "mintable amount" was perfect.
-        //
-        // In this case, the inflationPercentage that the
-        // `_calculateDepositAmount`'s `ethAmountIn` maps to may not be the most
-        // optimal and users may incur the cost of paying extra dust for the
-        // same mint amount. However, outside of the edge case if the
-        // `minAmountOut` being an exact "mintable amount", we have empricially
-        // observed via fuzzing that simply adding 1 to the `ethAmountIn` of the
-        // back computation will most likely result in the eth amount in needed
-        // for the minimum mint amount.
 
         ethAmountIn = _calculateDepositAmount(_currentValueInProtocol, _existingEzETHSupply, minAmountOut);
         if (ethAmountIn == 0) return (0, 0);
