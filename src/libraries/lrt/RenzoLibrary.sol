@@ -5,10 +5,10 @@ import { RENZO_RESTAKE_MANAGER, EZETH } from "../../Constants.sol";
 import { WadRayMath, WAD, RAY } from "../math/WadRayMath.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { console2 } from "forge-std/console2.sol";
 
 using Math for uint256;
 using WadRayMath for uint256;
-
 /**
  * @title RenzoLibrary
  *
@@ -77,6 +77,7 @@ using WadRayMath for uint256;
  * "mint range". The mint range for `0` ezETH is `0` to `227527` wei and the mint
  * range for `226219` ezETH is `227528` to `455054` wei.
  */
+
 library RenzoLibrary {
     error InvalidAmountOut(uint256 amountOut);
     error InvalidAmountIn(uint256 amountIn);
@@ -105,22 +106,10 @@ library RenzoLibrary {
     {
         if (minAmountOut == 0) return (0, 0);
 
-        (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
-        uint256 totalSupply = EZETH.totalSupply();
+        (,, uint256 _currentValueInProtocol) = RENZO_RESTAKE_MANAGER.calculateTVLs();
+        uint256 _existingEzETHSupply = EZETH.totalSupply();
 
-        // Each `inflationPercentage` maps to a "mintable amount" and, therefore,
-        // there exists a "mint range" that maps to a single
-        // `inflationPercentage` and a single "mint amount".
-
-        // We need to first calculate the `inflationPercentage` that maps to the
-        // "mint range" of the `minAmountOut`.
-
-        // Technically, the specified `minAmountOut` is unlikely to be mintable
-        // given the rounding errors. But we can find the mint range of the
-        // "mint amount" below `minAmountOut
-        //
-        // To understand the reason for using `minAmountOut - 1`, consider the
-        // case where `minAmountOut` is a "mint amount". Continuing with the
+        // There exists an edge case where `minAmountOut` is an exact "mintable amount". Continuing with the
         // example from block 19387902, if `minAmountOut` is `226218`, the
         // `inflationPercentage` below would be 0. It would then be incremented
         // to 1 and then when deriving the true `amountOut` from the incremented
@@ -128,40 +117,22 @@ library RenzoLibrary {
         // `minAmountOut` is `226219`, the `inflationPercentage` below would be
         // 1 and it would be incremented to 2. Then, true `amountOut` would then
         // be `452438` which is unnecessarily minting more when the initial
-        // "mintable amount" was perfect. So we map "mintable amount"s to "mint
-        // range"s below themselves by subtracting 1. Underflow avoided by the
-        // check for `minAmountOut == 0` at the start of the function.
-        uint256 ethAmount = _calculateDepositAmount(totalTVL, minAmountOut - 1, totalSupply);
-        if (ethAmount == 0) return (0, 0);
-        uint256 inflationPercentage = WAD * ethAmount / (totalTVL + ethAmount);
+        // "mintable amount" was perfect.
+        //
+        // In this case, the inflationPercentage that the
+        // `_calculateDepositAmount`'s `ethAmountIn` maps to may not be the most
+        // optimal and users may incur the cost of paying extra dust for the
+        // same mint amount. However, outside of the edge case if the
+        // `minAmountOut` being an exact "mintable amount", we have empricially
+        // observed via fuzzing that simply adding 1 to the `ethAmountIn` of the
+        // back computation will most likely result in the eth amount in needed
+        // for the minimum mint amount.
 
-        // Once we have the `inflationPercentage` mapping to the "mintable amount"
-        // below `minAmountOut`, we increment it to find the
-        // `inflationPercentage` mapping to the "mintable amount" above
-        // `minAmountOut".
-        ++inflationPercentage;
+        ethAmountIn = _calculateDepositAmount(_currentValueInProtocol, _existingEzETHSupply, minAmountOut);
+        if (ethAmountIn == 0) return (0, 0);
 
-        // Then we go on to calculate the ezETH amount and optimal eth deposit
-        // mapping to that `inflationPercentage`.
-
-        // Calculate the new supply
-        uint256 newEzETHSupply = (totalSupply * WAD) / (WAD - inflationPercentage);
-
-        amountOut = newEzETHSupply - totalSupply;
-
-        ethAmountIn = inflationPercentage.mulDiv(totalTVL, WAD - inflationPercentage, Math.Rounding.Ceil);
-
-        // Very rarely, the `inflationPercentage` is less by one. So we try both.
-        if (_calculateMintAmount(totalTVL, ethAmountIn, totalSupply) >= minAmountOut) return (ethAmountIn, amountOut);
-
-        ++inflationPercentage;
-        ethAmountIn = inflationPercentage.mulDiv(totalTVL, WAD - inflationPercentage, Math.Rounding.Ceil);
-
-        newEzETHSupply = (totalSupply * WAD) / (WAD - inflationPercentage);
-        amountOut = newEzETHSupply - totalSupply;
-
-        if (_calculateMintAmount(totalTVL, ethAmountIn, totalSupply) >= minAmountOut) return (ethAmountIn, amountOut);
-
+        amountOut = _calculateMintAmount(_currentValueInProtocol, _existingEzETHSupply, ethAmountIn);
+        if (amountOut >= minAmountOut) return (ethAmountIn, amountOut);
         revert InvalidAmountOut(ethAmountIn);
     }
 
@@ -183,12 +154,12 @@ library RenzoLibrary {
         (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
         uint256 totalSupply = EZETH.totalSupply();
 
-        amount = _calculateMintAmount(totalTVL, ethAmount, totalSupply);
-        optimalAmount = _calculateDepositAmount(totalTVL, amount, totalSupply);
+        amount = _calculateMintAmount(totalTVL, totalSupply, ethAmount);
+        optimalAmount = _calculateDepositAmount(totalTVL, totalSupply, amount);
 
         // Can be off by 1 wei
-        if (_calculateMintAmount(totalTVL, optimalAmount, totalSupply) == amount) return (amount, optimalAmount);
-        if (_calculateMintAmount(totalTVL, optimalAmount + 1, totalSupply) == amount) {
+        if (_calculateMintAmount(totalTVL, totalSupply, optimalAmount) == amount) return (amount, optimalAmount);
+        if (_calculateMintAmount(totalTVL, totalSupply, optimalAmount + 1) == amount) {
             return (amount, optimalAmount + 1);
         }
 
@@ -198,7 +169,7 @@ library RenzoLibrary {
     function depositForLrt(uint256 ethAmount) internal returns (uint256 ezEthAmountToMint) {
         (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
 
-        ezEthAmountToMint = _calculateMintAmount(totalTVL, ethAmount, EZETH.totalSupply());
+        ezEthAmountToMint = _calculateMintAmount(totalTVL, EZETH.totalSupply(), ethAmount);
         RENZO_RESTAKE_MANAGER.depositETH{ value: ethAmount }(0);
     }
 
@@ -210,13 +181,14 @@ library RenzoLibrary {
      * function properly, `amountOut` should be a "mintable amount" (an amount of
      * ezETH that is actually possible to mint).
      *
-     * @param totalTVL Total TVL in the system.
+     * @param _currentValueInProtocol Total TVL in the system.
+     * @param _existingEzETHSupply Total supply of ezETH.
      * @param amountOut Desired amount of ezETH to mint.
      */
     function _calculateDepositAmount(
-        uint256 totalTVL,
-        uint256 amountOut,
-        uint256 totalSupply
+        uint256 _currentValueInProtocol,
+        uint256 _existingEzETHSupply,
+        uint256 amountOut
     )
         private
         pure
@@ -227,28 +199,23 @@ library RenzoLibrary {
         //        uint256 mintAmount = newEzETHSupply - _existingEzETHSupply;
         //
         // Solve for newEzETHSupply
-        uint256 newEzEthSupply = (amountOut + totalSupply);
-        uint256 newEzEthSupplyRay = newEzEthSupply.scaleUpToRay(18);
+        uint256 newEzEthSupply = (amountOut + _existingEzETHSupply);
 
         //        uint256 newEzETHSupply = (_existingEzETHSupply * SCALE_FACTOR) / (SCALE_FACTOR -
         // inflationPercentage);
         //
         // Solve for inflationPercentage
-        uint256 intem = totalSupply.scaleUpToRay(18).mulDiv(RAY, newEzEthSupplyRay);
-        uint256 inflationPercentage = RAY - intem;
+        uint256 inflationPercentage = WAD - WAD.mulDiv(_existingEzETHSupply, newEzEthSupply);
 
         //         uint256 inflationPercentage = SCALE_FACTOR * _newValueAdded / (_currentValueInProtocol +
         // _newValueAdded);
         //
         // Solve for _newValueAdded
-        uint256 ethAmountRay = inflationPercentage.mulDiv(totalTVL.scaleUpToRay(18), RAY - inflationPercentage);
+        uint256 ethAmountIn = inflationPercentage.mulDiv(_currentValueInProtocol, WAD - inflationPercentage);
 
-        // Truncate from RAY to WAD with roundingUp plus one extra
-        // The one extra to get into the next mint range
-        uint256 ethAmount = ethAmountRay / 1e9 + 1;
-        if (ethAmountRay % 1e9 != 0) ++ethAmount;
+        ethAmountIn++;
 
-        return ethAmount;
+        return ethAmountIn;
     }
 
     /**
@@ -264,8 +231,8 @@ library RenzoLibrary {
      */
     function _calculateMintAmount(
         uint256 _currentValueInProtocol,
-        uint256 _newValueAdded,
-        uint256 _existingEzETHSupply
+        uint256 _existingEzETHSupply,
+        uint256 _newValueAdded
     )
         private
         pure
