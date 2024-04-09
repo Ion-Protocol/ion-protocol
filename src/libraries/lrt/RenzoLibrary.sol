@@ -2,10 +2,9 @@
 pragma solidity 0.8.21;
 
 import { RENZO_RESTAKE_MANAGER, EZETH } from "../../Constants.sol";
-import { WadRayMath, WAD, RAY } from "../math/WadRayMath.sol";
+import { WadRayMath, WAD } from "../math/WadRayMath.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { console2 } from "forge-std/console2.sol";
 
 using Math for uint256;
 using WadRayMath for uint256;
@@ -76,11 +75,12 @@ using WadRayMath for uint256;
  * We will call the range of values that produce the same amount of ezETH a
  * "mint range". The mint range for `0` ezETH is `0` to `227527` wei and the mint
  * range for `226219` ezETH is `227528` to `455054` wei.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 
 library RenzoLibrary {
     error InvalidAmountOut(uint256 amountOut);
-    error InvalidAmountIn(uint256 amountIn);
 
     /**
      * @notice Returns the amount of ETH required to mint at least
@@ -212,7 +212,10 @@ library RenzoLibrary {
         // Solve for _newValueAdded
         uint256 ethAmountIn = inflationPercentage.mulDiv(_currentValueInProtocol, WAD - inflationPercentage);
 
-        ethAmountIn++;
+        // Unlikely to overflow
+        unchecked {
+            ethAmountIn++;
+        }
 
         return ethAmountIn;
     }
