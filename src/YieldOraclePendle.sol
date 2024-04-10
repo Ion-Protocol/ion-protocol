@@ -21,7 +21,9 @@ contract YieldOraclePendle is IYieldOracle {
     IPMarketV3 public immutable market;
     uint32 public immutable twapDuration;
 
-    constructor(IPMarketV3 _market, uint32 _twapDuration) {
+    uint256 public immutable yieldCeiling;
+
+    constructor(IPMarketV3 _market, uint32 _twapDuration, uint256 _yieldCeiling) {
         (,,,,, uint16 observationCardinalityNext) = _market._storage();
 
         uint256 minimumOracleSlots = twapDuration / 12;
@@ -30,6 +32,7 @@ contract YieldOraclePendle is IYieldOracle {
 
         market = _market;
         twapDuration = _twapDuration;
+        yieldCeiling = _yieldCeiling;
     }
 
     function apys(uint256) external view override returns (uint32) {
@@ -45,6 +48,10 @@ contract YieldOraclePendle is IYieldOracle {
 
         // For a 40% APY, implied rate will be 1.4e18
         uint256 impliedRate = LogExpMath.exp(lnImpliedRate.toInt256()).toUint256();
+        impliedRate -= 1e18;
+
+        uint256 _yieldCeiling = yieldCeiling;
+        if (impliedRate > _yieldCeiling) impliedRate = _yieldCeiling;
 
         return impliedRate.scaleDown({ from: 18, to: 8 }).toUint32();
     }
