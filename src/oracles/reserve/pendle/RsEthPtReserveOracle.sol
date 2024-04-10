@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { RSETH_LRT_ORACLE } from "../../../Constants.sol";
 import { ReserveOracle } from "../ReserveOracle.sol";
 
-contract WeEthPtReserveOracle is ReserveOracle {
+contract RsEthPtReserveOracle is ReserveOracle {
     constructor(
         uint8 _ilkIndex,
         address[] memory _feeds,
