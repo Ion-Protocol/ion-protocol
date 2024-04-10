@@ -14,7 +14,14 @@ import { IStandardizedYield } from "pendle-core-v2-public/interfaces/IStandardiz
 import { IPPrincipalToken } from "pendle-core-v2-public/interfaces/IPPrincipalToken.sol";
 import { IPYieldToken } from "pendle-core-v2-public/interfaces/IPYieldToken.sol";
 
+/**
+ * @notice This contract allows for easy creation of leverage positions for PT
+ * collateralized Ion markets.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
+    error InvalidGemJoin(address invalidJoin);
     error MarketMustBeCaller(address caller);
     error ExternalFlashswapNotAllowed();
     error InvalidSwapDirection();
@@ -29,6 +36,13 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
 
     uint256 flashswapInitiated = 1;
 
+    /**
+     * @notice Creates a new `PtHandler` instance
+     * @param pool The related IonPool.
+     * @param join The related GemJoin.
+     * @param whitelist The whitelist contract.
+     * @param _market The related Pendle market.
+     */
     constructor(
         IonPool pool,
         GemJoin join,
@@ -37,7 +51,11 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
     )
         IonHandlerBase(0, pool, join, whitelist)
     {
+        if (!pool.hasRole(pool.GEM_JOIN_ROLE(), address(join))) revert InvalidGemJoin(address(join));
+
         (IStandardizedYield _SY, IPPrincipalToken _PT, IPYieldToken _YT) = _market.readTokens();
+
+        if (join.GEM() != _PT) revert InvalidGemJoin(address(join));
 
         SY = _SY;
         PT = _PT;
@@ -83,12 +101,22 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
         flashswapInitiated = 1;
     }
 
-    // /**
-    //  * @dev On small enough swaps, the SY to send back can be 0.
-    //  * @param ptToAccount
-    //  * @param syToAccount
-    //  * @param data
-    //  */
+    /**
+     * @notice This function should never be called directly.
+     *
+     * @dev On small enough swaps, the SY to send back can be 0.
+     *
+     * This function can only be called by the market.
+     *
+     * This function can only be called by market if the swap was initiated by
+     * this contract.
+     *
+     * @param ptToAccount Amount of PT sent from the perspective of the pool (negative means pool is sending, positive
+     * means user is receiving)
+     * @param syToAccount Amount of SY sent from the perspective of the pool (negative means pool is sending, positive
+     * means user is receiving)
+     * @param data Arbitrary data passed by the market
+     */
     function swapCallback(int256 ptToAccount, int256 syToAccount, bytes calldata data) external {
         if (msg.sender != address(market)) revert MarketMustBeCaller(msg.sender);
         if (flashswapInitiated == 1) revert ExternalFlashswapNotAllowed();

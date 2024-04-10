@@ -7,7 +7,7 @@ import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
 import { PendlePtOracleLib } from "pendle-core-v2-public/oracles/PendlePtOracleLib.sol";
 
 /**
- * @notice
+ * @notice Spot Oracle for PT markets
  *
  * @dev This contract assumes that the SY is pegged 1:1 with the underlying
  * asset of IonPool.
@@ -15,6 +15,8 @@ import { PendlePtOracleLib } from "pendle-core-v2-public/oracles/PendlePtOracleL
  * This is a major assumption to be aware of since this oracle will return a
  * valuation in SY, which may or may not be the same as the underlying in the
  * IonPool.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 contract PtSpotOracle is SpotOracle {
     using PendlePtOracleLib for IPMarketV3;

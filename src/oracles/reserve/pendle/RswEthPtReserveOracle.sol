@@ -4,6 +4,11 @@ pragma solidity 0.8.21;
 import { RSWETH } from "../../../Constants.sol";
 import { ReserveOracle } from "../ReserveOracle.sol";
 
+/**
+ * @notice Reserve Oracle for PT-rswETH
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract RswEthPtReserveOracle is ReserveOracle {
     constructor(
         uint8 _ilkIndex,

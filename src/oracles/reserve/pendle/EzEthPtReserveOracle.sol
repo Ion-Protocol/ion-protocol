@@ -8,6 +8,11 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 using Math for uint256;
 
+/**
+ * @notice Reserve Oracle for PT-ezETH
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract EzEthPtReserveOracle is ReserveOracle {
     constructor(
         uint8 _ilkIndex,
