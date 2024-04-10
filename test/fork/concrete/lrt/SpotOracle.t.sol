@@ -64,7 +64,7 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
         assertEq(spotOracle.getSpot(), expectedSpot, "uses exchange rate as min");
     }
 
-    function testFork_MaxTimeFromLastUpdateExceeded() public {
+    function testFork_MaxTimeFromLastUpdateExceeded() public virtual {
         assertGt(spotOracle.getPrice(), 0, "time from last update not exceeded price should not be zero");
         assertGt(spotOracle.getSpot(), 0, "time from last update not exceeded spot should not be zero");
 
