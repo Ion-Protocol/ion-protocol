@@ -4,6 +4,11 @@ pragma solidity 0.8.21;
 import { WEETH_ADDRESS } from "../../../Constants.sol";
 import { ReserveOracle } from "../ReserveOracle.sol";
 
+/**
+ * @notice Reserve Oracle for PT-weETH
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract WeEthPtReserveOracle is ReserveOracle {
     constructor(
         uint8 _ilkIndex,
