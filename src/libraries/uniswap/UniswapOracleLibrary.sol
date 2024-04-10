@@ -34,13 +34,15 @@ library UniswapOracleLibrary {
 
         // NOTE: Changed to match versions
         // arithmeticMeanTick = int24(tickCumulativesDelta / secondsAgo);
-        arithmeticMeanTick = int24(tickCumulativesDelta) / int24(int32(secondsAgo));
+        arithmeticMeanTick = int24(int256(tickCumulativesDelta) / int256(uint256(secondsAgo)));
 
         // Always round to negative infinity
 
         // NOTE: Changed to match versions
         // if (tickCumulativesDelta < 0 && (tickCumulativesDelta % secondsAgo != 0)) arithmeticMeanTick--;
-        if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int56(int32(secondsAgo)) != 0)) arithmeticMeanTick--;
+        if (tickCumulativesDelta < 0 && (int256(tickCumulativesDelta) % int256(uint256(secondsAgo)) != 0)) {
+            arithmeticMeanTick--;
+        }
 
         // We are multiplying here instead of shifting to ensure that harmonicMeanLiquidity doesn't overflow uint128
         uint192 secondsAgoX160 = uint192(secondsAgo) * type(uint160).max;
