@@ -69,7 +69,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
     function zapDepositAndBorrow(
         uint256 stEthAmount,
         uint256 amountToBorrow,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         onlyWhitelistedBorrowers(proof)
@@ -83,7 +83,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         uint256 initialDeposit,
         uint256 resultingAdditionalStEthCollateral,
         uint256 maxResultingAdditionalDebt,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         onlyWhitelistedBorrowers(proof)
@@ -102,7 +102,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         uint256 initialDeposit,
         uint256 resultingAdditionalStEthCollateral,
         uint256 maxResultingAdditionalDebt,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         onlyWhitelistedBorrowers(proof)
@@ -123,7 +123,7 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         uint256 maxResultingAdditionalDebt,
         uint160 sqrtPriceLimitX96,
         uint256 deadline,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         checkDeadline(deadline)

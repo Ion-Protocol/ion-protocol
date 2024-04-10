@@ -17,7 +17,7 @@ abstract contract WeEthHandler_ForkFuzzTest is WeEthHandler_ForkBase, UniswapFla
     }
 }
 
-contract WeEthHanlder_WithRateChange_ForkFuzzTest is
+contract WeEthHandler_WithRateChange_ForkFuzzTest is
     WeEthHandler_ForkFuzzTest,
     UniswapFlashswapDirectMintHandler_WithRateChange_FuzzTest
 {

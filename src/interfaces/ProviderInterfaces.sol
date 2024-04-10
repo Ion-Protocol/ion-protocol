@@ -93,6 +93,7 @@ interface ISwEth {
 interface IWeEth is IERC20 {
     function getRate() external view returns (uint256);
     function getEETHByWeETH(uint256) external view returns (uint256);
+    function getWeETHByeETH(uint256) external view returns (uint256);
 
     // Official function technically returns the interface but we won't type it
     // here
@@ -116,7 +117,9 @@ interface IEtherFiLiquidityPool {
     function getTotalEtherClaimOf(address _user) external view returns (uint256);
 }
 
-interface IRsEth is IERC20 { }
+interface IRsEth is IERC20 {
+    function getAssetPrice(address asset) external view returns (uint256);
+}
 
 interface IRswEth is IERC20 {
     function deposit() external payable;
