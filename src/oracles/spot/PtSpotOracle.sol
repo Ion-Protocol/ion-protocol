@@ -32,7 +32,7 @@ contract PtSpotOracle is SpotOracle {
     )
         SpotOracle(_ltv, _reserveOracle)
     {
-        (,,,,, uint16 observationCardinalityNext) = market._storage();
+        (,,,,, uint16 observationCardinalityNext) = _market._storage();
 
         uint256 minimumOracleSlots = twapDuration / 12;
 
