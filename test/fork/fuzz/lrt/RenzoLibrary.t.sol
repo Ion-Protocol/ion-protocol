@@ -181,7 +181,9 @@ contract RenzoLibraryHelper {
 
         uint256 ethAmountIn = inflationPercentage * _currentValueInProtocol / (SCALE_FACTOR - inflationPercentage);
 
-        ethAmountIn++; // always increment by default
+        if (inflationPercentage * _currentValueInProtocol % (SCALE_FACTOR - inflationPercentage) != 0) {
+            ethAmountIn++;
+        }
 
         return ethAmountIn;
     }

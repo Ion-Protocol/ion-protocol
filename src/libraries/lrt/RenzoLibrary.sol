@@ -212,9 +212,11 @@ library RenzoLibrary {
         // Solve for _newValueAdded
         uint256 ethAmountIn = inflationPercentage.mulDiv(_currentValueInProtocol, WAD - inflationPercentage);
 
-        // Unlikely to overflow
-        unchecked {
-            ethAmountIn++;
+        if (inflationPercentage * _currentValueInProtocol % (WAD - inflationPercentage) != 0) {
+            // Unlikely to overflow
+            unchecked {
+                ethAmountIn++;
+            }
         }
 
         return ethAmountIn;
