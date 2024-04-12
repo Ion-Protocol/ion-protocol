@@ -210,14 +210,15 @@ library RenzoLibrary {
         // _newValueAdded);
         //
         // Solve for _newValueAdded
-        uint256 ethAmountIn = inflationPercentage.mulDiv(_currentValueInProtocol, WAD - inflationPercentage);
-
-        if (inflationPercentage * _currentValueInProtocol % (WAD - inflationPercentage) != 0) {
-            // Unlikely to overflow
-            unchecked {
-                ethAmountIn++;
-            }
-        }
+        // NOTE This equation is intentionally rounded up. This is because if
+        // the division truncates and value is lost, the `ethAmountIn` in the
+        // forward compute will output less than the minimum `amountOut`. We
+        // round up to guarantee that the users will always only pay the minimum
+        // necessary amount for either the exact minimum amount out or the next
+        // closest possible mintable amount if the minimum amount out is not a
+        // mintable value.
+        uint256 ethAmountIn =
+            inflationPercentage.mulDiv(_currentValueInProtocol, WAD - inflationPercentage, Math.Rounding.Ceil);
 
         return ethAmountIn;
     }
