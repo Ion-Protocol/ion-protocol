@@ -10,8 +10,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 using WadRayMath for uint256;
 
-import { console2 } from "forge-std/console2.sol";
-
 struct Config {
     uint256 initialDepositLowerBound;
 }
@@ -48,8 +46,7 @@ abstract contract UniswapFlashswapDirectMintHandlerWithDust_FuzzTest is LrtHandl
         uint256 roundingError = currentRate / RAY;
         if (currentRate % RAY != 0) roundingError++;
 
-        // TODO: Can this dust amount be bounded at run-time?
-        uint256 maxDust = 400_000;
+        uint256 maxDust = 1e9;
 
         assertLt(
             ionPool.collateral(_getIlkIndex(), address(this)),

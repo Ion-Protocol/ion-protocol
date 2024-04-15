@@ -10,7 +10,6 @@ import { IUniswapV3SwapCallback } from "@uniswap/v3-core/contracts/interfaces/ca
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { console2 } from "forge-std/console2.sol";
 
 /**
  * @notice This contract is forked off of the UniswapFlashswapDirectMintHandler,
@@ -28,7 +27,7 @@ import { console2 } from "forge-std/console2.sol";
  * of initial user deposit and additionally minted collateral to the caller's
  * requested resulting additional collateral amount.
  *
- * This contract allows for easy creation of leverge positions through a Uniswap
+ * This contract allows for easy creation of leverage positions through a Uniswap
  * flashswap and direct mint of the collateral from the provider. This will be
  * used when the collateral cannot be minted directly with the base asset but
  * can be directly minted by a token that the base asset has a UniswapV3 pool
@@ -94,6 +93,7 @@ abstract contract UniswapFlashswapDirectMintHandlerWithDust is IonHandlerBase, I
      * @param initialDeposit in collateral terms. [WAD]
      * @param resultingAdditionalCollateral in collateral terms. [WAD]
      * @param maxResultingDebt in base asset terms. [WAD]
+     * @param deadline The unix timestamp after which the uniswap transaction reverts.
      * @param proof used to validate the user is whitelisted.
      */
     function flashswapAndMint(

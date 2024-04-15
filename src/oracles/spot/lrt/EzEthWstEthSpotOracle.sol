@@ -41,6 +41,9 @@ contract EzEthWstEthSpotOracle is SpotOracle {
     /**
      * @notice Gets the price of ezETH in wstETH
      * (ETH / ezETH) / (ETH / stETH) * (wstETH / stETH) = wstETH / ezETH
+     * @dev Redstone oracle returns ETH per ezETH with 8 decimals. This needs to
+     * be converted to wstETH per ezETH denomination.
+     * @return wstEthPerWeEth price of ezETH in wstETH. [WAD]
      */
     function getPrice() public view override returns (uint256) {
         // ETH / ezETH [8 decimals]
