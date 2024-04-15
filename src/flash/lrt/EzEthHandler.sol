@@ -7,7 +7,7 @@ import { Whitelist } from "../../Whitelist.sol";
 import { UniswapFlashswapDirectMintHandlerWithDust } from "./../UniswapFlashswapDirectMintHandlerWithDust.sol";
 import { IonHandlerBase } from "../IonHandlerBase.sol";
 import { RenzoLibrary } from "./../../libraries/lrt/RenzoLibrary.sol";
-import { EZETH, WETH_ADDRESS } from "../../Constants.sol";
+import { WETH_ADDRESS } from "../../Constants.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 

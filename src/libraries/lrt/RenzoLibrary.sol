@@ -2,13 +2,12 @@
 pragma solidity 0.8.21;
 
 import { RENZO_RESTAKE_MANAGER, EZETH } from "../../Constants.sol";
-import { WadRayMath, WAD, RAY } from "../math/WadRayMath.sol";
+import { WadRayMath, WAD } from "../math/WadRayMath.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 using Math for uint256;
 using WadRayMath for uint256;
-
 /**
  * @title RenzoLibrary
  *
@@ -77,6 +76,7 @@ using WadRayMath for uint256;
  * "mint range". The mint range for `0` ezETH is `0` to `227527` wei and the mint
  * range for `226219` ezETH is `227528` to `455054` wei.
  */
+
 library RenzoLibrary {
     error InvalidAmountOut(uint256 amountOut);
     error InvalidAmountIn(uint256 amountIn);
