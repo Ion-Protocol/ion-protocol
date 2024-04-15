@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.21;
 
-import { IonPool } from "./IonPool.sol";
+import { IIonPool } from "./interfaces/IIonPool.sol";
+import { IIonLens } from "./interfaces/IIonLens.sol";
 import { WAD } from "./libraries/math/WadRayMath.sol";
 
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
@@ -26,6 +27,7 @@ contract Vault is ERC4626, Ownable2Step {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
 
+    error InvalidUnderlyingAsset();
     error InvalidSupplyQueueLength();
     error InvalidWithdrawQueueLength();
     error AllocationCapExceeded();
@@ -35,29 +37,29 @@ contract Vault is ERC4626, Ownable2Step {
     error InvalidSupplyQueuePool();
     error InvalidWithdrawQueuePool();
 
-    event UpdateSupplyQueue(address indexed caller, IonPool[] newSupplyQueue);
-    event UpdateWithdrawQueue(address indexed caller, IonPool[] newWithdrawQueue);
+    event UpdateSupplyQueue(address indexed caller, IIonPool[] newSupplyQueue);
+    event UpdateWithdrawQueue(address indexed caller, IIonPool[] newWithdrawQueue);
 
-    event ReallocateWithdraw(IonPool indexed pool, uint256 assets);
-    event ReallocateSupply(IonPool indexed pool, uint256 assets);
+    event ReallocateWithdraw(IIonPool indexed pool, uint256 assets);
+    event ReallocateSupply(IIonPool indexed pool, uint256 assets);
     event FeeAccrued(uint256 feeShares, uint256 newTotalAssets);
     event UpdateLastTotalAssets(uint256 lastTotalAssets, uint256 newLastTotalAssets);
 
     EnumerableSet.AddressSet supportedMarkets;
-    IonPool[] public supplyQueue;
-    IonPool[] public withdrawQueue;
+    IIonPool[] public supplyQueue;
+    IIonPool[] public withdrawQueue;
 
     address feeRecipient;
     uint256 public feePercentage;
 
-    mapping(IonPool => uint256) public caps;
+    mapping(IIonPool => uint256) public caps;
     uint256 public lastTotalAssets;
 
     IIonLens public immutable ionLens;
     IERC20 public immutable baseAsset;
 
     struct MarketAllocation {
-        IonPool pool;
+        IIonPool pool;
         uint256 targetAssets;
     }
 
@@ -65,7 +67,7 @@ contract Vault is ERC4626, Ownable2Step {
         address _owner,
         address _feeRecipient,
         IERC20 _baseAsset,
-        IIonLens ionLens,
+        IIonLens _ionLens,
         string memory _name,
         string memory _symbol
     )
@@ -74,30 +76,53 @@ contract Vault is ERC4626, Ownable2Step {
         Ownable(_owner)
     {
         feeRecipient = _feeRecipient;
+        ionLens = _ionLens;
+        baseAsset = _baseAsset;
     }
 
     /**
      * @notice Add markets that can be supplied and withdrawn from.
+     * @dev TODO when removing markets, revoke all approvals to the market.
      */
-    function addSupportedMarkets(IonPool[] calldata markets) external onlyOwner {
-        // TODO: The market supported's base asset must be the BASE_ASSET
+    function addSupportedMarkets(IIonPool[] calldata markets) external onlyOwner {
         for (uint256 i; i < markets.length; ++i) {
-            supportedMarkets.add(address(markets[i]));
+            IIonPool pool = markets[i];
+            if (address(pool.underlying()) != address(baseAsset)) revert InvalidUnderlyingAsset();
+            supportedMarkets.add(address(pool));
+
+            address[] memory values = supportedMarkets.values();
+
+            baseAsset.approve(address(pool), type(uint256).max);
+        }
+    }
+
+    function _validateIonPoolArrayInput(IIonPool[] memory pools) internal view {
+        uint256 length = pools.length;
+        if (length != supportedMarkets.length()) revert InvalidSupplyQueueLength();
+        for (uint256 i; i < length; ++i) {
+            address pool = address(pools[i]);
+            if (!supportedMarkets.contains(pool) || pool == address(0)) revert InvalidSupplyQueuePool();
+        }
+    }
+
+    /**
+     * TODO Should you be able to change allocation caps to be below current deposit amount?
+     * How does this affect supply and deposit behavior?
+     */
+    function updateAllocationCaps(IIonPool[] calldata pools, uint256[] calldata newCaps) external onlyOwner {
+        _validateIonPoolArrayInput(pools);
+
+        for (uint256 i; i < pools.length; ++i) {
+            caps[pools[i]] = newCaps[i];
         }
     }
 
     /**
      * @notice Update the order of the markets in which user deposits are supplied.
-     * @dev The IonPool in the queue must be part of `supportedMarkets`.
+     * @dev The IIonPool in the queue must be part of `supportedMarkets`.
      */
-    function updateSupplyQueue(IonPool[] calldata newSupplyQueue) external onlyOwner {
-        uint256 length = newSupplyQueue.length;
-        console2.log("length: ", length);
-        if (length != supportedMarkets.length()) revert InvalidSupplyQueueLength();
-        for (uint256 i; i < length; ++i) {
-            address pool = address(newSupplyQueue[i]);
-            if (!supportedMarkets.contains(pool) || pool == address(0)) revert InvalidSupplyQueuePool();
-        }
+    function updateSupplyQueue(IIonPool[] calldata newSupplyQueue) external onlyOwner {
+        _validateIonPoolArrayInput(newSupplyQueue);
 
         supplyQueue = newSupplyQueue;
 
@@ -108,12 +133,8 @@ contract Vault is ERC4626, Ownable2Step {
      * @notice Update the order of the markets in which the deposits are withdrawn.
      * @dev The IonPool in the queue must be part of `supportedMarkets`.
      */
-    function updateWithdrawQueue(IonPool[] calldata newWithdrawQueue) external onlyOwner {
-        uint256 length = newWithdrawQueue.length;
-        if (length != supportedMarkets.length()) revert InvalidWithdrawQueueLength();
-        for (uint256 i; i < length; ++i) {
-            if (!supportedMarkets.contains(address(newWithdrawQueue[i]))) revert InvalidWithdrawQueuePool();
-        }
+    function updateWithdrawQueue(IIonPool[] calldata newWithdrawQueue) external onlyOwner {
+        _validateIonPoolArrayInput(newWithdrawQueue);
 
         withdrawQueue = newWithdrawQueue;
 
@@ -133,7 +154,8 @@ contract Vault is ERC4626, Ownable2Step {
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         super._deposit(caller, receiver, assets, shares);
-
+        console2.log("baseAsset: ", address(baseAsset));
+        console2.log("balance after super._deposit", baseAsset.balanceOf(address(this)));
         _supplyToIonPool(assets);
 
         _updateLastTotalAssets(lastTotalAssets + assets);
@@ -145,9 +167,9 @@ contract Vault is ERC4626, Ownable2Step {
      */
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
         uint256 newTotalAssets = _accrueFee();
-
+        console2.log("newTotalAssets: ", newTotalAssets);
         shares = _convertToSharesWithTotals(assets, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
-
+        console2.log("shares: ", shares);
         _updateLastTotalAssets(newTotalAssets - assets);
 
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -181,7 +203,7 @@ contract Vault is ERC4626, Ownable2Step {
         uint256 totalWithdrawn;
         for (uint256 i; i < allocations.length; ++i) {
             MarketAllocation memory allocation = allocations[i];
-            IonPool pool = allocation.pool;
+            IIonPool pool = allocation.pool;
 
             uint256 targetAssets = allocation.targetAssets;
             uint256 currentSupplied = pool.balanceOf(address(this));
@@ -226,31 +248,42 @@ contract Vault is ERC4626, Ownable2Step {
 
     function _supplyToIonPool(uint256 assets) internal {
         for (uint256 i; i < supplyQueue.length; ++i) {
-            IonPool pool = supplyQueue[i];
+            IIonPool pool = supplyQueue[i];
 
             console2.log("i: ", i);
-            console2.log("pool: ", pool);
+            console2.log("pool: ", address(pool));
+            console2.log("supply assets: ", assets);
+            console2.log("caps[pool]: ", caps[pool]);
+            console2.log("ionLens.wethSupplyCap(pool): ", ionLens.wethSupplyCap(pool));
 
-            uint256 supplyCap = caps[pool];
-            if (supplyCap == 0) continue;
+            uint256 supplyCeil = Math.min(caps[pool], ionLens.wethSupplyCap(pool));
+            console2.log("supplyCeil: ", supplyCeil);
+
+            if (supplyCeil == 0) continue;
 
             pool.accrueInterest();
 
-            // supply as much assets we can to fill the cap for each market
+            // supply as much assets we can to fill the maximum available
+            // deposit for each market
+            // TODO What happens if the supplyCap or the allocationCap goes
+            // below the current supplied?
             uint256 currentSupplied = pool.balanceOf(address(this));
-            uint256 toSupply = Math.min(_zeroFloorSub(supplyCap, currentSupplied), assets);
+            console2.log("currentSupplied: ", currentSupplied);
+            uint256 toSupply = Math.min(_zeroFloorSub(supplyCeil, currentSupplied), assets);
+            console2.log("toSupply: ", toSupply);
             if (toSupply > 0) {
                 pool.supply(address(this), toSupply, new bytes32[](0));
                 assets -= toSupply; // `supply` might take 1 more wei than expected
             }
             if (assets == 0) return;
         }
+        console2.log("assets out of loop: ", assets);
         if (assets != 0) revert AllSupplyCapsReached();
     }
 
     function _withdrawFromIonPool(uint256 assets) internal {
         for (uint256 i; i < supplyQueue.length; ++i) {
-            IonPool pool = withdrawQueue[i];
+            IIonPool pool = withdrawQueue[i];
 
             uint256 currentSupplied = pool.balanceOf(address(this));
             uint256 toWithdraw = Math.min(currentSupplied, assets);
@@ -304,7 +337,7 @@ contract Vault is ERC4626, Ownable2Step {
      */
     function totalAssets() public view override returns (uint256 assets) {
         for (uint256 i; i < supportedMarkets.length(); ++i) {
-            assets += IonPool(supportedMarkets.at(i)).balanceOf(address(this));
+            assets += IIonPool(supportedMarkets.at(i)).balanceOf(address(this));
         }
     }
 

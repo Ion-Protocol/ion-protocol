@@ -230,4 +230,7 @@ interface IIonPool {
     function whitelist() external view returns (address);
     function withdraw(address receiverOfUnderlying, uint256 amount) external;
     function withdrawCollateral(uint8 ilkIndex, address user, address recipient, uint256 amount) external;
+
+    function getTotalUnderlyingClaims() external returns (uint256);
+    function getUnderlyingClaimOf(address user) external returns (uint256);
 }

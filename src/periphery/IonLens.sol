@@ -360,6 +360,7 @@ contract IonLens is IIonLens {
         return value;
     }
 
+    // TODO: RENAME VARIABLE HERE and weth()
     /**
      * @return The supply cap
      */
