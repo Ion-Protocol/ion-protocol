@@ -181,7 +181,6 @@ contract IonLensTest is Test {
     }
 
     function test_debtUnaccrued() public {
-        uint8 ilkIndex = 0;
         uint256 debtUnaccruedBefore = ionPool.debtUnaccrued();
 
         _updateImpl();
@@ -192,7 +191,6 @@ contract IonLensTest is Test {
     }
 
     function test_debt() public {
-        uint8 ilkIndex = 0;
         uint256 debtBefore = ionPool.debt();
 
         _updateImpl();
@@ -203,26 +201,24 @@ contract IonLensTest is Test {
     }
 
     function test_weth() public {
-        uint8 ilkIndex = 0;
         uint256 wethBefore = ionPool.weth();
 
         _updateImpl();
 
-        uint256 wethAfter = ionLens.weth(ionPool);
+        uint256 wethAfter = ionLens.liquidity(ionPool);
 
         assertEq(wethBefore, wethAfter, "weth");
     }
 
-    function test_wethSupplyCap() public {
-        uint8 ilkIndex = 0;
-        uint256 wethSupplyCapBefore =
+    function test_supplyCap() public {
+        uint256 supplyCapBefore =
             uint256(vm.load(address(ionPool), 0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e09));
 
         _updateImpl();
 
-        uint256 wethSupplyCapAfter = ionLens.wethSupplyCap(ionPool);
+        uint256 supplyCapAfter = ionLens.supplyCap(ionPool);
 
-        assertEq(wethSupplyCapBefore, wethSupplyCapAfter, "weth supply cap");
+        assertEq(supplyCapBefore, supplyCapAfter, "weth supply cap");
     }
 
     function test_totalUnbackedDebt() public {
@@ -236,7 +232,6 @@ contract IonLensTest is Test {
     }
 
     function test_interestRateModule() public {
-        uint8 ilkIndex = 0;
         address interestRateModuleBefore = ionPool.interestRateModule();
 
         _updateImpl();

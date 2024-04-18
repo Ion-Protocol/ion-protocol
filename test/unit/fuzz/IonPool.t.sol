@@ -50,7 +50,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         uint256 normalizedAmount = supplyAmount.rayDivDown(currentSupplyFactor);
         vm.assume(supplyAmount < type(uint128).max && normalizedAmount > 0);
 
-        uint256 supplyAmountBeforeSupply = lens.weth(iIonPool);
+        uint256 supplyAmountBeforeSupply = lens.liquidity(iIonPool);
 
         underlying.mint(lender1, supplyAmount);
 
@@ -70,7 +70,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         vm.prank(lender1);
         ionPool.supply(lender1, supplyAmount, new bytes32[](0));
 
-        assertEq(lens.weth(iIonPool), supplyAmountBeforeSupply + supplyAmount, "weth");
+        assertEq(lens.liquidity(iIonPool), supplyAmountBeforeSupply + supplyAmount, "weth");
         assertEq(ionPool.balanceOf(lender1), normalizedAmount, "ionPool balanceOf");
 
         uint256 roundingError = currentSupplyFactor / RAY;
@@ -86,7 +86,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
 
         underlying.mint(lender1, supplyAmount);
 
-        uint256 supplyAmountBeforeSupply = lens.weth(iIonPool);
+        uint256 supplyAmountBeforeSupply = lens.liquidity(iIonPool);
 
         uint256 currentTotalDebt = lens.debt(iIonPool);
         (uint256 supplyFactorIncrease,,, uint256 newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
@@ -104,7 +104,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         vm.prank(lender1);
         ionPool.supply(address(this), supplyAmount, new bytes32[](0));
 
-        assertEq(lens.weth(iIonPool), supplyAmountBeforeSupply + supplyAmount);
+        assertEq(lens.liquidity(iIonPool), supplyAmountBeforeSupply + supplyAmount);
         assertEq(ionPool.balanceOf(address(this)), normalizedAmount);
 
         uint256 roundingError = currentSupplyFactor / RAY;
@@ -131,7 +131,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
 
         // Changing supply factor, means that the interest will be deposited
         _changeSupplyFactorIfNeeded();
-        uint256 supplyAmountAfterRebase = lens.weth(iIonPool);
+        uint256 supplyAmountAfterRebase = lens.liquidity(iIonPool);
         uint256 lender1BalanceAfterRebase = ionPool.getUnderlyingClaimOf(lender1);
 
         assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase);
@@ -164,7 +164,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
         uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
 
-        assertEq(lens.weth(iIonPool), supplyAmountAfterRebase - locs.withdrawAmount);
+        assertEq(lens.liquidity(iIonPool), supplyAmountAfterRebase - locs.withdrawAmount);
         assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + locs.withdrawAmount);
         // Most important invariant
         assertGe(rewardAssetBurned, underlyingWithdrawn);
@@ -186,7 +186,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
 
         // Changing supply factor, means that the interest will be deposited
         _changeSupplyFactorIfNeeded();
-        uint256 supplyAmountAfterRebase = lens.weth(iIonPool);
+        uint256 supplyAmountAfterRebase = lens.liquidity(iIonPool);
         uint256 lender1BalanceAfterRebase = ionPool.getUnderlyingClaimOf(lender1);
 
         assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase, "amount after rebase");
@@ -219,7 +219,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
         uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
 
-        assertEq(lens.weth(iIonPool), supplyAmountAfterRebase - locs.withdrawAmount, "weth");
+        assertEq(lens.liquidity(iIonPool), supplyAmountAfterRebase - locs.withdrawAmount, "weth");
         assertEq(underlyingAfterWithdraw, underlyingBeforeWithdraw + locs.withdrawAmount, "underlying");
         // Most important invariant
         assertGe(rewardAssetBurned, underlyingWithdrawn, "burned greater than withdrawn");
@@ -550,7 +550,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
             vm.stopPrank();
 
-            uint256 liquidityBefore = lens.weth(iIonPool);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
             uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
 
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
@@ -572,7 +572,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
             assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
         }
     }
@@ -606,7 +606,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
             vm.stopPrank();
 
-            uint256 liquidityBefore = lens.weth(iIonPool);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
             uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
 
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
@@ -634,7 +634,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
             assertEq(underlying.balanceOf(borrower2), borrowedSoFar);
         }
     }
@@ -706,7 +706,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
             vm.stopPrank();
 
-            uint256 liquidityBefore = lens.weth(iIonPool);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
 
             uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
@@ -737,7 +737,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
             assertEq(underlying.balanceOf(borrower2), borrowedSoFar);
         }
     }
@@ -809,7 +809,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             vm.stopPrank();
 
             uint256 rate = ionPool.rate(i);
-            uint256 liquidityBefore = lens.weth(iIonPool);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
 
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
             assertEq(
@@ -824,7 +824,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
             assertEq(
                 underlying.balanceOf(borrower1), locs.borrowedSoFar + locs.fundsCollectedForRepayment - locs.repaidSoFar
             );
@@ -866,7 +866,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - locs.normalizedRepayAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount - locs.normalizedRepayAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved + trueRepayAmount);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved + trueRepayAmount);
             assertEq(
                 underlying.balanceOf(borrower1), locs.borrowedSoFar + locs.fundsCollectedForRepayment - locs.repaidSoFar
             );
@@ -900,7 +900,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             vm.stopPrank();
 
             uint256 rate = ionPool.rate(i);
-            uint256 liquidityBefore = lens.weth(iIonPool);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
 
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
@@ -913,7 +913,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
             _warpTimeIfNeeded();
@@ -953,7 +953,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - locs.normalizedRepayAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount - locs.normalizedRepayAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved + trueRepayAmount);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved + trueRepayAmount);
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
             assertEq(underlying.balanceOf(borrower2), 0);
         }
@@ -986,7 +986,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             vm.stopPrank();
 
             uint256 rate = ionPool.rate(i);
-            uint256 liquidityBefore = lens.weth(iIonPool);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
 
             uint256 trueBorrowAmount = normalizedBorrowAmount.rayMulDown(rate);
 
@@ -1002,7 +1002,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
             assertEq(underlying.balanceOf(borrower1), borrowedSoFar);
 
             vm.expectRevert(abi.encodeWithSelector(IonPool.TakingWethWithoutConsent.selector, borrower2, borrower1));
@@ -1043,7 +1043,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
             vm.stopPrank();
 
             uint256 rate = ionPool.rate(i);
-            uint256 liquidityBefore = lens.weth(iIonPool);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
 
             assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
@@ -1056,7 +1056,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
 
             _warpTimeIfNeeded();
@@ -1099,7 +1099,7 @@ abstract contract IonPool_BorrowerFuzzTestBase is IonPoolSharedSetup, IIonPoolEv
 
             assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount - locs.normalizedRepayAmount);
             assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount - locs.normalizedRepayAmount);
-            assertEq(lens.weth(iIonPool), liquidityBefore - liquidityRemoved + trueRepayAmount);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved + trueRepayAmount);
             assertEq(underlying.balanceOf(borrower1), locs.borrowedSoFar);
             assertEq(underlying.balanceOf(borrower2), 0);
         }
@@ -1266,7 +1266,7 @@ contract IonPool_BorrowerFuzzTest is IonPool_BorrowerFuzzTestBase {
     function test_SetUp() public override {
         super.test_SetUp();
 
-        assertEq(lens.weth(iIonPool), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(lens.liquidity(iIonPool), INITIAL_LENDER_UNDERLYING_BALANCE);
         assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
         assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
 
