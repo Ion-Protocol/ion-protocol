@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { Vault } from "./../../../../src/Vault.sol";
+import { Vault } from "./../../../../src/vault/Vault.sol";
 import { IonPool } from "./../../../../src/IonPool.sol";
 import { Whitelist } from "./../../../../src/Whitelist.sol";
 import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";

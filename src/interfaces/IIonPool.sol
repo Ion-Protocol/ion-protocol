@@ -232,5 +232,5 @@ interface IIonPool {
     function withdrawCollateral(uint8 ilkIndex, address user, address recipient, uint256 amount) external;
 
     function getTotalUnderlyingClaims() external returns (uint256);
-    function getUnderlyingClaimOf(address user) external returns (uint256);
+    function getUnderlyingClaimOf(address user) external view returns (uint256);
 }
