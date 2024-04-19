@@ -14,6 +14,8 @@ using Math for uint256;
  * @title KelpDaoLibrary
  *
  * @notice A helper library for KelpDao-related conversions.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 library KelpDaoLibrary {
     /**

@@ -75,6 +75,8 @@ using WadRayMath for uint256;
  * We will call the range of values that produce the same amount of ezETH a
  * "mint range". The mint range for `0` ezETH is `0` to `227527` wei and the mint
  * range for `226219` ezETH is `227528` to `455054` wei.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 
 library RenzoLibrary {
