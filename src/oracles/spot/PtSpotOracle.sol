@@ -45,6 +45,8 @@ contract PtSpotOracle is SpotOracle {
     }
 
     function getPrice() public view override returns (uint256 price) {
+        if (market.expiry() <= block.timestamp) return 0;
+
         return market.getPtToSyRate(twapDuration);
     }
 }
