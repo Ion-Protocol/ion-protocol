@@ -15,6 +15,7 @@ import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { ERC20 } from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import { IERC20Metadata } from "openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol";
+import { Multicall } from "openzeppelin-contracts/contracts/utils/Multicall.sol";
 
 /**
  * @title Ion Lending Vault
@@ -26,7 +27,7 @@ import { IERC20Metadata } from "openzeppelin-contracts/contracts/interfaces/IERC
  * Ion Protocol.
  * @custom:security-contact security@molecularlabs.io
  */
-contract Vault is ERC4626, Ownable2Step {
+contract Vault is ERC4626, Ownable2Step, Multicall {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
 
@@ -64,7 +65,7 @@ contract Vault is ERC4626, Ownable2Step {
     IIonPool[] public supplyQueue;
     IIonPool[] public withdrawQueue;
 
-    address feeRecipient;
+    address public feeRecipient;
     uint256 public feePercentage;
     uint256 public lastTotalAssets;
 
@@ -692,9 +693,9 @@ contract Vault is ERC4626, Ownable2Step {
 
             if (pool == IDLE) {
                 uint256 currentIdleBalance = baseAsset.balanceOf(address(this));
-                toWithdraw = Math.min(currentIdleBalance, assets);
+                uint256 toWithdraw = Math.min(currentIdleBalance, assets);
                 assets -= toWithdraw;
-                if (assets == 0) return;
+                if (assets == 0) return assets;
                 continue;
             }
 
