@@ -26,6 +26,13 @@ contract PtSpotOracle is SpotOracle {
     IPMarketV3 public immutable market;
     uint32 public immutable twapDuration;
 
+    /**
+     * @notice Construct a new `PtSpotOracle` instance
+     * @param _market The Pendle Market to get the PT price from
+     * @param _twapDuration The duration of the TWAP
+     * @param _ltv The Loan To Value ratio
+     * @param _reserveOracle The oracle to get the reserve price from
+     */
     constructor(
         IPMarketV3 _market,
         uint32 _twapDuration,
@@ -44,6 +51,9 @@ contract PtSpotOracle is SpotOracle {
         twapDuration = _twapDuration;
     }
 
+    /**
+     * @inheritdoc SpotOracle
+     */
     function getPrice() public view override returns (uint256 price) {
         if (market.expiry() <= block.timestamp) return 0;
 
