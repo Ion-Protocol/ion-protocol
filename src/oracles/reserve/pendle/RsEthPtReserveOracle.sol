@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { WAD } from "../../../libraries/math/WadRayMath.sol";
 import { RSETH_LRT_ORACLE } from "../../../Constants.sol";
 import { ReserveOracle } from "../ReserveOracle.sol";
+
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @notice Reserve Oracle for PT-rsETH
@@ -10,6 +13,8 @@ import { ReserveOracle } from "../ReserveOracle.sol";
  * @custom:security-contact security@molecularlabs.io
  */
 contract RsEthPtReserveOracle is ReserveOracle {
+    using Math for uint256;
+
     constructor(
         uint8 _ilkIndex,
         address[] memory _feeds,
@@ -24,6 +29,6 @@ contract RsEthPtReserveOracle is ReserveOracle {
      * at maturity, we need to convert 1 ETH of value into rsETH terms.
      */
     function _getProtocolExchangeRate() internal view override returns (uint256) {
-        return RSETH_LRT_ORACLE.rsETHPrice();
+        return WAD.mulDiv(WAD, RSETH_LRT_ORACLE.rsETHPrice());
     }
 }

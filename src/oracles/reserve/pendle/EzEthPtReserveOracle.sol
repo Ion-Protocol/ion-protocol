@@ -31,6 +31,6 @@ contract EzEthPtReserveOracle is ReserveOracle {
         (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
         uint256 totalSupply = EZETH.totalSupply();
 
-        return totalTVL.mulDiv(1e18, totalSupply);
+        return totalSupply.mulDiv(1e18, totalTVL);
     }
 }
