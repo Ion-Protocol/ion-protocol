@@ -15,6 +15,11 @@ using SafeCast for uint256;
 using SafeCast for int256;
 using WadRayMath for uint256;
 
+/**
+ * @notice Yield Oracle for Pendle Markets
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract YieldOraclePendle is IYieldOracle {
     error InsufficientOracleSlots(uint256 currentSlots);
 
@@ -23,6 +28,12 @@ contract YieldOraclePendle is IYieldOracle {
 
     uint256 public immutable yieldCeiling;
 
+    /**
+     * @notice Construct a new `YieldOraclePendle` instance
+     * @param _market The Pendle Market to get the APY from
+     * @param _twapDuration The duration of the TWAP
+     * @param _yieldCeiling The maximum APY
+     */
     constructor(IPMarketV3 _market, uint32 _twapDuration, uint256 _yieldCeiling) {
         (,,,,, uint16 observationCardinalityNext) = _market._storage();
 
@@ -35,6 +46,9 @@ contract YieldOraclePendle is IYieldOracle {
         yieldCeiling = _yieldCeiling;
     }
 
+    /**
+     * @notice Get the APY for a given collateral
+     */
     function apys(uint256) external view override returns (uint32) {
         uint256 expiry = market.expiry();
 
