@@ -13,14 +13,12 @@ import { InterestRate } from "./../../src/InterestRate.sol";
 import { Whitelist } from "./../../src/Whitelist.sol";
 import { ProxyAdmin } from "./../../src/admin/ProxyAdmin.sol";
 import { TransparentUpgradeableProxy } from "./../../src/admin/TransparentUpgradeableProxy.sol";
-import { WSTETH_ADDRESS } from "./../../src/Constants.sol";
-import { IonPoolSharedSetup, IonPoolExposed, MockSpotOracle } from "./IonPoolSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "./ERC20PresetMinterPauser.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import { ERC20 } from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import { EnumerableSet } from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-// import { StdStorage, stdStorage } from "../../../../lib/forge-safe/lib/forge-std/src/StdStorage.sol";
+
+import { IonPoolSharedSetup, IonPoolExposed } from "./IonPoolSharedSetup.sol";
 
 import "forge-std/Test.sol";
 import { console2 } from "forge-std/console2.sol";
@@ -45,11 +43,18 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     IERC20 immutable RSETH = IERC20(address(new ERC20PresetMinterPauser("KelpDAO Restaked ETH", "rsETH")));
     IERC20 immutable RSWETH = IERC20(address(new ERC20PresetMinterPauser("Swell Restaked ETH", "rswETH")));
 
+    IIonPool constant IDLE = IIonPool(address(uint160(uint256(keccak256("IDLE_ASSET_HOLDINGS")))));
     IIonPool weEthIonPool;
     IIonPool rsEthIonPool;
     IIonPool rswEthIonPool;
 
+    GemJoin weEthGemJoin;
+    GemJoin rsEthGemJoin;
+    GemJoin rswEthGemJoin;
+
     IIonPool[] pools;
+
+    uint256[] ZERO_ALLO_CAPS = new uint256[](3);
 
     function setUp() public virtual override {
         super.setUp();
@@ -67,7 +72,8 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         markets[1] = rsEthIonPool;
         markets[2] = rswEthIonPool;
 
-        vault.addSupportedMarkets(markets);
+        vault.addSupportedMarkets(markets, ZERO_ALLO_CAPS, markets, markets);
+
         vm.stopPrank();
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
@@ -76,6 +82,17 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         pools[0] = weEthIonPool;
         pools[1] = rsEthIonPool;
         pools[2] = rswEthIonPool;
+
+        weEthGemJoin =
+            new GemJoin(IonPool(address(weEthIonPool)), IERC20(weEthIonPool.getIlkAddress(0)), 0, address(this));
+        rsEthGemJoin =
+            new GemJoin(IonPool(address(rsEthIonPool)), IERC20(rsEthIonPool.getIlkAddress(0)), 0, address(this));
+        rswEthGemJoin =
+            new GemJoin(IonPool(address(rswEthIonPool)), IERC20(rswEthIonPool.getIlkAddress(0)), 0, address(this));
+
+        weEthIonPool.grantRole(weEthIonPool.GEM_JOIN_ROLE(), address(weEthGemJoin));
+        rsEthIonPool.grantRole(rsEthIonPool.GEM_JOIN_ROLE(), address(rsEthGemJoin));
+        rswEthIonPool.grantRole(rswEthIonPool.GEM_JOIN_ROLE(), address(rswEthGemJoin));
     }
 
     function setERC20Balance(address token, address usr, uint256 amt) public {
@@ -144,27 +161,27 @@ contract VaultSharedSetup is IonPoolSharedSetup {
 
     // --- Privileged Helper Functions ---
 
-    // In the order of supply queue
+    // Updates in the order of supply queue
     function updateSupplyCaps(Vault _vault, uint256 cap1, uint256 cap2, uint256 cap3) internal {
         _vault.supplyQueue(0).updateSupplyCap(cap1);
         _vault.supplyQueue(1).updateSupplyCap(cap2);
         _vault.supplyQueue(2).updateSupplyCap(cap3);
     }
 
-    // In the order of supply queue
+    // Updates in the order of the supplyQueue array
     function updateAllocationCaps(Vault _vault, uint256 cap1, uint256 cap2, uint256 cap3) internal {
         uint256[] memory caps = new uint256[](3);
         caps[0] = cap1;
         caps[1] = cap2;
         caps[2] = cap3;
 
-        IIonPool[] memory queue = new IIonPool[](3);
-        queue[0] = _vault.supplyQueue(0);
-        queue[1] = _vault.supplyQueue(1);
-        queue[2] = _vault.supplyQueue(2);
+        IIonPool[] memory ionPools = new IIonPool[](3);
+        ionPools[0] = _vault.supplyQueue(0);
+        ionPools[1] = _vault.supplyQueue(1);
+        ionPools[2] = _vault.supplyQueue(2);
 
         vm.prank(_vault.owner());
-        _vault.updateAllocationCaps(queue, caps);
+        _vault.updateAllocationCaps(ionPools, caps);
     }
 
     function updateSupplyQueue(Vault _vault, IIonPool pool1, IIonPool pool2, IIonPool pool3) internal {
@@ -185,7 +202,17 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         _vault.updateWithdrawQueue(queue);
     }
 
+    // -- Queries ---
+
+    // function expectedSupplyAmounts(Vault _vault, uint256 assets) internal returns (uint256[]) {
+
+    // }
+
     // -- Exact Rounding Error Equations ---
+
+    function postDepositClaimRE(uint256 depositAmount, uint256 supplyFactor) internal returns (uint256) {
+        return (supplyFactor + 2) / RAY + 1;
+    }
 
     // The difference between the expected total assets after withdrawal and the
     // actual total assets after withdrawal.
@@ -211,5 +238,32 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     {
         totalAssets += 1;
         return (totalAssets - withdrawAmount * totalSupply % totalAssets) / totalSupply;
+    }
+
+    // --- IonPool Interactions ---
+
+    function borrow(address borrower, IIonPool pool, GemJoin gemJoin, uint256 depositAmt, uint256 borrowAmt) internal {
+        IERC20 collateralAsset = IERC20(address(pool.getIlkAddress(0)));
+
+        setERC20Balance(address(collateralAsset), borrower, depositAmt);
+
+        vm.startPrank(borrower);
+        collateralAsset.approve(address(gemJoin), depositAmt);
+        gemJoin.join(borrower, depositAmt);
+        // move collateral to vault
+        pool.depositCollateral(0, borrower, borrower, depositAmt, emptyProof);
+        pool.borrow(0, borrower, borrower, borrowAmt, emptyProof);
+        vm.stopPrank();
+    }
+
+    function supply(address lender, IIonPool pool, uint256 supplyAmt) internal {
+        IERC20 underlying = IERC20(pool.underlying());
+
+        setERC20Balance(address(underlying), lender, supplyAmt);
+
+        vm.startPrank(lender);
+        underlying.approve(address(pool), type(uint256).max);
+        pool.supply(lender, supplyAmt, emptyProof);
+        vm.stopPrank();
     }
 }
