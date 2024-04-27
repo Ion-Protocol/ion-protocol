@@ -17,12 +17,11 @@ contract VaultFactory {
     event CreateVault(
         address indexed vault,
         address indexed caller,
-        address indexed owner,
+        address indexed initialDefaultAdmin,
+        uint48 initialDelay,
         address feeRecipient,
+        uint256 feePercentage,
         IERC20 baseAsset,
-        IIonLens ionLens,
-        string name,
-        string symbol,
         bytes32 salt
     );
 
@@ -30,28 +29,40 @@ contract VaultFactory {
 
     /**
      * @notice Deploys a new Ion Lending Vault.
-     * @param owner Owner of the vault
-     * @param feeRecipient Address that receives the accrued manager fees.
-     * @param baseAsset The asset that is being lent out to IonPools.
      * @param ionLens The IonLens contract for querying data.
+     * @param baseAsset The asset that is being lent out to IonPools.
+     * @param feeRecipient Address that receives the accrued manager fees.
+     * @param feePercentage Fee percentage to be set.
      * @param name Name of the vault token.
      * @param symbol Symbol of the vault token.
+     * @param initialDelay The initial delay for default admin transfers.
+     * @param initialDefaultAdmin The initial default admin for the vault.
      * @param salt The salt used for CREATE2 deployment.
      */
     function createVault(
-        address owner,
-        address feeRecipient,
-        IERC20 baseAsset,
         IIonLens ionLens,
+        IERC20 baseAsset,
+        address feeRecipient,
+        uint256 feePercentage,
         string memory name,
         string memory symbol,
+        uint48 initialDelay,
+        address initialDefaultAdmin,
         bytes32 salt
     )
         external
         returns (IVault vault)
     {
-        vault = IVault(address(new Vault{ salt: salt }(owner, feeRecipient, baseAsset, ionLens, name, symbol)));
+        vault = IVault(
+            address(
+                new Vault{ salt: salt }(
+                    ionLens, baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin
+                )
+            )
+        );
 
-        emit CreateVault(address(vault), msg.sender, owner, feeRecipient, baseAsset, ionLens, name, symbol, salt);
+        emit CreateVault(
+            address(vault), msg.sender, initialDefaultAdmin, initialDelay, feeRecipient, feePercentage, baseAsset, salt
+        );
     }
 }

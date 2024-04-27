@@ -6,16 +6,17 @@ import { IIonPool } from "./../interfaces/IIonPool.sol";
 import { IIonLens } from "./../interfaces/IIonLens.sol";
 import { WAD } from "./../libraries/math/WadRayMath.sol";
 
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import { IERC4626 } from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
-import { ERC4626 } from "openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import { IERC20 } from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import { ERC20 } from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import { IERC20Metadata } from "openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol";
-import { Multicall } from "openzeppelin-contracts/contracts/utils/Multicall.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
+import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
+import { AccessControlDefaultAdminRules } from
+    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+import { ReentrancyGuard } from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title Ion Lending Vault
@@ -25,14 +26,15 @@ import { Multicall } from "openzeppelin-contracts/contracts/utils/Multicall.sol"
  * Metamorpho contract licnesed under GPL-2.0 with changes to administrative
  * logic, underlying data structures, and applying the lending interactions to
  * Ion Protocol.
+ *
  * @custom:security-contact security@molecularlabs.io
  */
-contract Vault is ERC4626, Ownable2Step, Multicall {
+contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
 
     error InvalidQueueLength();
-    error AllocationCapOrSupplyCapExceeded();
+    error AllocationCapExceeded();
     error AllSupplyCapsReached();
     error NotEnoughLiquidityToWithdraw();
     error InvalidIdleMarketRemovalNonZeroBalance();
@@ -54,6 +56,9 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
     event FeeAccrued(uint256 feeShares, uint256 newTotalAssets);
     event UpdateLastTotalAssets(uint256 lastTotalAssets, uint256 newLastTotalAssets);
 
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant ALLOCATOR_ROLE = keccak256("ALLOCATOR_ROLE");
+
     IIonPool constant IDLE = IIonPool(address(uint160(uint256(keccak256("IDLE_ASSET_HOLDINGS")))));
 
     uint8 public immutable DECIMALS_OFFSET;
@@ -68,6 +73,7 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
 
     address public feeRecipient;
     uint256 public feePercentage;
+
     uint256 public lastTotalAssets;
 
     mapping(IIonPool => uint256) public caps;
@@ -78,22 +84,41 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
     }
 
     constructor(
-        address _owner,
-        address _feeRecipient,
-        IERC20 _baseAsset,
         IIonLens _ionLens,
+        IERC20 _baseAsset,
+        address _feeRecipient,
+        uint256 _feePercentage,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        uint48 initialDelay,
+        address initialDefaultAdmin
     )
-        ERC4626(IERC20(_baseAsset))
+        ERC4626(_baseAsset)
         ERC20(_name, _symbol)
-        Ownable(_owner)
+        AccessControlDefaultAdminRules(initialDelay, initialDefaultAdmin)
     {
-        feeRecipient = _feeRecipient;
         ionLens = _ionLens;
         baseAsset = _baseAsset;
 
+        feePercentage = _feePercentage;
+        feeRecipient = _feeRecipient;
+
         DECIMALS_OFFSET = uint8(_zeroFloorSub(uint256(18), IERC20Metadata(address(_baseAsset)).decimals()));
+    }
+
+    /**
+     * @notice Updates the fee percentage.
+     * @dev Input must be in [RAY]. Ex) 2% would be 0.02e27.
+     */
+    function updateFeePercentage(uint256 _feePercentage) external onlyRole(OWNER_ROLE) {
+        feePercentage = _feePercentage;
+    }
+
+    /**
+     * @notice Updates the fee recipient.
+     */
+    function updateFeeRecipient(address _feeRecipient) external onlyRole(OWNER_ROLE) {
+        feeRecipient = _feeRecipient;
     }
 
     /**
@@ -110,24 +135,27 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
         IIonPool[] calldata newWithdrawQueue
     )
         public
-        onlyOwner
+        onlyRole(OWNER_ROLE)
     {
         if (marketsToAdd.length != allocationCaps.length) revert MarketsAndAllocationCapLengthMustBeEqual();
 
-        for (uint256 i; i < marketsToAdd.length; ++i) {
+        for (uint256 i; i != marketsToAdd.length;) {
             IIonPool pool = marketsToAdd[i];
 
             if (pool != IDLE) {
                 if (address(pool.underlying()) != address(baseAsset) || (address(pool) == address(0))) {
                     revert InvalidSupportedMarkets();
                 }
+                baseAsset.approve(address(pool), type(uint256).max);
             }
 
             if (!supportedMarkets.add(address(pool))) revert MarketAlreadySupported();
 
             caps[pool] = allocationCaps[i];
 
-            if (pool != IDLE) baseAsset.approve(address(pool), type(uint256).max);
+            unchecked {
+                ++i;
+            }
         }
 
         updateSupplyQueue(newSupplyQueue);
@@ -147,9 +175,9 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
         IIonPool[] calldata newWithdrawQueue
     )
         external
-        onlyOwner
+        onlyRole(OWNER_ROLE)
     {
-        for (uint256 i; i < marketsToRemove.length; ++i) {
+        for (uint256 i; i != marketsToRemove.length;) {
             IIonPool pool = marketsToRemove[i];
 
             if (pool == IDLE) {
@@ -159,12 +187,15 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
                 // `getUnderlyingClaimOf` returns zero even though the
                 // `normalizedBalance` is zero.
                 if (pool.balanceOf(address(this)) != 0) revert InvalidMarketRemovalNonZeroSupply();
+                baseAsset.approve(address(pool), 0);
             }
 
             if (!supportedMarkets.remove(address(pool))) revert MarketNotSupported();
             delete caps[pool];
 
-            if (pool != IDLE) baseAsset.approve(address(pool), 0);
+            unchecked {
+                ++i;
+            }
         }
         updateSupplyQueue(newSupplyQueue);
         updateWithdrawQueue(newWithdrawQueue);
@@ -174,28 +205,28 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
      * @notice Update the order of the markets in which user deposits are supplied.
      * @dev The IonPool in the queue must be part of `supportedMarkets`.
      */
-    function updateSupplyQueue(IIonPool[] calldata newSupplyQueue) public onlyOwner {
+    function updateSupplyQueue(IIonPool[] calldata newSupplyQueue) public onlyRole(ALLOCATOR_ROLE) {
         _validateQueueInput(newSupplyQueue);
 
         supplyQueue = newSupplyQueue;
 
-        emit UpdateSupplyQueue(msg.sender, newSupplyQueue);
+        emit UpdateSupplyQueue(_msgSender(), newSupplyQueue);
     }
 
     /**
      * @notice Update the order of the markets in which the deposits are withdrawn.
      * @dev The IonPool in the queue must be part of `supportedMarkets`.
      */
-    function updateWithdrawQueue(IIonPool[] calldata newWithdrawQueue) public onlyOwner {
+    function updateWithdrawQueue(IIonPool[] calldata newWithdrawQueue) public onlyRole(ALLOCATOR_ROLE) {
         _validateQueueInput(newWithdrawQueue);
 
         withdrawQueue = newWithdrawQueue;
 
-        emit UpdateWithdrawQueue(msg.sender, newWithdrawQueue);
+        emit UpdateWithdrawQueue(_msgSender(), newWithdrawQueue);
     }
 
     /**
-     * @dev The input array contains ordered indices of the `supportedMarkets`.
+     * @dev The input array contains ordered IonPools.
      * - Must not contain duplicates.
      * - Must be the same length as the `supportedMarkets` array.
      * - Must not contain indices that are out of bounds of the `supportedMarkets` EnumerableSet's underlying array.
@@ -209,18 +240,22 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
 
         bool[] memory seen = new bool[](queueLength);
 
-        for (uint256 i; i < queueLength; ++i) {
+        for (uint256 i; i != queueLength;) {
             // the `_positions` mapping returns `index + 1` and 0 means the value is not in the set
             bytes32 key = bytes32(uint256(uint160(address(queue[i]))));
             uint256 index = supportedMarkets._inner._positions[key];
 
             if (index == 0) revert InvalidQueueMarketNotSupported();
 
-            index--;
+            --index;
 
             if (seen[index] == true) revert InvalidQueueContainsDuplicates();
 
             seen[index] = true;
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -229,37 +264,49 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
      * within `supportedMarkets`. The elements inside `ionPools` must exist in
      * `supportedMarkets`.
      */
-    function updateAllocationCaps(IIonPool[] calldata ionPools, uint256[] calldata newCaps) external onlyOwner {
+    function updateAllocationCaps(
+        IIonPool[] calldata ionPools,
+        uint256[] calldata newCaps
+    )
+        external
+        onlyRole(OWNER_ROLE)
+    {
         if (ionPools.length != newCaps.length) revert IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
 
-        for (uint256 i; i < ionPools.length; ++i) {
+        for (uint256 i; i != ionPools.length;) {
             IIonPool pool = ionPools[i];
             if (!supportedMarkets.contains(address(pool))) revert MarketNotSupported();
             caps[pool] = newCaps[i];
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
     /**
-     * @notice Reallocates the base asset supply position across the specified IonPools.
+     * @notice Reallocates the base asset supply position across the specified
+     * IonPools. This call will revert if the resulting allocation in an IonPool
+     * violates the pool's supply cap.
      * @dev Depending on the order of deposits and withdrawals to and from
      * markets, the function could revert if there is not enough assets
      * withdrawn to deposit later in the loop. A key invariant is that the total
      * assets withdrawn should be equal to the total assets supplied. Otherwise,
      * revert.
      */
-    function reallocate(MarketAllocation[] calldata allocations) external onlyOwner {
+    function reallocate(MarketAllocation[] calldata allocations) external onlyRole(ALLOCATOR_ROLE) nonReentrant {
         uint256 totalSupplied;
         uint256 totalWithdrawn;
 
         uint256 currentIdleDeposits = baseAsset.balanceOf(address(this));
-        for (uint256 i; i < allocations.length; ++i) {
-            MarketAllocation memory allocation = allocations[i];
+        for (uint256 i; i != allocations.length;) {
+            MarketAllocation calldata allocation = allocations[i];
             IIonPool pool = allocation.pool;
 
             uint256 currentSupplied = pool == IDLE ? currentIdleDeposits : pool.getUnderlyingClaimOf(address(this));
             int256 assets = allocation.assets; // to deposit or withdraw
 
-            // if `assets` is zero, this means fully withdraw from the market.
+            // if `assets` is `type(int256).min`, this means fully withdraw from the market.
             // This prevents frontrunning in case the market needs to be fully withdrawn
             // from in order to remove the market.
             uint256 transferAmt;
@@ -282,17 +329,20 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
 
                 emit ReallocateWithdraw(pool, transferAmt);
             } else if (assets > 0) {
-                // Deposit all assets that have been withdrawn so far
+                // It is not possible to predict the exact amount of assets that
+                // will be withdrawn when using the `type(int256).min` indicator
+                // in previous iterations of the loop due to the per-second
+                // interest rate accrual. Therefore, the `max` indicator is
+                // necessary to be able to fully deposit the total withdrawn
+                // amount.
                 if (assets == type(int256).max) {
                     transferAmt = totalWithdrawn;
                 } else {
                     transferAmt = uint256(assets);
                 }
 
-                uint256 supplyCeil = pool == IDLE ? caps[pool] : Math.min(caps[pool], ionLens.wethSupplyCap(pool));
-
-                if (currentSupplied + transferAmt > supplyCeil) {
-                    revert AllocationCapOrSupplyCapExceeded();
+                if (currentSupplied + transferAmt > caps[pool]) {
+                    revert AllocationCapExceeded();
                 }
 
                 // If the assets are being deposited to IDLE, then no need for
@@ -305,53 +355,63 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
                 totalSupplied += transferAmt;
 
                 emit ReallocateSupply(pool, transferAmt);
-            } else {
-                continue;
+            }
+
+            unchecked {
+                ++i;
             }
         }
-        // totalSupplied must be less than or equal to totalWithdrawn
+
         if (totalSupplied != totalWithdrawn) revert InvalidReallocation();
     }
 
     // --- IonPool Interactions ---
 
+    /**
+     * @notice Iterates through the supply queue to deposit as much as possible.
+     * Reverts if the deposit amount cannot be filled due to the allocation cap
+     * or the supply cap.
+     * @dev Must be non-reentrant in case the underlying IonPool implements
+     * callback logic.
+     */
     function _supplyToIonPool(uint256 assets) internal {
         uint256 currentIdleDeposits = baseAsset.balanceOf(address(this)) - assets;
+        uint256 supplyQueueLength = supplyQueue.length;
 
-        for (uint256 i; i < supplyQueue.length; ++i) {
+        for (uint256 i; i != supplyQueueLength; ++i) {
             IIonPool pool = supplyQueue[i];
 
             // handle case where assets are kept on balance without any transfer
             // to IonPools.
+            uint256 toSupply;
             if (pool == IDLE) {
                 uint256 allocationCap = caps[pool];
-                if (allocationCap == 0) continue;
 
                 // Can supply up to the difference between allocationCap and the current balance.
                 // Should supply only the `assets` if it's lower than the available room to fill.
                 uint256 availableRoom = _zeroFloorSub(allocationCap, currentIdleDeposits);
-                uint256 toKeepIdle = Math.min(availableRoom, assets);
-                assets -= toKeepIdle;
-                if (assets == 0) return;
-                continue;
-            }
 
-            uint256 supplyCeil = Math.min(caps[pool], ionLens.wethSupplyCap(pool));
+                // Decrement the accumulator at the end of this loop, but no
+                // external interactions need to be made as the assets are
+                // already on this contract' balance.
+                toSupply = Math.min(availableRoom, assets);
+            } else {
+                uint256 supplyCeil = Math.min(caps[pool], ionLens.wethSupplyCap(pool));
 
-            if (supplyCeil == 0) continue;
+                if (supplyCeil == 0) continue;
 
-            pool.accrueInterest();
+                // supply as much assets we can to fill the maximum available
+                // deposit for each market
+                uint256 currentSupplied = pool.getUnderlyingClaimOf(address(this));
 
-            // supply as much assets we can to fill the maximum available
-            // deposit for each market
-            uint256 currentSupplied = pool.getUnderlyingClaimOf(address(this));
+                toSupply = Math.min(_zeroFloorSub(supplyCeil, currentSupplied), assets);
 
-            uint256 toSupply = Math.min(_zeroFloorSub(supplyCeil, currentSupplied), assets);
+                if (toSupply == 0) continue;
 
-            if (toSupply > 0) {
                 pool.supply(address(this), toSupply, new bytes32[](0));
-                assets -= toSupply;
             }
+
+            assets -= toSupply;
             if (assets == 0) return;
         }
         if (assets != 0) revert AllSupplyCapsReached();
@@ -359,30 +419,33 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
 
     function _withdrawFromIonPool(uint256 assets) internal {
         uint256 currentIdleDeposits = baseAsset.balanceOf(address(this));
-
-        for (uint256 i; i < supplyQueue.length; ++i) {
+        uint256 withdrawQueueLength = withdrawQueue.length;
+        for (uint256 i; i < withdrawQueueLength; ++i) {
             IIonPool pool = withdrawQueue[i];
 
             // if the assets are IDLE, they are already on this contract's
             // balance. Update `assets` accumulator but don't actually transfer.
             uint256 toWithdraw;
             if (pool == IDLE) {
+                // Decrement by this amount at the end of the loop, but do not
+                // make any external interaction as the balance is already
+                // sitting in this contract and does not need to be withdrawn
+                // from an `IonPool`.
                 toWithdraw = Math.min(currentIdleDeposits, assets);
-                assets -= toWithdraw;
-                if (assets == 0) return;
-                continue;
-            }
+            } else {
+                uint256 withdrawable = _withdrawable(pool);
+                toWithdraw = Math.min(assets, withdrawable);
 
-            uint256 withdrawable = _withdrawable(pool);
-            toWithdraw = Math.min(assets, withdrawable);
+                // If `assets` is greater than `currentSupplied`, we want to fully
+                // withdraw from this market. In IonPool, the shares to burn is
+                // rounded up as ceil(assets / supplyFactor)
+                if (toWithdraw == 0) continue;
 
-            // If `assets` is greater than `currentSupplied`, we want to fully withdraw from this market.
-            // In IonPool, the shares to burn is rounded up as
-            // ceil(assets / supplyFactor)
-            if (toWithdraw > 0) {
                 pool.withdraw(address(this), toWithdraw);
-                assets -= toWithdraw;
             }
+
+            assets -= toWithdraw;
+
             if (assets == 0) return;
         }
 
@@ -396,21 +459,22 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
      * @notice Receives deposits from the sender and supplies into the underlying IonPool markets.
      * @dev All incoming deposits are deposited in the order specified in the deposit queue.
      */
-    function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256 shares) {
         uint256 newTotalAssets = _accrueFee();
 
         shares = _convertToSharesWithTotals(assets, totalSupply(), newTotalAssets, Math.Rounding.Floor);
-        _deposit(msg.sender, receiver, assets, shares);
+        _deposit(_msgSender(), receiver, assets, shares);
     }
 
     /**
      * @inheritdoc IERC4626
      * @dev
      */
-    function mint(uint256 shares, address receiver) public override returns (uint256 assets) {
+    function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256 assets) {
         uint256 newTotalAssets = _accrueFee();
 
-        lastTotalAssets = newTotalAssets; // TODO: does this need to be updated here?
+        // This is updated again with the deposited assets amount in `_deposit`.
+        lastTotalAssets = newTotalAssets;
 
         assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
 
@@ -421,35 +485,55 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
      * @notice Withdraws supplied assets from IonPools and sends them to the receiver in exchange for vault shares.
      * @dev All withdraws are withdrawn in the order specified in the withdraw queue.
      */
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    )
+        public
+        override
+        nonReentrant
+        returns (uint256 shares)
+    {
         uint256 newTotalAssets = _accrueFee();
         shares = _convertToSharesWithTotals(assets, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
         _updateLastTotalAssets(newTotalAssets - assets);
 
-        _withdraw(msg.sender, receiver, owner, assets, shares);
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
     }
 
     /**
      * @inheritdoc IERC4626
-     * @dev
+     * @dev After withdrawing `assets`, the user gets exact `assets` out. But in
+     * the IonPool, the resulting total underlying claim may have decreased
+     * by a bit above the `assets` amount due to rounding in the pool's favor.
+     *
+     * In that case, the resulting `totalAssets()` will be smaller than just
+     * the `newTotalAssets - assets`. Predicting the exact resulting
+     * totalAssets() requires knowing how much liquidity is being withdrawn
+     * from each pool, which is not possible to know until the actual
+     * iteration on the withdraw queue. So we acknowledge the dust
+     * difference here.
+     *
+     * If the `lastTotalAssets` is slightly greater than the actual `totalAssets`,
+     * the impact will be that the calculated interest accrued during fee distribution will be slightly less than the
+     * true value.
      */
-    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256 assets) {
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    )
+        public
+        override
+        nonReentrant
+        returns (uint256 assets)
+    {
         uint256 newTotalAssets = _accrueFee();
 
         assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Floor);
 
-        // After withdrawing `assets`, the user gets exact `assets` out.
-        // But in the IonPool, the resulting total underlying claim may have decreased by a bit above the `assets`
-        // amount due to rounding in protocol favor.
-        // In that case, the resulting totalAssets() will be smaller than just the `newTotalAssets - assets`.
-        // Predicting the exact resulting totalAssets() requires knowing how much liquidity is being withdrawn from each
-        // pool, which is not possible to know
-        // until the actual iteration on the withdraw queue. So we acknowledge the dust difference here.
-        // The `lastTotalAssets` will be greater than the actual `totalAssets`, so in practice the impact will be that
-        // the calculated interest accrued during fee distribution will be slightly less than the true value.
-
-        // TODO: Should this be zeroFloorSub or a normal `-`
-        _updateLastTotalAssets(_zeroFloorSub(newTotalAssets, assets));
+        _updateLastTotalAssets(newTotalAssets - assets);
 
         _withdraw(_msgSender(), receiver, owner, assets, shares);
     }
@@ -504,12 +588,15 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
      * lender receipt token that is pegged 1:1 to the underlying supplied asset.
      */
     function totalAssets() public view override returns (uint256 assets) {
-        for (uint256 i; i < supportedMarkets.length(); ++i) {
+        for (uint256 i; i != supportedMarkets.length();) {
             address pool = supportedMarkets.at(i);
             if (pool == address(IDLE)) {
                 assets += baseAsset.balanceOf(address(this));
             } else {
                 assets += IIonPool(pool).getUnderlyingClaimOf(address(this));
+            }
+            unchecked {
+                ++i;
             }
         }
     }
@@ -630,9 +717,9 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
         newTotalAssets = totalAssets();
         uint256 totalInterest = _zeroFloorSub(newTotalAssets, lastTotalAssets);
 
-        // TotalInterest amount of new iTokens were created for this vault. A
+        // The new amount of new iTokens that were created for this vault. A
         // portion of this should be claimable by depositors and some portion of
-        // this should be claimable by the fee recipient
+        // this should be claimable by the fee recipient.
         if (totalInterest != 0 && feePercentage != 0) {
             uint256 feeAssets = totalInterest.mulDiv(feePercentage, WAD);
 
@@ -707,27 +794,29 @@ contract Vault is ERC4626, Ownable2Step, Multicall {
 
     /**
      * @dev Emulates the actual `_withdrawFromIonPool` accounting to predict
-     * accurately how much liquidity will be left after the withdraw. The
+     * accurately how much of the input assets will be left after withdrawing as much as it can. The
      * difference between this return value and the input `assets` is the exact
      * amount that will be withdrawn.
      * @return The remaining assets to be withdrawn. NOT the amount of assets that were withdrawn.
      */
     function _simulateWithdrawIon(uint256 assets) internal view returns (uint256) {
-        for (uint8 i; i < withdrawQueue.length; ++i) {
+        uint256 withdrawQueueLength = withdrawQueue.length;
+        for (uint256 i; i < withdrawQueueLength; ++i) {
             IIonPool pool = withdrawQueue[i];
 
+            uint256 toWithdraw;
             if (pool == IDLE) {
                 uint256 currentIdleBalance = baseAsset.balanceOf(address(this));
-                uint256 toWithdraw = Math.min(currentIdleBalance, assets);
+                toWithdraw = Math.min(currentIdleBalance, assets);
                 assets -= toWithdraw;
                 if (assets == 0) return assets;
                 continue;
             }
 
             uint256 withdrawable = _withdrawable(pool);
-            uint256 toWithdraw = Math.min(assets, withdrawable);
+            toWithdraw = Math.min(assets, withdrawable);
 
-            assets -= toWithdraw; // TODO Should this be `_zeroFloorSub` instead.
+            assets -= toWithdraw;
 
             if (assets == 0) break;
         }

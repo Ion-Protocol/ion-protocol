@@ -18,17 +18,22 @@ using EnumerableSet for EnumerableSet.AddressSet;
 using WadRayMath for uint256;
 using Math for uint256;
 
-address constant VAULT_OWNER = address(1);
-address constant FEE_RECIPIENT = address(2);
-
 contract VaultSetUpTest is VaultSharedSetup {
     function setUp() public override {
         super.setUp();
     }
 
     function test_AddSupportedMarketsSeparately() public {
-        vault = new Vault(VAULT_OWNER, FEE_RECIPIENT, BASE_ASSET, ionLens, "Ion Vault Token", "IVT");
-        vm.startPrank(vault.owner());
+        vault = new Vault(
+            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
 
         IIonPool[] memory market1 = new IIonPool[](1);
         market1[0] = weEthIonPool;
@@ -44,7 +49,6 @@ contract VaultSetUpTest is VaultSharedSetup {
         vault.addSupportedMarkets(market1, allocationCaps, market1, market1);
 
         address[] memory supportedMarkets1 = vault.getSupportedMarkets();
-        console2.log("supportedMarkets1[0]: ", supportedMarkets1[0]);
 
         assertEq(supportedMarkets1.length, 1, "supported markets length one");
         assertEq(supportedMarkets1[0], address(weEthIonPool), "first supported markets address");
@@ -79,11 +83,22 @@ contract VaultSetUpTest is VaultSharedSetup {
         assertEq(address(vault.supplyQueue(2)), address(rswEthIonPool), "third in supply queue");
         assertEq(address(vault.withdrawQueue(2)), address(rswEthIonPool), "third in withdraw queue");
         assertEq(vault.caps(rswEthIonPool), allocationCap, "rswEthIonPool allocation cap");
+
+        vm.stopPrank();
     }
 
     function test_AddSupportedMarketsTogether() public {
-        vault = new Vault(VAULT_OWNER, FEE_RECIPIENT, BASE_ASSET, ionLens, "Ion Vault Token", "IVT");
-        vm.startPrank(vault.owner());
+        vault = new Vault(
+            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
+
         IIonPool[] memory markets = new IIonPool[](3);
         markets[0] = weEthIonPool;
         markets[1] = rsEthIonPool;
@@ -113,6 +128,8 @@ contract VaultSetUpTest is VaultSharedSetup {
         assertEq(vault.caps(weEthIonPool), 1 ether, "weEthIonPool allocation cap");
         assertEq(vault.caps(rsEthIonPool), 2 ether, "rsEthIonPool allocation cap");
         assertEq(vault.caps(rswEthIonPool), 3 ether, "rswEthIonPool allocation cap");
+
+        vm.stopPrank();
     }
 
     function test_UpdateSupplyQueue() public {
@@ -121,7 +138,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         supplyQueue[1] = rswEthIonPool;
         supplyQueue[2] = weEthIonPool;
 
-        vm.startPrank(vault.owner());
+        vm.startPrank(OWNER);
         vault.updateSupplyQueue(supplyQueue);
 
         assertEq(address(vault.supplyQueue(0)), address(supplyQueue[0]), "updated supply queue");
@@ -135,11 +152,13 @@ contract VaultSetUpTest is VaultSharedSetup {
             invalidLengthQueue[i] = weEthIonPool;
         }
 
-        vm.startPrank(vault.owner());
+        vm.startPrank(OWNER);
+
         vm.expectRevert(Vault.InvalidQueueLength.selector);
         vault.updateSupplyQueue(invalidLengthQueue);
 
         IIonPool[] memory zeroAddressQueue = new IIonPool[](3);
+
         vm.expectRevert(Vault.InvalidQueueMarketNotSupported.selector);
         vault.updateSupplyQueue(zeroAddressQueue);
 
@@ -263,7 +282,6 @@ contract VaultDeposit is VaultSharedSetup {
         setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
 
         address[] memory supportedMarkets = vault.getSupportedMarkets();
-        console2.log("supportedMarkets.length: ", supportedMarkets.length);
 
         updateSupplyQueue(vault, rsEthIonPool, rswEthIonPool, weEthIonPool);
         updateSupplyCaps(vault, 3e18, 10e18, 5e18);
@@ -322,8 +340,6 @@ contract VaultDeposit is VaultSharedSetup {
         uint256 initialTotalSupply = vault.totalSupply();
         uint256 initialTotalAssets = vault.totalAssets();
 
-        console2.log("initialTotalAssets: ", initialTotalAssets);
-
         updateSupplyQueue(vault, weEthIonPool, rsEthIonPool, rswEthIonPool);
         updateSupplyCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
         updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
@@ -335,13 +351,6 @@ contract VaultDeposit is VaultSharedSetup {
         uint256 assetBalanceDiff = initialAssetBalance - BASE_ASSET.balanceOf(address(this));
         uint256 totalSupplyDiff = vault.totalSupply() - initialTotalSupply;
         uint256 totalAssetsDiff = vault.totalAssets() - initialTotalAssets;
-
-        console2.log("expectedDepositAmount: ", expectedDepositAmount);
-        console2.log("vault.totalAssets(): ", vault.totalAssets());
-        console2.log("totalAssetsDiff: ", totalAssetsDiff);
-
-        console2.log("assetBalanceDiff: ", assetBalanceDiff);
-        console2.log("assetsDeposited: ", assetsDeposited);
 
         uint256 totalAssetsRoundingError = (weEthIonPool.supplyFactor() + 2) / RAY + 1;
 
@@ -453,8 +462,6 @@ contract VaultWithdraw is VaultSharedSetup {
         uint256 totalAssetsRoundingError = totalAssetsREAfterWithdraw(4e18, weEthIonPool.supplyFactor());
         uint256 maxWithdrawRoundingError = maxWithdrawREAfterWithdraw(withdrawAmount, prevTotalAssets, prevTotalSupply);
 
-        console2.log("totalAssetsRoundingError: ", totalAssetsRoundingError);
-
         // pool1 deposit 2 withdraw 2
         // pool2 deposit 3 withdraw 3
         // pool3 deposit 5 withdraw 4
@@ -538,7 +545,7 @@ contract VaultReallocate is VaultSharedSetup {
         allocs[1] = Vault.MarketAllocation({ pool: weEthIonPool, assets: weEthDiff });
         allocs[2] = Vault.MarketAllocation({ pool: rsEthIonPool, assets: rsEthDiff });
 
-        vm.prank(vault.owner());
+        vm.prank(ALLOCATOR);
         vault.reallocate(allocs);
 
         uint256 newTotalAssets = vault.totalAssets();
@@ -603,7 +610,7 @@ contract VaultReallocate is VaultSharedSetup {
         allocs[1] = Vault.MarketAllocation({ pool: weEthIonPool, assets: weEthDiff });
         allocs[2] = Vault.MarketAllocation({ pool: rswEthIonPool, assets: rswEthDiff });
 
-        vm.prank(vault.owner());
+        vm.prank(ALLOCATOR);
         vault.reallocate(allocs);
 
         uint256 newTotalAssets = vault.totalAssets();
@@ -647,8 +654,8 @@ contract VaultReallocate is VaultSharedSetup {
         allocs[1] = Vault.MarketAllocation({ pool: rsEthIonPool, assets: -1e18 });
         allocs[2] = Vault.MarketAllocation({ pool: weEthIonPool, assets: 2e18 });
 
-        vm.prank(vault.owner());
-        vm.expectRevert(Vault.AllocationCapOrSupplyCapExceeded.selector);
+        vm.prank(ALLOCATOR);
+        vm.expectRevert(Vault.AllocationCapExceeded.selector);
         vault.reallocate(allocs);
     }
 
@@ -674,8 +681,9 @@ contract VaultReallocate is VaultSharedSetup {
         allocs[1] = Vault.MarketAllocation({ pool: rsEthIonPool, assets: type(int256).min });
         allocs[2] = Vault.MarketAllocation({ pool: weEthIonPool, assets: 4e18 });
 
-        vm.prank(vault.owner());
-        vm.expectRevert(Vault.AllocationCapOrSupplyCapExceeded.selector);
+        vm.prank(ALLOCATOR);
+        vm.expectRevert(abi.encodeWithSelector(IIonPool.DepositSurpassesSupplyCap.selector, 4e18, 5e18));
+        // vm.expectRevert(IIonPool.DepositSurpassesSupplyCap.selector);
         vault.reallocate(allocs);
     }
 }
@@ -686,7 +694,10 @@ contract VaultWithIdlePool is VaultSharedSetup {
 
     function setUp() public virtual override {
         super.setUp();
-        vault = new Vault(VAULT_OWNER, FEE_RECIPIENT, BASE_ASSET, ionLens, "Ion Vault Token", "IVT");
+
+        vault = new Vault(
+            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
+        );
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
@@ -702,9 +713,15 @@ contract VaultWithIdlePool is VaultSharedSetup {
         allocationCaps[2] = 30e18;
         allocationCaps[3] = 40e18;
 
-        console2.log("idLE POOL SETUP");
+        vm.startPrank(vault.defaultAdmin());
 
-        vm.prank(vault.owner());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), ALLOCATOR);
+
+        vm.stopPrank();
+
+        vm.prank(OWNER);
         vault.addSupportedMarkets(marketsToAdd, allocationCaps, marketsToAdd, marketsToAdd);
     }
 
@@ -805,11 +822,6 @@ contract VaultWithIdlePool is VaultSharedSetup {
         uint256 rsEthIonPoolClaim = rsEthIonPool.getUnderlyingClaimOf(address(vault));
         uint256 rswEthIonPoolClaim = rswEthIonPool.getUnderlyingClaimOf(address(vault));
 
-        console2.log("weEthIonPoolClaim: ", weEthIonPoolClaim);
-        console2.log("idleClaim: ", idleClaim);
-        console2.log("rsEthIonPoolClaim: ", rsEthIonPoolClaim);
-        console2.log("rswEthIonPoolClaim: ", rswEthIonPoolClaim);
-
         uint256 withdrawAmount = 40e18;
 
         uint256 expectedTotalAssets = prevTotalAssets - withdrawAmount;
@@ -833,8 +845,6 @@ contract VaultWithIdlePool is VaultSharedSetup {
         vault.withdraw(withdrawAmount, address(this), address(this));
 
         // vault total assets decreases by withdraw amount + rounding error
-        console2.log("vault.totalAssets(): ", vault.totalAssets());
-        console2.log("expectedTotalAssets: ", expectedTotalAssets);
         assertLe(
             expectedTotalAssets - vault.totalAssets(),
             postDepositClaimRE(withdrawAmount, supplyFactor),
@@ -859,7 +869,6 @@ contract VaultWithIdlePool is VaultSharedSetup {
         vault.deposit(depositAmount, address(this));
 
         uint256 withdrawAmount = vault.maxWithdraw(address(this));
-        console2.log("withdrawAmount: ", withdrawAmount);
         vault.withdraw(withdrawAmount, address(this), address(this));
 
         assertEq(vault.totalAssets(), 0, "vault total assets");
@@ -881,7 +890,7 @@ contract VaultWithIdlePool is VaultSharedSetup {
         uint256[] memory newAllocationCaps = new uint256[](1);
         newAllocationCaps[0] = 50e18;
 
-        vm.prank(vault.owner());
+        vm.prank(OWNER);
         vault.updateAllocationCaps(ionPoolToUpdate, newAllocationCaps);
 
         // 10 weEth 20 idle 30 rsEth 10 rswEth
@@ -907,7 +916,7 @@ contract VaultWithIdlePool is VaultSharedSetup {
         allocs[1] = Vault.MarketAllocation({ pool: rsEthIonPool, assets: rsEthDiff });
         allocs[2] = Vault.MarketAllocation({ pool: IDLE, assets: idleDiff });
 
-        vm.prank(vault.owner());
+        vm.prank(ALLOCATOR);
         vault.reallocate(allocs);
 
         assertLt(
@@ -952,7 +961,7 @@ contract VaultWithIdlePool is VaultSharedSetup {
         allocs[1] = Vault.MarketAllocation({ pool: IDLE, assets: idleDiff });
         allocs[2] = Vault.MarketAllocation({ pool: rswEthIonPool, assets: rswEthDiff });
 
-        vm.prank(vault.owner());
+        vm.prank(ALLOCATOR);
         vault.reallocate(allocs);
 
         assertLt(

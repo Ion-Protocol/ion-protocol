@@ -27,9 +27,6 @@ using EnumerableSet for EnumerableSet.AddressSet;
 using WadRayMath for uint256;
 using Math for uint256;
 
-address constant VAULT_OWNER = address(1);
-address constant FEE_RECIPIENT = address(2);
-
 contract VaultSharedSetup is IonPoolSharedSetup {
     using stdStorage for StdStorage;
 
@@ -37,6 +34,15 @@ contract VaultSharedSetup is IonPoolSharedSetup {
 
     Vault vault;
     IonLens ionLens;
+
+    // roles
+    address constant VAULT_ADMIN = address(uint160(uint256(keccak256("VAULT_ADMIN"))));
+    address constant OWNER = address(uint160(uint256(keccak256("OWNER"))));
+    address constant ALLOCATOR = address(uint160(uint256(keccak256("ALLOCATOR"))));
+
+    uint48 constant INITIAL_DELAY = 0;
+    address constant FEE_RECIPIENT = address(uint160(uint256(keccak256("FEE_RECIPIENT"))));
+    uint256 constant ZERO_FEES = 0;
 
     IERC20 immutable BASE_ASSET = IERC20(address(new ERC20PresetMinterPauser("Lido Wrapped Staked ETH", "wstETH")));
     IERC20 immutable WEETH = IERC20(address(new ERC20PresetMinterPauser("EtherFi Restaked ETH", "weETH")));
@@ -65,16 +71,26 @@ contract VaultSharedSetup is IonPoolSharedSetup {
 
         ionLens = new IonLens();
 
-        vault = new Vault(VAULT_OWNER, FEE_RECIPIENT, BASE_ASSET, ionLens, "Ion Vault Token", "IVT");
-        vm.startPrank(vault.owner());
+        vault = new Vault(
+            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER); // OWNER also needs to be ALLOCATOR in order to update queues
+            // inside `addSupportedMarkets`.
+        vault.grantRole(vault.ALLOCATOR_ROLE(), ALLOCATOR);
+
         IIonPool[] memory markets = new IIonPool[](3);
         markets[0] = weEthIonPool;
         markets[1] = rsEthIonPool;
         markets[2] = rswEthIonPool;
 
-        vault.addSupportedMarkets(markets, ZERO_ALLO_CAPS, markets, markets);
-
         vm.stopPrank();
+
+        vm.prank(OWNER);
+        vault.addSupportedMarkets(markets, ZERO_ALLO_CAPS, markets, markets);
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
@@ -180,7 +196,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         ionPools[1] = _vault.supplyQueue(1);
         ionPools[2] = _vault.supplyQueue(2);
 
-        vm.prank(_vault.owner());
+        vm.prank(OWNER);
         _vault.updateAllocationCaps(ionPools, caps);
     }
 
@@ -189,7 +205,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         supplyQueue[0] = pool1;
         supplyQueue[1] = pool2;
         supplyQueue[2] = pool3;
-        vm.prank(_vault.owner());
+        vm.prank(ALLOCATOR);
         _vault.updateSupplyQueue(supplyQueue);
     }
 
@@ -198,7 +214,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         queue[0] = pool1;
         queue[1] = pool2;
         queue[2] = pool3;
-        vm.prank(_vault.owner());
+        vm.prank(ALLOCATOR);
         _vault.updateWithdrawQueue(queue);
     }
 

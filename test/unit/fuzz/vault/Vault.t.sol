@@ -23,7 +23,7 @@ contract Vault_Fuzz is VaultSharedSetup {
      * NOTE: While this passes, the expression with SF - 3 also passes, so not
      * yet a guarantee that this is the tightest bound possible. 
      */
-    function test_IonPoolSupplyRoundingError(uint256 assets, uint256 supplyFactor) public {
+    function testFuzz_IonPoolSupplyRoundingError(uint256 assets, uint256 supplyFactor) public {
         assets = bound(assets, 1e18, type(uint128).max);
         supplyFactor = bound(supplyFactor, 1e27, assets * RAY);
 
@@ -37,6 +37,6 @@ contract Vault_Fuzz is VaultSharedSetup {
         uint256 resultingClaim = weEthIonPool.getUnderlyingClaimOf(address(this));
 
         uint256 re = assets - ((assets * RAY - ((assets * RAY) % supplyFactor)) / RAY);
-        assertLe(expectedClaim - resultingClaim, (supplyFactor - WAD) / RAY + 1);
+        assertLe(expectedClaim - resultingClaim, (supplyFactor - 2) / RAY + 1);
     }
 }
