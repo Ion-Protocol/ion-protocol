@@ -15,14 +15,13 @@ contract VaultFactory {
     // --- Events ---
 
     event CreateVault(
-        address indexed vault,
-        address indexed caller,
-        address indexed initialDefaultAdmin,
-        uint48 initialDelay,
+        address vault,
+        IERC20 indexed baseAsset,
         address feeRecipient,
         uint256 feePercentage,
-        IERC20 baseAsset,
-        bytes32 salt
+        string name,
+        string symbol,
+        address indexed initialDefaultAdmin
     );
 
     // --- External ---
@@ -61,8 +60,6 @@ contract VaultFactory {
             )
         );
 
-        emit CreateVault(
-            address(vault), msg.sender, initialDefaultAdmin, initialDelay, feeRecipient, feePercentage, baseAsset, salt
-        );
+        emit CreateVault(address(vault), baseAsset, feeRecipient, feePercentage, name, symbol, initialDefaultAdmin);
     }
 }
