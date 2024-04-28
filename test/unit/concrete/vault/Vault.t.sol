@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { ERC20PresetMinterPauser } from "./../../../helpers/ERC20PresetMinterPauser.sol";
 import { VaultSharedSetup } from "./../../../helpers/VaultSharedSetup.sol";
 
 import { WadRayMath, RAY } from "./../../../../src/libraries/math/WadRayMath.sol";
@@ -10,7 +11,8 @@ import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 import { IonLens } from "./../../../../src/periphery/IonLens.sol";
 import { EnumerableSet } from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-
+import { IAccessControl } from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import "forge-std/Test.sol";
 import { console2 } from "forge-std/console2.sol";
 
@@ -132,6 +134,212 @@ contract VaultSetUpTest is VaultSharedSetup {
         vm.stopPrank();
     }
 
+    function test_Revert_AddSupportedMarkets_InvalidSupportedMarkets() public {
+        IERC20 wrongBaseAsset = IERC20(address(new ERC20PresetMinterPauser("Wrong Wrapped Staked ETH", "wstETH")));
+
+        IIonPool newIonPool = deployIonPool(wrongBaseAsset, WEETH, address(this));
+
+        IIonPool[] memory markets = new IIonPool[](1);
+        markets[0] = newIonPool;
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = 1e18;
+
+        IIonPool[] memory queue = new IIonPool[](4);
+        queue[0] = weEthIonPool;
+        queue[1] = rsEthIonPool;
+        queue[2] = rswEthIonPool;
+        queue[3] = newIonPool;
+
+        vm.startPrank(OWNER);
+
+        // wrong base asset revert
+        vm.expectRevert(Vault.InvalidSupportedMarkets.selector);
+        vault.addSupportedMarkets(markets, allocationCaps, queue, queue);
+
+        // zero address revert
+        vm.expectRevert();
+        markets[0] = IIonPool(address(0));
+        vault.addSupportedMarkets(markets, allocationCaps, queue, queue);
+
+        vm.stopPrank();
+    }
+
+    function test_RemoveSingleSupportedMarket() public {
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = 1e18;
+
+        IIonPool[] memory marketsToRemove = new IIonPool[](1);
+        marketsToRemove[0] = weEthIonPool;
+
+        IIonPool[] memory supplyQueue = new IIonPool[](2);
+        supplyQueue[0] = rsEthIonPool;
+        supplyQueue[1] = rswEthIonPool;
+
+        IIonPool[] memory withdrawQueue = new IIonPool[](2);
+        withdrawQueue[0] = rswEthIonPool;
+        withdrawQueue[1] = rsEthIonPool;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(marketsToRemove, allocationCaps);
+
+        assertEq(vault.caps(weEthIonPool), 1e18, "allocation cap");
+        assertEq(BASE_ASSET.allowance(address(vault), address(weEthIonPool)), type(uint256).max, "allowance");
+
+        vm.prank(OWNER);
+        vault.removeSupportedMarkets(marketsToRemove, supplyQueue, withdrawQueue);
+
+        address[] memory supportedMarkets = vault.getSupportedMarkets();
+
+        assertEq(supportedMarkets.length, 2, "supported markets");
+        // weEth rsEth rswEth => rswEth rsEth
+        // weEth is swapped and popped
+        assertEq(address(supportedMarkets[0]), address(rswEthIonPool), "first in supported markets");
+        assertEq(address(supportedMarkets[1]), address(rsEthIonPool), "second in supported markets");
+
+        assertEq(address(vault.supplyQueue(0)), address(rsEthIonPool), "first in supply queue");
+        assertEq(address(vault.supplyQueue(1)), address(rswEthIonPool), "second in supply queue");
+
+        assertEq(address(vault.withdrawQueue(0)), address(rswEthIonPool), "first in withdraw queue");
+        assertEq(address(vault.withdrawQueue(1)), address(rsEthIonPool), "second in withdraw queue");
+
+        assertEq(vault.caps(weEthIonPool), 0, "allocation cap deleted");
+        assertEq(BASE_ASSET.allowance(address(vault), address(weEthIonPool)), 0, "approval revoked");
+    }
+
+    function test_RemoveAllSupportedMarkets() public {
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 1e18;
+        allocationCaps[1] = 1e18;
+        allocationCaps[2] = 1e18;
+
+        IIonPool[] memory marketsToRemove = new IIonPool[](3);
+        marketsToRemove[0] = weEthIonPool;
+        marketsToRemove[1] = rsEthIonPool;
+        marketsToRemove[2] = rswEthIonPool;
+
+        IIonPool[] memory supplyQueue = new IIonPool[](0);
+
+        IIonPool[] memory withdrawQueue = new IIonPool[](0);
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(marketsToRemove, allocationCaps);
+
+        vm.prank(OWNER);
+        vault.removeSupportedMarkets(marketsToRemove, supplyQueue, withdrawQueue);
+
+        address[] memory supportedMarkets = vault.getSupportedMarkets();
+
+        assertEq(supportedMarkets.length, 0, "supported markets");
+
+        vm.expectRevert();
+        vault.supplyQueue(0);
+        vm.expectRevert();
+        vault.withdrawQueue(0);
+
+        assertEq(vault.caps(weEthIonPool), 0, "allocation cap deleted");
+        assertEq(vault.caps(rsEthIonPool), 0, "allocation cap deleted");
+        assertEq(vault.caps(rswEthIonPool), 0, "allocation cap deleted");
+
+        assertEq(BASE_ASSET.allowance(address(vault), address(weEthIonPool)), 0, "approval revoked");
+        assertEq(BASE_ASSET.allowance(address(vault), address(rsEthIonPool)), 0, "approval revoked");
+        assertEq(BASE_ASSET.allowance(address(vault), address(rswEthIonPool)), 0, "approval revoked");
+    }
+
+    function test_Revert_RemoveMarkets_IdleMarketWithBalance() public {
+        IIonPool IDLE = vault.IDLE();
+
+        IIonPool[] memory market = new IIonPool[](1);
+        market[0] = IDLE;
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = 10e18;
+
+        IIonPool[] memory queue = new IIonPool[](4);
+        queue[0] = IDLE;
+        queue[1] = weEthIonPool;
+        queue[2] = rsEthIonPool;
+        queue[3] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vault.addSupportedMarkets(market, allocationCaps, queue, queue);
+
+        // make a deposit into the idle pool
+        uint256 depositAmount = 5e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+
+        vault.deposit(depositAmount, address(this));
+
+        assertEq(BASE_ASSET.balanceOf(address(vault)), depositAmount, "deposited to IDLE");
+
+        IIonPool[] memory newQueue = new IIonPool[](3);
+        queue[0] = weEthIonPool;
+        queue[1] = rsEthIonPool;
+        queue[2] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vm.expectRevert(Vault.InvalidIdleMarketRemovalNonZeroBalance.selector);
+        vault.removeSupportedMarkets(market, newQueue, newQueue);
+    }
+
+    function test_Revert_RemoveMarkets_IonPoolMarketWithBalance() public {
+        IIonPool[] memory market = new IIonPool[](1);
+        market[0] = weEthIonPool;
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = 10e18;
+
+        IIonPool[] memory queue = new IIonPool[](2);
+        queue[0] = rsEthIonPool;
+        queue[1] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(market, allocationCaps);
+
+        uint256 depositAmount = 5e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+
+        vault.deposit(depositAmount, address(this));
+
+        assertGt(weEthIonPool.balanceOf(address(vault)), 0, "deposited to weEthIonPool");
+
+        vm.prank(OWNER);
+        vm.expectRevert(Vault.InvalidMarketRemovalNonZeroSupply.selector);
+        vault.removeSupportedMarkets(market, queue, queue);
+    }
+
+    function test_Revert_RemoveMarkets_MarketNotSupported() public {
+        IIonPool[] memory market = new IIonPool[](1);
+        market[0] = IDLE;
+
+        IIonPool[] memory queue = new IIonPool[](3);
+        queue[0] = weEthIonPool;
+        queue[1] = rsEthIonPool;
+        queue[2] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vm.expectRevert(Vault.MarketNotSupported.selector);
+        vault.removeSupportedMarkets(market, queue, queue);
+    }
+
+    function test_Revert_RemoveMarkets_WrongQueues() public {
+        // wrong queue length
+        IIonPool[] memory market = new IIonPool[](1);
+        market[0] = weEthIonPool;
+
+        // there should be 2 markets left, but this inputs 3 markets into the queues
+        IIonPool[] memory queue = new IIonPool[](3);
+        queue[0] = weEthIonPool;
+        queue[1] = rsEthIonPool;
+        queue[2] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vm.expectRevert(Vault.InvalidQueueLength.selector);
+        vault.removeSupportedMarkets(market, queue, queue);
+    }
+
+    function test_RemoveMarkets_WithMulticall() public { }
+
     function test_UpdateSupplyQueue() public {
         IIonPool[] memory supplyQueue = new IIonPool[](3);
         supplyQueue[0] = rsEthIonPool;
@@ -173,9 +381,181 @@ contract VaultSetUpTest is VaultSharedSetup {
 
     function test_UpdateWithdrawQueue() public { }
 
-    function test_Revert_UpdateWithdrawQUeue() public { }
+    function test_Revert_UpdateWithdrawQueue() public { }
 
     function test_Revert_DuplicateIonPoolArray() public { }
+
+    function test_UpdateFeePercentage() public {
+        vm.prank(OWNER);
+        vault.updateFeePercentage(0.1e27);
+
+        assertEq(0.1e27, vault.feePercentage(), "fee percentage");
+    }
+
+    function test_UpdateFeeRecipient() public {
+        address newFeeRecipient = newAddress("new fee recipient");
+
+        vm.prank(OWNER);
+        vault.updateFeeRecipient(newFeeRecipient);
+
+        assertEq(newFeeRecipient, vault.feeRecipient(), "fee recipient");
+    }
+}
+
+contract VaultRolesAndPrivilegedFunctions is VaultSharedSetup {
+    IIonPool newIonPool;
+    IIonPool[] newSupplyQueue;
+    IIonPool[] newWithdrawQueue;
+
+    function setUp() public override {
+        super.setUp();
+
+        newIonPool = deployIonPool(BASE_ASSET, WEETH, address(this));
+
+        newSupplyQueue = new IIonPool[](4);
+        newSupplyQueue[0] = newIonPool;
+        newSupplyQueue[1] = weEthIonPool;
+        newSupplyQueue[2] = rsEthIonPool;
+        newSupplyQueue[3] = rswEthIonPool;
+
+        newWithdrawQueue = new IIonPool[](4);
+        newWithdrawQueue[0] = newIonPool;
+        newWithdrawQueue[1] = rsEthIonPool;
+        newWithdrawQueue[2] = rswEthIonPool;
+        newWithdrawQueue[3] = weEthIonPool;
+    }
+
+    function test_DefaultAdmin_RoleAssignment() public {
+        address owner1 = newAddress("owner1");
+        address owner2 = newAddress("owner2");
+
+        address allocator1 = newAddress("allocator1");
+
+        assertEq(vault.DEFAULT_ADMIN_ROLE(), vault.getRoleAdmin(vault.OWNER_ROLE()), "owner role admin");
+        assertEq(vault.DEFAULT_ADMIN_ROLE(), vault.getRoleAdmin(vault.ALLOCATOR_ROLE()), "allocator role admin");
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), owner1);
+        vault.grantRole(vault.OWNER_ROLE(), owner2);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), allocator1);
+        vm.stopPrank();
+
+        assertTrue(vault.hasRole(vault.OWNER_ROLE(), owner1), "owner1");
+        assertTrue(vault.hasRole(vault.OWNER_ROLE(), owner2), "owner2");
+        assertTrue(vault.hasRole(vault.ALLOCATOR_ROLE(), allocator1), "allocator1");
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.revokeRole(vault.OWNER_ROLE(), owner1);
+        vm.stopPrank();
+
+        assertFalse(vault.hasRole(vault.OWNER_ROLE(), owner1), "owner1 revoked");
+    }
+
+    function test_OwnerRole() public {
+        address notOwner = newAddress("not owner");
+        address owner = newAddress("owner");
+
+        uint256 newFeePerc = 0.05e27;
+        address newFeeRecipient = newAddress("new fee recipient");
+
+        IIonPool[] memory marketsToAdd = new IIonPool[](1);
+        marketsToAdd[0] = newIonPool;
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = 1e18;
+
+        IIonPool[] memory ionPoolToUpdate = new IIonPool[](1);
+        ionPoolToUpdate[0] = weEthIonPool;
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), owner);
+        vm.stopPrank();
+
+        // from owner
+        vm.startPrank(owner);
+        vault.updateFeePercentage(newFeePerc);
+        vault.updateFeeRecipient(newFeeRecipient);
+        vault.updateAllocationCaps(ionPoolToUpdate, allocationCaps);
+        vm.stopPrank();
+
+        // grant owner also the allocator role
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.ALLOCATOR_ROLE(), owner);
+        vm.stopPrank();
+
+        // from owner with also the allocator role
+        vm.startPrank(owner);
+        vault.addSupportedMarkets(marketsToAdd, allocationCaps, newSupplyQueue, newWithdrawQueue);
+        vm.stopPrank();
+
+        // not from owner
+        vm.startPrank(notOwner);
+
+        bytes memory notOwnerRevert = abi.encodeWithSelector(
+            IAccessControl.AccessControlUnauthorizedAccount.selector, notOwner, vault.OWNER_ROLE()
+        );
+
+        vm.expectRevert(notOwnerRevert);
+        vault.updateFeePercentage(newFeePerc);
+
+        vm.expectRevert(notOwnerRevert);
+        vault.updateFeeRecipient(newFeeRecipient);
+
+        vm.expectRevert(notOwnerRevert);
+        vault.addSupportedMarkets(marketsToAdd, allocationCaps, newSupplyQueue, newWithdrawQueue);
+
+        vm.expectRevert(notOwnerRevert);
+        vault.updateAllocationCaps(ionPoolToUpdate, allocationCaps);
+
+        vm.stopPrank();
+    }
+
+    function test_AllocatorRole() public {
+        address notAllocator = newAddress("not allocator");
+        address allocator = newAddress("allocator");
+
+        newSupplyQueue = new IIonPool[](3);
+        newSupplyQueue[0] = rswEthIonPool;
+        newSupplyQueue[1] = weEthIonPool;
+        newSupplyQueue[2] = rsEthIonPool;
+
+        newWithdrawQueue = new IIonPool[](3);
+        newWithdrawQueue[0] = weEthIonPool;
+        newWithdrawQueue[1] = rsEthIonPool;
+        newWithdrawQueue[2] = rswEthIonPool;
+
+        Vault.MarketAllocation[] memory allocs = new Vault.MarketAllocation[](3);
+        allocs[0] = Vault.MarketAllocation({ pool: rswEthIonPool, assets: 0 });
+        allocs[1] = Vault.MarketAllocation({ pool: weEthIonPool, assets: 0 });
+        allocs[2] = Vault.MarketAllocation({ pool: rsEthIonPool, assets: 0 });
+
+        bytes memory notAllocatorRevert = abi.encodeWithSelector(
+            IAccessControl.AccessControlUnauthorizedAccount.selector, notAllocator, vault.ALLOCATOR_ROLE()
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.ALLOCATOR_ROLE(), allocator);
+        vm.stopPrank();
+
+        vm.startPrank(notAllocator);
+
+        vm.expectRevert(notAllocatorRevert);
+        vault.updateSupplyQueue(newSupplyQueue);
+
+        vm.expectRevert(notAllocatorRevert);
+        vault.updateWithdrawQueue(newWithdrawQueue);
+
+        vm.expectRevert(notAllocatorRevert);
+        vault.reallocate(allocs);
+
+        vm.stopPrank();
+
+        vm.startPrank(allocator);
+        vault.updateSupplyQueue(newSupplyQueue);
+        vault.updateWithdrawQueue(newWithdrawQueue);
+        vault.reallocate(allocs);
+        vm.stopPrank();
+    }
 }
 
 contract VaultDeposit is VaultSharedSetup {
@@ -367,8 +747,6 @@ contract VaultDeposit is VaultSharedSetup {
     }
 
     function test_Mint_AllMarkets() public { }
-
-    function test_Mint_WithIdle() public { }
 }
 
 contract VaultWithdraw is VaultSharedSetup {
@@ -493,14 +871,26 @@ contract VaultWithdraw is VaultSharedSetup {
         );
     }
 
+    function test_Revert_Withdraw_NotEnoughLiquidity() public {
+        uint256 depositAmount = 10e18;
+        uint256 withdrawAmount = 20e18;
+
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+
+        updateAllocationCaps(vault, 2e18, 3e18, 5e18);
+
+        vault.deposit(depositAmount, address(this));
+
+        vm.expectRevert(Vault.NotEnoughLiquidityToWithdraw.selector);
+        vault.withdraw(withdrawAmount, address(this), address(this));
+    }
+
     // try to deposit and withdraw same amounts
     function test_Withdraw_FullWithdraw() public { }
 
     function test_Withdraw_Different_Queue_Order() public { }
 
     function test_DepositAndWithdraw_MultipleUsers() public { }
-
-    function test_Revert_Withdraw() public { }
 }
 
 contract VaultReallocate is VaultSharedSetup {
@@ -878,7 +1268,21 @@ contract VaultWithIdlePool is VaultSharedSetup {
         assertEq(vault.balanceOf(address(this)), 0, "user shares balance");
     }
 
-    function test_Redeem() public { }
+    function test_FullRedeem() public {
+        uint256 depositAmount = 70e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+        vault.deposit(depositAmount, address(this));
+
+        uint256 redeemAmount = vault.maxRedeem(address(this));
+
+        vault.redeem(redeemAmount, address(this), address(this));
+
+        assertEq(vault.totalAssets(), 0, "vault total assets");
+        assertEq(vault.totalSupply(), 0, "vault total shares");
+
+        assertEq(BASE_ASSET.balanceOf(address(this)), redeemAmount, "user base asset balance");
+        assertEq(vault.balanceOf(address(this)), 0, "user shares balance");
+    }
 
     function test_Reallocate_DepositToIdle() public {
         uint256 depositAmount = 70e18;
@@ -977,6 +1381,93 @@ contract VaultWithIdlePool is VaultSharedSetup {
         );
         assertEq(prevRsEthClaim, rsEthIonPool.getUnderlyingClaimOf(address(vault)), "rsEthIonPool");
     }
+}
+
+contract VaultERC4626ExternalViews is VaultSharedSetup {
+    address constant NULL = address(0);
+
+    function setUp() public override {
+        super.setUp();
+        // TODO add idle market by default
+        // markets.push(IDLE);
+    }
+
+    // --- Max ---
+    // Get max and submit max transactions
+
+    function test_MaxDepositView_AllocationAndSupplyCaps() public {
+        uint256 maxDeposit = vault.maxDeposit(NULL);
+        assertEq(maxDeposit, 0, "initial max deposit");
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 10e18;
+        allocationCaps[1] = 20e18;
+        allocationCaps[2] = 30e18;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        maxDeposit = vault.maxDeposit(NULL);
+        assertEq(maxDeposit, 60e18, "new max deposit after update allocation cap");
+
+        // change IonPool supply cap
+        weEthIonPool.updateSupplyCap(5e18); // 10 allocation cap > 5 supply cap
+
+        maxDeposit = vault.maxDeposit(NULL);
+        assertEq(maxDeposit, 55e18, "max deposit after update supply cap");
+    }
+
+    function test_MaxDeposit_AfterDeposits() public {
+        // // deposit
+        // uint256 depositAmount = 35e18;
+        // setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+
+        // // Out of 60e18 room, 35e18 was taken up.
+
+        // maxDeposit = vault.maxDeposit(NULL);
+
+        // assertEq(maxDeposit, 35e18, "max deposit after deposit");
+    }
+
+    function test_MaxMint_MintAmount() public {
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 10e18;
+        allocationCaps[1] = 20e18;
+        allocationCaps[2] = 30e18;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 maxMintShares = vault.maxMint(NULL);
+        console2.log("maxMintShares: ", maxMintShares);
+
+        setERC20Balance(address(BASE_ASSET), address(this), 60e18);
+        vault.mint(maxMintShares, address(this));
+
+        uint256 resultingShares = vault.balanceOf(address(this));
+
+        uint256 maxWithdrawableAssets = vault.previewRedeem(resultingShares);
+        uint256 maxRedeemableShares = vault.previewWithdraw(maxWithdrawableAssets);
+
+        assertEq(resultingShares, 60e18, "resulting shares");
+        assertEq(maxWithdrawableAssets, 60e18, "resulting claim");
+        assertEq(maxRedeemableShares, 60e18, "redeemable shares");
+    }
+
+    function test_MaxWithdraw() public { }
+
+    function test_MaxRedeem() public { }
+
+    // --- Previews ---
+    // Check the difference between preview and actual
+
+    function test_PreviewDeposit() public { }
+
+    function test_PreviewMint() public { }
+
+    function test_PreviewWithdraw() public { }
+
+    function test_PreviewRedeem() public { }
 }
 
 contract VaultDeposit_WithoutSupplyFactor is VaultDeposit {

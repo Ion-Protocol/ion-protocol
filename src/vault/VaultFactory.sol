@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { Vault } from "./Vault.sol";
-import { IVault } from "./../interfaces/IVault.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import { IIonLens } from "./../interfaces/IIonLens.sol";
 
@@ -50,14 +49,10 @@ contract VaultFactory {
         bytes32 salt
     )
         external
-        returns (IVault vault)
+        returns (Vault vault)
     {
-        vault = IVault(
-            address(
-                new Vault{ salt: salt }(
-                    ionLens, baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin
-                )
-            )
+        vault = new Vault{ salt: salt }(
+            ionLens, baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin
         );
 
         emit CreateVault(address(vault), baseAsset, feeRecipient, feePercentage, name, symbol, initialDefaultAdmin);

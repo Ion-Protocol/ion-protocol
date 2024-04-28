@@ -58,7 +58,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     GemJoin rsEthGemJoin;
     GemJoin rswEthGemJoin;
 
-    IIonPool[] pools;
+    IIonPool[] markets;
 
     uint256[] ZERO_ALLO_CAPS = new uint256[](3);
 
@@ -82,7 +82,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
             // inside `addSupportedMarkets`.
         vault.grantRole(vault.ALLOCATOR_ROLE(), ALLOCATOR);
 
-        IIonPool[] memory markets = new IIonPool[](3);
+        markets = new IIonPool[](3);
         markets[0] = weEthIonPool;
         markets[1] = rsEthIonPool;
         markets[2] = rswEthIonPool;
@@ -94,10 +94,10 @@ contract VaultSharedSetup is IonPoolSharedSetup {
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
-        pools = new IIonPool[](3);
-        pools[0] = weEthIonPool;
-        pools[1] = rsEthIonPool;
-        pools[2] = rswEthIonPool;
+        // pools = new IIonPool[](3);
+        // pools[0] = weEthIonPool;
+        // pools[1] = rsEthIonPool;
+        // pools[2] = rswEthIonPool;
 
         weEthGemJoin =
             new GemJoin(IonPool(address(weEthIonPool)), IERC20(weEthIonPool.getIlkAddress(0)), 0, address(this));
@@ -281,5 +281,9 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         underlying.approve(address(pool), type(uint256).max);
         pool.supply(lender, supplyAmt, emptyProof);
         vm.stopPrank();
+    }
+
+    function newAddress(bytes memory str) internal returns (address) {
+        return address(uint160(uint256(keccak256(str))));
     }
 }
