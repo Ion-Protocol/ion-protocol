@@ -158,7 +158,7 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
         globalState.supplyFactor = ionPool.supplyFactor();
         globalState.totalSupply = ionPool.totalSupply();
         globalState.totalDebt = lens.debt(iIonPool);
-        globalState.wethLiquidity = lens.weth(iIonPool);
+        globalState.wethLiquidity = lens.liquidity(iIonPool);
         globalState.utilizationRate = InvariantHelpers.getUtilizationRate(ionPool, lens);
 
         require(
@@ -262,7 +262,7 @@ contract LenderHandler is Handler {
 
     function withdraw(uint256 amount, uint256 warpTimeAmount) public {
         // To prevent reverts, limit withdraw amounts to the available liquidity in the pool
-        uint256 balance = Math.min(lens.weth(iIonPool), ionPool.balanceOf(address(this)));
+        uint256 balance = Math.min(lens.liquidity(iIonPool), ionPool.balanceOf(address(this)));
         amount = bound(amount, 0, balance);
 
         _warpTime(warpTimeAmount);
@@ -321,7 +321,7 @@ contract BorrowerHandler is Handler {
             maxAdditionalNormalizedDebt = _min(maxAdditionalDebt / ilkRate, type(uint64).max);
         }
 
-        uint256 poolLiquidity = lens.weth(iIonPool);
+        uint256 poolLiquidity = lens.liquidity(iIonPool);
         uint256 normalizedPoolLiquidity = poolLiquidity.rayDivDown(ilkRate);
 
         normalizedAmount = _min(bound(normalizedAmount, 0, maxAdditionalNormalizedDebt), normalizedPoolLiquidity);

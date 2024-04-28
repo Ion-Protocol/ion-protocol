@@ -2,7 +2,7 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "../../src/IonPool.sol";
-import { WSTETH_ADDRESS, RSETH, WEETH_ADDRESS, EETH_ADDRESS } from "../../src/Constants.sol";
+import { WSTETH_ADDRESS, WEETH_ADDRESS, EETH_ADDRESS } from "../../src/Constants.sol";
 import { LidoLibrary } from "../../src/libraries/lst/LidoLibrary.sol";
 import { EtherFiLibrary } from "../../src/libraries/lrt/EtherFiLibrary.sol";
 import { WeEthHandler } from "../../src/flash/lrt/WeEthHandler.sol";

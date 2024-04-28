@@ -255,38 +255,6 @@ abstract contract RewardToken is
     }
 
     /**
-     * @dev Front-running more likely to maintain user intent
-     * @param spender to increase allowance of
-     * @param increaseAmount to increase by
-     */
-    function increaseAllowance(address spender, uint256 increaseAmount) external returns (bool) {
-        _approve(_msgSender(), spender, allowance(_msgSender(), spender) + increaseAmount);
-        return true;
-    }
-
-    /**
-     *
-     * @param spender to decrease allowance of
-     * @param decreaseAmount to decrease by
-     */
-    function decreaseAllowance(address spender, uint256 decreaseAmount) public virtual returns (bool) {
-        uint256 currentAllowance = allowance(_msgSender(), spender);
-
-        if (currentAllowance < decreaseAmount) {
-            revert ERC20InsufficientAllowance(spender, currentAllowance, decreaseAmount);
-        }
-
-        uint256 newAllowance;
-        // Underflow impossible
-        unchecked {
-            newAllowance = currentAllowance - decreaseAmount;
-        }
-
-        _approve(_msgSender(), spender, newAllowance);
-        return true;
-    }
-
-    /**
      *
      * @param owner of tokens
      * @param spender of tokens

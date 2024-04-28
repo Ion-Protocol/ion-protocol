@@ -253,9 +253,9 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
             uint256 ilkRate = lens.rateUnaccrued(iIonPool, i);
             totalDebt += totalNormalizedDebts.rayMulDown(ilkRate);
         }
-        assertGe(lens.weth(iIonPool) + totalDebt, ionPool.totalSupplyUnaccrued());
+        assertGe(lens.liquidity(iIonPool) + totalDebt, ionPool.totalSupplyUnaccrued());
         assertGe(
-            lens.weth(iIonPool).scaleUpToRad(18) + lens.debtUnaccrued(iIonPool),
+            lens.liquidity(iIonPool).scaleUpToRad(18) + lens.debtUnaccrued(iIonPool),
             ionPool.totalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
         );
 

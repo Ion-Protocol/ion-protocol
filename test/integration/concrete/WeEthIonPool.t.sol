@@ -126,7 +126,7 @@ contract WeEthIonPool_IntegrationTest is WeEthIonPoolSharedSetup {
         vm.stopPrank();
 
         assertEq(ionPool.getUnderlyingClaimOf(lenderA), lenderAFirstSupplyAmount, "lender balance after 1st supply");
-        assertEq(lens.weth(iIonPool), lenderAFirstSupplyAmount, "liquidity after 1st supply");
+        assertEq(lens.liquidity(iIonPool), lenderAFirstSupplyAmount, "liquidity after 1st supply");
 
         /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
         /*                           ACTION 2                         */
