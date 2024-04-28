@@ -68,7 +68,7 @@ contract IonPoolExposed is IonPool {
     function addLiquidity(uint256 amount) external {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.weth += amount;
+        $.liquidity += amount;
     }
 }
 

@@ -23,7 +23,7 @@ contract IonInvariants {
      */
     function Invariant1(IIonPool ionPool) external view {
         require(
-            lens.weth(ionPool).scaleUpToRad(18) + lens.debtUnaccrued(ionPool)
+            lens.liquidity(ionPool).scaleUpToRad(18) + lens.debtUnaccrued(ionPool)
                 >= ionPool.normalizedTotalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
         );
     }
@@ -46,7 +46,7 @@ contract IonInvariants {
      */
     function Invariant3(IIonPool ionPool) external view {
         require(
-            lens.weth(ionPool).scaleUpToRad(18) + lens.debt(ionPool)
+            lens.liquidity(ionPool).scaleUpToRad(18) + lens.debt(ionPool)
                 >= ionPool.normalizedTotalSupply() * ionPool.supplyFactor()
         );
     }

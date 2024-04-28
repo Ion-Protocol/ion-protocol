@@ -141,9 +141,9 @@ contract IonPool is PausableUpgradeable, RewardToken {
         mapping(address unbackedDebtor => uint256) unbackedDebt; // [RAD]
         mapping(address user => mapping(address operator => uint256)) isOperator;
         uint256 debt; // Total Debt [RAD]
-        uint256 weth; // liquidity in pool [WAD]
-        uint256 wethSupplyCap; // [WAD]
-        uint256 totalUnbackedDebt; // Total Unbacked WETH  [RAD]
+        uint256 liquidity; // liquidity in pool [WAD]
+        uint256 supplyCap; // [WAD]
+        uint256 totalUnbackedDebt; // Total Unbacked Underlying  [RAD]
         InterestRate interestRateModule;
         Whitelist whitelist;
     }
@@ -278,7 +278,7 @@ contract IonPool is PausableUpgradeable, RewardToken {
     function updateSupplyCap(uint256 newSupplyCap) external onlyRole(ION) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.wethSupplyCap = newSupplyCap;
+        $.supplyCap = newSupplyCap;
 
         emit SupplyCapUpdated(newSupplyCap);
     }
@@ -537,7 +537,7 @@ contract IonPool is PausableUpgradeable, RewardToken {
         uint256 newTotalDebt = _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.weth -= amount;
+        $.liquidity -= amount;
 
         uint256 _supplyFactor =
             _burn({ user: _msgSender(), receiverOfUnderlying: receiverOfUnderlying, amount: amount });
@@ -564,11 +564,11 @@ contract IonPool is PausableUpgradeable, RewardToken {
         uint256 newTotalDebt = _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.weth += amount;
+        $.liquidity += amount;
 
         uint256 _supplyFactor = _mint({ user: user, senderOfUnderlying: _msgSender(), amount: amount });
 
-        uint256 _supplyCap = $.wethSupplyCap;
+        uint256 _supplyCap = $.supplyCap;
 
         if (getTotalUnderlyingClaims() > _supplyCap) revert DepositSurpassesSupplyCap(amount, _supplyCap);
 
@@ -794,13 +794,13 @@ contract IonPool is PausableUpgradeable, RewardToken {
             uint256 amountWad = amountUint / RAY;
             if (amountUint % RAY > 0) ++amountWad;
 
-            $.weth += amountWad;
+            $.liquidity += amountWad;
             underlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
             uint256 amountWad = uint256(amount) / RAY;
 
-            $.weth -= amountWad;
+            $.liquidity -= amountWad;
 
             underlying().safeTransfer(user, amountWad);
         }

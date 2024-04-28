@@ -32,9 +32,9 @@ interface IIonLens {
 
     function debt(IIonPool pool) external view returns (uint256);
 
-    function weth(IIonPool pool) external view returns (uint256);
+    function liquidity(IIonPool pool) external view returns (uint256);
 
-    function wethSupplyCap(IIonPool pool) external view returns (uint256);
+    function supplyCap(IIonPool pool) external view returns (uint256);
 
     function totalUnbackedDebt(IIonPool pool) external view returns (uint256);
 

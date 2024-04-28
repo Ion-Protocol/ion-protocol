@@ -33,7 +33,7 @@ contract RewardTokenExposed is RewardToken {
     }
 
     function mint(address user, uint256 amount) external {
-        _mint(user, user, amount);
+        _mint(user, msg.sender, amount);
     }
 
     function mintToTreasury(uint256 amount) external {

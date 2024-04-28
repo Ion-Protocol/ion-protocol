@@ -1,28 +1,30 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-import { ISpotOracle } from "../interfaces/ISpotOracle.sol";
-import { IInterestRate } from "../interfaces/IInterestRate.sol";
 import { IIonPool } from "../interfaces/IIonPool.sol";
-import { IWhitelist } from "../interfaces/IWhitelist.sol";
 import { IIonLens } from "../interfaces/IIonLens.sol";
 
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import { StorageSlot } from "@openzeppelin/contracts/utils/StorageSlot.sol";
+
+struct IlkSlot0 {
+    uint104 totalNormalizedDebt; // Total Normalised Debt     [WAD]
+    uint104 rate; // Accumulated Rates         [RAY]
+    uint48 lastRateUpdate; // block.timestamp of last update; overflows in 800_000 years}
+}
 
 contract IonLens is IIonLens {
     // --- Data ---
     struct Ilk {
-        uint104 totalNormalizedDebt; // Total Normalised Debt     [WAD]
-        uint104 rate; // Accumulated Rates         [RAY]
-        uint48 lastRateUpdate; // block.timestamp of last update; overflows in 800_000 years
-        ISpotOracle spot; // Oracle that provides price with safety margin
-        uint256 debtCeiling; // Debt Ceiling              [RAD]
-        uint256 dust; // Vault Debt Floor            [RAD]
+        IlkSlot0 slot0;
+        StorageSlot.AddressSlot spot; // Oracle that provides price with safety margin
+        StorageSlot.Uint256Slot debtCeiling; // Debt Ceiling              [RAD]
+        StorageSlot.Uint256Slot dust; // Vault Debt Floor            [RAD]
     }
 
     struct Vault {
-        uint256 collateral; // Locked Collateral  [WAD]
-        uint256 normalizedDebt; // Normalised Debt    [WAD]
+        StorageSlot.Uint256Slot collateral; // Locked Collateral  [WAD]
+        StorageSlot.Uint256Slot normalizedDebt; // Normalised Debt    [WAD]
     }
 
     /// @custom:storage-location erc7201:ion.storage.IonPool
@@ -31,15 +33,15 @@ contract IonLens is IIonLens {
         // remove() should never be called, it will mess up the ordering
         EnumerableSet.AddressSet ilkAddresses;
         mapping(uint256 ilkIndex => mapping(address user => Vault)) vaults;
-        mapping(uint256 ilkIndex => mapping(address user => uint256)) gem; // [WAD]
-        mapping(address unbackedDebtor => uint256) unbackedDebt; // [RAD]
-        mapping(address user => mapping(address operator => uint256)) isOperator;
-        uint256 debt; // Total Debt [RAD]
-        uint256 weth; // liquidity in pool [WAD]
-        uint256 wethSupplyCap; // [WAD]
-        uint256 totalUnbackedDebt; // Total Unbacked WETH  [RAD]
-        IInterestRate interestRateModule;
-        IWhitelist whitelist;
+        mapping(uint256 ilkIndex => mapping(address user => StorageSlot.Uint256Slot)) gem; // [WAD]
+        mapping(address unbackedDebtor => StorageSlot.Uint256Slot) unbackedDebt; // [RAD]
+        mapping(address user => mapping(address operator => StorageSlot.Uint256Slot)) isOperator;
+        StorageSlot.Uint256Slot debt; // Total Debt [RAD]
+        StorageSlot.Uint256Slot liquidity; // liquidity in pool [WAD]
+        StorageSlot.Uint256Slot supplyCap; // [WAD]
+        StorageSlot.Uint256Slot totalUnbackedDebt; // Total Unbacked Underlying  [RAD]
+        StorageSlot.AddressSlot interestRateModule;
+        StorageSlot.AddressSlot whitelist;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ion.storage.IonPool")) - 1)) & ~uint56(0xff))
@@ -51,48 +53,30 @@ contract IonLens is IIonLens {
     error SloadFailed();
     error InvalidFieldSlot();
 
+    constructor() {
+        IonPoolStorage storage $ = _getIonPoolStorage();
+
+        // 4 collaterals should be enough. Must be initialized here to not
+        // trigger an access-out-of-bounds error.
+        $.ilks.push();
+        $.ilks.push();
+        $.ilks.push();
+        $.ilks.push();
+    }
+
     function _getIonPoolStorage() internal pure returns (IonPoolStorage storage $) {
         assembly {
             $.slot := IonPoolStorageLocation
         }
     }
 
-    function _getMappingIndexSlot(uint256 key, uint256 mappingSlot) internal pure returns (uint256 slot) {
-        assembly ("memory-safe") {
-            mstore(0x00, key)
-            mstore(0x20, mappingSlot)
-            slot := keccak256(0x00, 0x40)
-        }
-    }
-
-    /**
-     * @notice Get the slot of the `index`th element of a dynamic array in
-     * storage. If the element is a struct, it will take up `elementSize` slots
-     * and the slot of the specific field will be `fieldSlot`.
-     * @param index of the element in the dynamic array.
-     * @param arraySlot Slot of the dynamic array head in storage.
-     * @param elementSize Size of each element in the dynamic array.
-     * @param fieldSlot The slot of the field in the struct. (`elementSize` and
-     * `fieldSlot` would 1 and 0 respectively for non-struct elements.)
-     */
-    function _getDynamicArrayElementSlot(
-        uint256 index,
-        uint256 arraySlot,
-        uint256 elementSize,
-        uint256 fieldSlot
-    )
-        internal
+    function _toUint256PointerMapping(mapping(bytes32 => uint256) storage inPtr)
+        private
         pure
-        returns (uint256 slot)
+        returns (mapping(address => StorageSlot.Uint256Slot) storage outPtr)
     {
-        if (elementSize <= fieldSlot) revert InvalidFieldSlot();
-
-        assembly ("memory-safe") {
-            mstore(0x00, arraySlot)
-            // Go to the index of element
-            slot := add(keccak256(0x00, 0x20), mul(index, elementSize))
-            // Get specified field from element
-            slot := add(slot, fieldSlot)
+        assembly {
+            outPtr.slot := inPtr.slot
         }
     }
 
@@ -130,16 +114,17 @@ contract IonLens is IIonLens {
      */
     function getIlkIndex(IIonPool pool, address ilkAddress) external view returns (uint8) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        mapping(bytes32 => uint256) storage ilksSlot = $.ilkAddresses._inner._positions;
+        mapping(address => StorageSlot.Uint256Slot) storage ilksSlot =
+            _toUint256PointerMapping($.ilkAddresses._inner._positions);
 
-        uint256 mappingSlot;
+        StorageSlot.Uint256Slot storage ptr = ilksSlot[ilkAddress];
+
+        uint256 slot;
         assembly {
-            mappingSlot := ilksSlot.slot
+            slot := ptr.slot
         }
 
-        uint256 ilkAddressUint = uint160(ilkAddress);
-
-        uint256 value = queryPoolSlot(pool, _getMappingIndexSlot({ key: ilkAddressUint, mappingSlot: mappingSlot }));
+        uint256 value = queryPoolSlot(pool, slot);
         return uint8(value) - 1;
     }
 
@@ -149,19 +134,17 @@ contract IonLens is IIonLens {
      */
     function totalNormalizedDebt(IIonPool pool, uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        Ilk[] storage ilks = $.ilks;
+        IlkSlot0 storage ptr = $.ilks[ilkIndex].slot0;
 
         uint256 slot;
         assembly {
-            slot := ilks.slot
+            slot := ptr.slot
         }
 
-        uint256 elementSlot =
-            _getDynamicArrayElementSlot({ index: ilkIndex, arraySlot: slot, elementSize: 4, fieldSlot: 0 });
-        uint256 value = queryPoolSlot(pool, elementSlot);
-        uint256 mask = type(uint104).max;
+        uint256 value = queryPoolSlot(pool, slot);
 
-        return value & mask;
+        // Truncate to uint104
+        return uint104(value);
     }
 
     /**
@@ -169,20 +152,17 @@ contract IonLens is IIonLens {
      */
     function rateUnaccrued(IIonPool pool, uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        Ilk[] storage ilks = $.ilks;
+        IlkSlot0 storage ptr = $.ilks[ilkIndex].slot0;
 
         uint256 slot;
         assembly {
-            slot := ilks.slot
+            slot := ptr.slot
         }
 
-        uint256 elementSlot =
-            _getDynamicArrayElementSlot({ index: ilkIndex, arraySlot: slot, elementSize: 4, fieldSlot: 0 });
-        uint256 value = queryPoolSlot(pool, elementSlot);
+        uint256 value = queryPoolSlot(pool, slot);
         value >>= 104;
-        uint256 mask = type(uint104).max;
 
-        return value & mask;
+        return uint104(value);
     }
 
     /**
@@ -191,20 +171,17 @@ contract IonLens is IIonLens {
      */
     function lastRateUpdate(IIonPool pool, uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        Ilk[] storage ilks = $.ilks;
+        IlkSlot0 storage ptr = $.ilks[ilkIndex].slot0;
 
         uint256 slot;
         assembly {
-            slot := ilks.slot
+            slot := ptr.slot
         }
 
-        uint256 elementSlot =
-            _getDynamicArrayElementSlot({ index: ilkIndex, arraySlot: slot, elementSize: 4, fieldSlot: 0 });
-        uint256 value = queryPoolSlot(pool, elementSlot);
+        uint256 value = queryPoolSlot(pool, slot);
         value >>= 104 + 104;
-        uint256 mask = type(uint48).max;
 
-        return value & mask;
+        return uint48(value);
     }
 
     /**
@@ -212,16 +189,14 @@ contract IonLens is IIonLens {
      */
     function spot(IIonPool pool, uint8 ilkIndex) external view returns (address) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        Ilk[] storage ilks = $.ilks;
+        StorageSlot.AddressSlot storage ptr = $.ilks[ilkIndex].spot;
 
         uint256 slot;
         assembly {
-            slot := ilks.slot
+            slot := ptr.slot
         }
 
-        uint256 elementSlot =
-            _getDynamicArrayElementSlot({ index: ilkIndex, arraySlot: slot, elementSize: 4, fieldSlot: 1 });
-        uint256 value = queryPoolSlot(pool, elementSlot);
+        uint256 value = queryPoolSlot(pool, slot);
 
         return address(uint160(value));
     }
@@ -231,16 +206,14 @@ contract IonLens is IIonLens {
      */
     function debtCeiling(IIonPool pool, uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        Ilk[] storage ilks = $.ilks;
+        StorageSlot.Uint256Slot storage ptr = $.ilks[ilkIndex].debtCeiling;
 
         uint256 slot;
         assembly {
-            slot := ilks.slot
+            slot := ptr.slot
         }
 
-        uint256 elementSlot =
-            _getDynamicArrayElementSlot({ index: ilkIndex, arraySlot: slot, elementSize: 4, fieldSlot: 2 });
-        uint256 value = queryPoolSlot(pool, elementSlot);
+        uint256 value = queryPoolSlot(pool, slot);
 
         return value;
     }
@@ -250,16 +223,14 @@ contract IonLens is IIonLens {
      */
     function dust(IIonPool pool, uint8 ilkIndex) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        Ilk[] storage ilks = $.ilks;
+        StorageSlot.Uint256Slot storage ptr = $.ilks[ilkIndex].dust;
 
         uint256 slot;
         assembly {
-            slot := ilks.slot
+            slot := ptr.slot
         }
 
-        uint256 elementSlot =
-            _getDynamicArrayElementSlot({ index: ilkIndex, arraySlot: slot, elementSize: 4, fieldSlot: 3 });
-        uint256 value = queryPoolSlot(pool, elementSlot);
+        uint256 value = queryPoolSlot(pool, slot);
 
         return value;
     }
@@ -269,19 +240,14 @@ contract IonLens is IIonLens {
      */
     function gem(IIonPool pool, uint8 ilkIndex, address user) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        mapping(uint256 ilkIndex => mapping(address user => uint256)) storage gemMapping = $.gem;
+        StorageSlot.Uint256Slot storage ptr = $.gem[ilkIndex][user];
 
-        uint256 mappingSlot;
+        uint256 slot;
         assembly {
-            mappingSlot := gemMapping.slot
+            slot := ptr.slot
         }
 
-        uint256 userUint = uint160(user);
-
-        uint256 mappingSlot1 = _getMappingIndexSlot({ key: ilkIndex, mappingSlot: mappingSlot });
-        uint256 mappingSlot2 = _getMappingIndexSlot({ key: userUint, mappingSlot: mappingSlot1 });
-
-        uint256 value = queryPoolSlot(pool, mappingSlot2);
+        uint256 value = queryPoolSlot(pool, slot);
         return value;
     }
 
@@ -290,15 +256,14 @@ contract IonLens is IIonLens {
      */
     function unbackedDebt(IIonPool pool, address unbackedDebtor) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        mapping(address unbackedDebtor => uint256) storage debtMapping = $.unbackedDebt; // [RAD]
+        StorageSlot.Uint256Slot storage ptr = $.unbackedDebt[unbackedDebtor];
 
-        uint256 mappingSlot;
+        uint256 slot;
         assembly {
-            mappingSlot := debtMapping.slot
+            slot := ptr.slot
         }
 
-        uint256 value =
-            queryPoolSlot(pool, _getMappingIndexSlot({ key: uint160(unbackedDebtor), mappingSlot: mappingSlot }));
+        uint256 value = queryPoolSlot(pool, slot);
         return value;
     }
 
@@ -307,28 +272,24 @@ contract IonLens is IIonLens {
      */
     function isOperator(IIonPool pool, address user, address operator) external view returns (bool) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        mapping(address user => mapping(address operator => uint256)) storage operatorMapping = $.isOperator;
+        StorageSlot.Uint256Slot storage ptr = $.isOperator[user][operator];
 
-        uint256 mappingSlot;
+        uint256 slot;
         assembly {
-            mappingSlot := operatorMapping.slot
+            slot := ptr.slot
         }
 
-        uint256 userUint = uint160(user);
-        uint256 operatorUint = uint160(operator);
-
-        uint256 mappingSlot1 = _getMappingIndexSlot({ key: userUint, mappingSlot: mappingSlot });
-        uint256 mappingSlot2 = _getMappingIndexSlot({ key: operatorUint, mappingSlot: mappingSlot1 });
-        uint256 value = queryPoolSlot(pool, mappingSlot2);
+        uint256 value = queryPoolSlot(pool, slot);
         return value != 0;
     }
 
     function debtUnaccrued(IIonPool pool) public view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
+        StorageSlot.Uint256Slot storage ptr = $.debt;
 
         uint256 slot;
         assembly {
-            slot := add($.slot, 7)
+            slot := ptr.slot
         }
 
         uint256 value = queryPoolSlot(pool, slot);
@@ -348,12 +309,13 @@ contract IonLens is IIonLens {
     /**
      * @return The total amount of ETH liquidity in the pool.
      */
-    function weth(IIonPool pool) external view returns (uint256) {
+    function liquidity(IIonPool pool) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
+        StorageSlot.Uint256Slot storage ptr = $.liquidity;
 
         uint256 slot;
         assembly {
-            slot := add($.slot, 8)
+            slot := ptr.slot
         }
 
         uint256 value = queryPoolSlot(pool, slot);
@@ -363,12 +325,13 @@ contract IonLens is IIonLens {
     /**
      * @return The supply cap
      */
-    function wethSupplyCap(IIonPool pool) external view returns (uint256) {
+    function supplyCap(IIonPool pool) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
+        StorageSlot.Uint256Slot storage ptr = $.supplyCap;
 
         uint256 slot;
         assembly {
-            slot := add($.slot, 9)
+            slot := ptr.slot
         }
 
         uint256 value = queryPoolSlot(pool, slot);
@@ -380,10 +343,11 @@ contract IonLens is IIonLens {
      */
     function totalUnbackedDebt(IIonPool pool) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
+        StorageSlot.Uint256Slot storage ptr = $.totalUnbackedDebt;
 
         uint256 slot;
         assembly {
-            slot := add($.slot, 10)
+            slot := ptr.slot
         }
 
         uint256 value = queryPoolSlot(pool, slot);
@@ -395,10 +359,11 @@ contract IonLens is IIonLens {
      */
     function interestRateModule(IIonPool pool) external view returns (address) {
         IonPoolStorage storage $ = _getIonPoolStorage();
+        StorageSlot.AddressSlot storage ptr = $.interestRateModule;
 
         uint256 slot;
         assembly {
-            slot := add($.slot, 11)
+            slot := ptr.slot
         }
 
         uint256 value = queryPoolSlot(pool, slot);
@@ -407,10 +372,11 @@ contract IonLens is IIonLens {
 
     function whitelist(IIonPool pool) external view returns (address) {
         IonPoolStorage storage $ = _getIonPoolStorage();
+        StorageSlot.AddressSlot storage ptr = $.whitelist;
 
         uint256 slot;
         assembly {
-            slot := add($.slot, 12)
+            slot := ptr.slot
         }
 
         uint256 value = queryPoolSlot(pool, slot);
