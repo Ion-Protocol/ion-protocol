@@ -62,6 +62,8 @@ contract VaultSharedSetup is IonPoolSharedSetup {
 
     uint256[] ZERO_ALLO_CAPS = new uint256[](3);
 
+    address constant NULL = address(0);
+
     function setUp() public virtual override {
         super.setUp();
 

@@ -338,7 +338,54 @@ contract VaultSetUpTest is VaultSharedSetup {
         vault.removeSupportedMarkets(market, queue, queue);
     }
 
-    function test_RemoveMarkets_WithMulticall() public { }
+    function test_RemoveMarkets_WithMulticall() public {
+        // for removing weEthIonPool
+        IIonPool[] memory marketsToRemove = new IIonPool[](1);
+        marketsToRemove[0] = weEthIonPool;
+
+        IIonPool[] memory queue = new IIonPool[](2);
+        queue[0] = rsEthIonPool;
+        queue[1] = rswEthIonPool;
+
+        // for updating allocation caps
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 10e18;
+        allocationCaps[1] = 10e18;
+        allocationCaps[2] = 10e18;
+
+        // for fully withdrawing from weEthIonPool and fully depositing to rsEthIonPool
+        Vault.MarketAllocation[] memory allocs = new Vault.MarketAllocation[](2);
+        allocs[0] = Vault.MarketAllocation({ pool: weEthIonPool, assets: type(int256).min });
+        allocs[1] = Vault.MarketAllocation({ pool: rsEthIonPool, assets: type(int256).max });
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmount = 5e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+        vault.deposit(depositAmount, address(this));
+
+        assertGt(weEthIonPool.balanceOf(address(vault)), 0, "deposited to weEthIonPool");
+
+        bytes memory reallocateCalldata = abi.encodeWithSelector(Vault.reallocate.selector, allocs);
+
+        bytes memory removeMarketCalldata =
+            abi.encodeWithSelector(Vault.removeSupportedMarkets.selector, marketsToRemove, queue, queue);
+
+        bytes[] memory multicallData = new bytes[](2);
+        multicallData[0] = reallocateCalldata;
+        multicallData[1] = removeMarketCalldata;
+
+        vm.prank(OWNER);
+        vault.multicall(multicallData);
+
+        vm.expectRevert(Vault.MarketNotSupported.selector);
+        vault.supportedMarketsIndexOf(address(weEthIonPool));
+
+        assertEq(vault.supportedMarketsLength(), 2, "supported markets length");
+        assertTrue(!vault.containsSupportedMarket(address(weEthIonPool)), "does not contain weEthIonPool");
+    }
 
     function test_UpdateSupplyQueue() public {
         IIonPool[] memory supplyQueue = new IIonPool[](3);
@@ -367,7 +414,7 @@ contract VaultSetUpTest is VaultSharedSetup {
 
         IIonPool[] memory zeroAddressQueue = new IIonPool[](3);
 
-        vm.expectRevert(Vault.InvalidQueueMarketNotSupported.selector);
+        vm.expectRevert(Vault.MarketNotSupported.selector);
         vault.updateSupplyQueue(zeroAddressQueue);
 
         IIonPool[] memory notSupportedQueue = new IIonPool[](3);
@@ -375,7 +422,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         notSupportedQueue[1] = rswEthIonPool;
         notSupportedQueue[2] = IIonPool(address(uint160(uint256(keccak256("address not in supported markets")))));
 
-        vm.expectRevert(Vault.InvalidQueueMarketNotSupported.selector);
+        vm.expectRevert(Vault.MarketNotSupported.selector);
         vault.updateSupplyQueue(notSupportedQueue);
     }
 
@@ -705,6 +752,8 @@ contract VaultDeposit is VaultSharedSetup {
         vm.expectRevert(Vault.AllSupplyCapsReached.selector);
         vault.deposit(depositAmount, address(this));
     }
+
+    function test_SupplyToIonPool_AllocationCapAndSupplyCapDiffs() public { }
 
     /**
      * - Exact shares to mint must be minted to the user.
@@ -1384,11 +1433,8 @@ contract VaultWithIdlePool is VaultSharedSetup {
 }
 
 contract VaultERC4626ExternalViews is VaultSharedSetup {
-    address constant NULL = address(0);
-
     function setUp() public override {
         super.setUp();
-        // TODO add idle market by default
         // markets.push(IDLE);
     }
 
