@@ -5,7 +5,6 @@ import { WadRayMath, RAY } from "./../../src/libraries/math/WadRayMath.sol";
 import { Vault } from "./../../src/vault/Vault.sol";
 import { IonPool } from "./../../src/IonPool.sol";
 import { IIonPool } from "./../../src/interfaces/IIonPool.sol";
-import { IonLens } from "./../../src/periphery/IonLens.sol";
 import { GemJoin } from "./../../src/join/GemJoin.sol";
 import { YieldOracle } from "./../../src/YieldOracle.sol";
 import { IYieldOracle } from "./../../src/interfaces/IYieldOracle.sol";
@@ -33,7 +32,6 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     StdStorage stdstore1;
 
     Vault vault;
-    IonLens ionLens;
 
     // roles
     address constant VAULT_ADMIN = address(uint160(uint256(keccak256("VAULT_ADMIN"))));
@@ -71,11 +69,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         rsEthIonPool = deployIonPool(BASE_ASSET, RSETH, address(this));
         rswEthIonPool = deployIonPool(BASE_ASSET, RSWETH, address(this));
 
-        ionLens = new IonLens();
-
-        vault = new Vault(
-            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
-        );
+        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
 
         vm.startPrank(vault.defaultAdmin());
 
@@ -220,12 +214,6 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         _vault.updateWithdrawQueue(queue);
     }
 
-    // -- Queries ---
-
-    // function expectedSupplyAmounts(Vault _vault, uint256 assets) internal returns (uint256[]) {
-
-    // }
-
     // -- Exact Rounding Error Equations ---
 
     function postDepositClaimRE(uint256 depositAmount, uint256 supplyFactor) internal returns (uint256) {
@@ -242,10 +230,6 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         return (supplyFactor - withdrawAmount * RAY % supplyFactor) / RAY;
     }
 
-    // Resulting vault shares?
-    // The difference between the expected max withdraw after withdrawal and the
-    // actual max withdraw after withdrawal.
-    // TODO: totalSupply needs to change when _decimalsOffset is added
     function maxWithdrawREAfterWithdraw(
         uint256 withdrawAmount,
         uint256 totalAssets,
@@ -287,5 +271,17 @@ contract VaultSharedSetup is IonPoolSharedSetup {
 
     function newAddress(bytes memory str) internal returns (address) {
         return address(uint160(uint256(keccak256(str))));
+    }
+
+    function withSupplyFactor() internal {
+        IonPoolExposed(address(weEthIonPool)).setSupplyFactor(1.13131323e27);
+        IonPoolExposed(address(rsEthIonPool)).setSupplyFactor(1.1585678e27);
+        IonPoolExposed(address(rswEthIonPool)).setSupplyFactor(1.838194e27);
+    }
+
+    function withInflatedSupplyFactor() internal {
+        IonPoolExposed(address(weEthIonPool)).setSupplyFactor(5.1336673e27);
+        IonPoolExposed(address(rsEthIonPool)).setSupplyFactor(7.1336673e27);
+        IonPoolExposed(address(rswEthIonPool)).setSupplyFactor(10.1336673e27);
     }
 }

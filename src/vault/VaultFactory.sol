@@ -3,7 +3,6 @@ pragma solidity 0.8.21;
 
 import { Vault } from "./Vault.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import { IIonLens } from "./../interfaces/IIonLens.sol";
 
 /**
  * @title Ion Lending Vault Factory
@@ -27,7 +26,6 @@ contract VaultFactory {
 
     /**
      * @notice Deploys a new Ion Lending Vault.
-     * @param ionLens The IonLens contract for querying data.
      * @param baseAsset The asset that is being lent out to IonPools.
      * @param feeRecipient Address that receives the accrued manager fees.
      * @param feePercentage Fee percentage to be set.
@@ -38,7 +36,6 @@ contract VaultFactory {
      * @param salt The salt used for CREATE2 deployment.
      */
     function createVault(
-        IIonLens ionLens,
         IERC20 baseAsset,
         address feeRecipient,
         uint256 feePercentage,
@@ -51,8 +48,9 @@ contract VaultFactory {
         external
         returns (Vault vault)
     {
+        // TODO use named args syntax
         vault = new Vault{ salt: salt }(
-            ionLens, baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin
+            baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin
         );
 
         emit CreateVault(address(vault), baseAsset, feeRecipient, feePercentage, name, symbol, initialDefaultAdmin);

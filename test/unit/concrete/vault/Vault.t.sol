@@ -8,7 +8,6 @@ import { WadRayMath, RAY } from "./../../../../src/libraries/math/WadRayMath.sol
 import { Vault } from "./../../../../src/vault/Vault.sol";
 import { IonPool } from "./../../../../src/IonPool.sol";
 import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
-import { IonLens } from "./../../../../src/periphery/IonLens.sol";
 import { EnumerableSet } from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { IAccessControl } from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
@@ -26,9 +25,7 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsSeparately() public {
-        vault = new Vault(
-            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
-        );
+        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -90,9 +87,7 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsTogether() public {
-        vault = new Vault(
-            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
-        );
+        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -154,7 +149,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         vm.startPrank(OWNER);
 
         // wrong base asset revert
-        vm.expectRevert(Vault.InvalidSupportedMarkets.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidUnderlyingAsset.selector, newIonPool));
         vault.addSupportedMarkets(markets, allocationCaps, queue, queue);
 
         // zero address revert
@@ -164,6 +159,8 @@ contract VaultSetUpTest is VaultSharedSetup {
 
         vm.stopPrank();
     }
+
+    function test_Revert_AddSupportedMarkets_MarketAlreadySupported() public { }
 
     function test_RemoveSingleSupportedMarket() public {
         uint256[] memory allocationCaps = new uint256[](1);
@@ -304,7 +301,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         assertGt(weEthIonPool.balanceOf(address(vault)), 0, "deposited to weEthIonPool");
 
         vm.prank(OWNER);
-        vm.expectRevert(Vault.InvalidMarketRemovalNonZeroSupply.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidMarketRemovalNonZeroSupply.selector, weEthIonPool));
         vault.removeSupportedMarkets(market, queue, queue);
     }
 
@@ -318,7 +315,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         queue[2] = rswEthIonPool;
 
         vm.prank(OWNER);
-        vm.expectRevert(Vault.MarketNotSupported.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, IDLE));
         vault.removeSupportedMarkets(market, queue, queue);
     }
 
@@ -334,7 +331,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         queue[2] = rswEthIonPool;
 
         vm.prank(OWNER);
-        vm.expectRevert(Vault.InvalidQueueLength.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidQueueLength.selector, 3, 2));
         vault.removeSupportedMarkets(market, queue, queue);
     }
 
@@ -380,7 +377,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         vm.prank(OWNER);
         vault.multicall(multicallData);
 
-        vm.expectRevert(Vault.MarketNotSupported.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, weEthIonPool));
         vault.supportedMarketsIndexOf(address(weEthIonPool));
 
         assertEq(vault.supportedMarketsLength(), 2, "supported markets length");
@@ -409,20 +406,21 @@ contract VaultSetUpTest is VaultSharedSetup {
 
         vm.startPrank(OWNER);
 
-        vm.expectRevert(Vault.InvalidQueueLength.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidQueueLength.selector, 5, 3));
         vault.updateSupplyQueue(invalidLengthQueue);
 
         IIonPool[] memory zeroAddressQueue = new IIonPool[](3);
 
-        vm.expectRevert(Vault.MarketNotSupported.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, address(0)));
         vault.updateSupplyQueue(zeroAddressQueue);
 
+        IIonPool wrongIonPool = IIonPool(address(uint160(uint256(keccak256("address not in supported markets")))));
         IIonPool[] memory notSupportedQueue = new IIonPool[](3);
         notSupportedQueue[0] = rsEthIonPool;
         notSupportedQueue[1] = rswEthIonPool;
-        notSupportedQueue[2] = IIonPool(address(uint160(uint256(keccak256("address not in supported markets")))));
+        notSupportedQueue[2] = wrongIonPool;
 
-        vm.expectRevert(Vault.MarketNotSupported.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, wrongIonPool));
         vault.updateSupplyQueue(notSupportedQueue);
     }
 
@@ -605,7 +603,7 @@ contract VaultRolesAndPrivilegedFunctions is VaultSharedSetup {
     }
 }
 
-contract VaultDeposit is VaultSharedSetup {
+abstract contract VaultDeposit is VaultSharedSetup {
     function setUp() public virtual override {
         super.setUp();
     }
@@ -798,7 +796,7 @@ contract VaultDeposit is VaultSharedSetup {
     function test_Mint_AllMarkets() public { }
 }
 
-contract VaultWithdraw is VaultSharedSetup {
+abstract contract VaultWithdraw is VaultSharedSetup {
     function setUp() public virtual override {
         super.setUp();
     }
@@ -942,7 +940,7 @@ contract VaultWithdraw is VaultSharedSetup {
     function test_DepositAndWithdraw_MultipleUsers() public { }
 }
 
-contract VaultReallocate is VaultSharedSetup {
+abstract contract VaultReallocate is VaultSharedSetup {
     function setUp() public virtual override {
         super.setUp();
     }
@@ -1068,10 +1066,6 @@ contract VaultReallocate is VaultSharedSetup {
         );
     }
 
-    function test_Reallocate_WithIdleAsset() public {
-        //
-    }
-
     function test_Revert_Reallocate_AllocationCapExceeded() public {
         uint256 depositAmount = 10e18;
 
@@ -1087,14 +1081,16 @@ contract VaultReallocate is VaultSharedSetup {
 
         uint256 prevTotalAssets = vault.totalAssets();
 
-        // tries to deposit 10e18 to 9e18 allocation cap
+        uint256 weEthCurrentSupplied = weEthIonPool.getUnderlyingClaimOf(address(vault));
+
+        // tries to deposit 2e18 + 2e18 to 3e18 allocation cap
         Vault.MarketAllocation[] memory allocs = new Vault.MarketAllocation[](3);
         allocs[0] = Vault.MarketAllocation({ pool: rswEthIonPool, assets: -1e18 });
         allocs[1] = Vault.MarketAllocation({ pool: rsEthIonPool, assets: -1e18 });
         allocs[2] = Vault.MarketAllocation({ pool: weEthIonPool, assets: 2e18 });
 
         vm.prank(ALLOCATOR);
-        vm.expectRevert(Vault.AllocationCapExceeded.selector);
+        vm.expectRevert(abi.encodeWithSelector(Vault.AllocationCapExceeded.selector, weEthCurrentSupplied + 2e18, 3e18));
         vault.reallocate(allocs);
     }
 
@@ -1127,16 +1123,14 @@ contract VaultReallocate is VaultSharedSetup {
     }
 }
 
-contract VaultWithIdlePool is VaultSharedSetup {
+abstract contract VaultWithIdlePool is VaultSharedSetup {
     IIonPool[] marketsToAdd;
     uint256[] allocationCaps;
 
     function setUp() public virtual override {
         super.setUp();
 
-        vault = new Vault(
-            ionLens, BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN
-        );
+        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
@@ -1184,12 +1178,12 @@ contract VaultWithIdlePool is VaultSharedSetup {
             "weEthIonPool"
         );
         assertEq(BASE_ASSET.balanceOf(address(vault)), 20e18, "IDLE");
-        assertLt(
+        assertLe(
             30e18 - rsEthIonPool.getUnderlyingClaimOf(address(vault)),
             postDepositClaimRE(30e18, rsEthIonPoolSF),
             "rsEthIonPool"
         );
-        assertLt(
+        assertLe(
             10e18 - rswEthIonPool.getUnderlyingClaimOf(address(vault)),
             postDepositClaimRE(10e18, rswEthIonPoolSF),
             "rswEthIonPool"
@@ -1232,12 +1226,12 @@ contract VaultWithIdlePool is VaultSharedSetup {
             "weEthIonPool"
         );
         assertEq(BASE_ASSET.balanceOf(address(vault)), expectedIdleClaim, "IDLE");
-        assertLt(
+        assertLe(
             expectedRsEthIonPoolClaim - rsEthIonPool.getUnderlyingClaimOf(address(vault)),
             postDepositClaimRE(expectedWeEthIonPoolClaim, rsEthIonPoolSF),
             "rsEthIonPool"
         );
-        assertLt(
+        assertLe(
             expectedRswEthIonPoolClaim - rswEthIonPool.getUnderlyingClaimOf(address(vault)),
             postDepositClaimRE(expectedRswEthIonPoolClaim, rswEthIonPoolSF),
             "rswEthIonPool"
@@ -1302,7 +1296,7 @@ contract VaultWithIdlePool is VaultSharedSetup {
         assertEq(BASE_ASSET.balanceOf(address(this)), withdrawAmount, "user base asset balance");
     }
 
-    function test_FullWithdraw() public {
+    function test_MaxWithdraw() public {
         uint256 depositAmount = 70e18;
         setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
         vault.deposit(depositAmount, address(this));
@@ -1317,20 +1311,28 @@ contract VaultWithIdlePool is VaultSharedSetup {
         assertEq(vault.balanceOf(address(this)), 0, "user shares balance");
     }
 
-    function test_FullRedeem() public {
+    function test_MaxRedeem() public {
         uint256 depositAmount = 70e18;
         setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
         vault.deposit(depositAmount, address(this));
 
+        // all deposits are available to be withdrawn.
         uint256 redeemAmount = vault.maxRedeem(address(this));
 
-        vault.redeem(redeemAmount, address(this), address(this));
+        uint256 withdrawnAssets = vault.redeem(redeemAmount, address(this), address(this));
 
-        assertEq(vault.totalAssets(), 0, "vault total assets");
-        assertEq(vault.totalSupply(), 0, "vault total shares");
+        uint256 weEthRoundingError = (weEthIonPool.supplyFactor()) / RAY + 1;
+        uint256 rsEthRoundingError = (rsEthIonPool.supplyFactor()) / RAY + 1;
+        uint256 rswEthRoundingError = (rswEthIonPool.supplyFactor()) / RAY + 1;
+        uint256 roundingError = weEthRoundingError + rsEthRoundingError + rswEthRoundingError;
 
-        assertEq(BASE_ASSET.balanceOf(address(this)), redeemAmount, "user base asset balance");
-        assertEq(vault.balanceOf(address(this)), 0, "user shares balance");
+        // _maxWithdraw rounds down inside the `IonPool` to calculate the claims
+        // and the shares conversion rounds down again.
+        assertLe(vault.totalAssets(), roundingError, "vault total assets");
+        assertLe(vault.totalSupply(), roundingError, "vault total shares");
+
+        assertEq(withdrawnAssets, BASE_ASSET.balanceOf(address(this)), "user base asset balance");
+        assertLe(vault.balanceOf(address(this)), 1, "user shares balance");
     }
 
     function test_Reallocate_DepositToIdle() public {
@@ -1463,17 +1465,7 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
         assertEq(maxDeposit, 55e18, "max deposit after update supply cap");
     }
 
-    function test_MaxDeposit_AfterDeposits() public {
-        // // deposit
-        // uint256 depositAmount = 35e18;
-        // setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
-
-        // // Out of 60e18 room, 35e18 was taken up.
-
-        // maxDeposit = vault.maxDeposit(NULL);
-
-        // assertEq(maxDeposit, 35e18, "max deposit after deposit");
-    }
+    function test_MaxDeposit_AfterDeposits() public { }
 
     function test_MaxMint_MintAmount() public {
         uint256[] memory allocationCaps = new uint256[](3);
@@ -1505,6 +1497,7 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
     function test_MaxRedeem() public { }
 
     // --- Previews ---
+
     // Check the difference between preview and actual
 
     function test_PreviewDeposit() public { }
@@ -1525,12 +1518,14 @@ contract VaultDeposit_WithoutSupplyFactor is VaultDeposit {
 contract VaultDeposit_WithSupplyFactor is VaultDeposit {
     function setUp() public override(VaultDeposit) {
         super.setUp();
+        withSupplyFactor();
     }
 }
 
 contract VaultDeposit_WithInflatedSupplyFactor is VaultDeposit {
     function setUp() public override(VaultDeposit) {
         super.setUp();
+        withInflatedSupplyFactor();
     }
 }
 
@@ -1543,12 +1538,14 @@ contract VaultWithdraw_WithoutSupplyFactor is VaultWithdraw {
 contract VaultWithdraw_WithSupplyFactor is VaultWithdraw {
     function setUp() public override(VaultWithdraw) {
         super.setUp();
+        withSupplyFactor();
     }
 }
 
 contract VaultWithdraw_WithInflatedSupplyFactor is VaultWithdraw {
     function setUp() public override(VaultWithdraw) {
         super.setUp();
+        withInflatedSupplyFactor();
     }
 }
 
@@ -1561,12 +1558,14 @@ contract VaultReallocate_WithoutSupplyFactor is VaultReallocate {
 contract VaultReallocate_WithSupplyFactor is VaultReallocate {
     function setUp() public override(VaultReallocate) {
         super.setUp();
+        withSupplyFactor();
     }
 }
 
 contract VaultReallocate_WithInflatedSupplyFactor is VaultReallocate {
     function setUp() public override(VaultReallocate) {
         super.setUp();
+        withInflatedSupplyFactor();
     }
 }
 
@@ -1579,11 +1578,13 @@ contract VaultWithIdlePool_WithoutSupplyFactor is VaultWithIdlePool {
 contract VaultWithIdlePool_WithSupplyFactor is VaultWithIdlePool {
     function setUp() public override(VaultWithIdlePool) {
         super.setUp();
+        withSupplyFactor();
     }
 }
 
 contract VaultWithIdlePool_WithInflatedSupplyFactor is VaultWithIdlePool {
     function setUp() public override(VaultWithIdlePool) {
         super.setUp();
+        withInflatedSupplyFactor();
     }
 }

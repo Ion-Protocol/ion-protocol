@@ -233,4 +233,5 @@ interface IIonPool {
 
     function getTotalUnderlyingClaims() external view returns (uint256);
     function getUnderlyingClaimOf(address user) external view returns (uint256);
+    function extsload(bytes32 slot) external view returns (bytes32);
 }
