@@ -29,6 +29,7 @@ runs = 20
 depth = 1536
 # fail_on_revert = true
 call_override = false   # reentrancy-check
+preserve_state = true
 
 [profile.ci.fuzz]
 runs = 10
