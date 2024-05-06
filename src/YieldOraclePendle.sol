@@ -33,6 +33,7 @@ contract YieldOraclePendle is IYieldOracle {
      * @param _yieldCeiling The maximum APY
      */
     constructor(IPMarketV3 _market, uint32 _twapDuration, uint256 _yieldCeiling) {
+        //slither-disable-next-line unused-return
         (,,,,, uint16 observationCardinalityNext) = _market._storage();
 
         uint256 minimumOracleSlots = _twapDuration / 12;
