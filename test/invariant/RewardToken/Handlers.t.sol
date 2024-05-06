@@ -39,11 +39,11 @@ contract UserHandler is Handler {
     }
 
     function burn(address account, uint256 amount) external {
-        amount = bound(amount, 0, REWARD_MODULE.getUnderlyingClaimOf(account));
+        amount = bound(amount, 0, REWARD_MODULE.balanceOf(account));
         uint256 currentSupplyFactor = REWARD_MODULE.supplyFactor();
 
         uint256 amountNormalized = amount.rayDivUp(currentSupplyFactor);
-        if (amountNormalized == 0 || amountNormalized > REWARD_MODULE.balanceOf(account)) return;
+        if (amountNormalized == 0 || amountNormalized > REWARD_MODULE.normalizedBalanceOf(account)) return;
         REWARD_MODULE.burn(account, account, amount);
     }
 
@@ -66,11 +66,11 @@ contract SupplyFactorIncreaseHandler is Handler {
         uint256 oldSupplyFactor = REWARD_MODULE.supplyFactor();
         amount = bound(amount, 1.1e27, 1.25e27); // between 1E-16 and 15%
 
-        uint256 oldTotalSupply = REWARD_MODULE.getTotalUnderlyingClaims();
+        uint256 oldTotalSupply = REWARD_MODULE.totalSupply();
         uint256 newSupplyFactor = oldSupplyFactor.rayMulDown(amount);
         REWARD_MODULE.setSupplyFactor(newSupplyFactor);
 
-        uint256 interestCreated = REWARD_MODULE.getTotalUnderlyingClaims() - oldTotalSupply;
+        uint256 interestCreated = REWARD_MODULE.totalSupply() - oldTotalSupply;
         UNDERLYING.mint(address(REWARD_MODULE), interestCreated + 1);
     }
 }

@@ -37,7 +37,7 @@ contract Vault_Fuzz is VaultSharedSetup {
         weEthIonPool.supply(address(this), assets, new bytes32[](0));
 
         uint256 expectedClaim = assets;
-        uint256 resultingClaim = weEthIonPool.getUnderlyingClaimOf(address(this));
+        uint256 resultingClaim = weEthIonPool.balanceOf(address(this));
 
         uint256 re = assets - ((assets * RAY - ((assets * RAY) % supplyFactor)) / RAY);
         assertLe(expectedClaim - resultingClaim, (supplyFactor - 2) / RAY + 1);

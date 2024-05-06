@@ -105,20 +105,20 @@ contract RewardToken_InvariantTest is RewardTokenSharedSetup {
         uint256 totalSupplyByBalances;
         for (uint256 i = 0; i < userHandlers.length; i++) {
             UserHandler user = userHandlers[i];
-            totalSupplyByBalances += rewardModule.balanceOf(address(user));
+            totalSupplyByBalances += rewardModule.normalizedBalanceOf(address(user));
         }
 
         underlying.balanceOf(address(rewardModule)); // update underlying balance
         rewardModule.totalSupply();
 
-        assertEq(rewardModule.totalSupply(), totalSupplyByBalances);
+        assertEq(rewardModule.normalizedTotalSupply(), totalSupplyByBalances);
     }
 
     function invariant_lenderClaimAlwaysBacked() external {
-        uint256 lenderClaim = rewardModule.getTotalUnderlyingClaims();
+        uint256 totalSupply = rewardModule.totalSupply();
 
         uint256 underlyingBalance = underlying.balanceOf(address(rewardModule));
 
-        assertGe(underlyingBalance, lenderClaim);
+        assertGe(underlyingBalance, totalSupply);
     }
 }

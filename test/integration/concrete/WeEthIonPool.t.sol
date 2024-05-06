@@ -125,7 +125,7 @@ contract WeEthIonPool_IntegrationTest is WeEthIonPoolSharedSetup {
         ionPool.supply(lenderA, lenderAFirstSupplyAmount, lenderProofs[0]);
         vm.stopPrank();
 
-        assertEq(ionPool.getUnderlyingClaimOf(lenderA), lenderAFirstSupplyAmount, "lender balance after 1st supply");
+        assertEq(ionPool.balanceOf(lenderA), lenderAFirstSupplyAmount, "lender balance after 1st supply");
         assertEq(lens.liquidity(iIonPool), lenderAFirstSupplyAmount, "liquidity after 1st supply");
 
         /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -172,10 +172,7 @@ contract WeEthIonPool_IntegrationTest is WeEthIonPoolSharedSetup {
         uint256 roundingError = ionPool.supplyFactor() / 1e27;
 
         assertApproxEqAbs(
-            ionPool.getUnderlyingClaimOf(lenderB),
-            lenderBFirstSupplyAmount,
-            roundingError,
-            "lenderB balance after 1st supply"
+            ionPool.balanceOf(lenderB), lenderBFirstSupplyAmount, roundingError, "lenderB balance after 1st supply"
         );
 
         /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -219,14 +216,14 @@ contract WeEthIonPool_IntegrationTest is WeEthIonPoolSharedSetup {
         vm.startPrank(lenderA);
         ionPool.withdraw(lenderA, lender1WithdrawAmountFail);
 
-        uint256 lenderABalanceBefore = ionPool.getUnderlyingClaimOf(lenderA);
+        uint256 lenderABalanceBefore = ionPool.balanceOf(lenderA);
 
         uint256 lender1WithdrawAmount = 10e18;
         ionPool.withdraw(lenderA, lender1WithdrawAmount);
         vm.stopPrank();
 
         assertEq(
-            ionPool.getUnderlyingClaimOf(lenderA),
+            ionPool.balanceOf(lenderA),
             lenderABalanceBefore - lender1WithdrawAmount,
             "lenderA balance after 1st withdrawal"
         );
