@@ -28,7 +28,7 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
     error UnexpectedSyOut(uint256 amountSyOut, uint256 expectedSyOut);
     error FlashswapTooExpensive(uint256 amountSyIn, uint256 maxResultingDebt);
 
-    IPMarketV3 public immutable market;
+    IPMarketV3 public immutable MARKET;
 
     IStandardizedYield public immutable SY;
     IERC20 public immutable PT;
@@ -63,7 +63,7 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
 
         BASE.approve(address(_SY), type(uint256).max);
 
-        market = _market;
+        MARKET = _market;
     }
 
     /**
@@ -94,7 +94,7 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
 
         flashswapInitiated = 2;
 
-        market.swapSyForExactPt(
+        MARKET.swapSyForExactPt(
             address(this), ptToFlashswap, abi.encode(resultingAdditionalCollateral, maxResultingDebt, msg.sender)
         );
 
@@ -118,7 +118,7 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
      * @param data Arbitrary data passed by the market
      */
     function swapCallback(int256 ptToAccount, int256 syToAccount, bytes calldata data) external {
-        if (msg.sender != address(market)) revert MarketMustBeCaller(msg.sender);
+        if (msg.sender != address(MARKET)) revert MarketMustBeCaller(msg.sender);
         if (flashswapInitiated == 1) revert ExternalFlashswapNotAllowed();
 
         (uint256 resultingAdditionalCollateral, uint256 maxResultingDebt, address user) =
@@ -136,7 +136,7 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
 
         // Automatically repay the flashswap
         uint256 amountSyOut;
-        if (syToSend != 0) amountSyOut = SY.deposit(address(market), address(BASE), syToSend, syToSend);
+        if (syToSend != 0) amountSyOut = SY.deposit(address(MARKET), address(BASE), syToSend, syToSend);
 
         // This check guarantees that the SY is pegged to the BASE asset
         if (amountSyOut != syToSend) revert UnexpectedSyOut(amountSyOut, syToSend);

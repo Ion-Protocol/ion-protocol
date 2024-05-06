@@ -4,8 +4,6 @@ pragma solidity 0.8.21;
 import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
 import { IPMarketSwapCallback } from "pendle-core-v2-public/interfaces/IPMarketSwapCallback.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 contract PtQuoter is IPMarketSwapCallback {
     // 0xfd2dc465
     error SwapData(uint256 quote);

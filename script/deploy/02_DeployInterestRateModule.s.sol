@@ -10,8 +10,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 // struct IlkData {
 //     // Word 1
 //     uint96 adjustedProfitMargin; // 27 decimals

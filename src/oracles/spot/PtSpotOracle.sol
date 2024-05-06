@@ -7,7 +7,7 @@ import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
 import { PendlePtOracleLib } from "pendle-core-v2-public/oracles/PendlePtOracleLib.sol";
 
 /**
- * @notice Spot Oracle for PT markets
+ * @notice Spot Oracle for PT MARKETs
  *
  * @dev This contract assumes that the SY is pegged 1:1 with the underlying
  * asset of IonPool.
@@ -23,8 +23,8 @@ contract PtSpotOracle is SpotOracle {
 
     error InsufficientOracleSlots(uint256 currentSlots);
 
-    IPMarketV3 public immutable market;
-    uint32 public immutable twapDuration;
+    IPMarketV3 public immutable MARKET;
+    uint32 public immutable TWAP_DURATION;
 
     /**
      * @notice Construct a new `PtSpotOracle` instance
@@ -47,16 +47,16 @@ contract PtSpotOracle is SpotOracle {
 
         if (observationCardinalityNext < minimumOracleSlots) revert InsufficientOracleSlots(observationCardinalityNext);
 
-        market = _market;
-        twapDuration = _twapDuration;
+        MARKET = _market;
+        TWAP_DURATION = _twapDuration;
     }
 
     /**
      * @inheritdoc SpotOracle
      */
     function getPrice() public view override returns (uint256 price) {
-        if (market.expiry() <= block.timestamp) return 0;
+        if (MARKET.expiry() <= block.timestamp) return 0;
 
-        return market.getPtToSyRate(twapDuration);
+        return MARKET.getPtToSyRate(TWAP_DURATION);
     }
 }
