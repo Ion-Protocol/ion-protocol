@@ -15,7 +15,6 @@ import {
     ETHX_ADDRESS,
     RSWETH,
     EZETH,
-    RENZO_ORACLE,
     RENZO_RESTAKE_MANAGER
 } from "../../../../src/Constants.sol";
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
@@ -24,8 +23,6 @@ import { IERC20 } from "../../../../lib/forge-safe/lib/forge-std/src/interfaces/
 import { RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 import { WeEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/WeEthWstEthReserveOracle.sol";
 import { EzEthWstEthReserveOracle } from "./../../../../src/oracles/reserve/lrt/EzEthWstEthReserveOracle.sol";
-import { ReserveFeed } from "../../../../src/oracles/reserve/ReserveFeed.sol";
-import { ReserveOracle } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 

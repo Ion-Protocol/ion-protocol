@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WEETH_ADDRESS, EETH_ADDRESS, PT_WEETH_POOL } from "../../../../src/Constants.sol";
+import { WEETH_ADDRESS, PT_WEETH_POOL } from "../../../../src/Constants.sol";
 import { PtHandler } from "../../../../src/flash/PtHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { IWeEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
 import { EtherFiLibrary } from "../../../../src/libraries/lrt/EtherFiLibrary.sol";
 
-import { PtHandler_Test } from "../handlers-base/PtHandler.t.sol";
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
 import { PtHandler_ForkBase } from "../../../helpers/handlers/PtHandlerBase.sol";
 

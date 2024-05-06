@@ -6,8 +6,6 @@ import { EZETH, RENZO_RESTAKE_MANAGER } from "../../../../src/Constants.sol";
 
 import { Test } from "forge-std/Test.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 uint256 constant SCALE_FACTOR = 1e18;
 
 contract RenzoLibrary_FuzzTest is Test {

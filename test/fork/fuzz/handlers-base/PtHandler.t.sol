@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { PtHandler } from "../../../../src/flash/PtHandler.sol";
-import { ISpotOracle } from "../../../../src/interfaces/ISpotOracle.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { PtHandler_ForkBase } from "../../../helpers/handlers/PtHandlerBase.sol";
@@ -27,7 +25,7 @@ abstract contract PtHandler_FuzzTest is PtHandler_ForkBase {
         uint256 quote;
 
         if (collateralToFlashswap != 0) {
-            quote = ptQuoter.quoteSyForExactPt(_getTypedPtHandler().market(), collateralToFlashswap);
+            quote = ptQuoter.quoteSyForExactPt(_getTypedPtHandler().MARKET(), collateralToFlashswap);
             // vm.assume(quote != 0);
         }
 

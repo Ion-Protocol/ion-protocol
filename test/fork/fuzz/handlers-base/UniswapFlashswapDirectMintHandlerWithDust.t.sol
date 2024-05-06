@@ -10,8 +10,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 using WadRayMath for uint256;
 
-import { console2 } from "forge-std/console2.sol";
-
 struct Config {
     uint256 initialDepositLowerBound;
 }

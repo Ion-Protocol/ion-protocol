@@ -1,3 +1,4 @@
 src/libraries/uniswap/
 src/interfaces/ProviderInterfaces.sol
+src/interfaces/ISpotOracle.sol
 src/periphery/IonInvariants.sol

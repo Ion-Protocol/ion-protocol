@@ -16,8 +16,6 @@ import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-
 abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     using WadRayMath for uint256;
 
