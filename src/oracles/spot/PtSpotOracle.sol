@@ -36,7 +36,7 @@ contract PtSpotOracle is SpotOracle {
     {
         (,,,,, uint16 observationCardinalityNext) = _market._storage();
 
-        uint256 minimumOracleSlots = twapDuration / 12;
+        uint256 minimumOracleSlots = _twapDuration / 12;
 
         if (observationCardinalityNext < minimumOracleSlots) revert InsufficientOracleSlots(observationCardinalityNext);
 
