@@ -17,6 +17,15 @@ uint32 constant TWAP_DURATION = 1800;
 abstract contract PtSpotOracle_ForkTest is SpotOracle_ForkTest {
     function testFork_MaxTimeFromLastUpdateExceeded() public override { }
 
+    function testFork_ViewPrice() public override {
+        uint256 price = spotOracle.getPrice();
+        if (PtSpotOracle(address(spotOracle)).MARKET().expiry() < block.timestamp) {
+            assertEq(price, 0);
+        } else {
+            assertGt(price, 0, "price greater than zero");
+        }
+    }
+
     function testFork_PriceIsZeroBeyondExpiry() public {
         vm.warp(type(uint256).max);
 

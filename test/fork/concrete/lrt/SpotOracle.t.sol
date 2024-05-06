@@ -24,7 +24,7 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     ReserveOracle reserveOracle;
     SpotOracle spotOracle;
 
-    function testFork_ViewPrice() public {
+    function testFork_ViewPrice() public virtual {
         uint256 price = spotOracle.getPrice();
         assertGt(price, 0, "price greater than zero");
     }

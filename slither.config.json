@@ -13,6 +13,7 @@
     "forge-std/=lib/forge-std/src/",
     "openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
     "openzeppelin-contracts/=lib/openzeppelin-contracts/",
-    "@uniswap/v3-core/=lib/v3-core/"
+    "@uniswap/v3-core/=lib/v3-core/",
+    "pendle-core-v2-public/=lib/pendle-core-v2-public/contracts/"
   ]
 }
