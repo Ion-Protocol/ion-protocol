@@ -34,7 +34,7 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
     IERC20 public immutable PT;
     IERC20 public immutable YT;
 
-    uint256 flashswapInitiated = 1;
+    uint256 private flashswapInitiated = 1;
 
     /**
      * @notice Creates a new `PtHandler` instance

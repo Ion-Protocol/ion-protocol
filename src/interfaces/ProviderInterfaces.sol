@@ -117,9 +117,7 @@ interface IEtherFiLiquidityPool {
     function getTotalEtherClaimOf(address _user) external view returns (uint256);
 }
 
-interface IRsEth is IERC20 {
-    function getAssetPrice(address asset) external view returns (uint256);
-}
+interface IRsEth is IERC20 { }
 
 interface IRswEth is IERC20 {
     function deposit() external payable;
@@ -131,6 +129,7 @@ interface IRswEth is IERC20 {
 interface ILRTOracle {
     function rsETHPrice() external view returns (uint256);
     function updateRSETHPrice() external;
+    function getAssetPrice(address asset) external view returns (uint256);
 }
 
 interface ILRTDepositPool {
@@ -187,7 +186,6 @@ interface IRenzoOracle {
         external
         pure
         returns (uint256);
-    function calculateTVLs() external view returns (uint256[][] memory, uint256[] memory, uint256);
 }
 
 interface IOperatorDelegator {
