@@ -16,7 +16,6 @@ import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { ReentrancyGuard } from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import { AccessControlDefaultAdminRules } from
     "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
-
 /**
  * @title Ion Lending Vault
  * @author Molecular Labs
@@ -28,6 +27,7 @@ import { AccessControlDefaultAdminRules } from
  *
  * @custom:security-contact security@molecularlabs.io
  */
+
 contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
@@ -115,6 +115,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      */
     function updateFeePercentage(uint256 _feePercentage) external onlyRole(OWNER_ROLE) {
         if (_feePercentage > RAY) revert InvalidFeePercentage();
+        _accrueFee();
         feePercentage = _feePercentage;
     }
 
@@ -343,6 +344,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 // to the user from the previous function scope.
                 if (pool != IDLE) {
                     pool.withdraw(address(this), transferAmt);
+                } else {
+                    currentIdleDeposits -= transferAmt;
                 }
 
                 totalWithdrawn += transferAmt;
@@ -372,6 +375,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 // contract.
                 if (pool != IDLE) {
                     pool.supply(address(this), transferAmt, new bytes32[](0));
+                } else {
+                    currentIdleDeposits += transferAmt;
                 }
 
                 totalSupplied += transferAmt;
@@ -655,7 +660,16 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         for (uint256 i; i != _supportedMarketsLength;) {
             IIonPool pool = IIonPool(supportedMarkets.at(i));
 
-            uint256 assetsInPool = pool == IDLE ? BASE_ASSET.balanceOf(address(this)) : pool.balanceOf(address(this));
+            uint256 assetsInPool;
+            if (pool == IDLE) {
+                assetsInPool = BASE_ASSET.balanceOf(address(this));
+            } else {
+                if (pool.paused()) {
+                    assetsInPool = pool.balanceOfUnaccrued(address(this));
+                } else {
+                    assetsInPool = pool.balanceOf(address(this));
+                }
+            }
 
             assets += assetsInPool;
 
@@ -762,7 +776,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         (feeShares, newTotalAssets) = _accruedFeeShares();
         if (feeShares != 0) _mint(feeRecipient, feeShares);
 
-        lastTotalAssets = newTotalAssets; // This update happens outside of this function in Metamorpho.
+        lastTotalAssets = newTotalAssets;
 
         emit FeeAccrued(feeShares, newTotalAssets);
     }
@@ -896,7 +910,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @return The max amount of assets withdrawable from this IonPool.
      */
     function _withdrawable(IIonPool pool) internal view returns (uint256) {
-        uint256 currentSupplied = pool.balanceOf(address(this)); // TODO should be balanceOf
+        uint256 currentSupplied = pool.balanceOf(address(this));
         uint256 availableLiquidity = uint256(pool.extsload(ION_POOL_LIQUIDITY_SLOT));
 
         return Math.min(currentSupplied, availableLiquidity);

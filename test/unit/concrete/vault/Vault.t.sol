@@ -1423,7 +1423,109 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
 contract VaultERC4626ExternalViews is VaultSharedSetup {
     function setUp() public override {
         super.setUp();
-        // markets.push(IDLE);
+    }
+
+    function test_TotalAssetsWithSinglePausedIonPool() public {
+        weEthIonPool.updateSupplyCap(type(uint256).max);
+        weEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+
+        supply(address(this), weEthIonPool, 1000e18);
+        borrow(address(this), weEthIonPool, weEthGemJoin, 100e18, 70e18);
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 20e18;
+        allocationCaps[1] = 0;
+        allocationCaps[2] = 0;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 10e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool balance");
+        // pause the weEthIonPool
+        weEthIonPool.pause();
+
+        vm.warp(block.timestamp + 365 days);
+
+        assertGt(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
+        assertLt(
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
+            "weEthIonPool unaccrued balance"
+        );
+        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
+
+        uint256 totalAssets = vault.totalAssets();
+        assertEq(totalAssets, depositAmt, "total assets with paused IonPool does not include interest");
+    }
+
+    function test_TotalAssetsWithMultiplePausedIonPools() public {
+        // Make sure every pool has debt to accrue interest from
+        uint256 initialSupplyAmt = 1000e18;
+        weEthIonPool.updateSupplyCap(type(uint256).max);
+        rsEthIonPool.updateSupplyCap(type(uint256).max);
+        rswEthIonPool.updateSupplyCap(type(uint256).max);
+
+        weEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+        rsEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+        rswEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+
+        supply(address(this), weEthIonPool, initialSupplyAmt);
+        borrow(address(this), weEthIonPool, weEthGemJoin, 100e18, 70e18);
+
+        supply(address(this), rsEthIonPool, initialSupplyAmt);
+        borrow(address(this), rsEthIonPool, rsEthGemJoin, 100e18, 70e18);
+
+        supply(address(this), rswEthIonPool, initialSupplyAmt);
+        borrow(address(this), rswEthIonPool, rswEthGemJoin, 100e18, 70e18);
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        uint256 weEthIonPoolAmt = 10e18;
+        uint256 rsEthIonPoolAmt = 20e18;
+        uint256 rswEthIonPoolAmt = 30e18;
+        allocationCaps[0] = weEthIonPoolAmt;
+        allocationCaps[1] = rsEthIonPoolAmt;
+        allocationCaps[2] = rswEthIonPoolAmt;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 60e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), weEthIonPoolAmt, "weEthIonPool balance");
+        assertEq(rsEthIonPool.balanceOf(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance");
+        assertEq(rswEthIonPool.balanceOf(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance");
+
+        weEthIonPool.pause();
+        // NOTE rsEthIonPool is not paused
+        rswEthIonPool.pause();
+
+        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
+        assertFalse(rsEthIonPool.paused(), "rsEthIonPool is not paused");
+        assertTrue(rswEthIonPool.paused(), "rswEthIonPool is paused");
+
+        vm.warp(block.timestamp + 365 days);
+
+        assertGt(weEthIonPool.balanceOf(address(vault)), weEthIonPoolAmt, "weEthIonPool balance increases");
+        assertGt(rsEthIonPool.balanceOf(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance does not  change");
+        assertGt(rswEthIonPool.balanceOf(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance increases");
+
+        // The 'unaccrued' values should not change
+        assertEq(weEthIonPool.balanceOfUnaccrued(address(vault)), weEthIonPoolAmt, "weEthIonPool balance");
+        assertEq(rsEthIonPool.balanceOfUnaccrued(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance");
+        assertEq(rswEthIonPool.balanceOfUnaccrued(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance");
+
+        uint256 expectedTotalAssets = weEthIonPool.balanceOfUnaccrued(address(vault))
+            + rsEthIonPool.balanceOf(address(vault)) + rswEthIonPool.balanceOfUnaccrued(address(vault));
+
+        assertEq(
+            vault.totalAssets(), expectedTotalAssets, "total assets without accounting for interest in paused IonPools"
+        );
     }
 
     // --- Max ---
@@ -1493,6 +1595,100 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
     function test_PreviewWithdraw() public { }
 
     function test_PreviewRedeem() public { }
+}
+
+contract VaultInflationAttack is VaultSharedSetup {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    /**
+     * Starting Attacker Balance: 11e18 + 10
+     * Attacker Mint: 10 shares
+     * Attacker Donation: 11e18
+     * Alice Deposit: 1e18
+     * Alice Shares Minted:
+     *
+     * How much did the attacker lose during the donation?
+     * Attacker Donated 11e18,
+     */
+    function test_InflationAttackNotProfitable() public {
+        IIonPool[] memory market = new IIonPool[](1);
+        market[0] = IDLE;
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = type(uint256).max;
+
+        IIonPool[] memory queue = new IIonPool[](4);
+        queue[0] = IDLE;
+        queue[1] = weEthIonPool;
+        queue[2] = rsEthIonPool;
+        queue[3] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vault.addSupportedMarkets(market, allocationCaps, queue, queue);
+
+        uint256 donationAmt = 11e18;
+        uint256 mintAmt = 10;
+
+        // fund attacker
+        setERC20Balance(address(BASE_ASSET), address(this), donationAmt + mintAmt);
+
+        uint256 initialAssetBalance = BASE_ASSET.balanceOf(address(this));
+        console2.log("attacker balance before : ");
+        console2.log(initialAssetBalance);
+
+        vault.mint(mintAmt, address(this));
+        uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(address(this)));
+
+        console2.log("attackerClaimAfterMint: ");
+        console2.log(attackerClaimAfterMint);
+
+        console2.log("donationAmt: ");
+        console2.log(donationAmt);
+
+        // donate to inflate exchange rate by increasing `totalAssets`
+        IERC20(address(BASE_ASSET)).transfer(address(vault), donationAmt);
+
+        // how much of this donation was captured by the virtual shares on the vault?
+        uint256 attackerClaimAfterDonation = vault.previewRedeem(vault.balanceOf(address(this)));
+
+        console2.log("attackerClaimAfterDonation: ");
+        console2.log(attackerClaimAfterDonation);
+
+        uint256 lossFromDonation = attackerClaimAfterMint + donationAmt - attackerClaimAfterDonation;
+
+        console2.log("loss from donation: ");
+        console2.log(lossFromDonation);
+
+        address alice = address(0xabcd);
+        setERC20Balance(address(BASE_ASSET), alice, 10e18 + 10);
+
+        vm.startPrank(alice);
+        IERC20(address(BASE_ASSET)).approve(address(vault), 1e18);
+        vault.deposit(1e18, alice);
+        vm.stopPrank();
+
+        // Alice gained zero shares due to exchange rate inflation
+        uint256 aliceShares = vault.balanceOf(alice);
+        console.log("alice must lose all her shares : ");
+        console.log(aliceShares);
+
+        // How much of alice's deposits were captured by the attacker's shares?
+        uint256 attackerClaimAfterAlice = vault.previewRedeem(vault.balanceOf(address(this)));
+        uint256 attackerGainFromAlice = attackerClaimAfterAlice - attackerClaimAfterDonation;
+        console2.log("attackerGainFromAlice: ");
+        console2.log(attackerGainFromAlice);
+
+        vault.redeem(vault.balanceOf(address(this)) - 3, address(this), address(this));
+        uint256 afterAssetBalance = BASE_ASSET.balanceOf(address(this));
+
+        console.log("attacker balance after : ");
+        console.log(afterAssetBalance);
+
+        assertLe(attackerGainFromAlice, lossFromDonation, "attack must not be profitable");
+        assertLe(afterAssetBalance, initialAssetBalance, "attacker must not be profitable");
+    }
 }
 
 contract VaultDeposit_WithoutSupplyFactor is VaultDeposit {

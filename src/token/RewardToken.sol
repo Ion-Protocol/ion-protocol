@@ -333,8 +333,6 @@ abstract contract RewardToken is
             $._normalizedBalances[from] = oldSenderBalance - amountNormalized;
         }
         $._normalizedBalances[to] += amountNormalized;
-
-        emit Transfer(from, to, amountNormalized);
     }
 
     /**
@@ -450,7 +448,7 @@ abstract contract RewardToken is
     }
 
     /**
-     * @dev Current token balance
+     * @dev Current claim of the underlying token inclusive of interest to be accrued.
      * @param user to get balance of
      */
     function balanceOf(address user) public view returns (uint256) {
@@ -459,6 +457,14 @@ abstract contract RewardToken is
         (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
 
         return $._normalizedBalances[user].rayMulDown($.supplyFactor + totalSupplyFactorIncrease);
+    }
+
+    /**
+     * @dev Current claim of the underlying token without accounting for interest to be accrued.
+     */
+    function balanceOfUnaccrued(address user) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._normalizedBalances[user].rayMulDown($.supplyFactor);
     }
 
     /**
@@ -532,9 +538,7 @@ abstract contract RewardToken is
     }
 
     /**
-     * @dev Current total supply
-     *
-     * Normalized total supply and total supply are same in non-rebasing token.
+     * @dev Normalized total supply.
      */
     function normalizedTotalSupply() public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
