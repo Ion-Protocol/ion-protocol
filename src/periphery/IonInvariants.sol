@@ -7,6 +7,8 @@ import { WadRayMath } from "../libraries/math/WadRayMath.sol";
 /**
  * @notice This contract will be deployed on mainnet and be used to check the
  * invariants of the Ion system offchain every block.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 contract IonInvariants {
     using WadRayMath for uint256;
