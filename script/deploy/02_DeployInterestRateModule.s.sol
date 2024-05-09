@@ -10,7 +10,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
+import { console2 } from "forge-std/console2.sol";
 
 // struct IlkData {
 //     // Word 1
@@ -78,13 +78,30 @@ contract DeployInterestRateScript is DeployScript {
             interestRateModule = new InterestRate(ilkDataList, yieldOracle);
         }
 
+        (uint256 zeroUtilRate,) = interestRateModule.calculateInterestRate(0, 0, 100e18);
+        zeroUtilRate += 1e27;
+
+        uint256 annualZeroUtilRate = _rpow(zeroUtilRate, 31_536_000, 1e27);
+
+        uint256 optimalUtilTotalIlkDebt = uint256(optimalUtilizationRate) * 100e18 / 1e4 * 1e27;
+        (uint256 optimalUtilRate,) = interestRateModule.calculateInterestRate(0, 90e45, 100e18);
+        optimalUtilRate += 1e27;
+
+        uint256 annualOptimalUtilRate = _rpow(optimalUtilRate, 31_536_000, 1e27);
+
         // Get the borrow rate at a 100% utilization rate
-        (uint256 borrowRate,) = interestRateModule.calculateInterestRate(0, 100e45, 100e18);
-        borrowRate += 1e27;
+        (uint256 maxUtilRate,) = interestRateModule.calculateInterestRate(0, 100e45, 100e18);
+        maxUtilRate += 1e27;
 
-        uint256 annualInterestRate = _rpow(borrowRate, 31_536_000, 1e27);
+        uint256 annualMaxUtilRate = _rpow(maxUtilRate, 31_536_000, 1e27);
 
-        require(annualInterestRate < 1.3e27, "Interest rate too high");
+        console2.log("annual zero utilization rate: ", annualZeroUtilRate);
+        console2.log("annual optimal utilization rate: ", annualOptimalUtilRate);
+        console2.log("annual max utilization rate: ", annualMaxUtilRate);
+
+        require(annualZeroUtilRate < 1.1e27, "Annual zero utilization rate too high");
+        require(annualOptimalUtilRate < 1.2e27, "Annual optimal utilization rate too high");
+        require(annualMaxUtilRate < 1.4e27, "Annual max utilization rate too high");
     }
 
     function _rpow(uint256 x, uint256 n, uint256 b) internal pure returns (uint256 z) {
