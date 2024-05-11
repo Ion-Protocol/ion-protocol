@@ -16,7 +16,6 @@ import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { ReentrancyGuard } from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import { AccessControlDefaultAdminRules } from
     "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
-
 /**
  * @title Ion Lending Vault
  * @author Molecular Labs
@@ -28,6 +27,7 @@ import { AccessControlDefaultAdminRules } from
  *
  * @custom:security-contact security@molecularlabs.io
  */
+
 contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
@@ -752,7 +752,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         newTotalSupply = totalSupply() + feeShares;
 
         assets = _convertToAssetsWithTotals(balanceOf(owner), newTotalSupply, newTotalAssets, Math.Rounding.Floor);
-
         assets -= _simulateWithdrawIon(assets);
     }
 
@@ -897,9 +896,10 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @return The max amount of assets withdrawable from this IonPool.
      */
     function _withdrawable(IIonPool pool) internal view returns (uint256) {
+        if (pool.paused()) return 0;
+
         uint256 currentSupplied = pool.getUnderlyingClaimOf(address(this));
         uint256 availableLiquidity = uint256(pool.extsload(ION_POOL_LIQUIDITY_SLOT));
-
         return Math.min(currentSupplied, availableLiquidity);
     }
 
@@ -910,6 +910,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @return The max amount of assets depositable to this IonPool.
      */
     function _depositable(IIonPool pool) internal view returns (uint256) {
+        if (pool.paused()) return 0;
+
         uint256 allocationCapDiff = _zeroFloorSub(caps[pool], pool.getUnderlyingClaimOf(address(this)));
         uint256 supplyCapDiff =
             _zeroFloorSub(uint256(pool.extsload(ION_POOL_SUPPLY_CAP_SLOT)), pool.getTotalUnderlyingClaims());
