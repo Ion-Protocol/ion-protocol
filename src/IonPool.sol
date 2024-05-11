@@ -490,13 +490,13 @@ contract IonPool is PausableUpgradeable, RewardToken {
         (uint256 borrowRate, uint256 reserveFactor) =
             $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
 
-        if (borrowRate == 0) return (0, 0, 0, 0, 0);
-
-        // Calculates borrowRate ^ (time) and returns the result with RAY precision
-        uint256 borrowRateExpT = _rpow(borrowRate + RAY, block.timestamp - ilk.lastRateUpdate, RAY);
-
         // Unsafe cast OK
         timestampIncrease = uint48(block.timestamp) - ilk.lastRateUpdate;
+
+        if (borrowRate == 0) return (0, 0, 0, 0, timestampIncrease);
+
+        // Calculates borrowRate ^ (time) and returns the result with RAY precision
+        uint256 borrowRateExpT = _rpow(borrowRate + RAY, timestampIncrease, RAY);
 
         // Debt distribution
         // This form of rate accrual is much safer than distributing the new
