@@ -1192,6 +1192,82 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
             previousRates[i] = rate;
         }
     }
+
+    // If distribution factor is zero, should return
+    // minimum kink rate.
+    function test_DivideByZeroWhenDistributionFactorIsZero() public {
+        IlkData[] memory ilkConfigs = new IlkData[](2);
+        uint16[] memory distributionFactors = new uint16[](2);
+        distributionFactors[0] = 0;
+        distributionFactors[1] = 1e4;
+
+        uint96 minimumKinkRate = 4_062_570_058_138_700_000;
+        for (uint8 i; i != 2; ++i) {
+            IlkData memory ilkConfig = IlkData({
+                adjustedProfitMargin: 0,
+                minimumKinkRate: minimumKinkRate,
+                reserveFactor: 0,
+                adjustedBaseRate: 0,
+                minimumBaseRate: 0,
+                optimalUtilizationRate: 9000,
+                distributionFactor: distributionFactors[i],
+                adjustedAboveKinkSlope: 0,
+                minimumAboveKinkSlope: 0
+            });
+            ilkConfigs[i] = ilkConfig;
+        }
+
+        interestRateModule = new InterestRate(ilkConfigs, apyOracle);
+
+        vm.warp(block.timestamp + 1 days);
+
+        (uint256 zeroDistFactorBorrowRate,) = interestRateModule.calculateInterestRate(0, 10e45, 100e18); // 10%
+            // utilization
+        assertEq(zeroDistFactorBorrowRate, minimumKinkRate, "borrow rate should be minimum kink rate");
+
+        (uint256 nonZeroDistFactorBorrowRate,) = interestRateModule.calculateInterestRate(1, 100e45, 100e18); // 90%
+            // utilization
+        assertApproxEqAbs(
+            nonZeroDistFactorBorrowRate, minimumKinkRate, 1, "borrow rate at any util should be minimum kink rate"
+        );
+    }
+
+    // If scaling total eth supply with distribution factor truncates to zero,
+    // should return minimum base rate.
+    function test_DivideByZeroWhenTotalEthSupplyIsSmall() public {
+        IlkData[] memory ilkConfigs = new IlkData[](2);
+        uint16[] memory distributionFactors = new uint16[](2);
+        distributionFactors[0] = 0.5e4;
+        distributionFactors[1] = 0.5e4;
+
+        uint96 minimumKinkRate = 4_062_570_058_138_700_000;
+        uint96 minimumBaseRate = 1_580_630_071_273_960_000;
+        for (uint8 i; i != 2; ++i) {
+            IlkData memory ilkConfig = IlkData({
+                adjustedProfitMargin: 0,
+                minimumKinkRate: minimumKinkRate,
+                reserveFactor: 0,
+                adjustedBaseRate: 0,
+                minimumBaseRate: minimumBaseRate,
+                optimalUtilizationRate: 9000,
+                distributionFactor: distributionFactors[i],
+                adjustedAboveKinkSlope: 0,
+                minimumAboveKinkSlope: 0
+            });
+            ilkConfigs[i] = ilkConfig;
+        }
+
+        interestRateModule = new InterestRate(ilkConfigs, apyOracle);
+
+        vm.warp(block.timestamp + 1 days);
+
+        (uint256 borrowRate,) = interestRateModule.calculateInterestRate(0, 0, 1); // dust amount of eth supply
+        assertEq(borrowRate, minimumBaseRate, "borrow rate should be minimum base rate");
+
+        (uint256 borrowRateWithoutTruncation,) = interestRateModule.calculateInterestRate(1, 90e45, 100e18); // 90%
+            // utilization
+        assertApproxEqAbs(borrowRateWithoutTruncation, minimumKinkRate, 1, "borrow rate without truncation");
+    }
 }
 
 contract IonPool_AdminTest is IonPoolSharedSetup {
