@@ -10,6 +10,7 @@ import { console2 } from "forge-std/console2.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
 using Math for uint256;
+using WadRayMath for uint256;
 
 contract Vault_Fuzz is VaultSharedSetup {
     function setUp() public override {
@@ -54,6 +55,78 @@ contract Vault_Fuzz is VaultSharedSetup {
         sharesToBurn = sharesToBurn * supplyFactor < claim * RAY ? sharesToBurn + 1 : sharesToBurn;
 
         assertEq(normalizedAmt, sharesToBurn);
+    }
+
+    // NOTE Supplying the diff can revert if the normalized mint amount
+    // truncates to zero. Otherwise, it should be impossible to supply the
+    // 'diff' and end up violating the supply cap.
+
+    function testFuzz_DepositToFillSupplyCap(uint256 assets, uint256 supplyFactor) public {
+        supplyFactor = bound(supplyFactor, 1e27, 10e27);
+        IonPoolExposed(address(weEthIonPool)).setSupplyFactor(supplyFactor);
+
+        uint256 supplyCap = bound(assets, 100e18, type(uint128).max);
+        weEthIonPool.updateSupplyCap(supplyCap);
+
+        uint256 initialDeposit = bound(assets, 1e18, supplyCap - 10e18);
+        supply(address(this), weEthIonPool, initialDeposit);
+        uint256 initialTotalNormalized = weEthIonPool.totalSupplyUnaccrued();
+
+        uint256 supplyCapDiff = _zeroFloorSub(supplyCap, weEthIonPool.getTotalUnderlyingClaims());
+
+        // `IonPool.supply` math
+        uint256 amountScaled = supplyCapDiff.rayDivDown(supplyFactor);
+        uint256 resultingTotalNormalized = initialTotalNormalized + amountScaled;
+
+        uint256 resultingTotalClaim = resultingTotalNormalized.rayMulDown(supplyFactor);
+
+        supply(address(this), weEthIonPool, supplyCapDiff);
+
+        assertEq(
+            resultingTotalClaim, weEthIonPool.getTotalUnderlyingClaims(), "resulting should be the same as calculated"
+        );
+
+        // Is it possible that depositing this supplyCapDiff results in a revert?
+        // `IonPool` compares `getTotalUnderlyingClaims > _supplyCap`
+        assertLe(resultingTotalClaim, supplyCap, "supply cap reached");
+        assertLe(weEthIonPool.getTotalUnderlyingClaims(), supplyCap, "supply cap reached");
+    }
+
+    // Supplying the diff in the allocation cap should never end up violating
+    // the allocation cap.
+    // Is it possible that the `maxDeposit` returns more than the allocation cap?
+    function testFuzz_DepositToFillAllocationCap(uint256 assets, uint256 supplyFactor) public {
+        supplyFactor = bound(supplyFactor, 1e27, 10e27);
+        IonPoolExposed(address(weEthIonPool)).setSupplyFactor(supplyFactor);
+
+        uint256 allocationCap = bound(assets, 100e18, type(uint128).max);
+        updateAllocationCaps(vault, allocationCap, type(uint128).max, 0);
+
+        // Deposit, but leave some room below the allocation cap.
+        uint256 depositAmt = bound(assets, 1e18, allocationCap - 10e18);
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 initialTotalNormalized = weEthIonPool.totalSupplyUnaccrued();
+
+        uint256 allocationCapDiff = _zeroFloorSub(allocationCap, weEthIonPool.getUnderlyingClaimOf(address(vault)));
+
+        uint256 amountScaled = allocationCapDiff.rayDivDown(supplyFactor);
+        uint256 resultingTotalNormalized = initialTotalNormalized + amountScaled;
+        uint256 resultingTotalClaim = resultingTotalNormalized.rayMulDown(supplyFactor);
+
+        // Try to deposit a little more than the first allocation cap would
+        // allow, then check whether it's possible to violate the first
+        // allocation cap.
+
+        setERC20Balance(address(BASE_ASSET), address(this), allocationCapDiff + 123e18);
+        vault.deposit(allocationCapDiff + 123e18, address(this));
+
+        uint256 actualTotalClaim = weEthIonPool.getUnderlyingClaimOf(address(vault));
+        assertEq(resultingTotalClaim, actualTotalClaim, "expected and actual must be equal");
+
+        assertLe(resultingTotalClaim, allocationCap, "expected claim le to allocation cap");
+        assertLe(actualTotalClaim, allocationCap, "actual claim le to allocation cap");
     }
 }
 
