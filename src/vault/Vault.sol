@@ -115,7 +115,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      */
     function updateFeePercentage(uint256 _feePercentage) external onlyRole(OWNER_ROLE) {
         if (_feePercentage > RAY) revert InvalidFeePercentage();
-        _accrueFee();
         feePercentage = _feePercentage;
     }
 
