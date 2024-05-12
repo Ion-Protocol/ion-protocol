@@ -460,6 +460,14 @@ abstract contract RewardToken is
     }
 
     /**
+     * @dev Current claim of the underlying token without accounting for interest to be accrued.
+     */
+    function balanceOfUnaccrued(address user) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._normalizedBalances[user].rayMulDown($.supplyFactor);
+    }
+
+    /**
      * @dev Accounting is done in normalized balances
      * @param user to get normalized balance of
      */

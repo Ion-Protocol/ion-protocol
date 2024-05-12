@@ -655,7 +655,16 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         for (uint256 i; i != _supportedMarketsLength;) {
             IIonPool pool = IIonPool(supportedMarkets.at(i));
 
-            uint256 assetsInPool = pool == IDLE ? BASE_ASSET.balanceOf(address(this)) : pool.balanceOf(address(this));
+            uint256 assetsInPool;
+            if (pool == IDLE) {
+                assetsInPool = BASE_ASSET.balanceOf(address(this));
+            } else {
+                if (pool.paused()) {
+                    assetsInPool = pool.balanceOfUnaccrued(address(this));
+                } else {
+                    assetsInPool = pool.balanceOf(address(this));
+                }
+            }
 
             assets += assetsInPool;
 
