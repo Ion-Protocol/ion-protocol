@@ -750,7 +750,12 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         (feeShares, newTotalAssets) = _accruedFeeShares();
         newTotalSupply = totalSupply() + feeShares;
 
-        assets = _convertToAssetsWithTotals(balanceOf(owner), newTotalSupply, newTotalAssets, Math.Rounding.Floor);
+        uint256 shareBalances = balanceOf(owner);
+        if (owner == feeRecipient) {
+            shareBalances += feeShares;
+        }
+
+        assets = _convertToAssetsWithTotals(shareBalances, newTotalSupply, newTotalAssets, Math.Rounding.Floor);
 
         assets -= _simulateWithdrawIon(assets);
     }
