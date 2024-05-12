@@ -115,7 +115,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      */
     function updateFeePercentage(uint256 _feePercentage) external onlyRole(OWNER_ROLE) {
         if (_feePercentage > RAY) revert InvalidFeePercentage();
-        _accrueFee();
         feePercentage = _feePercentage;
     }
 
@@ -344,8 +343,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 // to the user from the previous function scope.
                 if (pool != IDLE) {
                     pool.withdraw(address(this), transferAmt);
-                } else {
-                    currentIdleDeposits -= transferAmt;
                 }
 
                 totalWithdrawn += transferAmt;
@@ -375,8 +372,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 // contract.
                 if (pool != IDLE) {
                     pool.supply(address(this), transferAmt, new bytes32[](0));
-                } else {
-                    currentIdleDeposits += transferAmt;
                 }
 
                 totalSupplied += transferAmt;
@@ -660,16 +655,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         for (uint256 i; i != _supportedMarketsLength;) {
             IIonPool pool = IIonPool(supportedMarkets.at(i));
 
-            uint256 assetsInPool;
-            if (pool == IDLE) {
-                assetsInPool = BASE_ASSET.balanceOf(address(this));
-            } else {
-                if (pool.paused()) {
-                    assetsInPool = pool.balanceOfUnaccrued(address(this));
-                } else {
-                    assetsInPool = pool.balanceOf(address(this));
-                }
-            }
+            uint256 assetsInPool = pool == IDLE ? BASE_ASSET.balanceOf(address(this)) : pool.balanceOf(address(this));
 
             assets += assetsInPool;
 
