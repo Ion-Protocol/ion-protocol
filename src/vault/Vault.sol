@@ -421,12 +421,16 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
                 // For the IDLE pool, decrement the accumulator at the end of this
                 // loop, but no external interactions need to be made as the assets
-                // are already on this contract' balance.
+                // are already on this contract' balance. If the pool supply
+                // reverts, simply skip to the next iteration.
                 if (pool != IDLE) {
-                    pool.supply(address(this), toSupply, new bytes32[](0));
+                    try pool.supply(address(this), toSupply, new bytes32[](0)) {
+                        assets -= toSupply;
+                    } catch { }
+                } else {
+                    assets -= toSupply;
                 }
 
-                assets -= toSupply;
                 if (assets == 0) return;
             }
 
@@ -458,12 +462,17 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 uint256 toWithdraw = Math.min(withdrawable, assets);
 
                 // For the `IDLE` pool, they are already on this contract's
-                // balance. Update `assets` accumulator but don't actually transfer.
+                // balance. Update `assets` accumulator but don't actually
+                // transfer. If the pool withdraw reverts, simply skip to the
+                // next iteration.
                 if (pool != IDLE) {
-                    pool.withdraw(address(this), toWithdraw);
+                    try pool.withdraw(address(this), toWithdraw) {
+                        assets -= toWithdraw;
+                    } catch { }
+                } else {
+                    assets -= toWithdraw;
                 }
 
-                assets -= toWithdraw;
                 if (assets == 0) return;
             }
 

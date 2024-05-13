@@ -793,6 +793,46 @@ abstract contract VaultDeposit is VaultSharedSetup {
         assertEq(assetsDeposited, expectedDepositAmount, "mint return value");
     }
 
+    function test_Deposit_SkipPauseReverts() public {
+        // If the market is paused, then the deposit iteration should skip it.
+        updateAllocationCaps(vault, 10 ether, 20 ether, 30 ether);
+
+        uint256 depositAmt = 30 ether;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+
+        // The second market is paused.
+        rsEthIonPool.pause();
+
+        // 10 ether in weEthIonPool, 20 ether in rswEthIonPool
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(
+            weEthIonPool.balanceOf(address(vault)),
+            claimAfterDeposit(0, 10 ether, weEthIonPool.supplyFactor()),
+            "weEthIonPool balance"
+        );
+        assertEq(rsEthIonPool.balanceOf(address(vault)), 0, "rsEthIonPool balance");
+        assertEq(
+            rswEthIonPool.balanceOf(address(vault)),
+            claimAfterDeposit(0, 20 ether, rswEthIonPool.supplyFactor()),
+            "rswEthIonPool balance"
+        );
+    }
+
+    function test_Deposit_AllMarketsPaused() public {
+        updateAllocationCaps(vault, 10 ether, 20 ether, 30 ether);
+
+        weEthIonPool.pause();
+        rsEthIonPool.pause();
+        rswEthIonPool.pause();
+
+        uint256 depositAmt = 30 ether;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+
+        vm.expectRevert(Vault.AllSupplyCapsReached.selector);
+        vault.deposit(depositAmt, address(this));
+    }
+
     function test_Mint_AllMarkets() public { }
 }
 
@@ -928,6 +968,42 @@ abstract contract VaultWithdraw is VaultSharedSetup {
 
         vm.expectRevert(Vault.NotEnoughLiquidityToWithdraw.selector);
         vault.withdraw(withdrawAmount, address(this), address(this));
+    }
+
+    function test_Withdraw_SkipPauseReverts() public {
+        uint256 depositAmt = 6e18;
+        uint256 withdrawAmt = 3e18;
+
+        updateAllocationCaps(vault, 1e18, 2e18, 3e18);
+
+        // Deposit 1e18 to weETH, 2e18 to rsETH, 3e18 to rswETH
+        // rsETH is paused
+        // Withdraw 1e18 from weETH, 0 from rsETH, 2e18 from rswETH
+
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 initialWeEthIonPoolDeposit = weEthIonPool.balanceOf(address(vault));
+        uint256 initialRsEthIonPoolDeposit = rsEthIonPool.balanceOf(address(vault));
+        uint256 initialRswEthIonPoolDeposit = rswEthIonPool.balanceOf(address(vault));
+
+        rsEthIonPool.pause();
+
+        vault.withdraw(withdrawAmt, address(this), address(this));
+
+        uint256 rswEthIonPoolWithdrawAmt = withdrawAmt - initialWeEthIonPoolDeposit;
+        uint256 expectedRswEthIonPoolDeposit = initialRswEthIonPoolDeposit - rswEthIonPoolWithdrawAmt;
+        uint256 rswEthIonPoolDeposit = rswEthIonPool.balanceOf(address(vault));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), 0, "weEthIonPool balance");
+        assertEq(
+            rsEthIonPool.balanceOf(address(vault)), initialRsEthIonPoolDeposit, "rsEthIonPool deposit should not change"
+        );
+        assertLe(
+            expectedRswEthIonPoolDeposit - rswEthIonPoolDeposit,
+            rswEthIonPool.supplyFactor() / RAY,
+            "rswEthIonPool balance"
+        );
     }
 
     // try to deposit and withdraw same amounts
@@ -1462,7 +1538,6 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
         vault.updateAllocationCaps(markets, allocationCaps);
 
         uint256 maxMintShares = vault.maxMint(NULL);
-        console2.log("maxMintShares: ", maxMintShares);
 
         setERC20Balance(address(BASE_ASSET), address(this), 60e18);
         vault.mint(maxMintShares, address(this));
