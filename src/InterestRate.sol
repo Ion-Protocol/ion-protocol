@@ -326,15 +326,12 @@ contract InterestRate {
             return (ilkData.minimumKinkRate, ilkData.reserveFactor.scaleUpToRay(4));
         }
 
-        uint256 totalEthSupplyScaled = totalEthSupply.wadMulDown(distributionFactor.scaleUpToWad(4));
         // If the `totalEthSupply` is small enough to truncate to zero, then
-        // simply return the minimum base rate.
-        if (totalEthSupplyScaled == 0) {
-            return (ilkData.minimumBaseRate, ilkData.reserveFactor.scaleUpToRay(4));
-        }
+        // treat the utilization as zero.
+        uint256 totalEthSupplyScaled = totalEthSupply.wadMulDown(distributionFactor.scaleUpToWad(4));
 
         // [RAD] / [WAD] = [RAY]
-        uint256 utilizationRate = totalEthSupply == 0 ? 0 : totalIlkDebt / totalEthSupplyScaled;
+        uint256 utilizationRate = totalEthSupplyScaled == 0 ? 0 : totalIlkDebt / totalEthSupplyScaled;
 
         // Avoid stack too deep
         uint256 adjustedBelowKinkSlope;
