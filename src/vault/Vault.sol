@@ -86,6 +86,13 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         int256 assets;
     }
 
+    struct MarketsArgs {
+        IIonPool[] marketsToAdd;
+        uint256[] allocationCaps;
+        IIonPool[] newSupplyQueue;
+        IIonPool[] newWithdrawQueue;
+    }
+
     constructor(
         IERC20 _baseAsset,
         address _feeRecipient,
@@ -93,7 +100,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         string memory _name,
         string memory _symbol,
         uint48 initialDelay,
-        address initialDefaultAdmin
+        address initialDefaultAdmin,
+        MarketsArgs memory marketsArgs
     )
         ERC4626(_baseAsset)
         ERC20(_name, _symbol)
@@ -105,6 +113,13 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         feeRecipient = _feeRecipient;
 
         DECIMALS_OFFSET = uint8(_zeroFloorSub(uint256(18), IERC20Metadata(address(_baseAsset)).decimals()));
+
+        _addSupportedMarkets(
+            marketsArgs.marketsToAdd,
+            marketsArgs.allocationCaps,
+            marketsArgs.newSupplyQueue,
+            marketsArgs.newWithdrawQueue
+        );
     }
 
     /**
@@ -138,13 +153,24 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @param newWithdrawQueue Desired withdraw queue of IonPools for all resulting supported markets.
      */
     function addSupportedMarkets(
-        IIonPool[] calldata marketsToAdd,
-        uint256[] calldata allocationCaps,
-        IIonPool[] calldata newSupplyQueue,
-        IIonPool[] calldata newWithdrawQueue
+        IIonPool[] memory marketsToAdd,
+        uint256[] memory allocationCaps,
+        IIonPool[] memory newSupplyQueue,
+        IIonPool[] memory newWithdrawQueue
     )
-        public
+        external
         onlyRole(OWNER_ROLE)
+    {
+        _addSupportedMarkets(marketsToAdd, allocationCaps, newSupplyQueue, newWithdrawQueue);
+    }
+
+    function _addSupportedMarkets(
+        IIonPool[] memory marketsToAdd,
+        uint256[] memory allocationCaps,
+        IIonPool[] memory newSupplyQueue,
+        IIonPool[] memory newWithdrawQueue
+    )
+        internal
     {
         if (marketsToAdd.length != allocationCaps.length) revert MarketsAndAllocationCapLengthMustBeEqual();
 
@@ -167,8 +193,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
             }
         }
 
-        updateSupplyQueue(newSupplyQueue);
-        updateWithdrawQueue(newWithdrawQueue);
+        _updateSupplyQueue(newSupplyQueue);
+        _updateWithdrawQueue(newWithdrawQueue);
     }
 
     /**
@@ -211,8 +237,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 ++i;
             }
         }
-        updateSupplyQueue(newSupplyQueue);
-        updateWithdrawQueue(newWithdrawQueue);
+        _updateSupplyQueue(newSupplyQueue);
+        _updateWithdrawQueue(newWithdrawQueue);
     }
 
     /**
@@ -220,7 +246,11 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @dev Each IonPool in the queue must be part of the `supportedMarkets` set.
      * @param newSupplyQueue The new supply queue ordering.
      */
-    function updateSupplyQueue(IIonPool[] calldata newSupplyQueue) public onlyRole(ALLOCATOR_ROLE) {
+    function updateSupplyQueue(IIonPool[] memory newSupplyQueue) external onlyRole(ALLOCATOR_ROLE) {
+        _updateSupplyQueue(newSupplyQueue);
+    }
+
+    function _updateSupplyQueue(IIonPool[] memory newSupplyQueue) internal {
         _validateQueueInput(newSupplyQueue);
 
         supplyQueue = newSupplyQueue;
@@ -233,7 +263,11 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @dev The IonPool in the queue must be part of the `supportedMarkets` set.
      * @param newWithdrawQueue The new withdraw queue ordering.
      */
-    function updateWithdrawQueue(IIonPool[] calldata newWithdrawQueue) public onlyRole(ALLOCATOR_ROLE) {
+    function updateWithdrawQueue(IIonPool[] memory newWithdrawQueue) external onlyRole(ALLOCATOR_ROLE) {
+        _updateWithdrawQueue(newWithdrawQueue);
+    }
+
+    function _updateWithdrawQueue(IIonPool[] memory newWithdrawQueue) internal {
         _validateQueueInput(newWithdrawQueue);
 
         withdrawQueue = newWithdrawQueue;
@@ -249,7 +283,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * The above rule enforces that the queue must have all and only the elements in the `supportedMarkets` set.
      * @param queue The queue being validated.
      */
-    function _validateQueueInput(IIonPool[] calldata queue) internal view {
+    function _validateQueueInput(IIonPool[] memory queue) internal view {
         uint256 _supportedMarketsLength = supportedMarkets.length();
         uint256 queueLength = queue.length;
 
@@ -705,9 +739,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         super._deposit(caller, receiver, assets, shares);
-
         _supplyToIonPool(assets);
-
         _updateLastTotalAssets(lastTotalAssets + assets);
     }
 
