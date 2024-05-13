@@ -32,6 +32,8 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     StdStorage stdstore1;
 
     Vault vault;
+    Vault.MarketsArgs marketsArgs;
+    Vault.MarketsArgs emptyMarketsArgs;
 
     // roles
     address constant VAULT_ADMIN = address(uint160(uint256(keccak256("VAULT_ADMIN"))));
@@ -41,6 +43,10 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     uint48 constant INITIAL_DELAY = 0;
     address constant FEE_RECIPIENT = address(uint160(uint256(keccak256("FEE_RECIPIENT"))));
     uint256 constant ZERO_FEES = 0;
+
+    uint256 constant MIN_INITIAL_DEPOSIT = 1e9;
+
+    bytes32 constant SALT = keccak256("SALT");
 
     IERC20 immutable BASE_ASSET = IERC20(address(new ERC20PresetMinterPauser("Lido Wrapped Staked ETH", "wstETH")));
     IERC20 immutable WEETH = IERC20(address(new ERC20PresetMinterPauser("EtherFi Restaked ETH", "weETH")));
@@ -69,7 +75,21 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         rsEthIonPool = deployIonPool(BASE_ASSET, RSETH, address(this));
         rswEthIonPool = deployIonPool(BASE_ASSET, RSWETH, address(this));
 
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        markets = new IIonPool[](3);
+        markets[0] = weEthIonPool;
+        markets[1] = rsEthIonPool;
+        markets[2] = rswEthIonPool;
+
+        marketsArgs.marketsToAdd = markets;
+        marketsArgs.allocationCaps = ZERO_ALLO_CAPS;
+        marketsArgs.newSupplyQueue = markets;
+        marketsArgs.newWithdrawQueue = markets;
+
+        vault = new Vault{ salt: SALT }(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, marketsArgs
+        );
+
+        BASE_ASSET.approve(address(vault), type(uint256).max);
 
         vm.startPrank(vault.defaultAdmin());
 
@@ -78,22 +98,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
             // inside `addSupportedMarkets`.
         vault.grantRole(vault.ALLOCATOR_ROLE(), ALLOCATOR);
 
-        markets = new IIonPool[](3);
-        markets[0] = weEthIonPool;
-        markets[1] = rsEthIonPool;
-        markets[2] = rswEthIonPool;
-
         vm.stopPrank();
-
-        vm.prank(OWNER);
-        vault.addSupportedMarkets(markets, ZERO_ALLO_CAPS, markets, markets);
-
-        BASE_ASSET.approve(address(vault), type(uint256).max);
-
-        // pools = new IIonPool[](3);
-        // pools[0] = weEthIonPool;
-        // pools[1] = rsEthIonPool;
-        // pools[2] = rswEthIonPool;
 
         weEthGemJoin =
             new GemJoin(IonPool(address(weEthIonPool)), IERC20(weEthIonPool.getIlkAddress(0)), 0, address(this));

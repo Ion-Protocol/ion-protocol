@@ -25,7 +25,9 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsSeparately() public {
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -87,7 +89,9 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsTogether() public {
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -1128,7 +1132,9 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
     function setUp() public virtual override {
         super.setUp();
 
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
