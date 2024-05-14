@@ -64,7 +64,11 @@ contract VaultFactory {
 
         baseAsset.safeTransferFrom(msg.sender, address(this), initialDeposit);
         baseAsset.approve(address(vault), initialDeposit);
-        vault.deposit(initialDeposit, msg.sender);
+        uint256 sharesMinted = vault.deposit(initialDeposit, address(this));
+
+        // The factory keeps 1e3 shares to reduce inflation attack vector.
+        // Effectively burns this amount of shares by locking it in the factory.
+        vault.transfer(msg.sender, sharesMinted - 1e3);
 
         emit CreateVault(address(vault), baseAsset, feeRecipient, feePercentage, name, symbol, initialDefaultAdmin);
     }

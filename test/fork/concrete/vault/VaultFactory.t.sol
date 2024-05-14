@@ -8,6 +8,8 @@ import { ERC20PresetMinterPauser } from "../../../helpers/ERC20PresetMinterPause
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 
+import { console2 } from "forge-std/console2.sol";
+
 contract VaultFactoryTest is VaultSharedSetup {
     VaultFactory factory;
 
@@ -94,6 +96,9 @@ contract VaultFactoryTest is VaultSharedSetup {
         assertEq(BASE_ASSET.balanceOf(address(this)), 0, "initial deposit spent");
         assertEq(vault.totalAssets(), MIN_INITIAL_DEPOSIT, "total assets");
         assertEq(vault.totalSupply(), MIN_INITIAL_DEPOSIT, "total supply");
+
+        assertEq(vault.balanceOf(address(factory)), 1e3, "factory gets 1e3 shares");
+        assertEq(vault.balanceOf(address(this)), MIN_INITIAL_DEPOSIT - 1e3, "deployer gets 1e3 less shares");
     }
 
     function test_CreateVault_Twice() public {
@@ -213,5 +218,103 @@ contract VaultFactoryTest is VaultSharedSetup {
         );
 
         require(address(vault) != address(vault2), "different deployment address");
+    }
+
+    /**
+     * The amount of funds that the attacker can cause the user to lose should
+     * cost the attacker a significant amount of funds.
+     */
+    function test_InflationAttackCostToGriefShouldBeHigh_DeployerIsNotTheAttacker() public {
+        address deployer = newAddress("DEPLOYER");
+        // deploy using the factory which enforces minimum deposit of 1e9 assets
+        // and the 1e3 shares burn.
+        bytes32 salt = keccak256("random salt");
+
+        setERC20Balance(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
+
+        vm.startPrank(deployer);
+        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
+
+        Vault vault = factory.createVault(
+            BASE_ASSET,
+            feeRecipient,
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            salt,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+        vm.stopPrank();
+
+        vm.startPrank(VAULT_ADMIN);
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vm.stopPrank();
+
+        updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
+
+        uint256 donationAmt = 11e18;
+        uint256 mintAmt = 10;
+
+        // fund attacker
+        setERC20Balance(address(BASE_ASSET), address(this), donationAmt + mintAmt);
+        BASE_ASSET.approve(address(vault), type(uint256).max);
+
+        uint256 initialAssetBalance = BASE_ASSET.balanceOf(address(this));
+        console2.log("attacker balance before : ");
+        console2.log(initialAssetBalance);
+
+        vault.mint(mintAmt, address(this));
+        uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(address(this)));
+
+        console2.log("attackerClaimAfterMint: ");
+        console2.log(attackerClaimAfterMint);
+
+        console2.log("donationAmt: ");
+        console2.log(donationAmt);
+
+        // donate to inflate exchange rate by increasing `totalAssets`
+        IERC20(address(BASE_ASSET)).transfer(address(vault), donationAmt);
+
+        // how much of this donation was captured by the virtual shares on the vault?
+        uint256 attackerClaimAfterDonation = vault.previewRedeem(vault.balanceOf(address(this)));
+
+        console2.log("attackerClaimAfterDonation: ");
+        console2.log(attackerClaimAfterDonation);
+
+        uint256 lossFromDonation = attackerClaimAfterMint + donationAmt - attackerClaimAfterDonation;
+
+        console2.log("loss from donation: ");
+        console2.log(lossFromDonation);
+
+        address alice = address(0xabcd);
+        setERC20Balance(address(BASE_ASSET), alice, 10e18 + 10);
+
+        vm.startPrank(alice);
+        IERC20(address(BASE_ASSET)).approve(address(vault), 1e18);
+        vault.deposit(1e18, alice);
+        vm.stopPrank();
+
+        // Alice gained zero shares due to exchange rate inflation
+        uint256 aliceShares = vault.balanceOf(alice);
+        console2.log("alice must lose all her shares : ");
+        console2.log(aliceShares);
+
+        // How much of alice's deposits were captured by the attacker's shares?
+        uint256 attackerClaimAfterAlice = vault.previewRedeem(vault.balanceOf(address(this)));
+        uint256 attackerGainFromAlice = attackerClaimAfterAlice - attackerClaimAfterDonation;
+        console2.log("attackerGainFromAlice: ");
+        console2.log(attackerGainFromAlice);
+
+        vault.redeem(vault.balanceOf(address(this)) - 3, address(this), address(this));
+        uint256 afterAssetBalance = BASE_ASSET.balanceOf(address(this));
+
+        console2.log("attacker balance after : ");
+        console2.log(afterAssetBalance);
+
+        assertLe(attackerGainFromAlice, lossFromDonation, "attack must not be profitable");
+        assertLe(afterAssetBalance, initialAssetBalance, "attacker must not be profitable");
     }
 }
