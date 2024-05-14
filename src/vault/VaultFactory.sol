@@ -28,10 +28,13 @@ contract VaultFactory {
     // --- External ---
 
     /**
-     * @notice Deploys a new Ion Lending Vault. Transfers 1 gwei of base asset
-     * from the caller to initiate an initial deposit to the vault.
-     * @dev The 1e9 initial deposit amount was chosen to defend against
-     * inflation attacks.
+     * @notice Deploys a new Ion Lending Vault. Transfers the `initialDeposit`
+     * amount of the base asset from the caller initiate the first deposit to
+     * the vault. The minimum `initialDeposit` is 1e3. If less, this call would
+     * underflow as it will always burn 1e3 shares of the total shares minted to
+     * defend against inflation attacks.
+     * @dev The 1e3 initial deposit amount was chosen to defend against
+     * inflation attacks, referencing the UniV2 LP token implementation.
      * @param baseAsset The asset that is being lent out to IonPools.
      * @param feeRecipient Address that receives the accrued manager fees.
      * @param feePercentage Fee percentage to be set.
