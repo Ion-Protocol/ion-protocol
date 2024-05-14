@@ -225,6 +225,23 @@ contract VaultFactoryTest is VaultSharedSetup {
      * cost the attacker a significant amount of funds.
      */
     function test_InflationAttackCostToGriefShouldBeHigh_DeployerIsNotTheAttacker() public {
+        uint256[] memory alloCaps = new uint256[](4);
+        alloCaps[0] = type(uint256).max;
+        alloCaps[1] = type(uint256).max;
+        alloCaps[2] = type(uint256).max;
+        alloCaps[3] = type(uint256).max;
+
+        IIonPool[] memory markets = new IIonPool[](4);
+        markets[0] = IDLE;
+        markets[1] = weEthIonPool;
+        markets[2] = rsEthIonPool;
+        markets[3] = rswEthIonPool;
+
+        marketsArgs.marketsToAdd = markets;
+        marketsArgs.allocationCaps = alloCaps;
+        marketsArgs.newSupplyQueue = markets;
+        marketsArgs.newWithdrawQueue = markets;
+
         address deployer = newAddress("DEPLOYER");
         // deploy using the factory which enforces minimum deposit of 1e9 assets
         // and the 1e3 shares burn.
@@ -255,7 +272,7 @@ contract VaultFactoryTest is VaultSharedSetup {
 
         updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
 
-        uint256 donationAmt = 11e18;
+        uint256 donationAmt = 10e18;
         uint256 mintAmt = 10;
 
         // fund attacker
@@ -263,31 +280,34 @@ contract VaultFactoryTest is VaultSharedSetup {
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
         uint256 initialAssetBalance = BASE_ASSET.balanceOf(address(this));
-        console2.log("attacker balance before : ");
-        console2.log(initialAssetBalance);
+        console2.log("attacker balance before :");
+        console2.log("%e", initialAssetBalance);
 
         vault.mint(mintAmt, address(this));
         uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(address(this)));
 
         console2.log("attackerClaimAfterMint: ");
-        console2.log(attackerClaimAfterMint);
+        console2.log("%e", attackerClaimAfterMint);
 
         console2.log("donationAmt: ");
-        console2.log(donationAmt);
+        console2.log("%e", donationAmt);
 
         // donate to inflate exchange rate by increasing `totalAssets`
         IERC20(address(BASE_ASSET)).transfer(address(vault), donationAmt);
+
+        assertEq(donationAmt + mintAmt + 1e3, vault.totalAssets(), "total assets");
+        assertEq(mintAmt + 1e3, vault.totalSupply(), "minted shares");
 
         // how much of this donation was captured by the virtual shares on the vault?
         uint256 attackerClaimAfterDonation = vault.previewRedeem(vault.balanceOf(address(this)));
 
         console2.log("attackerClaimAfterDonation: ");
-        console2.log(attackerClaimAfterDonation);
+        console2.log("%e", attackerClaimAfterDonation);
 
         uint256 lossFromDonation = attackerClaimAfterMint + donationAmt - attackerClaimAfterDonation;
 
         console2.log("loss from donation: ");
-        console2.log(lossFromDonation);
+        console2.log("%e", lossFromDonation);
 
         address alice = address(0xabcd);
         setERC20Balance(address(BASE_ASSET), alice, 10e18 + 10);
@@ -299,22 +319,33 @@ contract VaultFactoryTest is VaultSharedSetup {
 
         // Alice gained zero shares due to exchange rate inflation
         uint256 aliceShares = vault.balanceOf(alice);
-        console2.log("alice must lose all her shares : ");
-        console2.log(aliceShares);
+        console2.log("alice resulting shares : ");
+        console2.log("%e", aliceShares);
+
+        uint256 aliceClaim = vault.maxWithdraw(alice);
+        console2.log("alice resulting claim: ");
+        console2.log("%e", aliceClaim);
+
+        console2.log("alice resulting assets lost: ");
+        console2.log("%e", 1e18 - aliceClaim);
 
         // How much of alice's deposits were captured by the attacker's shares?
         uint256 attackerClaimAfterAlice = vault.previewRedeem(vault.balanceOf(address(this)));
         uint256 attackerGainFromAlice = attackerClaimAfterAlice - attackerClaimAfterDonation;
         console2.log("attackerGainFromAlice: ");
-        console2.log(attackerGainFromAlice);
+        console2.log("%e", attackerGainFromAlice);
 
         vault.redeem(vault.balanceOf(address(this)) - 3, address(this), address(this));
         uint256 afterAssetBalance = BASE_ASSET.balanceOf(address(this));
 
         console2.log("attacker balance after : ");
-        console2.log(afterAssetBalance);
+        console2.log("%e", afterAssetBalance);
+
+        console2.log("attacker loss in balance");
+        console2.log("%e", initialAssetBalance - afterAssetBalance);
 
         assertLe(attackerGainFromAlice, lossFromDonation, "attack must not be profitable");
         assertLe(afterAssetBalance, initialAssetBalance, "attacker must not be profitable");
+        assertLe(1e18, initialAssetBalance - afterAssetBalance, "attacker loss greater than amount griefed");
     }
 }

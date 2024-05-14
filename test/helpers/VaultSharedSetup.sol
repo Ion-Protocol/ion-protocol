@@ -44,7 +44,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     address constant FEE_RECIPIENT = address(uint160(uint256(keccak256("FEE_RECIPIENT"))));
     uint256 constant ZERO_FEES = 0;
 
-    uint256 constant MIN_INITIAL_DEPOSIT = 1e9;
+    uint256 constant MIN_INITIAL_DEPOSIT = 1e3;
 
     bytes32 constant SALT = keccak256("SALT");
 
