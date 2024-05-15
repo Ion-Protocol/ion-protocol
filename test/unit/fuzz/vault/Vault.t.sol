@@ -124,8 +124,9 @@ contract VaultWithYieldAndFee_Fuzz is VaultSharedSetup {
         // expected resulting state
 
         uint256 expectedFeeAssets = interestAccrued.mulDiv(feePerc, RAY);
-        uint256 expectedFeeShares =
-            expectedFeeAssets.mulDiv(vault.totalSupply(), newTotalAssets - expectedFeeAssets, Math.Rounding.Floor);
+        uint256 expectedFeeShares = expectedFeeAssets.mulDiv(
+            vault.totalSupply() + 1, newTotalAssets - expectedFeeAssets + 1, Math.Rounding.Floor
+        );
 
         uint256 expectedUserAssets = prevUserAssets + interestAccrued.mulDiv(RAY - feePerc, RAY);
 

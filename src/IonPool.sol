@@ -478,7 +478,10 @@ contract IonPool is PausableUpgradeable, RewardToken {
         Ilk storage ilk = $.ilks[ilkIndex];
 
         uint256 _totalNormalizedDebt = ilk.totalNormalizedDebt;
-        if (_totalNormalizedDebt == 0 || block.timestamp == ilk.lastRateUpdate) {
+        // Because all interest that would have accrued during a pause is
+        // cancelled upon `unpause`, we return zero interest while markets are
+        // paused.
+        if (_totalNormalizedDebt == 0 || block.timestamp == ilk.lastRateUpdate || paused()) {
             // Unsafe cast OK
             // block.timestamp - ilk.lastRateUpdate will almost always be 0
             // here. The exception is on first borrow.

@@ -1445,21 +1445,35 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
         vault.deposit(depositAmt, address(this));
 
         assertEq(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool balance");
-        // pause the weEthIonPool
+
+        // Pause the weEthIonPool, stop accruing interest
         weEthIonPool.pause();
+        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
 
         vm.warp(block.timestamp + 365 days);
 
-        assertGt(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
-        assertLt(
+        assertEq(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
+        assertEq(
             weEthIonPool.balanceOfUnaccrued(address(vault)),
             weEthIonPool.balanceOf(address(vault)),
             "weEthIonPool unaccrued balance"
         );
-        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
 
         uint256 totalAssets = vault.totalAssets();
         assertEq(totalAssets, depositAmt, "total assets with paused IonPool does not include interest");
+
+        // When unpaused, should now accrue interest
+        weEthIonPool.unpause();
+        vm.warp(block.timestamp + 365 days);
+
+        assertGt(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
+        assertGt(
+            weEthIonPool.balanceOf(address(vault)),
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            "weEthIonPool unaccrued balance"
+        );
+
+        assertGt(vault.totalAssets(), depositAmt, "total assets with paused IonPool does not include interest");
     }
 
     function test_TotalAssetsWithMultiplePausedIonPools() public {
@@ -1511,14 +1525,29 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
 
         vm.warp(block.timestamp + 365 days);
 
-        assertGt(weEthIonPool.balanceOf(address(vault)), weEthIonPoolAmt, "weEthIonPool balance increases");
-        assertGt(rsEthIonPool.balanceOf(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance does not  change");
-        assertGt(rswEthIonPool.balanceOf(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance increases");
-
         // The 'unaccrued' values should not change
         assertEq(weEthIonPool.balanceOfUnaccrued(address(vault)), weEthIonPoolAmt, "weEthIonPool balance");
         assertEq(rsEthIonPool.balanceOfUnaccrued(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance");
         assertEq(rswEthIonPool.balanceOfUnaccrued(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance");
+
+        // When paused, the unaccrued and accrued balanceOf should be the same
+        assertEq(
+            weEthIonPool.balanceOf(address(vault)),
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            "weEthIonPool balance increases"
+        );
+        assertEq(
+            rswEthIonPool.balanceOf(address(vault)),
+            rswEthIonPool.balanceOfUnaccrued(address(vault)),
+            "rswEthIonPool balance increases"
+        );
+
+        // When not paused, the accrued balanceOf should be greater
+        assertGt(
+            rsEthIonPool.balanceOf(address(vault)),
+            rsEthIonPool.balanceOfUnaccrued(address(vault)),
+            "rsEthIonPool balance does not  change"
+        );
 
         uint256 expectedTotalAssets = weEthIonPool.balanceOfUnaccrued(address(vault))
             + rsEthIonPool.balanceOf(address(vault)) + rswEthIonPool.balanceOfUnaccrued(address(vault));
