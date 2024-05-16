@@ -227,7 +227,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
 
     function invariant_LenderDepositsAddToBalance() external returns (bool) {
         for (uint256 i = 0; i < lenders.length; i++) {
-            assertEq(lenders[i].totalHoldingsNormalized(), ionPool.balanceOf(address(lenders[i])));
+            assertEq(lenders[i].totalHoldingsNormalized(), ionPool.normalizedBalanceOf(address(lenders[i])));
         }
 
         return !failed();
@@ -236,9 +236,12 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
     function invariant_LenderBalancesPlusTreasuryAddToTotalSupply() external returns (bool) {
         uint256 totalLenderNormalizedBalances;
         for (uint256 i = 0; i < lenders.length; i++) {
-            totalLenderNormalizedBalances += ionPool.balanceOf(address(lenders[i]));
+            totalLenderNormalizedBalances += ionPool.normalizedBalanceOf(address(lenders[i]));
         }
-        assertEq(totalLenderNormalizedBalances + ionPool.balanceOf(TREASURY), ionPool.totalSupplyUnaccrued());
+        assertEq(
+            totalLenderNormalizedBalances + ionPool.normalizedBalanceOf(TREASURY),
+            ionPool.normalizedTotalSupplyUnaccrued()
+        );
 
         return !failed();
     }
@@ -256,7 +259,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         assertGe(lens.liquidity(iIonPool) + totalDebt, ionPool.totalSupplyUnaccrued());
         assertGe(
             lens.liquidity(iIonPool).scaleUpToRad(18) + lens.debtUnaccrued(iIonPool),
-            ionPool.totalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
+            ionPool.normalizedTotalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
         );
 
         return !failed();
