@@ -1192,6 +1192,67 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
             previousRates[i] = rate;
         }
     }
+
+    function test_AccrueInterestWhenPaused() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+        }
+
+        vm.warp(block.timestamp + 1 hours);
+
+        ionPool.pause();
+
+        uint256 rate0AfterPause = ionPool.rate(0);
+        uint256 rate1AfterPause = ionPool.rate(1);
+        uint256 rate2AfterPause = ionPool.rate(2);
+
+        uint256 supplyFactorAfterPause = ionPool.supplyFactor();
+        uint256 lenderBalanceAfterPause = ionPool.balanceOf(lender2);
+
+        vm.warp(block.timestamp + 365 days);
+
+        (
+            uint256 totalSupplyFactorIncrease,
+            uint256 treasuryMintAmount,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        ) = ionPool.calculateRewardAndDebtDistribution();
+
+        assertEq(totalSupplyFactorIncrease, 0, "no supply factor increase");
+        assertEq(treasuryMintAmount, 0, "no treasury mint amount");
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
+            assertEq(rateIncreases[i], 0, "no rate increase");
+            assertEq(timestampIncreases[i], 365 days, "no timestamp increase");
+        }
+        assertEq(totalDebtIncrease, 0, "no total debt increase");
+
+        assertEq(ionPool.balanceOf(lender2), lenderBalanceAfterPause, "lender balance doesn't change");
+        assertEq(ionPool.supplyFactor(), supplyFactorAfterPause, "supply factor doesn't change");
+        assertEq(ionPool.rate(0), rate0AfterPause, "rate 0 doesn't change");
+        assertEq(ionPool.rate(1), rate1AfterPause, "rate 1 doesn't change");
+        assertEq(ionPool.rate(2), rate2AfterPause, "rate 2 doesn't change");
+    }
 }
 
 contract IonPool_AdminTest is IonPoolSharedSetup {
