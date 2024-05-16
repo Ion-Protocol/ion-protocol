@@ -25,7 +25,9 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsSeparately() public {
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -87,7 +89,9 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsTogether() public {
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -793,6 +797,46 @@ abstract contract VaultDeposit is VaultSharedSetup {
         assertEq(assetsDeposited, expectedDepositAmount, "mint return value");
     }
 
+    function test_Deposit_SkipPauseReverts() public {
+        // If the market is paused, then the deposit iteration should skip it.
+        updateAllocationCaps(vault, 10 ether, 20 ether, 30 ether);
+
+        uint256 depositAmt = 30 ether;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+
+        // The second market is paused.
+        rsEthIonPool.pause();
+
+        // 10 ether in weEthIonPool, 20 ether in rswEthIonPool
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(
+            weEthIonPool.balanceOf(address(vault)),
+            claimAfterDeposit(0, 10 ether, weEthIonPool.supplyFactor()),
+            "weEthIonPool balance"
+        );
+        assertEq(rsEthIonPool.balanceOf(address(vault)), 0, "rsEthIonPool balance");
+        assertEq(
+            rswEthIonPool.balanceOf(address(vault)),
+            claimAfterDeposit(0, 20 ether, rswEthIonPool.supplyFactor()),
+            "rswEthIonPool balance"
+        );
+    }
+
+    function test_Deposit_AllMarketsPaused() public {
+        updateAllocationCaps(vault, 10 ether, 20 ether, 30 ether);
+
+        weEthIonPool.pause();
+        rsEthIonPool.pause();
+        rswEthIonPool.pause();
+
+        uint256 depositAmt = 30 ether;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+
+        vm.expectRevert(Vault.AllSupplyCapsReached.selector);
+        vault.deposit(depositAmt, address(this));
+    }
+
     function test_Mint_AllMarkets() public { }
 }
 
@@ -928,6 +972,42 @@ abstract contract VaultWithdraw is VaultSharedSetup {
 
         vm.expectRevert(Vault.NotEnoughLiquidityToWithdraw.selector);
         vault.withdraw(withdrawAmount, address(this), address(this));
+    }
+
+    function test_Withdraw_SkipPauseReverts() public {
+        uint256 depositAmt = 6e18;
+        uint256 withdrawAmt = 3e18;
+
+        updateAllocationCaps(vault, 1e18, 2e18, 3e18);
+
+        // Deposit 1e18 to weETH, 2e18 to rsETH, 3e18 to rswETH
+        // rsETH is paused
+        // Withdraw 1e18 from weETH, 0 from rsETH, 2e18 from rswETH
+
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 initialWeEthIonPoolDeposit = weEthIonPool.balanceOf(address(vault));
+        uint256 initialRsEthIonPoolDeposit = rsEthIonPool.balanceOf(address(vault));
+        uint256 initialRswEthIonPoolDeposit = rswEthIonPool.balanceOf(address(vault));
+
+        rsEthIonPool.pause();
+
+        vault.withdraw(withdrawAmt, address(this), address(this));
+
+        uint256 rswEthIonPoolWithdrawAmt = withdrawAmt - initialWeEthIonPoolDeposit;
+        uint256 expectedRswEthIonPoolDeposit = initialRswEthIonPoolDeposit - rswEthIonPoolWithdrawAmt;
+        uint256 rswEthIonPoolDeposit = rswEthIonPool.balanceOf(address(vault));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), 0, "weEthIonPool balance");
+        assertEq(
+            rsEthIonPool.balanceOf(address(vault)), initialRsEthIonPoolDeposit, "rsEthIonPool deposit should not change"
+        );
+        assertLe(
+            expectedRswEthIonPoolDeposit - rswEthIonPoolDeposit,
+            rswEthIonPool.supplyFactor() / RAY,
+            "rswEthIonPool balance"
+        );
     }
 
     // try to deposit and withdraw same amounts
@@ -1128,7 +1208,9 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
     function setUp() public virtual override {
         super.setUp();
 
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
@@ -1425,6 +1507,138 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
         super.setUp();
     }
 
+    function test_TotalAssetsWithSinglePausedIonPool() public {
+        weEthIonPool.updateSupplyCap(type(uint256).max);
+        weEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+
+        supply(address(this), weEthIonPool, 1000e18);
+        borrow(address(this), weEthIonPool, weEthGemJoin, 100e18, 70e18);
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 20e18;
+        allocationCaps[1] = 0;
+        allocationCaps[2] = 0;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 10e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool balance");
+
+        // Pause the weEthIonPool, stop accruing interest
+        weEthIonPool.pause();
+        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
+
+        vm.warp(block.timestamp + 365 days);
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
+        assertEq(
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
+            "weEthIonPool unaccrued balance"
+        );
+
+        uint256 totalAssets = vault.totalAssets();
+        assertEq(totalAssets, depositAmt, "total assets with paused IonPool does not include interest");
+
+        // When unpaused, should now accrue interest
+        weEthIonPool.unpause();
+        vm.warp(block.timestamp + 365 days);
+
+        assertGt(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
+        assertGt(
+            weEthIonPool.balanceOf(address(vault)),
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            "weEthIonPool unaccrued balance"
+        );
+
+        assertGt(vault.totalAssets(), depositAmt, "total assets with paused IonPool does not include interest");
+    }
+
+    function test_TotalAssetsWithMultiplePausedIonPools() public {
+        // Make sure every pool has debt to accrue interest from
+        uint256 initialSupplyAmt = 1000e18;
+        weEthIonPool.updateSupplyCap(type(uint256).max);
+        rsEthIonPool.updateSupplyCap(type(uint256).max);
+        rswEthIonPool.updateSupplyCap(type(uint256).max);
+
+        weEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+        rsEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+        rswEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+
+        supply(address(this), weEthIonPool, initialSupplyAmt);
+        borrow(address(this), weEthIonPool, weEthGemJoin, 100e18, 70e18);
+
+        supply(address(this), rsEthIonPool, initialSupplyAmt);
+        borrow(address(this), rsEthIonPool, rsEthGemJoin, 100e18, 70e18);
+
+        supply(address(this), rswEthIonPool, initialSupplyAmt);
+        borrow(address(this), rswEthIonPool, rswEthGemJoin, 100e18, 70e18);
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        uint256 weEthIonPoolAmt = 10e18;
+        uint256 rsEthIonPoolAmt = 20e18;
+        uint256 rswEthIonPoolAmt = 30e18;
+        allocationCaps[0] = weEthIonPoolAmt;
+        allocationCaps[1] = rsEthIonPoolAmt;
+        allocationCaps[2] = rswEthIonPoolAmt;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 60e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), weEthIonPoolAmt, "weEthIonPool balance");
+        assertEq(rsEthIonPool.balanceOf(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance");
+        assertEq(rswEthIonPool.balanceOf(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance");
+
+        weEthIonPool.pause();
+        // NOTE rsEthIonPool is not paused
+        rswEthIonPool.pause();
+
+        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
+        assertFalse(rsEthIonPool.paused(), "rsEthIonPool is not paused");
+        assertTrue(rswEthIonPool.paused(), "rswEthIonPool is paused");
+
+        vm.warp(block.timestamp + 365 days);
+
+        // The 'unaccrued' values should not change
+        assertEq(weEthIonPool.balanceOfUnaccrued(address(vault)), weEthIonPoolAmt, "weEthIonPool balance");
+        assertEq(rsEthIonPool.balanceOfUnaccrued(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance");
+        assertEq(rswEthIonPool.balanceOfUnaccrued(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance");
+
+        // When paused, the unaccrued and accrued balanceOf should be the same
+        assertEq(
+            weEthIonPool.balanceOf(address(vault)),
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            "weEthIonPool balance increases"
+        );
+        assertEq(
+            rswEthIonPool.balanceOf(address(vault)),
+            rswEthIonPool.balanceOfUnaccrued(address(vault)),
+            "rswEthIonPool balance increases"
+        );
+
+        // When not paused, the accrued balanceOf should be greater
+        assertGt(
+            rsEthIonPool.balanceOf(address(vault)),
+            rsEthIonPool.balanceOfUnaccrued(address(vault)),
+            "rsEthIonPool balance does not  change"
+        );
+
+        uint256 expectedTotalAssets = weEthIonPool.balanceOfUnaccrued(address(vault))
+            + rsEthIonPool.balanceOf(address(vault)) + rswEthIonPool.balanceOfUnaccrued(address(vault));
+
+        assertEq(
+            vault.totalAssets(), expectedTotalAssets, "total assets without accounting for interest in paused IonPools"
+        );
+    }
+
     // --- Max ---
     // Get max and submit max transactions
 
@@ -1462,7 +1676,6 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
         vault.updateAllocationCaps(markets, allocationCaps);
 
         uint256 maxMintShares = vault.maxMint(NULL);
-        console2.log("maxMintShares: ", maxMintShares);
 
         setERC20Balance(address(BASE_ASSET), address(this), 60e18);
         vault.mint(maxMintShares, address(this));

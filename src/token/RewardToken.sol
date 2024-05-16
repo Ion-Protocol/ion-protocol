@@ -460,6 +460,14 @@ abstract contract RewardToken is
     }
 
     /**
+     * @dev Current claim of the underlying token without accounting for interest to be accrued.
+     */
+    function balanceOfUnaccrued(address user) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._normalizedBalances[user].rayMulDown($.supplyFactor);
+    }
+
+    /**
      * @dev Accounting is done in normalized balances
      * @param user to get normalized balance of
      */
@@ -519,9 +527,9 @@ abstract contract RewardToken is
             return 0;
         }
 
-        (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
+        (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();
 
-        return _normalizedTotalSupply.rayMulDown($.supplyFactor + totalSupplyFactorIncrease);
+        return _normalizedTotalSupply.rayMulDown($.supplyFactor + totalSupplyFactorIncrease) + totalTreasuryMintAmount;
     }
 
     function normalizedTotalSupplyUnaccrued() public view returns (uint256) {
