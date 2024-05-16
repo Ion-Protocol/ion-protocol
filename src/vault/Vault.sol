@@ -46,6 +46,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     error MarketsAndAllocationCapLengthMustBeEqual();
     error IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
     error InvalidFeePercentage();
+    error MaxSupportedMarketsReached();
 
     event UpdateSupplyQueue(address indexed caller, IIonPool[] newSupplyQueue);
     event UpdateWithdrawQueue(address indexed caller, IIonPool[] newWithdrawQueue);
@@ -68,6 +69,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e08;
 
     IERC20 public immutable BASE_ASSET;
+
+    uint8 public constant MAX_SUPPORTED_MARKETS = 32;
 
     EnumerableSet.AddressSet supportedMarkets;
 
@@ -166,6 +169,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 ++i;
             }
         }
+
+        if (supportedMarkets.length() > MAX_SUPPORTED_MARKETS) revert MaxSupportedMarketsReached();
 
         updateSupplyQueue(newSupplyQueue);
         updateWithdrawQueue(newWithdrawQueue);

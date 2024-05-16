@@ -1129,6 +1129,52 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
         }
     }
 
+    // If zero borrow rate, only the last updated timestamp should update
+    function test_CalculateRewardAndDebtDistributionZeroBorrowRate() external {
+        // update interest rate module to have zero rates.
+        IlkData[] memory ilkConfigs = new IlkData[](3);
+        uint16[] memory distributionFactors = new uint16[](3);
+        distributionFactors[0] = 0.2e4;
+        distributionFactors[1] = 0.4e4;
+        distributionFactors[2] = 0.4e4;
+
+        for (uint8 i; i != 3; ++i) {
+            IlkData memory ilkConfig = IlkData({
+                adjustedProfitMargin: 0,
+                minimumKinkRate: 0,
+                reserveFactor: 0,
+                adjustedBaseRate: 0,
+                minimumBaseRate: 0,
+                optimalUtilizationRate: 9000,
+                distributionFactor: distributionFactors[i],
+                adjustedAboveKinkSlope: 0,
+                minimumAboveKinkSlope: 0
+            });
+            ilkConfigs[i] = ilkConfig;
+        }
+
+        interestRateModule = new InterestRate(ilkConfigs, apyOracle);
+        ionPool.updateInterestRateModule(interestRateModule);
+
+        vm.warp(block.timestamp + 1 days);
+
+        (
+            uint256 totalSupplyFactorIncrease,
+            ,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        ) = ionPool.calculateRewardAndDebtDistribution();
+
+        assertEq(totalSupplyFactorIncrease, 0, "total supply factor");
+        assertEq(totalDebtIncrease, 0, "total debt increase");
+
+        for (uint8 i; i != 3; ++i) {
+            assertEq(rateIncreases[i], 0, "rate");
+            assertEq(timestampIncreases[i], 1 days, "timestamp increase");
+        }
+    }
+
     function test_AccrueInterest() public {
         uint256 collateralDepositAmount = 10e18;
         uint256 normalizedBorrowAmount = 5e18;

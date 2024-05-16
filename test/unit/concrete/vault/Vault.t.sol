@@ -162,6 +162,28 @@ contract VaultSetUpTest is VaultSharedSetup {
 
     function test_Revert_AddSupportedMarkets_MarketAlreadySupported() public { }
 
+    function test_Revert_AddSupportedMarkets_MaxSupportedMarketsReached() public {
+        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vm.stopPrank();
+
+        IIonPool[] memory markets = new IIonPool[](vault.MAX_SUPPORTED_MARKETS() + 1);
+        uint256[] memory allocationCaps = new uint256[](vault.MAX_SUPPORTED_MARKETS() + 1);
+
+        for (uint8 i = 0; i < vault.MAX_SUPPORTED_MARKETS() + 1; i++) {
+            markets[i] = deployIonPool(BASE_ASSET, WEETH, address(this));
+            allocationCaps[i] = 1 ether;
+        }
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(Vault.MaxSupportedMarketsReached.selector);
+        vault.addSupportedMarkets(markets, allocationCaps, markets, markets);
+        vm.stopPrank();
+    }
+
     function test_RemoveSingleSupportedMarket() public {
         uint256[] memory allocationCaps = new uint256[](1);
         allocationCaps[0] = 1e18;
