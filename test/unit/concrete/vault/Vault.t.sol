@@ -166,6 +166,30 @@ contract VaultSetUpTest is VaultSharedSetup {
 
     function test_Revert_AddSupportedMarkets_MarketAlreadySupported() public { }
 
+    function test_Revert_AddSupportedMarkets_MaxSupportedMarketsReached() public {
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vm.stopPrank();
+
+        IIonPool[] memory markets = new IIonPool[](vault.MAX_SUPPORTED_MARKETS() + 1);
+        uint256[] memory allocationCaps = new uint256[](vault.MAX_SUPPORTED_MARKETS() + 1);
+
+        for (uint8 i = 0; i < vault.MAX_SUPPORTED_MARKETS() + 1; i++) {
+            markets[i] = deployIonPool(BASE_ASSET, WEETH, address(this));
+            allocationCaps[i] = 1 ether;
+        }
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(Vault.MaxSupportedMarketsReached.selector);
+        vault.addSupportedMarkets(markets, allocationCaps, markets, markets);
+        vm.stopPrank();
+    }
+
     function test_RemoveSingleSupportedMarket() public {
         uint256[] memory allocationCaps = new uint256[](1);
         allocationCaps[0] = 1e18;
@@ -1693,6 +1717,64 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
     function test_MaxWithdraw() public { }
 
     function test_MaxRedeem() public { }
+
+    function test_MaxWithdrawWithPausedPools() public {
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 10e18;
+        allocationCaps[1] = 20e18;
+        allocationCaps[2] = 30e18;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 35e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 maxWithdrawBeforePause = vault.maxWithdraw(address(this));
+
+        weEthIonPool.pause();
+        uint256 maxWithdrawAfterPause = vault.maxWithdraw(address(this));
+
+        rsEthIonPool.pause();
+        uint256 maxWithdrawAfterSecondPause = vault.maxWithdraw(address(this));
+
+        rswEthIonPool.pause();
+        uint256 maxWithdrawAfterThirdPause = vault.maxWithdraw(address(this));
+
+        assertEq(maxWithdrawBeforePause, depositAmt, "max withdraw before pause");
+        assertEq(maxWithdrawAfterPause, depositAmt - 10e18, "max withdraw after pause");
+        assertEq(maxWithdrawAfterSecondPause, depositAmt - 30e18, "max withdraw after second pause");
+        assertEq(maxWithdrawAfterThirdPause, 0, "max withdraw after third pause");
+    }
+
+    function test_MaxDepositWithPausedPools() public {
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 10e18;
+        allocationCaps[1] = 20e18;
+        allocationCaps[2] = 30e18;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 maxDepositBeforePause = vault.maxDeposit(NULL);
+
+        weEthIonPool.pause();
+        uint256 maxDepositAfterPause = vault.maxDeposit(NULL);
+
+        rsEthIonPool.pause();
+        uint256 maxDepositAfterSecondPause = vault.maxDeposit(NULL);
+
+        rswEthIonPool.pause();
+        uint256 maxDepositAfterThirdPause = vault.maxDeposit(NULL);
+
+        assertEq(maxDepositBeforePause, 60e18, "max deposit before pause");
+        assertEq(maxDepositAfterPause, 50e18, "max deposit after pause");
+        assertEq(maxDepositAfterSecondPause, 30e18, "max deposit after second pause");
+        assertEq(maxDepositAfterThirdPause, 0, "max deposit after third pause");
+    }
+
+    function test_WithdrawWithPausedPools() public { }
 
     // --- Previews ---
 

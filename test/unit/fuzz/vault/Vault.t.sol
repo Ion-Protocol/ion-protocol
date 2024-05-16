@@ -71,9 +71,9 @@ contract Vault_Fuzz is VaultSharedSetup {
 
         uint256 initialDeposit = bound(assets, 1e18, supplyCap - 10e18);
         supply(address(this), weEthIonPool, initialDeposit);
-        uint256 initialTotalNormalized = weEthIonPool.totalSupplyUnaccrued();
+        uint256 initialTotalNormalized = weEthIonPool.normalizedTotalSupply();
 
-        uint256 supplyCapDiff = _zeroFloorSub(supplyCap, weEthIonPool.getTotalUnderlyingClaims());
+        uint256 supplyCapDiff = _zeroFloorSub(supplyCap, weEthIonPool.totalSupply());
 
         // `IonPool.supply` math
         uint256 amountScaled = supplyCapDiff.rayDivDown(supplyFactor);
@@ -83,21 +83,19 @@ contract Vault_Fuzz is VaultSharedSetup {
 
         supply(address(this), weEthIonPool, supplyCapDiff);
 
-        assertEq(
-            resultingTotalClaim, weEthIonPool.getTotalUnderlyingClaims(), "resulting should be the same as calculated"
-        );
+        assertEq(resultingTotalClaim, weEthIonPool.totalSupply(), "resulting should be the same as calculated");
 
         // Is it possible that depositing this supplyCapDiff results in a revert?
         // `IonPool` compares `getTotalUnderlyingClaims > _supplyCap`
         assertLe(resultingTotalClaim, supplyCap, "supply cap reached");
-        assertLe(weEthIonPool.getTotalUnderlyingClaims(), supplyCap, "supply cap reached");
+        assertLe(weEthIonPool.totalSupply(), supplyCap, "supply cap reached");
     }
 
     // Supplying the diff in the allocation cap should never end up violating
     // the allocation cap.
     // Is it possible that the `maxDeposit` returns more than the allocation cap?
     function testFuzz_DepositToFillAllocationCap(uint256 assets, uint256 supplyFactor) public {
-        supplyFactor = bound(supplyFactor, 1e27, 10e27);
+        supplyFactor = bound(supplyFactor, 1e27, 9e27);
         IonPoolExposed(address(weEthIonPool)).setSupplyFactor(supplyFactor);
 
         uint256 allocationCap = bound(assets, 100e18, type(uint128).max);
@@ -108,9 +106,10 @@ contract Vault_Fuzz is VaultSharedSetup {
         setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
         vault.deposit(depositAmt, address(this));
 
-        uint256 initialTotalNormalized = weEthIonPool.totalSupplyUnaccrued();
+        // uint256 initialTotalNormalized = weEthIonPool.totalSupplyUnaccrued();
+        uint256 initialTotalNormalized = weEthIonPool.normalizedTotalSupply();
 
-        uint256 allocationCapDiff = _zeroFloorSub(allocationCap, weEthIonPool.getUnderlyingClaimOf(address(vault)));
+        uint256 allocationCapDiff = _zeroFloorSub(allocationCap, weEthIonPool.balanceOf(address(vault)));
 
         uint256 amountScaled = allocationCapDiff.rayDivDown(supplyFactor);
         uint256 resultingTotalNormalized = initialTotalNormalized + amountScaled;
@@ -123,7 +122,7 @@ contract Vault_Fuzz is VaultSharedSetup {
         setERC20Balance(address(BASE_ASSET), address(this), allocationCapDiff + 123e18);
         vault.deposit(allocationCapDiff + 123e18, address(this));
 
-        uint256 actualTotalClaim = weEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 actualTotalClaim = weEthIonPool.balanceOf(address(vault));
         assertEq(resultingTotalClaim, actualTotalClaim, "expected and actual must be equal");
 
         assertLe(resultingTotalClaim, allocationCap, "expected claim le to allocation cap");

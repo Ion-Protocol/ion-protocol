@@ -46,6 +46,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     error MarketsAndAllocationCapLengthMustBeEqual();
     error IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
     error InvalidFeePercentage();
+    error MaxSupportedMarketsReached();
 
     event UpdateSupplyQueue(address indexed caller, IIonPool[] newSupplyQueue);
     event UpdateWithdrawQueue(address indexed caller, IIonPool[] newWithdrawQueue);
@@ -68,6 +69,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e08;
 
     IERC20 public immutable BASE_ASSET;
+
+    uint8 public constant MAX_SUPPORTED_MARKETS = 32;
 
     EnumerableSet.AddressSet supportedMarkets;
 
@@ -193,6 +196,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 ++i;
             }
         }
+
+        if (supportedMarkets.length() > MAX_SUPPORTED_MARKETS) revert MaxSupportedMarketsReached();
 
         _updateSupplyQueue(newSupplyQueue);
         _updateWithdrawQueue(newWithdrawQueue);
@@ -947,9 +952,11 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @return The max amount of assets withdrawable from this IonPool.
      */
     function _withdrawable(IIonPool pool) internal view returns (uint256) {
-        uint256 currentSupplied = pool.balanceOf(address(this));
-        uint256 availableLiquidity = uint256(pool.extsload(ION_POOL_LIQUIDITY_SLOT));
+        if (pool.paused()) return 0;
 
+        uint256 currentSupplied = pool.balanceOf(address(this));
+
+        uint256 availableLiquidity = uint256(pool.extsload(ION_POOL_LIQUIDITY_SLOT));
         return Math.min(currentSupplied, availableLiquidity);
     }
 
@@ -960,6 +967,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @return The max amount of assets depositable to this IonPool.
      */
     function _depositable(IIonPool pool) internal view returns (uint256) {
+        if (pool.paused()) return 0;
+
         uint256 allocationCapDiff = _zeroFloorSub(caps[pool], pool.balanceOf(address(this)));
         uint256 supplyCapDiff = _zeroFloorSub(uint256(pool.extsload(ION_POOL_SUPPLY_CAP_SLOT)), pool.totalSupply());
 
