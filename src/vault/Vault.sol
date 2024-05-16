@@ -6,7 +6,6 @@ import { IIonPool } from "./../interfaces/IIonPool.sol";
 import { RAY } from "./../libraries/math/WadRayMath.sol";
 
 import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -16,6 +15,10 @@ import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { ReentrancyGuard } from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import { AccessControlDefaultAdminRules } from
     "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+
+// solhint-disable-next-line no-unused-import
+import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+
 /**
  * @title Ion Lending Vault
  * @author Molecular Labs
@@ -27,7 +30,6 @@ import { AccessControlDefaultAdminRules } from
  *
  * @custom:security-contact security@molecularlabs.io
  */
-
 contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
@@ -470,6 +472,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 if (pool != IDLE) {
                     try pool.supply(address(this), toSupply, new bytes32[](0)) {
                         assets -= toSupply;
+                        // solhint-disable-next-line no-empty-blocks
                     } catch { }
                 } else {
                     assets -= toSupply;
@@ -512,6 +515,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 if (pool != IDLE) {
                     try pool.withdraw(address(this), toWithdraw) {
                         assets -= toWithdraw;
+                        // solhint-disable-next-line no-empty-blocks
                     } catch { }
                 } else {
                     assets -= toWithdraw;
