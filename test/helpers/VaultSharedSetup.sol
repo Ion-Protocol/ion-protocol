@@ -289,4 +289,10 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         IonPoolExposed(address(rsEthIonPool)).setSupplyFactor(7.1336673e27);
         IonPoolExposed(address(rswEthIonPool)).setSupplyFactor(10.1336673e27);
     }
+
+    function _zeroFloorSub(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        assembly {
+            z := mul(gt(x, y), sub(x, y))
+        }
+    }
 }
