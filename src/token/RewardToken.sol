@@ -527,9 +527,9 @@ abstract contract RewardToken is
             return 0;
         }
 
-        (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
+        (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();
 
-        return _normalizedTotalSupply.rayMulDown($.supplyFactor + totalSupplyFactorIncrease);
+        return _normalizedTotalSupply.rayMulDown($.supplyFactor + totalSupplyFactorIncrease) + totalTreasuryMintAmount;
     }
 
     function normalizedTotalSupplyUnaccrued() public view returns (uint256) {
