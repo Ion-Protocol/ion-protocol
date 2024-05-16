@@ -7,7 +7,7 @@ import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 import { IonPoolExposed } from "../../../helpers/IonPoolSharedSetup.sol";
 import { VaultSharedSetup } from "../../../helpers/VaultSharedSetup.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import { RAY } from "./../../../../src/libraries/math/WadRayMath.sol";
+import { WadRayMath, RAY } from "./../../../../src/libraries/math/WadRayMath.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
 using Math for uint256;
