@@ -377,6 +377,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 // to the user from the previous function scope.
                 if (pool != IDLE) {
                     pool.withdraw(address(this), transferAmt);
+                } else {
+                    currentIdleDeposits -= transferAmt;
                 }
 
                 totalWithdrawn += transferAmt;
@@ -406,6 +408,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 // contract.
                 if (pool != IDLE) {
                     pool.supply(address(this), transferAmt, new bytes32[](0));
+                } else {
+                    currentIdleDeposits += transferAmt;
                 }
 
                 totalSupplied += transferAmt;
