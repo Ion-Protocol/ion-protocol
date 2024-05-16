@@ -16,7 +16,6 @@ import { Multicall } from "@openzeppelin/contracts/utils/Multicall.sol";
 import { ReentrancyGuard } from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import { AccessControlDefaultAdminRules } from
     "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
-
 /**
  * @title Ion Lending Vault
  * @author Molecular Labs
@@ -28,6 +27,7 @@ import { AccessControlDefaultAdminRules } from
  *
  * @custom:security-contact security@molecularlabs.io
  */
+
 contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint256;
@@ -197,10 +197,10 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
             if (pool == IDLE) {
                 if (BASE_ASSET.balanceOf(address(this)) != 0) revert InvalidIdleMarketRemovalNonZeroBalance();
             } else {
-                // Checks `balanceOf` as it may be possible that
-                // `getUnderlyingClaimOf` returns zero even though the
+                // Checks `normalizedBalanceOf` as it may be possible that
+                // `balanceOf` returns zero even though the
                 // `normalizedBalance` is zero.
-                if (pool.balanceOf(address(this)) != 0) revert InvalidMarketRemovalNonZeroSupply(pool);
+                if (pool.normalizedBalanceOf(address(this)) != 0) revert InvalidMarketRemovalNonZeroSupply(pool);
                 BASE_ASSET.approve(address(pool), 0);
             }
 
@@ -323,7 +323,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
             MarketAllocation calldata allocation = allocations[i];
             IIonPool pool = allocation.pool;
 
-            uint256 currentSupplied = pool == IDLE ? currentIdleDeposits : pool.getUnderlyingClaimOf(address(this));
+            uint256 currentSupplied = pool == IDLE ? currentIdleDeposits : pool.balanceOf(address(this));
             int256 assets = allocation.assets; // to deposit or withdraw
 
             // if `assets` is `type(int256).min`, this means fully withdraw from the market.
@@ -645,7 +645,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
     /**
      * @notice Returns the total claim that the vault has across all supported IonPools.
-     * @dev `IonPool.getUnderlyingClaimOf` returns the rebasing balance of the
+     * @dev `IonPool.balanceOf` returns the rebasing balance of the
      * lender receipt token that is pegged 1:1 to the underlying supplied asset.
      * @return assets The total assets held on the contract and inside the underlying
      * pools by this vault.
@@ -655,8 +655,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         for (uint256 i; i != _supportedMarketsLength;) {
             IIonPool pool = IIonPool(supportedMarkets.at(i));
 
-            uint256 assetsInPool =
-                pool == IDLE ? BASE_ASSET.balanceOf(address(this)) : pool.getUnderlyingClaimOf(address(this));
+            uint256 assetsInPool = pool == IDLE ? BASE_ASSET.balanceOf(address(this)) : pool.balanceOf(address(this));
 
             assets += assetsInPool;
 
@@ -763,7 +762,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         (feeShares, newTotalAssets) = _accruedFeeShares();
         if (feeShares != 0) _mint(feeRecipient, feeShares);
 
-        lastTotalAssets = newTotalAssets; // This update happens outside of this function in Metamorpho.
+        lastTotalAssets = newTotalAssets;
 
         emit FeeAccrued(feeShares, newTotalAssets);
     }
@@ -897,7 +896,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @return The max amount of assets withdrawable from this IonPool.
      */
     function _withdrawable(IIonPool pool) internal view returns (uint256) {
-        uint256 currentSupplied = pool.getUnderlyingClaimOf(address(this));
+        uint256 currentSupplied = pool.balanceOf(address(this));
         uint256 availableLiquidity = uint256(pool.extsload(ION_POOL_LIQUIDITY_SLOT));
 
         return Math.min(currentSupplied, availableLiquidity);
@@ -910,9 +909,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @return The max amount of assets depositable to this IonPool.
      */
     function _depositable(IIonPool pool) internal view returns (uint256) {
-        uint256 allocationCapDiff = _zeroFloorSub(caps[pool], pool.getUnderlyingClaimOf(address(this)));
-        uint256 supplyCapDiff =
-            _zeroFloorSub(uint256(pool.extsload(ION_POOL_SUPPLY_CAP_SLOT)), pool.getTotalUnderlyingClaims());
+        uint256 allocationCapDiff = _zeroFloorSub(caps[pool], pool.balanceOf(address(this)));
+        uint256 supplyCapDiff = _zeroFloorSub(uint256(pool.extsload(ION_POOL_SUPPLY_CAP_SLOT)), pool.totalSupply());
 
         return Math.min(allocationCapDiff, supplyCapDiff);
     }

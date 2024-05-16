@@ -29,7 +29,7 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         rewardModule.mint(address(0), amountOfRewards);
         rewardModule.mint(address(this), amountOfRewards);
 
-        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
     }
@@ -45,14 +45,14 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         underlying.approve(address(rewardModule), amountOfRewards);
         rewardModule.mint(address(this), amountOfRewards);
 
-        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), 0);
 
         vm.expectRevert(abi.encodeWithSelector(RewardToken.InvalidSender.selector, address(0)));
         rewardModule.burn(address(0), address(this), amountOfRewards);
         rewardModule.burn(address(this), address(this), amountOfRewards);
 
-        assertEq(rewardModule.balanceOf(address(this)), 0);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), 0);
     }
 
     function testFuzz_MintRewardWithSupplyFactorChange(uint256 amountOfRewards, uint256 supplyFactorNew) external {
@@ -71,8 +71,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
 
         uint256 expectedNormalizedMint1 = amountOfRewards.rayDivDown(supplyFactorOld);
 
-        assertEq(rewardModule.balanceOf(address(this)), expectedNormalizedMint1);
-        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
+        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
@@ -90,8 +90,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
         uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
-        assertEq(rewardModule.balanceOf(address(this)), totalDepositsNormalized);
-        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), totalDepositsNormalized);
+        assertEq(rewardModule.balanceOf(address(this)), totalValue);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
     }
@@ -112,8 +112,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
 
         uint256 expectedNormalizedMint1 = amountOfRewards.rayDivDown(supplyFactorOld);
 
-        assertEq(rewardModule.balanceOf(address(this)), expectedNormalizedMint1);
-        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), amountOfRewards);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), expectedNormalizedMint1);
+        assertEq(rewardModule.balanceOf(address(this)), amountOfRewards);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewards);
 
@@ -131,8 +131,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         uint256 totalDepositsNormalized = expectedNormalizedMint1 + expectedNormalizedMint2;
         uint256 totalValue = totalDepositsNormalized.rayMulDown(supplyFactorNew);
 
-        assertEq(rewardModule.balanceOf(address(this)), totalDepositsNormalized);
-        assertEq(rewardModule.getUnderlyingClaimOf(address(this)), totalValue);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), totalDepositsNormalized);
+        assertEq(rewardModule.balanceOf(address(this)), totalValue);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), totalDeposited + interestCreated);
 
@@ -153,7 +153,7 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         underlying.approve(address(rewardModule), amountOfRewardTokens);
         rewardModule.mint(address(this), amountOfRewardTokens);
 
-        assertEq(rewardModule.balanceOf(address(this)), amountOfRewardTokens);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), amountOfRewardTokens);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewardTokens);
 
@@ -172,8 +172,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         rewardModule.transfer(address(this), amountOfRewardTokens);
         rewardModule.transfer(receivingUser, amountOfRewardTokens);
 
-        assertEq(rewardModule.balanceOf(address(this)), 0);
-        assertEq(rewardModule.balanceOf(receivingUser), amountOfRewardTokens);
+        assertEq(rewardModule.normalizedBalanceOf(address(this)), 0);
+        assertEq(rewardModule.normalizedBalanceOf(receivingUser), amountOfRewardTokens);
         assertEq(underlying.balanceOf(address(this)), 0);
     }
 
@@ -186,8 +186,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         underlying.approve(address(rewardModule), amountOfRewardTokens);
         rewardModule.mint(sendingUser, amountOfRewardTokens);
 
-        assertEq(rewardModule.balanceOf(sendingUser), amountOfRewardTokens);
-        assertEq(rewardModule.balanceOf(receivingUser), 0);
+        assertEq(rewardModule.normalizedBalanceOf(sendingUser), amountOfRewardTokens);
+        assertEq(rewardModule.normalizedBalanceOf(receivingUser), 0);
         assertEq(rewardModule.allowance(sendingUser, spender), 0);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewardTokens);
@@ -215,8 +215,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         rewardModule.transferFrom(sendingUser, receivingUser, amountOfRewardTokens + 1);
         rewardModule.transferFrom(sendingUser, receivingUser, amountOfRewardTokens);
 
-        assertEq(rewardModule.balanceOf(sendingUser), 0);
-        assertEq(rewardModule.balanceOf(receivingUser), amountOfRewardTokens);
+        assertEq(rewardModule.normalizedBalanceOf(sendingUser), 0);
+        assertEq(rewardModule.normalizedBalanceOf(receivingUser), amountOfRewardTokens);
         assertEq(rewardModule.allowance(sendingUser, spender), 0);
     }
 
@@ -229,8 +229,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         underlying.approve(address(rewardModule), amountOfRewardTokens);
         rewardModule.mint(sendingUser, amountOfRewardTokens);
 
-        assertEq(rewardModule.balanceOf(sendingUser), amountOfRewardTokens);
-        assertEq(rewardModule.balanceOf(receivingUser), 0);
+        assertEq(rewardModule.normalizedBalanceOf(sendingUser), amountOfRewardTokens);
+        assertEq(rewardModule.normalizedBalanceOf(receivingUser), 0);
         assertEq(rewardModule.allowance(sendingUser, spender), 0);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), amountOfRewardTokens);
@@ -278,8 +278,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         rewardModule.transferFrom(sendingUser, receivingUser, amountOfRewardTokens + 1);
         rewardModule.transferFrom(sendingUser, receivingUser, amountOfRewardTokens);
 
-        assertEq(rewardModule.balanceOf(sendingUser), 0);
-        assertEq(rewardModule.balanceOf(receivingUser), amountOfRewardTokens);
+        assertEq(rewardModule.normalizedBalanceOf(sendingUser), 0);
+        assertEq(rewardModule.normalizedBalanceOf(receivingUser), amountOfRewardTokens);
         assertEq(rewardModule.allowance(sendingUser, spender), 0);
     }
 
@@ -306,8 +306,8 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
 
         underlying.approve(address(rewardModule), locals.amountOfRewardTokens);
         rewardModule.mint(sendingUser, locals.amountOfRewardTokens);
-        assertEq(rewardModule.balanceOf(sendingUser), locals.amountOfRewardTokens);
-        assertEq(rewardModule.balanceOf(receivingUser), 0);
+        assertEq(rewardModule.normalizedBalanceOf(sendingUser), locals.amountOfRewardTokens);
+        assertEq(rewardModule.normalizedBalanceOf(receivingUser), 0);
         assertEq(rewardModule.allowance(sendingUser, spender), 0);
         assertEq(underlying.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(rewardModule)), locals.amountOfRewardTokens);

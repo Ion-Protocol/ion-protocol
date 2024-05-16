@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 import { IonPoolExposed } from "../../../helpers/IonPoolSharedSetup.sol";
 import { VaultSharedSetup } from "../../../helpers/VaultSharedSetup.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { WadRayMath, RAY, WAD } from "./../../../../src/libraries/math/WadRayMath.sol";
 import { console2 } from "forge-std/console2.sol";
+import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
 using Math for uint256;
 
@@ -37,10 +39,21 @@ contract Vault_Fuzz is VaultSharedSetup {
         weEthIonPool.supply(address(this), assets, new bytes32[](0));
 
         uint256 expectedClaim = assets;
-        uint256 resultingClaim = weEthIonPool.getUnderlyingClaimOf(address(this));
+        uint256 resultingClaim = weEthIonPool.balanceOf(address(this));
 
         uint256 re = assets - ((assets * RAY - ((assets * RAY) % supplyFactor)) / RAY);
         assertLe(expectedClaim - resultingClaim, (supplyFactor - 2) / RAY + 1);
+    }
+
+    function testFuzz_FullyWithdrawableFromIonPool(uint256 assets) public {
+        uint256 supplyFactor = bound(assets, 1e27, 10e45);
+        uint256 normalizedAmt = bound(assets, 0, type(uint48).max);
+
+        uint256 claim = normalizedAmt * supplyFactor / RAY;
+        uint256 sharesToBurn = claim * RAY / supplyFactor;
+        sharesToBurn = sharesToBurn * supplyFactor < claim * RAY ? sharesToBurn + 1 : sharesToBurn;
+
+        assertEq(normalizedAmt, sharesToBurn);
     }
 }
 
@@ -157,4 +170,102 @@ contract VaultWithYieldAndFee_Fuzz is VaultSharedSetup {
     function testFuzz_MaxWithdrawAndMaxRedeem(uint256 assets) public { }
 
     function testFuzz_MaxDepositAndMaxMint(uint256 assets) public { }
+}
+
+contract VaultInflationAttack is VaultSharedSetup {
+    address immutable ATTACKER = newAddress("attacker");
+    address immutable USER = newAddress("user");
+
+    function setUp() public override {
+        super.setUp();
+
+        IIonPool[] memory market = new IIonPool[](1);
+        market[0] = IDLE;
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = type(uint256).max;
+
+        IIonPool[] memory queue = new IIonPool[](4);
+        queue[0] = IDLE;
+        queue[1] = weEthIonPool;
+        queue[2] = rsEthIonPool;
+        queue[3] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vault.addSupportedMarkets(market, allocationCaps, queue, queue);
+
+        vm.prank(ATTACKER);
+        IERC20(address(BASE_ASSET)).approve(address(vault), type(uint256).max);
+        vm.prank(USER);
+        IERC20(address(BASE_ASSET)).approve(address(vault), type(uint256).max);
+    }
+
+    function testFuzz_InflationAttackNotProfitable(uint256 assets) public {
+        // 1. The vault has not been used.
+        // - no shares minted and no assets deposited.
+        // - but the initial conversion is dictated by virtual shares.
+        assertEq(vault.totalSupply(), 0, "initial total supply");
+        assertEq(vault.totalAssets(), 0, "initial total assets");
+
+        // 2. The attacker makes a first deposit.
+        uint256 firstDepositAmt = bound(assets, 0, type(uint128).max);
+        setERC20Balance(address(BASE_ASSET), ATTACKER, firstDepositAmt);
+
+        vm.prank(ATTACKER);
+        vault.mint(firstDepositAmt, ATTACKER);
+
+        uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(ATTACKER));
+
+        // check that the mint amount and transfer amount was the same
+        assertEq(BASE_ASSET.balanceOf(ATTACKER), 0, "mint amount equals transfer amount");
+
+        // 3. The attacker donates.
+        // - In this case, transfers to vault to increase IDLE deposits.
+        // - Check that the attacker loses a portion of the donated funds.
+        uint256 donationAmt = bound(assets, 0, type(uint128).max);
+        setERC20Balance(address(BASE_ASSET), ATTACKER, donationAmt);
+
+        vm.prank(ATTACKER);
+        IERC20(address(BASE_ASSET)).transfer(address(vault), donationAmt);
+
+        uint256 attackerClaimAfterDonation = vault.previewRedeem(vault.balanceOf(ATTACKER));
+        uint256 attackerLossFromDonation = donationAmt - (attackerClaimAfterDonation - attackerClaimAfterMint);
+
+        uint256 totalAssetsBeforeDeposit = vault.totalAssets();
+        uint256 totalSupplyBeforeDeposit = vault.totalSupply();
+
+        // 4. A user makes a deposit where the shares truncate to zero.
+        // - sharesToMint = depositAmt * (newTotalSupply + 1) / (newTotalAssets + 1)
+        // - The sharesToMint must be less than 1 to round down to zero
+        //     - depositAmt * (newTotalSupply + 1) / (newTotalAssets + 1) < 1
+        //     - depositAmt < 1 * (newTotalAssets + 1) / (newTotalSupply + 1)
+        uint256 maxDepositAmt = (vault.totalAssets() + 1) / (vault.totalSupply() + 1);
+        uint256 userDepositAmt = bound(assets, 0, maxDepositAmt);
+
+        vm.startPrank(USER);
+        setERC20Balance(address(BASE_ASSET), USER, userDepositAmt);
+        IERC20(address(BASE_ASSET)).approve(address(vault), userDepositAmt);
+        vault.deposit(userDepositAmt, USER);
+        vm.stopPrank();
+
+        assertEq(vault.balanceOf(USER), 0, "user minted shares must be zero");
+
+        uint256 attackerClaimAfterUser = vault.previewRedeem(vault.balanceOf(ATTACKER));
+        uint256 attackerGainFromUser = attackerClaimAfterUser - attackerClaimAfterDonation;
+
+        // loss = donationAmt / (1 + firstDepositAmt)
+        uint256 expectedAttackerLossFromDonation = donationAmt / (1 + firstDepositAmt);
+        assertLe(
+            attackerLossFromDonation - expectedAttackerLossFromDonation,
+            1,
+            "attacker loss from donation as expected with rounding error"
+        );
+
+        // INVARIANT: The money gained from the user must be less than or equal to the attacker's loss from the
+        // donation.
+        // assertLe(attackerGainFromUser, attackerLossFromDonation, "attacker must not profit from user");
+        assertLe(userDepositAmt, attackerLossFromDonation, "loss must be ge to user deposit");
+    }
+
+    function testFuzz_InflationAttackSmallerDegree() public { }
 }
