@@ -25,7 +25,9 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsSeparately() public {
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -87,7 +89,9 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_AddSupportedMarketsTogether() public {
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         vm.startPrank(vault.defaultAdmin());
         vault.grantRole(vault.OWNER_ROLE(), OWNER);
@@ -161,6 +165,30 @@ contract VaultSetUpTest is VaultSharedSetup {
     }
 
     function test_Revert_AddSupportedMarkets_MarketAlreadySupported() public { }
+
+    function test_Revert_AddSupportedMarkets_MaxSupportedMarketsReached() public {
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vm.stopPrank();
+
+        IIonPool[] memory markets = new IIonPool[](vault.MAX_SUPPORTED_MARKETS() + 1);
+        uint256[] memory allocationCaps = new uint256[](vault.MAX_SUPPORTED_MARKETS() + 1);
+
+        for (uint8 i = 0; i < vault.MAX_SUPPORTED_MARKETS() + 1; i++) {
+            markets[i] = deployIonPool(BASE_ASSET, WEETH, address(this));
+            allocationCaps[i] = 1 ether;
+        }
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(Vault.MaxSupportedMarketsReached.selector);
+        vault.addSupportedMarkets(markets, allocationCaps, markets, markets);
+        vm.stopPrank();
+    }
 
     function test_RemoveSingleSupportedMarket() public {
         uint256[] memory allocationCaps = new uint256[](1);
@@ -298,7 +326,7 @@ contract VaultSetUpTest is VaultSharedSetup {
 
         vault.deposit(depositAmount, address(this));
 
-        assertGt(weEthIonPool.balanceOf(address(vault)), 0, "deposited to weEthIonPool");
+        assertGt(weEthIonPool.normalizedBalanceOf(address(vault)), 0, "deposited to weEthIonPool");
 
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSelector(Vault.InvalidMarketRemovalNonZeroSupply.selector, weEthIonPool));
@@ -363,7 +391,7 @@ contract VaultSetUpTest is VaultSharedSetup {
         setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
         vault.deposit(depositAmount, address(this));
 
-        assertGt(weEthIonPool.balanceOf(address(vault)), 0, "deposited to weEthIonPool");
+        assertGt(weEthIonPool.normalizedBalanceOf(address(vault)), 0, "deposited to weEthIonPool");
 
         bytes memory reallocateCalldata = abi.encodeWithSelector(Vault.reallocate.selector, allocs);
 
@@ -616,7 +644,7 @@ abstract contract VaultDeposit is VaultSharedSetup {
         updateSupplyCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
         updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
 
-        uint256 prevWeEthShares = weEthIonPool.balanceOf(address(vault));
+        uint256 prevWeEthShares = weEthIonPool.normalizedBalanceOf(address(vault));
 
         vault.deposit(depositAmount, address(this));
 
@@ -624,7 +652,7 @@ abstract contract VaultDeposit is VaultSharedSetup {
         assertEq(vault.balanceOf(address(this)), depositAmount, "user vault shares balance");
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
         assertEq(
-            weEthIonPool.getUnderlyingClaimOf(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevWeEthShares, depositAmount, weEthIonPool.supplyFactor()),
             "vault iToken claim"
         );
@@ -638,9 +666,9 @@ abstract contract VaultDeposit is VaultSharedSetup {
         updateSupplyCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
         updateAllocationCaps(vault, 1e18, 1e18, 1e18);
 
-        uint256 prevWeEthShares = weEthIonPool.balanceOf(address(vault));
-        uint256 prevRsEthShares = rsEthIonPool.balanceOf(address(vault));
-        uint256 prevRswEthShares = rswEthIonPool.balanceOf(address(vault));
+        uint256 prevWeEthShares = weEthIonPool.normalizedBalanceOf(address(vault));
+        uint256 prevRsEthShares = rsEthIonPool.normalizedBalanceOf(address(vault));
+        uint256 prevRswEthShares = rswEthIonPool.normalizedBalanceOf(address(vault));
 
         // 3e18 gets spread out equally amongst the three pools
         vault.deposit(depositAmount, address(this));
@@ -650,17 +678,17 @@ abstract contract VaultDeposit is VaultSharedSetup {
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
 
         assertEq(
-            weEthIonPool.getUnderlyingClaimOf(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevWeEthShares, 1e18, weEthIonPool.supplyFactor()),
             "weEth vault iToken claim"
         );
         assertEq(
-            rsEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rsEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevRsEthShares, 1e18, rsEthIonPool.supplyFactor()),
             "rsEth vault iToken claim"
         );
         assertEq(
-            rswEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rswEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevRswEthShares, 1e18, rswEthIonPool.supplyFactor()),
             "rswEth vault iToken claim"
         );
@@ -674,9 +702,9 @@ abstract contract VaultDeposit is VaultSharedSetup {
         updateSupplyCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
         updateAllocationCaps(vault, 3e18, 5e18, 7e18);
 
-        uint256 prevWeEthShares = weEthIonPool.balanceOf(address(vault));
-        uint256 prevRsEthShares = rsEthIonPool.balanceOf(address(vault));
-        uint256 prevRswEthShares = rswEthIonPool.balanceOf(address(vault));
+        uint256 prevWeEthShares = weEthIonPool.normalizedBalanceOf(address(vault));
+        uint256 prevRsEthShares = rsEthIonPool.normalizedBalanceOf(address(vault));
+        uint256 prevRswEthShares = rswEthIonPool.normalizedBalanceOf(address(vault));
 
         // 3e18 gets spread out equally amongst the three pools
         vault.deposit(depositAmount, address(this));
@@ -686,17 +714,17 @@ abstract contract VaultDeposit is VaultSharedSetup {
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
 
         assertEq(
-            weEthIonPool.getUnderlyingClaimOf(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevWeEthShares, 2e18, weEthIonPool.supplyFactor()),
             "weEth vault iToken claim"
         );
         assertEq(
-            rsEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rsEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevRsEthShares, 3e18, rsEthIonPool.supplyFactor()),
             "rsEth vault iToken claim"
         );
         assertEq(
-            rswEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rswEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevRswEthShares, 5e18, rswEthIonPool.supplyFactor()),
             "rswEth vault iToken claim"
         );
@@ -712,9 +740,9 @@ abstract contract VaultDeposit is VaultSharedSetup {
         updateSupplyCaps(vault, 3e18, 10e18, 5e18);
         updateAllocationCaps(vault, 5e18, 7e18, 20e18);
 
-        uint256 prevWeEthShares = weEthIonPool.balanceOf(address(vault));
-        uint256 prevRsEthShares = rsEthIonPool.balanceOf(address(vault));
-        uint256 prevRswEthShares = rswEthIonPool.balanceOf(address(vault));
+        uint256 prevWeEthShares = weEthIonPool.normalizedBalanceOf(address(vault));
+        uint256 prevRsEthShares = rsEthIonPool.normalizedBalanceOf(address(vault));
+        uint256 prevRswEthShares = rswEthIonPool.normalizedBalanceOf(address(vault));
 
         vault.deposit(depositAmount, address(this));
 
@@ -723,17 +751,17 @@ abstract contract VaultDeposit is VaultSharedSetup {
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
 
         assertEq(
-            weEthIonPool.getUnderlyingClaimOf(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevWeEthShares, 2e18, weEthIonPool.supplyFactor()),
             "weEth vault iToken claim"
         );
         assertEq(
-            rsEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rsEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevRsEthShares, 3e18, rsEthIonPool.supplyFactor()),
             "rsEth vault iToken claim"
         );
         assertEq(
-            rswEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rswEthIonPool.balanceOf(address(vault)),
             claimAfterDeposit(prevRswEthShares, 7e18, rswEthIonPool.supplyFactor()),
             "rswEth vault iToken claim"
         );
@@ -793,6 +821,46 @@ abstract contract VaultDeposit is VaultSharedSetup {
         assertEq(assetsDeposited, expectedDepositAmount, "mint return value");
     }
 
+    function test_Deposit_SkipPauseReverts() public {
+        // If the market is paused, then the deposit iteration should skip it.
+        updateAllocationCaps(vault, 10 ether, 20 ether, 30 ether);
+
+        uint256 depositAmt = 30 ether;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+
+        // The second market is paused.
+        rsEthIonPool.pause();
+
+        // 10 ether in weEthIonPool, 20 ether in rswEthIonPool
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(
+            weEthIonPool.balanceOf(address(vault)),
+            claimAfterDeposit(0, 10 ether, weEthIonPool.supplyFactor()),
+            "weEthIonPool balance"
+        );
+        assertEq(rsEthIonPool.balanceOf(address(vault)), 0, "rsEthIonPool balance");
+        assertEq(
+            rswEthIonPool.balanceOf(address(vault)),
+            claimAfterDeposit(0, 20 ether, rswEthIonPool.supplyFactor()),
+            "rswEthIonPool balance"
+        );
+    }
+
+    function test_Deposit_AllMarketsPaused() public {
+        updateAllocationCaps(vault, 10 ether, 20 ether, 30 ether);
+
+        weEthIonPool.pause();
+        rsEthIonPool.pause();
+        rswEthIonPool.pause();
+
+        uint256 depositAmt = 30 ether;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+
+        vm.expectRevert(Vault.AllSupplyCapsReached.selector);
+        vault.deposit(depositAmt, address(this));
+    }
+
     function test_Mint_AllMarkets() public { }
 }
 
@@ -839,9 +907,7 @@ abstract contract VaultWithdraw is VaultSharedSetup {
         );
         assertEq(vault.totalSupply(), expectedNewTotalSupply, "vault shares total supply");
 
-        assertEq(
-            vault.totalAssets(), rsEthIonPool.getUnderlyingClaimOf(address(vault)), "single market for total assets"
-        );
+        assertEq(vault.totalAssets(), rsEthIonPool.balanceOf(address(vault)), "single market for total assets");
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "valt's base asset balance should be zero");
 
         // user
@@ -900,10 +966,10 @@ abstract contract VaultWithdraw is VaultSharedSetup {
         );
         assertEq(vault.totalSupply(), expectedNewTotalSupply, "vault shares total supply");
 
-        assertEq(rsEthIonPool.getUnderlyingClaimOf(address(vault)), 0, "vault pool1 balance");
-        assertEq(rswEthIonPool.getUnderlyingClaimOf(address(vault)), 0, "vault pool2 balance");
+        assertEq(rsEthIonPool.balanceOf(address(vault)), 0, "vault pool1 balance");
+        assertEq(rswEthIonPool.balanceOf(address(vault)), 0, "vault pool2 balance");
         assertLe(
-            expectedNewTotalAssets - weEthIonPool.getUnderlyingClaimOf(address(vault)),
+            expectedNewTotalAssets - weEthIonPool.balanceOf(address(vault)),
             weEthIonPool.supplyFactor() / RAY,
             "vault pool3 balance"
         );
@@ -930,6 +996,42 @@ abstract contract VaultWithdraw is VaultSharedSetup {
 
         vm.expectRevert(Vault.NotEnoughLiquidityToWithdraw.selector);
         vault.withdraw(withdrawAmount, address(this), address(this));
+    }
+
+    function test_Withdraw_SkipPauseReverts() public {
+        uint256 depositAmt = 6e18;
+        uint256 withdrawAmt = 3e18;
+
+        updateAllocationCaps(vault, 1e18, 2e18, 3e18);
+
+        // Deposit 1e18 to weETH, 2e18 to rsETH, 3e18 to rswETH
+        // rsETH is paused
+        // Withdraw 1e18 from weETH, 0 from rsETH, 2e18 from rswETH
+
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 initialWeEthIonPoolDeposit = weEthIonPool.balanceOf(address(vault));
+        uint256 initialRsEthIonPoolDeposit = rsEthIonPool.balanceOf(address(vault));
+        uint256 initialRswEthIonPoolDeposit = rswEthIonPool.balanceOf(address(vault));
+
+        rsEthIonPool.pause();
+
+        vault.withdraw(withdrawAmt, address(this), address(this));
+
+        uint256 rswEthIonPoolWithdrawAmt = withdrawAmt - initialWeEthIonPoolDeposit;
+        uint256 expectedRswEthIonPoolDeposit = initialRswEthIonPoolDeposit - rswEthIonPoolWithdrawAmt;
+        uint256 rswEthIonPoolDeposit = rswEthIonPool.balanceOf(address(vault));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), 0, "weEthIonPool balance");
+        assertEq(
+            rsEthIonPool.balanceOf(address(vault)), initialRsEthIonPoolDeposit, "rsEthIonPool deposit should not change"
+        );
+        assertLe(
+            expectedRswEthIonPoolDeposit - rswEthIonPoolDeposit,
+            rswEthIonPool.supplyFactor() / RAY,
+            "rswEthIonPool balance"
+        );
     }
 
     // try to deposit and withdraw same amounts
@@ -962,9 +1064,9 @@ abstract contract VaultReallocate is VaultSharedSetup {
 
         uint256 prevTotalAssets = vault.totalAssets();
 
-        uint256 prevRsEthClaim = rsEthIonPool.getUnderlyingClaimOf(address(vault));
-        uint256 prevRswEthClaim = rswEthIonPool.getUnderlyingClaimOf(address(vault));
-        uint256 prevWeEthClaim = weEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 prevRsEthClaim = rsEthIonPool.balanceOf(address(vault));
+        uint256 prevRswEthClaim = rswEthIonPool.balanceOf(address(vault));
+        uint256 prevWeEthClaim = weEthIonPool.balanceOf(address(vault));
 
         int256 rswEthDiff = -1e18;
         int256 weEthDiff = -2e18;
@@ -988,19 +1090,19 @@ abstract contract VaultReallocate is VaultSharedSetup {
         uint256 newTotalAssets = vault.totalAssets();
 
         assertApproxEqAbs(
-            rsEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rsEthIonPool.balanceOf(address(vault)),
             expNewRsEthClaim,
             rsEthIonPool.supplyFactor() / RAY,
             "rsEth vault iToken claim"
         );
         assertApproxEqAbs(
-            rswEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rswEthIonPool.balanceOf(address(vault)),
             expNewRswEthClaim,
             rswEthIonPool.supplyFactor() / RAY,
             "rswEth vault iToken claim"
         );
         assertApproxEqAbs(
-            weEthIonPool.getUnderlyingClaimOf(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
             expNewWeEthClaim,
             weEthIonPool.supplyFactor() / RAY,
             "weEth vault iToken claim"
@@ -1028,9 +1130,9 @@ abstract contract VaultReallocate is VaultSharedSetup {
 
         updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
 
-        uint256 prevWeEthClaim = weEthIonPool.getUnderlyingClaimOf(address(vault));
-        uint256 prevRswEthClaim = rswEthIonPool.getUnderlyingClaimOf(address(vault));
-        uint256 prevRsEthClaim = rsEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 prevWeEthClaim = weEthIonPool.balanceOf(address(vault));
+        uint256 prevRswEthClaim = rswEthIonPool.balanceOf(address(vault));
+        uint256 prevRsEthClaim = rsEthIonPool.balanceOf(address(vault));
         uint256 expRswEthClaim = prevRswEthClaim + prevWeEthClaim + prevRsEthClaim;
 
         uint256 prevTotalAssets = vault.totalAssets();
@@ -1052,10 +1154,10 @@ abstract contract VaultReallocate is VaultSharedSetup {
 
         uint256 newTotalAssets = vault.totalAssets();
 
-        assertEq(rsEthIonPool.getUnderlyingClaimOf(address(vault)), 0, "rsEth vault iToken claim");
-        assertEq(weEthIonPool.getUnderlyingClaimOf(address(vault)), 0, "weEth vault iToken claim");
+        assertEq(rsEthIonPool.balanceOf(address(vault)), 0, "rsEth vault iToken claim");
+        assertEq(weEthIonPool.balanceOf(address(vault)), 0, "weEth vault iToken claim");
         assertApproxEqAbs(
-            rswEthIonPool.getUnderlyingClaimOf(address(vault)),
+            rswEthIonPool.balanceOf(address(vault)),
             expRswEthClaim,
             rswEthIonPool.supplyFactor() / RAY,
             "rswEth vault iToken claim"
@@ -1081,7 +1183,7 @@ abstract contract VaultReallocate is VaultSharedSetup {
 
         uint256 prevTotalAssets = vault.totalAssets();
 
-        uint256 weEthCurrentSupplied = weEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 weEthCurrentSupplied = weEthIonPool.balanceOf(address(vault));
 
         // tries to deposit 2e18 + 2e18 to 3e18 allocation cap
         Vault.MarketAllocation[] memory allocs = new Vault.MarketAllocation[](3);
@@ -1130,7 +1232,9 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
     function setUp() public virtual override {
         super.setUp();
 
-        vault = new Vault(BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
 
         BASE_ASSET.approve(address(vault), type(uint256).max);
 
@@ -1173,20 +1277,14 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
         // rsEthIonPool should be full at 30e18
         // rswEthIonPool should be at 10e18
         assertLe(
-            10e18 - weEthIonPool.getUnderlyingClaimOf(address(vault)),
-            postDepositClaimRE(10e18, weEthIonPoolSF),
-            "weEthIonPool"
+            10e18 - weEthIonPool.balanceOf(address(vault)), postDepositClaimRE(10e18, weEthIonPoolSF), "weEthIonPool"
         );
         assertEq(BASE_ASSET.balanceOf(address(vault)), 20e18, "IDLE");
         assertLe(
-            30e18 - rsEthIonPool.getUnderlyingClaimOf(address(vault)),
-            postDepositClaimRE(30e18, rsEthIonPoolSF),
-            "rsEthIonPool"
+            30e18 - rsEthIonPool.balanceOf(address(vault)), postDepositClaimRE(30e18, rsEthIonPoolSF), "rsEthIonPool"
         );
         assertLe(
-            10e18 - rswEthIonPool.getUnderlyingClaimOf(address(vault)),
-            postDepositClaimRE(10e18, rswEthIonPoolSF),
-            "rswEthIonPool"
+            10e18 - rswEthIonPool.balanceOf(address(vault)), postDepositClaimRE(10e18, rswEthIonPoolSF), "rswEthIonPool"
         );
         assertEq(BASE_ASSET.balanceOf(address(this)), 0, "user balance");
     }
@@ -1221,18 +1319,18 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
 
         assertEq(remainingAssets, 0, "test variables");
         assertLe(
-            expectedWeEthIonPoolClaim - weEthIonPool.getUnderlyingClaimOf(address(vault)),
+            expectedWeEthIonPoolClaim - weEthIonPool.balanceOf(address(vault)),
             postDepositClaimRE(expectedWeEthIonPoolClaim, weEthIonPoolSF),
             "weEthIonPool"
         );
         assertEq(BASE_ASSET.balanceOf(address(vault)), expectedIdleClaim, "IDLE");
         assertLe(
-            expectedRsEthIonPoolClaim - rsEthIonPool.getUnderlyingClaimOf(address(vault)),
+            expectedRsEthIonPoolClaim - rsEthIonPool.balanceOf(address(vault)),
             postDepositClaimRE(expectedWeEthIonPoolClaim, rsEthIonPoolSF),
             "rsEthIonPool"
         );
         assertLe(
-            expectedRswEthIonPoolClaim - rswEthIonPool.getUnderlyingClaimOf(address(vault)),
+            expectedRswEthIonPoolClaim - rswEthIonPool.balanceOf(address(vault)),
             postDepositClaimRE(expectedRswEthIonPoolClaim, rswEthIonPoolSF),
             "rswEthIonPool"
         );
@@ -1250,10 +1348,10 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
         uint256 prevTotalAssets = vault.totalAssets();
         uint256 supplyFactor = rsEthIonPool.supplyFactor();
 
-        uint256 weEthIonPoolClaim = weEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 weEthIonPoolClaim = weEthIonPool.balanceOf(address(vault));
         uint256 idleClaim = BASE_ASSET.balanceOf(address(vault));
-        uint256 rsEthIonPoolClaim = rsEthIonPool.getUnderlyingClaimOf(address(vault));
-        uint256 rswEthIonPoolClaim = rswEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 rsEthIonPoolClaim = rsEthIonPool.balanceOf(address(vault));
+        uint256 rswEthIonPoolClaim = rswEthIonPool.balanceOf(address(vault));
 
         uint256 withdrawAmount = 40e18;
 
@@ -1283,14 +1381,14 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
             postDepositClaimRE(withdrawAmount, supplyFactor),
             "vault total assets"
         );
-        assertEq(weEthIonPool.getUnderlyingClaimOf(address(vault)), 0, "weEthIonPool claim");
+        assertEq(weEthIonPool.balanceOf(address(vault)), 0, "weEthIonPool claim");
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "idle deposits");
         assertLt(
-            (rsEthIonPoolClaim - rsEthIonPoolWithdraw) - rsEthIonPool.getUnderlyingClaimOf(address(vault)),
+            (rsEthIonPoolClaim - rsEthIonPoolWithdraw) - rsEthIonPool.balanceOf(address(vault)),
             postDepositClaimRE(withdrawAmount, supplyFactor),
             "rsEthIonPool claim"
         );
-        assertEq(rswEthIonPool.getUnderlyingClaimOf(address(vault)), rswEthIonPoolClaim, "rswEthIonPool claim");
+        assertEq(rswEthIonPool.balanceOf(address(vault)), rswEthIonPoolClaim, "rswEthIonPool claim");
 
         // user gains withdrawn balance
         assertEq(BASE_ASSET.balanceOf(address(this)), withdrawAmount, "user base asset balance");
@@ -1349,10 +1447,10 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
         vault.updateAllocationCaps(ionPoolToUpdate, newAllocationCaps);
 
         // 10 weEth 20 idle 30 rsEth 10 rswEth
-        uint256 prevWeEthClaim = weEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 prevWeEthClaim = weEthIonPool.balanceOf(address(vault));
         uint256 prevIdleClaim = BASE_ASSET.balanceOf(address(vault));
-        uint256 prevRsEthClaim = rsEthIonPool.getUnderlyingClaimOf(address(vault));
-        uint256 prevRswEthClaim = rswEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 prevRsEthClaim = rsEthIonPool.balanceOf(address(vault));
+        uint256 prevRswEthClaim = rswEthIonPool.balanceOf(address(vault));
 
         uint256 weEthSF = weEthIonPool.supplyFactor();
         uint256 rsEthSF = rsEthIonPool.supplyFactor();
@@ -1375,17 +1473,13 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
         vault.reallocate(allocs);
 
         assertLt(
-            expectedWeEthClaim - weEthIonPool.getUnderlyingClaimOf(address(vault)),
-            postDepositClaimRE(0, weEthSF),
-            "weEthIonPol"
+            expectedWeEthClaim - weEthIonPool.balanceOf(address(vault)), postDepositClaimRE(0, weEthSF), "weEthIonPol"
         );
         assertEq(BASE_ASSET.balanceOf(address(vault)), expectedIdleClaim, "IDLE");
         assertLt(
-            expectedRsEthClaim - rsEthIonPool.getUnderlyingClaimOf(address(vault)),
-            postDepositClaimRE(0, rsEthSF),
-            "rswEthIonPol"
+            expectedRsEthClaim - rsEthIonPool.balanceOf(address(vault)), postDepositClaimRE(0, rsEthSF), "rswEthIonPol"
         );
-        assertEq(prevRswEthClaim, rswEthIonPool.getUnderlyingClaimOf(address(vault)), "rswEthIonPool");
+        assertEq(prevRswEthClaim, rswEthIonPool.balanceOf(address(vault)), "rswEthIonPool");
     }
 
     function test_Reallocate_WithdrawFromIdle() public {
@@ -1394,10 +1488,10 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
         vault.deposit(depositAmount, address(this));
 
         // 10 weEth 20 idle 30 rsEth 10 rswEth
-        uint256 prevWeEthClaim = weEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 prevWeEthClaim = weEthIonPool.balanceOf(address(vault));
         uint256 prevIdleClaim = BASE_ASSET.balanceOf(address(vault));
-        uint256 prevRsEthClaim = rsEthIonPool.getUnderlyingClaimOf(address(vault));
-        uint256 prevRswEthClaim = rswEthIonPool.getUnderlyingClaimOf(address(vault));
+        uint256 prevRsEthClaim = rsEthIonPool.balanceOf(address(vault));
+        uint256 prevRswEthClaim = rswEthIonPool.balanceOf(address(vault));
 
         uint256 weEthSF = weEthIonPool.supplyFactor();
         uint256 rswEthSF = rswEthIonPool.supplyFactor();
@@ -1420,24 +1514,153 @@ abstract contract VaultWithIdlePool is VaultSharedSetup {
         vault.reallocate(allocs);
 
         assertLt(
-            expectedWeEthClaim - weEthIonPool.getUnderlyingClaimOf(address(vault)),
-            postDepositClaimRE(0, weEthSF),
-            "weEthIonPol"
+            expectedWeEthClaim - weEthIonPool.balanceOf(address(vault)), postDepositClaimRE(0, weEthSF), "weEthIonPol"
         );
         assertEq(BASE_ASSET.balanceOf(address(vault)), expectedIdleClaim, "IDLE");
         assertLt(
-            expectedRswEthClaim - rswEthIonPool.getUnderlyingClaimOf(address(vault)),
+            expectedRswEthClaim - rswEthIonPool.balanceOf(address(vault)),
             postDepositClaimRE(0, rswEthSF),
             "rswEthIonPol"
         );
-        assertEq(prevRsEthClaim, rsEthIonPool.getUnderlyingClaimOf(address(vault)), "rsEthIonPool");
+        assertEq(prevRsEthClaim, rsEthIonPool.balanceOf(address(vault)), "rsEthIonPool");
     }
 }
 
 contract VaultERC4626ExternalViews is VaultSharedSetup {
     function setUp() public override {
         super.setUp();
-        // markets.push(IDLE);
+    }
+
+    function test_TotalAssetsWithSinglePausedIonPool() public {
+        weEthIonPool.updateSupplyCap(type(uint256).max);
+        weEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+
+        supply(address(this), weEthIonPool, 1000e18);
+        borrow(address(this), weEthIonPool, weEthGemJoin, 100e18, 70e18);
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 20e18;
+        allocationCaps[1] = 0;
+        allocationCaps[2] = 0;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 10e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool balance");
+
+        // Pause the weEthIonPool, stop accruing interest
+        weEthIonPool.pause();
+        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
+
+        vm.warp(block.timestamp + 365 days);
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
+        assertEq(
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            weEthIonPool.balanceOf(address(vault)),
+            "weEthIonPool unaccrued balance"
+        );
+
+        uint256 totalAssets = vault.totalAssets();
+        assertEq(totalAssets, depositAmt, "total assets with paused IonPool does not include interest");
+
+        // When unpaused, should now accrue interest
+        weEthIonPool.unpause();
+        vm.warp(block.timestamp + 365 days);
+
+        assertGt(weEthIonPool.balanceOf(address(vault)), depositAmt, "weEthIonPool accrues interest");
+        assertGt(
+            weEthIonPool.balanceOf(address(vault)),
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            "weEthIonPool unaccrued balance"
+        );
+
+        assertGt(vault.totalAssets(), depositAmt, "total assets with paused IonPool does not include interest");
+    }
+
+    function test_TotalAssetsWithMultiplePausedIonPools() public {
+        // Make sure every pool has debt to accrue interest from
+        uint256 initialSupplyAmt = 1000e18;
+        weEthIonPool.updateSupplyCap(type(uint256).max);
+        rsEthIonPool.updateSupplyCap(type(uint256).max);
+        rswEthIonPool.updateSupplyCap(type(uint256).max);
+
+        weEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+        rsEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+        rswEthIonPool.updateIlkDebtCeiling(0, type(uint256).max);
+
+        supply(address(this), weEthIonPool, initialSupplyAmt);
+        borrow(address(this), weEthIonPool, weEthGemJoin, 100e18, 70e18);
+
+        supply(address(this), rsEthIonPool, initialSupplyAmt);
+        borrow(address(this), rsEthIonPool, rsEthGemJoin, 100e18, 70e18);
+
+        supply(address(this), rswEthIonPool, initialSupplyAmt);
+        borrow(address(this), rswEthIonPool, rswEthGemJoin, 100e18, 70e18);
+
+        uint256[] memory allocationCaps = new uint256[](3);
+        uint256 weEthIonPoolAmt = 10e18;
+        uint256 rsEthIonPoolAmt = 20e18;
+        uint256 rswEthIonPoolAmt = 30e18;
+        allocationCaps[0] = weEthIonPoolAmt;
+        allocationCaps[1] = rsEthIonPoolAmt;
+        allocationCaps[2] = rswEthIonPoolAmt;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 60e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        assertEq(weEthIonPool.balanceOf(address(vault)), weEthIonPoolAmt, "weEthIonPool balance");
+        assertEq(rsEthIonPool.balanceOf(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance");
+        assertEq(rswEthIonPool.balanceOf(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance");
+
+        weEthIonPool.pause();
+        // NOTE rsEthIonPool is not paused
+        rswEthIonPool.pause();
+
+        assertTrue(weEthIonPool.paused(), "weEthIonPool is paused");
+        assertFalse(rsEthIonPool.paused(), "rsEthIonPool is not paused");
+        assertTrue(rswEthIonPool.paused(), "rswEthIonPool is paused");
+
+        vm.warp(block.timestamp + 365 days);
+
+        // The 'unaccrued' values should not change
+        assertEq(weEthIonPool.balanceOfUnaccrued(address(vault)), weEthIonPoolAmt, "weEthIonPool balance");
+        assertEq(rsEthIonPool.balanceOfUnaccrued(address(vault)), rsEthIonPoolAmt, "rsEthIonPool balance");
+        assertEq(rswEthIonPool.balanceOfUnaccrued(address(vault)), rswEthIonPoolAmt, "rswEthIonPool balance");
+
+        // When paused, the unaccrued and accrued balanceOf should be the same
+        assertEq(
+            weEthIonPool.balanceOf(address(vault)),
+            weEthIonPool.balanceOfUnaccrued(address(vault)),
+            "weEthIonPool balance increases"
+        );
+        assertEq(
+            rswEthIonPool.balanceOf(address(vault)),
+            rswEthIonPool.balanceOfUnaccrued(address(vault)),
+            "rswEthIonPool balance increases"
+        );
+
+        // When not paused, the accrued balanceOf should be greater
+        assertGt(
+            rsEthIonPool.balanceOf(address(vault)),
+            rsEthIonPool.balanceOfUnaccrued(address(vault)),
+            "rsEthIonPool balance does not  change"
+        );
+
+        uint256 expectedTotalAssets = weEthIonPool.balanceOfUnaccrued(address(vault))
+            + rsEthIonPool.balanceOf(address(vault)) + rswEthIonPool.balanceOfUnaccrued(address(vault));
+
+        assertEq(
+            vault.totalAssets(), expectedTotalAssets, "total assets without accounting for interest in paused IonPools"
+        );
     }
 
     // --- Max ---
@@ -1477,7 +1700,6 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
         vault.updateAllocationCaps(markets, allocationCaps);
 
         uint256 maxMintShares = vault.maxMint(NULL);
-        console2.log("maxMintShares: ", maxMintShares);
 
         setERC20Balance(address(BASE_ASSET), address(this), 60e18);
         vault.mint(maxMintShares, address(this));
@@ -1496,6 +1718,64 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
 
     function test_MaxRedeem() public { }
 
+    function test_MaxWithdrawWithPausedPools() public {
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 10e18;
+        allocationCaps[1] = 20e18;
+        allocationCaps[2] = 30e18;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 depositAmt = 35e18;
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 maxWithdrawBeforePause = vault.maxWithdraw(address(this));
+
+        weEthIonPool.pause();
+        uint256 maxWithdrawAfterPause = vault.maxWithdraw(address(this));
+
+        rsEthIonPool.pause();
+        uint256 maxWithdrawAfterSecondPause = vault.maxWithdraw(address(this));
+
+        rswEthIonPool.pause();
+        uint256 maxWithdrawAfterThirdPause = vault.maxWithdraw(address(this));
+
+        assertEq(maxWithdrawBeforePause, depositAmt, "max withdraw before pause");
+        assertEq(maxWithdrawAfterPause, depositAmt - 10e18, "max withdraw after pause");
+        assertEq(maxWithdrawAfterSecondPause, depositAmt - 30e18, "max withdraw after second pause");
+        assertEq(maxWithdrawAfterThirdPause, 0, "max withdraw after third pause");
+    }
+
+    function test_MaxDepositWithPausedPools() public {
+        uint256[] memory allocationCaps = new uint256[](3);
+        allocationCaps[0] = 10e18;
+        allocationCaps[1] = 20e18;
+        allocationCaps[2] = 30e18;
+
+        vm.prank(OWNER);
+        vault.updateAllocationCaps(markets, allocationCaps);
+
+        uint256 maxDepositBeforePause = vault.maxDeposit(NULL);
+
+        weEthIonPool.pause();
+        uint256 maxDepositAfterPause = vault.maxDeposit(NULL);
+
+        rsEthIonPool.pause();
+        uint256 maxDepositAfterSecondPause = vault.maxDeposit(NULL);
+
+        rswEthIonPool.pause();
+        uint256 maxDepositAfterThirdPause = vault.maxDeposit(NULL);
+
+        assertEq(maxDepositBeforePause, 60e18, "max deposit before pause");
+        assertEq(maxDepositAfterPause, 50e18, "max deposit after pause");
+        assertEq(maxDepositAfterSecondPause, 30e18, "max deposit after second pause");
+        assertEq(maxDepositAfterThirdPause, 0, "max deposit after third pause");
+    }
+
+    function test_WithdrawWithPausedPools() public { }
+
     // --- Previews ---
 
     // Check the difference between preview and actual
@@ -1507,6 +1787,100 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
     function test_PreviewWithdraw() public { }
 
     function test_PreviewRedeem() public { }
+}
+
+contract VaultInflationAttack is VaultSharedSetup {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    /**
+     * Starting Attacker Balance: 11e18 + 10
+     * Attacker Mint: 10 shares
+     * Attacker Donation: 11e18
+     * Alice Deposit: 1e18
+     * Alice Shares Minted:
+     *
+     * How much did the attacker lose during the donation?
+     * Attacker Donated 11e18,
+     */
+    function test_InflationAttackNotProfitable() public {
+        IIonPool[] memory market = new IIonPool[](1);
+        market[0] = IDLE;
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = type(uint256).max;
+
+        IIonPool[] memory queue = new IIonPool[](4);
+        queue[0] = IDLE;
+        queue[1] = weEthIonPool;
+        queue[2] = rsEthIonPool;
+        queue[3] = rswEthIonPool;
+
+        vm.prank(OWNER);
+        vault.addSupportedMarkets(market, allocationCaps, queue, queue);
+
+        uint256 donationAmt = 11e18;
+        uint256 mintAmt = 10;
+
+        // fund attacker
+        setERC20Balance(address(BASE_ASSET), address(this), donationAmt + mintAmt);
+
+        uint256 initialAssetBalance = BASE_ASSET.balanceOf(address(this));
+        console2.log("attacker balance before : ");
+        console2.log(initialAssetBalance);
+
+        vault.mint(mintAmt, address(this));
+        uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(address(this)));
+
+        console2.log("attackerClaimAfterMint: ");
+        console2.log(attackerClaimAfterMint);
+
+        console2.log("donationAmt: ");
+        console2.log(donationAmt);
+
+        // donate to inflate exchange rate by increasing `totalAssets`
+        IERC20(address(BASE_ASSET)).transfer(address(vault), donationAmt);
+
+        // how much of this donation was captured by the virtual shares on the vault?
+        uint256 attackerClaimAfterDonation = vault.previewRedeem(vault.balanceOf(address(this)));
+
+        console2.log("attackerClaimAfterDonation: ");
+        console2.log(attackerClaimAfterDonation);
+
+        uint256 lossFromDonation = attackerClaimAfterMint + donationAmt - attackerClaimAfterDonation;
+
+        console2.log("loss from donation: ");
+        console2.log(lossFromDonation);
+
+        address alice = address(0xabcd);
+        setERC20Balance(address(BASE_ASSET), alice, 10e18 + 10);
+
+        vm.startPrank(alice);
+        IERC20(address(BASE_ASSET)).approve(address(vault), 1e18);
+        vault.deposit(1e18, alice);
+        vm.stopPrank();
+
+        // Alice gained zero shares due to exchange rate inflation
+        uint256 aliceShares = vault.balanceOf(alice);
+        console.log("alice must lose all her shares : ");
+        console.log(aliceShares);
+
+        // How much of alice's deposits were captured by the attacker's shares?
+        uint256 attackerClaimAfterAlice = vault.previewRedeem(vault.balanceOf(address(this)));
+        uint256 attackerGainFromAlice = attackerClaimAfterAlice - attackerClaimAfterDonation;
+        console2.log("attackerGainFromAlice: ");
+        console2.log(attackerGainFromAlice);
+
+        vault.redeem(vault.balanceOf(address(this)) - 3, address(this), address(this));
+        uint256 afterAssetBalance = BASE_ASSET.balanceOf(address(this));
+
+        console.log("attacker balance after : ");
+        console.log(afterAssetBalance);
+
+        assertLe(attackerGainFromAlice, lossFromDonation, "attack must not be profitable");
+        assertLe(afterAssetBalance, initialAssetBalance, "attacker must not be profitable");
+    }
 }
 
 contract VaultDeposit_WithoutSupplyFactor is VaultDeposit {

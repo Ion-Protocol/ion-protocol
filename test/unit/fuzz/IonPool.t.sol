@@ -71,11 +71,11 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         ionPool.supply(lender1, supplyAmount, new bytes32[](0));
 
         assertEq(lens.liquidity(iIonPool), supplyAmountBeforeSupply + supplyAmount, "weth");
-        assertEq(ionPool.balanceOf(lender1), normalizedAmount, "ionPool balanceOf");
+        assertEq(ionPool.normalizedBalanceOf(lender1), normalizedAmount, "ionPool balanceOf");
 
         uint256 roundingError = currentSupplyFactor / RAY;
 
-        assertLe(ionPool.getUnderlyingClaimOf(lender1) - roundingError, supplyAmount, "balanceOf rounding error");
+        assertLe(ionPool.balanceOf(lender1) - roundingError, supplyAmount, "balanceOf rounding error");
     }
 
     function testFuzz_SupplyBaseToDifferentAddress(uint256 supplyAmount) public {
@@ -105,10 +105,10 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         ionPool.supply(address(this), supplyAmount, new bytes32[](0));
 
         assertEq(lens.liquidity(iIonPool), supplyAmountBeforeSupply + supplyAmount);
-        assertEq(ionPool.balanceOf(address(this)), normalizedAmount);
+        assertEq(ionPool.normalizedBalanceOf(address(this)), normalizedAmount);
 
         uint256 roundingError = currentSupplyFactor / RAY;
-        assertLe(ionPool.getUnderlyingClaimOf(address(this)) - roundingError, supplyAmount);
+        assertLe(ionPool.balanceOf(address(this)) - roundingError, supplyAmount);
     }
 
     struct FuzzWithdrawBaseLocs {
@@ -132,7 +132,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         // Changing supply factor, means that the interest will be deposited
         _changeSupplyFactorIfNeeded();
         uint256 supplyAmountAfterRebase = lens.liquidity(iIonPool);
-        uint256 lender1BalanceAfterRebase = ionPool.getUnderlyingClaimOf(lender1);
+        uint256 lender1BalanceAfterRebase = ionPool.balanceOf(lender1);
 
         assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase);
 
@@ -141,7 +141,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         vm.assume(locs.withdrawAmount > 0);
 
         uint256 underlyingBeforeWithdraw = underlying.balanceOf(lender1);
-        uint256 rewardAssetBalanceBeforeWithdraw = ionPool.getUnderlyingClaimOf(lender1);
+        uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
 
         locs.currentTotalDebt = lens.debt(iIonPool);
         (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
@@ -159,7 +159,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         ionPool.withdraw(lender1, locs.withdrawAmount);
 
         uint256 underlyingAfterWithdraw = underlying.balanceOf(lender1);
-        uint256 rewardAssetBalanceAfterWithdraw = ionPool.getUnderlyingClaimOf(lender1);
+        uint256 rewardAssetBalanceAfterWithdraw = ionPool.balanceOf(lender1);
 
         uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
         uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
@@ -170,7 +170,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         assertGe(rewardAssetBurned, underlyingWithdrawn);
 
         uint256 roundingError = currentSupplyFactor / RAY;
-        assertLt(ionPool.balanceOf(lender1), lender1BalanceAfterRebase - locs.withdrawAmount + roundingError);
+        assertLt(ionPool.normalizedBalanceOf(lender1), lender1BalanceAfterRebase - locs.withdrawAmount + roundingError);
     }
 
     function testFuzz_WithdrawBaseToDifferentAddress(uint256 supplyAmount, uint256 withdrawAmount) public {
@@ -187,7 +187,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         // Changing supply factor, means that the interest will be deposited
         _changeSupplyFactorIfNeeded();
         uint256 supplyAmountAfterRebase = lens.liquidity(iIonPool);
-        uint256 lender1BalanceAfterRebase = ionPool.getUnderlyingClaimOf(lender1);
+        uint256 lender1BalanceAfterRebase = ionPool.balanceOf(lender1);
 
         assertEq(supplyAmountAfterRebase, lender1BalanceAfterRebase, "amount after rebase");
 
@@ -196,7 +196,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         vm.assume(locs.withdrawAmount > 0);
 
         uint256 underlyingBeforeWithdraw = underlying.balanceOf(lender2);
-        uint256 rewardAssetBalanceBeforeWithdraw = ionPool.getUnderlyingClaimOf(lender1);
+        uint256 rewardAssetBalanceBeforeWithdraw = ionPool.balanceOf(lender1);
 
         locs.currentTotalDebt = lens.debt(iIonPool);
         (locs.supplyFactorIncrease,,, locs.newDebtIncrease,) = ionPool.calculateRewardAndDebtDistribution();
@@ -214,7 +214,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
         ionPool.withdraw(lender2, locs.withdrawAmount);
 
         uint256 underlyingAfterWithdraw = underlying.balanceOf(lender2);
-        uint256 rewardAssetBalanceAfterWithdraw = ionPool.getUnderlyingClaimOf(lender1);
+        uint256 rewardAssetBalanceAfterWithdraw = ionPool.balanceOf(lender1);
 
         uint256 underlyingWithdrawn = underlyingAfterWithdraw - underlyingBeforeWithdraw;
         uint256 rewardAssetBurned = rewardAssetBalanceBeforeWithdraw - rewardAssetBalanceAfterWithdraw;
@@ -226,7 +226,7 @@ abstract contract IonPool_LenderFuzzTestBase is IonPoolSharedSetup, IIonPoolEven
 
         uint256 roundingError = currentSupplyFactor / RAY;
         assertLt(
-            ionPool.getUnderlyingClaimOf(lender1),
+            ionPool.balanceOf(lender1),
             lender1BalanceAfterRebase - locs.withdrawAmount + roundingError,
             "underlying claim"
         );
@@ -1268,7 +1268,7 @@ contract IonPool_BorrowerFuzzTest is IonPool_BorrowerFuzzTestBase {
 
         assertEq(lens.liquidity(iIonPool), INITIAL_LENDER_UNDERLYING_BALANCE);
         assertEq(underlying.balanceOf(address(ionPool)), INITIAL_LENDER_UNDERLYING_BALANCE);
-        assertEq(ionPool.balanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
+        assertEq(ionPool.normalizedBalanceOf(lender2), INITIAL_LENDER_UNDERLYING_BALANCE);
 
         for (uint256 i = 0; i < lens.ilkCount(iIonPool); i++) {
             assertEq(collaterals[i].allowance(borrower1, address(gemJoins[i])), type(uint256).max);

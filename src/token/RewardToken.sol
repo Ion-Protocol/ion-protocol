@@ -333,8 +333,6 @@ abstract contract RewardToken is
             $._normalizedBalances[from] = oldSenderBalance - amountNormalized;
         }
         $._normalizedBalances[to] += amountNormalized;
-
-        emit Transfer(from, to, amountNormalized);
     }
 
     /**
@@ -450,10 +448,10 @@ abstract contract RewardToken is
     }
 
     /**
-     * @dev Current token balance
+     * @dev Current claim of the underlying token inclusive of interest to be accrued.
      * @param user to get balance of
      */
-    function getUnderlyingClaimOf(address user) public view returns (uint256) {
+    function balanceOf(address user) public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
@@ -462,10 +460,18 @@ abstract contract RewardToken is
     }
 
     /**
+     * @dev Current claim of the underlying token without accounting for interest to be accrued.
+     */
+    function balanceOfUnaccrued(address user) public view returns (uint256) {
+        RewardTokenStorage storage $ = _getRewardTokenStorage();
+        return $._normalizedBalances[user].rayMulDown($.supplyFactor);
+    }
+
+    /**
      * @dev Accounting is done in normalized balances
      * @param user to get normalized balance of
      */
-    function balanceOf(address user) external view returns (uint256) {
+    function normalizedBalanceOf(address user) external view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $._normalizedBalances[user];
     }
@@ -494,7 +500,10 @@ abstract contract RewardToken is
         return $.treasury;
     }
 
-    function getTotalUnderlyingClaimsUnaccrued() public view returns (uint256) {
+    /**
+     * @dev Total claim of the underlying asset belonging to lenders not inclusive of the new interest to be accrued.
+     */
+    function totalSupplyUnaccrued() public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
@@ -507,9 +516,9 @@ abstract contract RewardToken is
     }
 
     /**
-     * @dev Total claim of the underlying asset belonging to lenders.
+     * @dev Total claim of the underlying asset belonging to lender inclusive of the new interest to be accrued.
      */
-    function getTotalUnderlyingClaims() public view returns (uint256) {
+    function totalSupply() public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         uint256 _normalizedTotalSupply = $.normalizedTotalSupply;
@@ -518,22 +527,20 @@ abstract contract RewardToken is
             return 0;
         }
 
-        (uint256 totalSupplyFactorIncrease,,,,) = calculateRewardAndDebtDistribution();
+        (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();
 
-        return _normalizedTotalSupply.rayMulDown($.supplyFactor + totalSupplyFactorIncrease);
+        return _normalizedTotalSupply.rayMulDown($.supplyFactor + totalSupplyFactorIncrease) + totalTreasuryMintAmount;
     }
 
-    function totalSupplyUnaccrued() public view returns (uint256) {
+    function normalizedTotalSupplyUnaccrued() public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
         return $.normalizedTotalSupply;
     }
 
     /**
-     * @dev Current total supply
-     *
-     * Normalized total supply and total supply are same in non-rebasing token.
+     * @dev Normalized total supply.
      */
-    function totalSupply() public view returns (uint256) {
+    function normalizedTotalSupply() public view returns (uint256) {
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
         (uint256 totalSupplyFactorIncrease, uint256 totalTreasuryMintAmount,,,) = calculateRewardAndDebtDistribution();

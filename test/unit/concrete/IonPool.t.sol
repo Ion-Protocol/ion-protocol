@@ -1129,6 +1129,52 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
         }
     }
 
+    // If zero borrow rate, only the last updated timestamp should update
+    function test_CalculateRewardAndDebtDistributionZeroBorrowRate() external {
+        // update interest rate module to have zero rates.
+        IlkData[] memory ilkConfigs = new IlkData[](3);
+        uint16[] memory distributionFactors = new uint16[](3);
+        distributionFactors[0] = 0.2e4;
+        distributionFactors[1] = 0.4e4;
+        distributionFactors[2] = 0.4e4;
+
+        for (uint8 i; i != 3; ++i) {
+            IlkData memory ilkConfig = IlkData({
+                adjustedProfitMargin: 0,
+                minimumKinkRate: 0,
+                reserveFactor: 0,
+                adjustedBaseRate: 0,
+                minimumBaseRate: 0,
+                optimalUtilizationRate: 9000,
+                distributionFactor: distributionFactors[i],
+                adjustedAboveKinkSlope: 0,
+                minimumAboveKinkSlope: 0
+            });
+            ilkConfigs[i] = ilkConfig;
+        }
+
+        interestRateModule = new InterestRate(ilkConfigs, apyOracle);
+        ionPool.updateInterestRateModule(interestRateModule);
+
+        vm.warp(block.timestamp + 1 days);
+
+        (
+            uint256 totalSupplyFactorIncrease,
+            ,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        ) = ionPool.calculateRewardAndDebtDistribution();
+
+        assertEq(totalSupplyFactorIncrease, 0, "total supply factor");
+        assertEq(totalDebtIncrease, 0, "total debt increase");
+
+        for (uint8 i; i != 3; ++i) {
+            assertEq(rateIncreases[i], 0, "rate");
+            assertEq(timestampIncreases[i], 1 days, "timestamp increase");
+        }
+    }
+
     function test_AccrueInterest() public {
         uint256 collateralDepositAmount = 10e18;
         uint256 normalizedBorrowAmount = 5e18;
@@ -1191,6 +1237,143 @@ contract IonPool_InterestTest is IonPoolSharedSetup, IIonPoolEvents {
 
             previousRates[i] = rate;
         }
+    }
+
+    // If distribution factor is zero, should return
+    // minimum kink rate.
+    function test_DivideByZeroWhenDistributionFactorIsZero() public {
+        IlkData[] memory ilkConfigs = new IlkData[](2);
+        uint16[] memory distributionFactors = new uint16[](2);
+        distributionFactors[0] = 0;
+        distributionFactors[1] = 1e4;
+
+        uint96 minimumKinkRate = 4_062_570_058_138_700_000;
+        for (uint8 i; i != 2; ++i) {
+            IlkData memory ilkConfig = IlkData({
+                adjustedProfitMargin: 0,
+                minimumKinkRate: minimumKinkRate,
+                reserveFactor: 0,
+                adjustedBaseRate: 0,
+                minimumBaseRate: 0,
+                optimalUtilizationRate: 9000,
+                distributionFactor: distributionFactors[i],
+                adjustedAboveKinkSlope: 0,
+                minimumAboveKinkSlope: 0
+            });
+            ilkConfigs[i] = ilkConfig;
+        }
+
+        interestRateModule = new InterestRate(ilkConfigs, apyOracle);
+
+        vm.warp(block.timestamp + 1 days);
+
+        (uint256 zeroDistFactorBorrowRate,) = interestRateModule.calculateInterestRate(0, 10e45, 100e18); // 10%
+            // utilization
+        assertEq(zeroDistFactorBorrowRate, minimumKinkRate, "borrow rate should be minimum kink rate");
+
+        (uint256 nonZeroDistFactorBorrowRate,) = interestRateModule.calculateInterestRate(1, 100e45, 100e18); // 90%
+            // utilization
+        assertApproxEqAbs(
+            nonZeroDistFactorBorrowRate, minimumKinkRate, 1, "borrow rate at any util should be minimum kink rate"
+        );
+    }
+
+    // If scaling total eth supply with distribution factor truncates to zero,
+    // should return minimum base rate.
+    function test_DivideByZeroWhenTotalEthSupplyIsSmall() public {
+        IlkData[] memory ilkConfigs = new IlkData[](2);
+        uint16[] memory distributionFactors = new uint16[](2);
+        distributionFactors[0] = 0.5e4;
+        distributionFactors[1] = 0.5e4;
+
+        uint96 minimumKinkRate = 4_062_570_058_138_700_000;
+        uint96 minimumBaseRate = 1_580_630_071_273_960_000;
+        for (uint8 i; i != 2; ++i) {
+            IlkData memory ilkConfig = IlkData({
+                adjustedProfitMargin: 0,
+                minimumKinkRate: minimumKinkRate,
+                reserveFactor: 0,
+                adjustedBaseRate: 0,
+                minimumBaseRate: minimumBaseRate,
+                optimalUtilizationRate: 9000,
+                distributionFactor: distributionFactors[i],
+                adjustedAboveKinkSlope: 0,
+                minimumAboveKinkSlope: 0
+            });
+            ilkConfigs[i] = ilkConfig;
+        }
+
+        interestRateModule = new InterestRate(ilkConfigs, apyOracle);
+
+        vm.warp(block.timestamp + 1 days);
+
+        (uint256 borrowRate,) = interestRateModule.calculateInterestRate(0, 0, 1); // dust amount of eth supply
+        assertEq(borrowRate, minimumBaseRate, "borrow rate should be minimum base rate");
+
+        (uint256 borrowRateWithoutTruncation,) = interestRateModule.calculateInterestRate(1, 90e45, 100e18); // 90%
+            // utilization
+        assertApproxEqAbs(borrowRateWithoutTruncation, minimumKinkRate, 1, "borrow rate without truncation");
+    }
+
+    function test_AccrueInterestWhenPaused() public {
+        uint256 collateralDepositAmount = 10e18;
+        uint256 normalizedBorrowAmount = 5e18;
+
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
+            vm.prank(borrower1);
+            ionPool.depositCollateral(i, borrower1, borrower1, collateralDepositAmount, new bytes32[](0));
+
+            uint256 rate = ionPool.rate(i);
+            uint256 liquidityBefore = lens.liquidity(iIonPool);
+
+            assertEq(ionPool.collateral(i, borrower1), collateralDepositAmount);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * i);
+
+            vm.prank(borrower1);
+            ionPool.borrow(i, borrower1, borrower1, normalizedBorrowAmount, new bytes32[](0));
+
+            uint256 liquidityRemoved = normalizedBorrowAmount.rayMulDown(rate);
+
+            assertEq(ionPool.normalizedDebt(i, borrower1), normalizedBorrowAmount);
+            assertEq(lens.totalNormalizedDebt(iIonPool, i), normalizedBorrowAmount);
+            assertEq(lens.liquidity(iIonPool), liquidityBefore - liquidityRemoved);
+            assertEq(underlying.balanceOf(borrower1), normalizedBorrowAmount.rayMulDown(rate) * (i + 1));
+        }
+
+        vm.warp(block.timestamp + 1 hours);
+
+        ionPool.pause();
+
+        uint256 rate0AfterPause = ionPool.rate(0);
+        uint256 rate1AfterPause = ionPool.rate(1);
+        uint256 rate2AfterPause = ionPool.rate(2);
+
+        uint256 supplyFactorAfterPause = ionPool.supplyFactor();
+        uint256 lenderBalanceAfterPause = ionPool.balanceOf(lender2);
+
+        vm.warp(block.timestamp + 365 days);
+
+        (
+            uint256 totalSupplyFactorIncrease,
+            uint256 treasuryMintAmount,
+            uint104[] memory rateIncreases,
+            uint256 totalDebtIncrease,
+            uint48[] memory timestampIncreases
+        ) = ionPool.calculateRewardAndDebtDistribution();
+
+        assertEq(totalSupplyFactorIncrease, 0, "no supply factor increase");
+        assertEq(treasuryMintAmount, 0, "no treasury mint amount");
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
+            assertEq(rateIncreases[i], 0, "no rate increase");
+            assertEq(timestampIncreases[i], 365 days, "no timestamp increase");
+        }
+        assertEq(totalDebtIncrease, 0, "no total debt increase");
+
+        assertEq(ionPool.balanceOf(lender2), lenderBalanceAfterPause, "lender balance doesn't change");
+        assertEq(ionPool.supplyFactor(), supplyFactorAfterPause, "supply factor doesn't change");
+        assertEq(ionPool.rate(0), rate0AfterPause, "rate 0 doesn't change");
+        assertEq(ionPool.rate(1), rate1AfterPause, "rate 1 doesn't change");
+        assertEq(ionPool.rate(2), rate2AfterPause, "rate 2 doesn't change");
     }
 }
 

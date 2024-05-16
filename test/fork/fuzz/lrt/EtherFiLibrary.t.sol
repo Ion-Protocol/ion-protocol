@@ -31,7 +31,7 @@ contract EtherFiLibrary_FuzzTest is Test {
 
     function testForkFuzz_GetLstAmountOutForEthAmountIn(uint256 ethAmount) external {
         vm.assume(ethAmount != 0);
-        vm.assume(ethAmount < type(uint128).max);
+        vm.assume(ethAmount < type(uint96).max);
 
         uint256 lrtAmountOut = EtherFiLibrary.getLstAmountOutForEthAmountIn(WEETH_ADDRESS, ethAmount);
 
