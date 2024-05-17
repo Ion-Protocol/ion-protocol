@@ -9,7 +9,7 @@ import { IXERC20 } from "../interfaces/IXERC20.sol";
 
 import { ForwarderXReceiver } from "./ForwarderXReceiver.sol";
 
-contract L2BasicWithdrawal is ForwarderXReceiver {
+contract L1BasicWithdrawal is ForwarderXReceiver {
     constructor(address _connext) ForwarderXReceiver(_connext) { }
 
     function _prepare(
@@ -34,5 +34,9 @@ contract L2BasicWithdrawal is ForwarderXReceiver {
         uint256 assetsOut = vault.redeem(_amount, receiver, address(this));
 
         return abi.encode(vault, lockbox, xToken, assetsOut);
+    }
+
+    function _forwardFunctionCall(bytes memory, bytes32, uint256, address) internal pure override returns (bool) {
+        return true;
     }
 }

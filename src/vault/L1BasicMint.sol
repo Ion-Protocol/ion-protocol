@@ -49,9 +49,9 @@ contract L1BasicMint {
         external
         payable
     {
-        address baseAsset = vault.baseAsset();
-        if (lockbox.ERC20() != baseAsset) revert InvalidVault(vault, lockbox);
-        if (lockbox.XERC20() != address(xToken)) revert InvalidXToken(xToken, lockbox);
+        address baseAsset = vault.BASE_ASSET();
+        if (address(lockbox.ERC20()) != address(vault)) revert InvalidVault(vault, lockbox);
+        if (lockbox.XERC20() != xToken) revert InvalidXToken(xToken, lockbox);
 
         // Convert underlying to vault shares
         IERC20 _baseAsset = IERC20(baseAsset);

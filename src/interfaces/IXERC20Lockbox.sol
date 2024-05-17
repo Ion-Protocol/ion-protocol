@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IXERC20 } from "./IXERC20.sol";
+
 interface IXERC20Lockbox {
     error IXERC20Lockbox_Native();
     error IXERC20Lockbox_NotNative();
@@ -11,9 +14,9 @@ interface IXERC20Lockbox {
 
     receive() external payable;
 
-    function ERC20() external view returns (address);
+    function ERC20() external view returns (IERC20);
     function IS_NATIVE() external view returns (bool);
-    function XERC20() external view returns (address);
+    function XERC20() external view returns (IXERC20);
     function deposit(uint256 _amount) external;
     function depositNative() external payable;
     function depositNativeTo(address _to) external payable;

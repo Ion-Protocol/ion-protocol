@@ -17,6 +17,8 @@ import { ReentrancyGuard } from "openzeppelin-contracts/contracts/utils/Reentran
 import { AccessControlDefaultAdminRules } from
     "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 
+import { safeconsole as console } from "forge-std/safeconsole.sol";
+
 /**
  * @title Ion Lending Vault
  * @author Molecular Labs

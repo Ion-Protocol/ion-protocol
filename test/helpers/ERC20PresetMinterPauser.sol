@@ -91,6 +91,10 @@ contract ERC20PresetMinterPauser is Context, AccessControlEnumerable, ERC20Burna
         _unpause();
     }
 
+    function decimals() public pure override returns (uint8) {
+        return 18;
+    }
+
     function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) {
         super._update(from, to, value);
     }

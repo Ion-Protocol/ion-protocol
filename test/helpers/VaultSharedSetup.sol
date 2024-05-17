@@ -42,10 +42,10 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     address constant FEE_RECIPIENT = address(uint160(uint256(keccak256("FEE_RECIPIENT"))));
     uint256 constant ZERO_FEES = 0;
 
-    IERC20 immutable BASE_ASSET = IERC20(address(new ERC20PresetMinterPauser("Lido Wrapped Staked ETH", "wstETH")));
-    IERC20 immutable WEETH = IERC20(address(new ERC20PresetMinterPauser("EtherFi Restaked ETH", "weETH")));
-    IERC20 immutable RSETH = IERC20(address(new ERC20PresetMinterPauser("KelpDAO Restaked ETH", "rsETH")));
-    IERC20 immutable RSWETH = IERC20(address(new ERC20PresetMinterPauser("Swell Restaked ETH", "rswETH")));
+    IERC20 BASE_ASSET;
+    IERC20 WEETH;
+    IERC20 RSETH;
+    IERC20 RSWETH;
 
     IIonPool constant IDLE = IIonPool(address(uint160(uint256(keccak256("IDLE_ASSET_HOLDINGS")))));
     IIonPool weEthIonPool;
@@ -63,6 +63,11 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     address constant NULL = address(0);
 
     function setUp() public virtual override {
+        BASE_ASSET = IERC20(address(new ERC20PresetMinterPauser("Lido Wrapped Staked ETH", "wstETH")));
+        WEETH = IERC20(address(new ERC20PresetMinterPauser("EtherFi Restaked ETH", "weETH")));
+        RSETH = IERC20(address(new ERC20PresetMinterPauser("KelpDAO Restaked ETH", "rsETH")));
+        RSWETH = IERC20(address(new ERC20PresetMinterPauser("Swell Restaked ETH", "rswETH")));
+
         super.setUp();
 
         weEthIonPool = deployIonPool(BASE_ASSET, WEETH, address(this));

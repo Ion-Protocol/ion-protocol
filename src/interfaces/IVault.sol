@@ -80,7 +80,7 @@ interface IVault {
     function approve(address spender, uint256 value) external returns (bool);
     function asset() external view returns (address);
     function balanceOf(address account) external view returns (uint256);
-    function baseAsset() external view returns (address);
+    function BASE_ASSET() external view returns (address);
     function beginDefaultAdminTransfer(address newAdmin) external;
     function cancelDefaultAdminTransfer() external;
     function caps(address) external view returns (uint256);
