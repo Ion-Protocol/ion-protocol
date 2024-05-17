@@ -20,3 +20,4 @@ surl/=lib/forge-safe/lib/surl/
 v3-core/=lib/v3-core/
 v3-periphery/=lib/v3-periphery/contracts/
 solarray/=lib/solarray/src/
+pendle-core-v2-public/=lib/pendle-core-v2-public/contracts/

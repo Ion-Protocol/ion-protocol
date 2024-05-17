@@ -30,9 +30,20 @@ contract DeployIonPoolScript is DeployScript {
     bytes32 salt = config.readBytes32(".salt");
 
     function createX() public returns (IonPool ionImpl, IonPool ionPool) {
-        // _validateInterface(IERC20(underlying));
-        // _validateInterface(interestRateModule);
-        // _validateInterface(whitelist);
+        _validateInterface(IERC20(underlying));
+        _validateInterface(interestRateModule);
+        _validateInterface(whitelist);
+
+        ionImpl = IonPool(0xAd71a9e73e235A61caEb10059B64459FAB23B8C7);
+        _validateInterfaceIonPool(ionImpl);
+
+        // if (deployCreate2) {
+        //     ionImpl = new IonPool{ salt: DEFAULT_SALT }();
+        // } else {
+        //     ionImpl = new IonPool();
+        // }
+
+        bytes memory initCode = type(TransparentUpgradeableProxy).creationCode;
 
         bytes memory initData = abi.encodeWithSelector(
             IonPool.initialize.selector,
@@ -45,14 +56,6 @@ contract DeployIonPoolScript is DeployScript {
             interestRateModule,
             whitelist
         );
-
-        if (deployCreate2) {
-            ionImpl = new IonPool{ salt: DEFAULT_SALT }();
-        } else {
-            ionImpl = new IonPool();
-        }
-
-        bytes memory initCode = type(TransparentUpgradeableProxy).creationCode;
 
         address proxy =
             CREATEX.deployCreate3(salt, abi.encodePacked(initCode, abi.encode(ionImpl, initialDefaultAdmin, initData)));

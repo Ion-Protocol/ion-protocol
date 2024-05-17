@@ -7,7 +7,7 @@ import { IonPool } from "../../src/IonPool.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { IonHandlerBase } from "../../src/flash/IonHandlerBase.sol";
-import { RsEthHandler } from "../../src/flash/lrt/RsEthHandler.sol";
+import { RswEthHandler } from "../../src/flash/lrt/RswEthHandler.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
@@ -19,21 +19,21 @@ contract DeployHandlersScript is DeployScript {
     string configPath = "./deployment-config/08_DeployHandlers.json";
     string config = vm.readFile(configPath);
 
-    function run() public broadcast returns (IonHandlerBase handler) {
-        IonPool ionPool = IonPool(config.readAddress(".ionPool"));
-        GemJoin gemJoin = GemJoin(config.readAddress(".gemJoin"));
-        Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
+    IonPool ionPool = IonPool(config.readAddress(".ionPool"));
+    GemJoin gemJoin = GemJoin(config.readAddress(".gemJoin"));
+    Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
-        // _validateInterface(ionPool);
-        // _validateInterface(gemJoin);
-        // _validateInterface(whitelist);
+    function run() public broadcast returns (IonHandlerBase handler) {
+        _validateInterface(gemJoin);
+        _validateInterface(whitelist);
+        _validateInterfaceIonPool(ionPool);
 
         if (deployCreate2) {
-            handler = new RsEthHandler{ salt: DEFAULT_SALT }(
+            handler = new RswEthHandler{ salt: DEFAULT_SALT }(
                 ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP
             );
         } else {
-            handler = new RsEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
+            handler = new RswEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
         }
     }
 }

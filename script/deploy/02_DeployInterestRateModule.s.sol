@@ -10,8 +10,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
-import { safeconsole as console } from "forge-std/safeconsole.sol";
-
 // struct IlkData {
 //     // Word 1
 //     uint96 adjustedProfitMargin; // 27 decimals
@@ -54,7 +52,7 @@ contract DeployInterestRateScript is DeployScript {
     function run() public broadcast returns (InterestRate interestRateModule) {
         require(optimalUtilizationRate <= 1e4, "optimalUtilizationRate too high");
 
-        // _validateInterface(yieldOracle);
+        _validateInterface(yieldOracle);
 
         IlkData memory ilkData;
         ilkData.adjustedProfitMargin = adjustedProfitMargin;

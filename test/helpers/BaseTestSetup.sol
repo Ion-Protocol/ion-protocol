@@ -31,11 +31,5 @@ abstract contract BaseTestSetup is Test {
 
     function setUp() public virtual {
         underlying = new ERC20PresetMinterPauser("WETH", "Wrapped Ether");
-        if (address(WETH_ADDRESS).code.length == 0) {
-            vm.etch(address(WETH_ADDRESS), address(underlying).code);
-            underlying = ERC20PresetMinterPauser(address(WETH_ADDRESS));
-            underlying.grantRole(underlying.MINTER_ROLE(), address(this));
-            underlying.grantRole(underlying.DEFAULT_ADMIN_ROLE(), address(this));
-        }
     }
 }
