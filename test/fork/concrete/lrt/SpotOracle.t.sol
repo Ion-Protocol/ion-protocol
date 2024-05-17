@@ -16,8 +16,6 @@ import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-
 abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     using WadRayMath for uint256;
 
@@ -26,7 +24,7 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     ReserveOracle reserveOracle;
     SpotOracle spotOracle;
 
-    function testFork_ViewPrice() public {
+    function testFork_ViewPrice() public virtual {
         uint256 price = spotOracle.getPrice();
         assertGt(price, 0, "price greater than zero");
     }
@@ -64,7 +62,7 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
         assertEq(spotOracle.getSpot(), expectedSpot, "uses exchange rate as min");
     }
 
-    function testFork_MaxTimeFromLastUpdateExceeded() public {
+    function testFork_MaxTimeFromLastUpdateExceeded() public virtual {
         assertGt(spotOracle.getPrice(), 0, "time from last update not exceeded price should not be zero");
         assertGt(spotOracle.getSpot(), 0, "time from last update not exceeded spot should not be zero");
 

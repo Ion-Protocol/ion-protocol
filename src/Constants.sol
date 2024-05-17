@@ -23,6 +23,9 @@ import {
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
 import { IChainlink } from "./interfaces/IChainlink.sol";
 import { ICreateX } from "./interfaces/ICreateX.sol";
+
+import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
+
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
@@ -82,6 +85,12 @@ IRedstonePriceFeed constant MAINNET_USD_PER_ETHX_REDSTONE =
 // Uniswap
 IUniswapV3Pool constant MAINNET_SWETH_ETH_UNISWAP_01 = IUniswapV3Pool(0x30eA22C879628514f1494d4BBFEF79D21A6B49A2);
 IUniswapV3Pool constant MAINNET_WSTETH_WETH_UNISWAP = IUniswapV3Pool(0x109830a1AAaD605BbF02a9dFA7B0B92EC2FB7dAa);
+
+// Pendle Pools
+IPMarketV3 constant PT_WEETH_POOL = IPMarketV3(0xF32e58F92e60f4b0A37A69b95d642A471365EAe8);
+IPMarketV3 constant PT_RSETH_POOL = IPMarketV3(0x4f43c77872Db6BA177c270986CD30c3381AF37Ee);
+IPMarketV3 constant PT_EZETH_POOL = IPMarketV3(0xDe715330043799D7a80249660d1e6b61eB3713B3);
+IPMarketV3 constant PT_RSWETH_POOL = IPMarketV3(0x1729981345aa5CaCdc19eA9eeffea90cF1c6e28b);
 
 // CreateX
 ICreateX constant CREATEX = ICreateX(0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed);

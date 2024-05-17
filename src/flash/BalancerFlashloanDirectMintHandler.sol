@@ -61,7 +61,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingDebt,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         onlyWhitelistedBorrowers(proof)
@@ -131,7 +131,7 @@ abstract contract BalancerFlashloanDirectMintHandler is IonHandlerBase, IFlashLo
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingDebt,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         payable

@@ -85,7 +85,7 @@ abstract contract UniswapFlashswapDirectMintHandler is IonHandlerBase, IUniswapV
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingDebt,
         uint256 deadline,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         onlyWhitelistedBorrowers(proof)

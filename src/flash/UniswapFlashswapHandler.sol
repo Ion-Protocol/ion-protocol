@@ -100,7 +100,7 @@ abstract contract UniswapFlashswapHandler is IonHandlerBase, IUniswapV3SwapCallb
         uint256 maxResultingAdditionalDebt,
         uint160 sqrtPriceLimitX96,
         uint256 deadline,
-        bytes32[] memory proof
+        bytes32[] calldata proof
     )
         external
         checkDeadline(deadline)

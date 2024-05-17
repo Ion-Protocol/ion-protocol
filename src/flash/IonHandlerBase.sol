@@ -50,7 +50,7 @@ abstract contract IonHandlerBase {
      * bypass the whitelist check on `IonPool`.
      * @param proof to validate the whitelist check.
      */
-    modifier onlyWhitelistedBorrowers(bytes32[] memory proof) {
+    modifier onlyWhitelistedBorrowers(bytes32[] calldata proof) {
         WHITELIST.isWhitelistedBorrower(ILK_INDEX, msg.sender, msg.sender, proof);
         _;
     }
