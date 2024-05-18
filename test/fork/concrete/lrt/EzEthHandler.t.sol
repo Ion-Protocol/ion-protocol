@@ -6,6 +6,7 @@ import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBas
 import { EzEthHandler } from "./../../../../src/flash/lrt/EzEthHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { RENZO_RESTAKE_MANAGER, EZETH } from "../../../../src/Constants.sol";
+import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
 import { UniswapFlashswapDirectMintHandlerWithDust_Test } from
@@ -35,7 +36,7 @@ abstract contract EzEthHandler_ForkBase is LrtHandler_ForkBase {
         EZETH.approve(address(ezEthHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(IIonPool(address(ionPool))); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 

@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 import { BalancerFlashloanDirectMintHandler } from "../../../../src/flash/BalancerFlashloanDirectMintHandler.sol";
+import { ISpotOracle } from "../../../../src/interfaces/ISpotOracle.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
@@ -23,7 +24,7 @@ abstract contract BalancerFlashloanDirectMintHandler_FuzzTest is LstHandler_Fork
             _getProviderLibrary().getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         uint256 ilkRate = ionPool.rate(_getIlkIndex());
-        uint256 ilkSpot = ionPool.spot(_getIlkIndex()).getSpot();
+        uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, _getIlkIndex())).getSpot();
         // Calculating this way emulates the newTotalDebt value in IonPool
         uint256 newTotalDebt = resultingDebt.rayDivUp(ilkRate) * ilkRate;
 
@@ -56,7 +57,7 @@ abstract contract BalancerFlashloanDirectMintHandler_FuzzTest is LstHandler_Fork
             _getProviderLibrary().getEthAmountInForLstAmountOut(resultingCollateral - initialDeposit);
 
         uint256 ilkRate = ionPool.rate(_getIlkIndex());
-        uint256 ilkSpot = ionPool.spot(_getIlkIndex()).getSpot();
+        uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, _getIlkIndex())).getSpot();
         uint256 newTotalDebt = resultingDebt.rayDivUp(ilkRate) * ilkRate;
 
         bool unsafePositionChange = newTotalDebt > resultingCollateral * ilkSpot;

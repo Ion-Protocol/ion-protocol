@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { SpotOracle } from "./../../../../src/oracles/spot/SpotOracle.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
+import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 
 import { PtHandler_ForkBase } from "../../../helpers/handlers/PtHandlerBase.sol";
 
@@ -31,7 +33,7 @@ abstract contract PtHandler_FuzzTest is PtHandler_ForkBase {
 
         uint256 additionalDebt = quote;
         uint256 ilkRate = ionPool.rate(_getIlkIndex());
-        uint256 ilkSpot = ionPool.spot(_getIlkIndex()).getSpot();
+        uint256 ilkSpot = SpotOracle(lens.spot(IIonPool(address(ionPool)), _getIlkIndex())).getSpot();
         // Calculating this way emulates the newTotalDebt value in IonPool
         uint256 newTotalDebt = additionalDebt.rayDivUp(ilkRate) * ilkRate;
 

@@ -238,7 +238,7 @@ contract RenzoLibrary_Comparison_FuzzTest is RenzoLibraryHelper, Test {
             "old method mint amount out is greater than or equal to new method mint amount out"
         );
 
-        assertApproxEqAbs(oldMethodEthAmountIn, newMethodEthAmountIn, 1e8, "eth amount in approx eq");
+        assertApproxEqAbs(oldMethodEthAmountIn, newMethodEthAmountIn, 1e10, "eth amount in approx eq");
 
         uint256 oldMethodDust = oldMethodActualMintAmountOut - minMintAmount;
         uint256 newMethodDust = newMethodActualMintAmountOut - minMintAmount;

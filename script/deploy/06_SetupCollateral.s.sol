@@ -21,7 +21,7 @@ contract SetupCollateralScript is DeployScript {
     uint256 dust = config.readUint(".dust");
 
     function run() public broadcast {
-        _validateInterface(ionPool);
+        _validateInterfaceIonPool(ionPool);
         _validateInterface(IERC20(ilkAddress));
         _validateInterface(spotOracle);
 

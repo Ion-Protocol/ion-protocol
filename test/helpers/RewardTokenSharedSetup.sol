@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { RewardModule } from "../../src/reward/RewardModule.sol";
+import { RewardToken } from "../../src/token/RewardToken.sol";
 import { WadRayMath } from "../../src/libraries/math/WadRayMath.sol";
 import { TransparentUpgradeableProxy } from "../../src/admin/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "../../src/admin/ProxyAdmin.sol";
 
 import { BaseTestSetup } from "./BaseTestSetup.sol";
 
-contract RewardModuleExposed is RewardModule {
+contract RewardTokenExposed is RewardToken {
     function init(
         address _underlying,
         address _treasury,
@@ -19,7 +19,7 @@ contract RewardModuleExposed is RewardModule {
         external
         initializer
     {
-        RewardModule._initialize(_underlying, _treasury, decimals_, name_, symbol_);
+        RewardToken._initialize(_underlying, _treasury, decimals_, name_, symbol_);
     }
 
     // --- Cheats ---
@@ -33,7 +33,7 @@ contract RewardModuleExposed is RewardModule {
     }
 
     function mint(address user, uint256 amount) external {
-        _mint(user, user, amount);
+        _mint(user, msg.sender, amount);
     }
 
     function mintToTreasury(uint256 amount) external {
@@ -54,7 +54,7 @@ contract RewardModuleExposed is RewardModule {
     { }
 }
 
-abstract contract RewardModuleSharedSetup is BaseTestSetup {
+abstract contract RewardTokenSharedSetup is BaseTestSetup {
     using WadRayMath for uint256;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -63,7 +63,7 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
     event Mint(address indexed user, uint256 amount, uint256 supplyFactor);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    RewardModuleExposed rewardModule;
+    RewardTokenExposed rewardModule;
     ProxyAdmin ionProxyAdmin;
 
     uint256 sendingUserPrivateKey = 16;
@@ -76,43 +76,43 @@ abstract contract RewardModuleSharedSetup is BaseTestSetup {
     function setUp() public virtual override {
         super.setUp();
         ionProxyAdmin = new ProxyAdmin(address(this));
-        RewardModuleExposed rewardModuleImpl = new RewardModuleExposed();
+        RewardTokenExposed rewardModuleImpl = new RewardTokenExposed();
 
         bytes memory initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector, address(underlying), address(TREASURY), DECIMALS, NAME, SYMBOL
+            RewardTokenExposed.init.selector, address(underlying), address(TREASURY), DECIMALS, NAME, SYMBOL
         );
 
-        rewardModule = RewardModuleExposed(
+        rewardModule = RewardTokenExposed(
             address(new TransparentUpgradeableProxy(address(rewardModuleImpl), address(ionProxyAdmin), initializeBytes))
         );
     }
 
     function test_Initialize() external {
         ProxyAdmin _admin = new ProxyAdmin(address(this));
-        RewardModuleExposed _rewardModuleImpl = new RewardModuleExposed();
+        RewardTokenExposed _rewardModuleImpl = new RewardTokenExposed();
 
         bytes memory initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector, address(0), address(TREASURY), DECIMALS, NAME, SYMBOL
+            RewardTokenExposed.init.selector, address(0), address(TREASURY), DECIMALS, NAME, SYMBOL
         );
 
-        vm.expectRevert(RewardModule.InvalidUnderlyingAddress.selector);
-        rewardModule = RewardModuleExposed(
+        vm.expectRevert(RewardToken.InvalidUnderlyingAddress.selector);
+        rewardModule = RewardTokenExposed(
             address(new TransparentUpgradeableProxy(address(_rewardModuleImpl), address(_admin), initializeBytes))
         );
 
         initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector, address(underlying), address(0), DECIMALS, NAME, SYMBOL
+            RewardTokenExposed.init.selector, address(underlying), address(0), DECIMALS, NAME, SYMBOL
         );
 
-        vm.expectRevert(RewardModule.InvalidTreasuryAddress.selector);
-        rewardModule = RewardModuleExposed(
+        vm.expectRevert(RewardToken.InvalidTreasuryAddress.selector);
+        rewardModule = RewardTokenExposed(
             address(new TransparentUpgradeableProxy(address(_rewardModuleImpl), address(_admin), initializeBytes))
         );
 
         initializeBytes = abi.encodeWithSelector(
-            RewardModuleExposed.init.selector, address(underlying), address(TREASURY), DECIMALS, NAME, SYMBOL
+            RewardTokenExposed.init.selector, address(underlying), address(TREASURY), DECIMALS, NAME, SYMBOL
         );
-        rewardModule = RewardModuleExposed(
+        rewardModule = RewardTokenExposed(
             address(new TransparentUpgradeableProxy(address(_rewardModuleImpl), address(_admin), initializeBytes))
         );
     }

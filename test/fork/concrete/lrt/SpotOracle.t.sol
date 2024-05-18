@@ -14,6 +14,8 @@ import { EzEthWstEthReserveOracle } from "./../../../../src/oracles/reserve/lrt/
 import { EzEthWstEthSpotOracle } from "./../../../../src/oracles/spot/lrt/EzEthWstEthSpotOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 
+import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 
 abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
@@ -30,13 +32,14 @@ abstract contract SpotOracle_ForkTest is ReserveOracleSharedSetup {
     }
 
     function testFork_ViewSpot() public {
-        uint256 price = spotOracle.getPrice();
-        uint256 exchangeRate = reserveOracle.currentExchangeRate();
-        uint256 value = price <= exchangeRate ? price : exchangeRate;
-
         uint256 ltv = spotOracle.LTV();
-        uint256 expectedSpot = ltv.wadMulDown(value);
 
+        uint256 price = spotOracle.getPrice();
+        uint256 currentExchangeRate = reserveOracle.currentExchangeRate();
+
+        uint256 min = Math.min(price, currentExchangeRate);
+
+        uint256 expectedSpot = ltv.wadMulDown(min);
         uint256 spot = spotOracle.getSpot();
 
         assertEq(spot, expectedSpot, "spot");

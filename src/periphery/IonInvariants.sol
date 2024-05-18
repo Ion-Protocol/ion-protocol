@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { IonPool } from "../IonPool.sol";
+import { IIonLens } from "../interfaces/IIonLens.sol";
+import { IIonPool } from "../interfaces/IIonPool.sol";
 import { WadRayMath } from "../libraries/math/WadRayMath.sol";
 
 /**
@@ -13,12 +14,18 @@ import { WadRayMath } from "../libraries/math/WadRayMath.sol";
 contract IonInvariants {
     using WadRayMath for uint256;
 
+    IIonLens lens;
+
+    constructor(IIonLens _lens) {
+        lens = _lens;
+    }
+
     /**
      * @notice Liquidity in pool + debt to pool >= total supply.
      */
-    function Invariant1(IonPool ionPool) external view {
+    function Invariant1(IIonPool ionPool) external view {
         require(
-            ionPool.weth().scaleUpToRad(18) + ionPool.debtUnaccrued()
+            lens.liquidity(ionPool).scaleUpToRad(18) + lens.debtUnaccrued(ionPool)
                 >= ionPool.normalizedTotalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
         );
     }
@@ -26,35 +33,36 @@ contract IonInvariants {
     /**
      * @notice [Sum of all (ilk total normalized debt * ilk rate)] + unbacked debt >= debt to pool.
      */
-    function Invariant2(IonPool ionPool) external view {
+    function Invariant2(IIonPool ionPool) external view {
         uint256 totalDebt;
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
-            uint256 totalNormalizedDebt = ionPool.totalNormalizedDebt(i);
-            uint256 ilkRate = ionPool.rateUnaccrued(i);
+        for (uint8 i = 0; i < lens.ilkCount(ionPool); i++) {
+            uint256 totalNormalizedDebt = lens.totalNormalizedDebt(ionPool, i);
+            uint256 ilkRate = lens.rateUnaccrued(ionPool, i);
             totalDebt += totalNormalizedDebt * ilkRate;
         }
-        require(totalDebt + ionPool.totalUnbackedDebt() == ionPool.debtUnaccrued());
+        require(totalDebt + lens.totalUnbackedDebt(ionPool) == lens.debtUnaccrued(ionPool));
     }
 
     /**
      * @notice Invariant1 accrued
      */
-    function Invariant3(IonPool ionPool) external view {
+    function Invariant3(IIonPool ionPool) external view {
         require(
-            ionPool.weth().scaleUpToRad(18) + ionPool.debt() >= ionPool.normalizedTotalSupply() * ionPool.supplyFactor()
+            lens.liquidity(ionPool).scaleUpToRad(18) + lens.debt(ionPool)
+                >= ionPool.normalizedTotalSupply() * ionPool.supplyFactor()
         );
     }
 
     /**
      * @notice Invariant2 accrued
      */
-    function Invariant4(IonPool ionPool) external view {
+    function Invariant4(IIonPool ionPool) external view {
         uint256 totalDebt;
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
-            uint256 totalNormalizedDebt = ionPool.totalNormalizedDebt(i);
+        for (uint8 i = 0; i < lens.ilkCount(ionPool); i++) {
+            uint256 totalNormalizedDebt = lens.totalNormalizedDebt(ionPool, i);
             uint256 ilkRate = ionPool.rate(i);
             totalDebt += totalNormalizedDebt * ilkRate;
         }
-        require(totalDebt + ionPool.totalUnbackedDebt() == ionPool.debt());
+        require(totalDebt + lens.totalUnbackedDebt(ionPool) == lens.debt(ionPool));
     }
 }

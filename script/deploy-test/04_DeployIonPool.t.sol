@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { IIonPool } from "../../src/interfaces/IIonPool.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { DeployTestBase } from "./00_DeployTestBase.t.sol";
 import { DeployIonPoolScript } from "../deploy/04_DeployIonPool.s.sol";
@@ -9,14 +10,15 @@ address constant CREATEX_PUBLIC_KEY = 0x01bd9aBD70D74D8eC70D338bD6099ca29DA3F9B4
 
 contract DeployIonPoolTest is DeployTestBase, DeployIonPoolScript {
     function checkState(IonPool ionPool) public {
-        assertGt(address(ionPool).code.length, 0, "code");
+        address ionPoolAddr = address(ionPool);
+        assertGt(ionPoolAddr.code.length, 0, "code");
         assertEq(ionPool.owner(), initialDefaultAdmin, "owner");
         assertEq(ionPool.defaultAdmin(), initialDefaultAdmin, "initial default admin");
         assertEq(address(ionPool.underlying()), underlying, "underlying");
         assertEq(ionPool.treasury(), treasury, "treasury");
         assertEq(ionPool.decimals(), 18, "decimals");
-        assertEq(ionPool.interestRateModule(), address(interestRateModule), "interest rate module");
-        assertEq(ionPool.whitelist(), address(whitelist), "whitelist");
+        assertEq(lens.interestRateModule(IIonPool(ionPoolAddr)), address(interestRateModule), "interest rate module");
+        assertEq(lens.whitelist(IIonPool(ionPoolAddr)), address(whitelist), "whitelist");
 
         vm.startPrank(initialDefaultAdmin);
         ionPool.beginDefaultAdminTransfer(protocol);

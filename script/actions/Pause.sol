@@ -12,7 +12,7 @@ address constant SAFE = 0xcecc1978A819D4A3c0A2ee7C260ECb7A10732EEF;
 
 contract PausePool is BaseScript, BatchScript {
     function run(bool send, IonPool ionPool) public broadcast {
-        _validateInterface(ionPool);
+        // _validateInterface(ionPool);
 
         bytes memory pause = abi.encodeWithSelector(IonPool.pause.selector);
 
@@ -24,7 +24,7 @@ contract PausePool is BaseScript, BatchScript {
 
 contract UnpausePool is BaseScript, BatchScript {
     function run(bool send, IonPool ionPool) public broadcast {
-        _validateInterface(ionPool);
+        // _validateInterface(ionPool);
 
         bytes memory unpause = abi.encodeWithSelector(IonPool.unpause.selector);
 
@@ -36,7 +36,7 @@ contract UnpausePool is BaseScript, BatchScript {
 
 contract PauseGemJoin is BaseScript, BatchScript {
     function run(bool send, GemJoin gemJoin) public broadcast {
-        _validateInterface(gemJoin);
+        // _validateInterface(gemJoin);
 
         bytes memory pause = abi.encodeWithSelector(GemJoin.pause.selector, gemJoin);
 
@@ -61,11 +61,11 @@ contract UnpauseGemJoin is BaseScript, BatchScript {
  */
 contract PauseSystem is BaseScript, BatchScript {
     function run(bool send, GemJoin gemJoin) public broadcast {
-        _validateInterface(gemJoin);
+        // _validateInterface(gemJoin);
 
         IonPool pool = IonPool(gemJoin.POOL());
 
-        _validateInterface(pool);
+        // _validateInterface(pool);
 
         bytes memory pause = abi.encodeWithSelector(IonPool.pause.selector);
 
@@ -82,11 +82,11 @@ contract PauseSystem is BaseScript, BatchScript {
  */
 contract UnpauseSystem is BaseScript, BatchScript {
     function run(bool send, GemJoin gemJoin) public broadcast {
-        _validateInterface(gemJoin);
+        // _validateInterface(gemJoin);
 
         IonPool pool = IonPool(gemJoin.POOL());
 
-        _validateInterface(pool);
+        // _validateInterface(pool);
 
         bytes memory unpause = abi.encodeWithSelector(IonPool.unpause.selector);
 

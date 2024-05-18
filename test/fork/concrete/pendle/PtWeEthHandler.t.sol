@@ -6,6 +6,7 @@ import { PtHandler } from "../../../../src/flash/PtHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { IWeEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
 import { EtherFiLibrary } from "../../../../src/libraries/lrt/EtherFiLibrary.sol";
+import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
 import { PtHandler_ForkBase } from "../../../helpers/handlers/PtHandlerBase.sol";
@@ -34,7 +35,7 @@ abstract contract PtWeEthHandler_ForkBase is PtHandler_ForkBase {
         _pt.approve(address(ptHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(IIonPool(address(ionPool))); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 

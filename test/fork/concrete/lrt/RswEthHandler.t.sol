@@ -7,6 +7,7 @@ import { RswEthHandler } from "../../../../src/flash/lrt/RswEthHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { RSWETH } from "../../../../src/Constants.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
+import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
 import { UniswapFlashswapDirectMintHandler_Test } from "../handlers-base/UniswapFlashswapDirectMintHandler.t.sol";
@@ -43,7 +44,7 @@ abstract contract RswEthHandler_ForkBase is LrtHandler_ForkBase {
         RSWETH.approve(address(rswEthHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(IIonPool(address(ionPool))); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 

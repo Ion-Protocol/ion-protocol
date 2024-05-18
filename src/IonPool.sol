@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { Whitelist } from "./Whitelist.sol";
 import { SpotOracle } from "./oracles/spot/SpotOracle.sol";
-import { RewardModule } from "./reward/RewardModule.sol";
+import { RewardToken } from "./token/RewardToken.sol";
 import { InterestRate } from "./InterestRate.sol";
 import { WadRayMath, RAY } from "./libraries/math/WadRayMath.sol";
 
@@ -23,7 +23,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
  *
  * @custom:security-contact security@molecularlabs.io
  */
-contract IonPool is PausableUpgradeable, RewardModule {
+contract IonPool is PausableUpgradeable, RewardToken {
     using SafeERC20 for IERC20;
     using SafeCast for *;
     using WadRayMath for *;
@@ -106,13 +106,13 @@ contract IonPool is PausableUpgradeable, RewardModule {
     // --- Modifiers ---
     modifier onlyWhitelistedBorrowers(uint8 ilkIndex, address user, bytes32[] memory proof) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedBorrower(ilkIndex, msg.sender, user, proof);
+        $.whitelist.isWhitelistedBorrower(ilkIndex, _msgSender(), user, proof);
         _;
     }
 
     modifier onlyWhitelistedLenders(address user, bytes32[] memory proof) {
         IonPoolStorage storage $ = _getIonPoolStorage();
-        $.whitelist.isWhitelistedLender(msg.sender, user, proof);
+        $.whitelist.isWhitelistedLender(_msgSender(), user, proof);
         _;
     }
 
@@ -141,9 +141,9 @@ contract IonPool is PausableUpgradeable, RewardModule {
         mapping(address unbackedDebtor => uint256) unbackedDebt; // [RAD]
         mapping(address user => mapping(address operator => uint256)) isOperator;
         uint256 debt; // Total Debt [RAD]
-        uint256 weth; // liquidity in pool [WAD]
-        uint256 wethSupplyCap; // [WAD]
-        uint256 totalUnbackedDebt; // Total Unbacked WETH  [RAD]
+        uint256 liquidity; // liquidity in pool [WAD]
+        uint256 supplyCap; // [WAD]
+        uint256 totalUnbackedDebt; // Total Unbacked Underlying  [RAD]
         InterestRate interestRateModule;
         Whitelist whitelist;
     }
@@ -176,7 +176,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
         initializer
     {
         __AccessControlDefaultAdminRules_init(0, initialDefaultAdmin);
-        RewardModule._initialize(_underlying, _treasury, decimals_, name_, symbol_);
+        RewardToken._initialize(_underlying, _treasury, decimals_, name_, symbol_);
 
         _grantRole(ION, initialDefaultAdmin);
 
@@ -278,7 +278,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
     function updateSupplyCap(uint256 newSupplyCap) external onlyRole(ION) {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.wethSupplyCap = newSupplyCap;
+        $.supplyCap = newSupplyCap;
 
         emit SupplyCapUpdated(newSupplyCap);
     }
@@ -478,7 +478,10 @@ contract IonPool is PausableUpgradeable, RewardModule {
         Ilk storage ilk = $.ilks[ilkIndex];
 
         uint256 _totalNormalizedDebt = ilk.totalNormalizedDebt;
-        if (_totalNormalizedDebt == 0 || block.timestamp == ilk.lastRateUpdate) {
+        // Because all interest that would have accrued during a pause is
+        // cancelled upon `unpause`, we return zero interest while markets are
+        // paused.
+        if (_totalNormalizedDebt == 0 || block.timestamp == ilk.lastRateUpdate || paused()) {
             // Unsafe cast OK
             // block.timestamp - ilk.lastRateUpdate will almost always be 0
             // here. The exception is on first borrow.
@@ -490,13 +493,13 @@ contract IonPool is PausableUpgradeable, RewardModule {
         (uint256 borrowRate, uint256 reserveFactor) =
             $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
 
-        if (borrowRate == 0) return (0, 0, 0, 0, 0);
-
-        // Calculates borrowRate ^ (time) and returns the result with RAY precision
-        uint256 borrowRateExpT = _rpow(borrowRate + RAY, block.timestamp - ilk.lastRateUpdate, RAY);
-
         // Unsafe cast OK
         timestampIncrease = uint48(block.timestamp) - ilk.lastRateUpdate;
+
+        if (borrowRate == 0) return (0, 0, 0, 0, timestampIncrease);
+
+        // Calculates borrowRate ^ (time) and returns the result with RAY precision
+        uint256 borrowRateExpT = _rpow(borrowRate + RAY, timestampIncrease, RAY);
 
         // Debt distribution
         // This form of rate accrual is much safer than distributing the new
@@ -537,7 +540,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
         uint256 newTotalDebt = _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.weth -= amount;
+        $.liquidity -= amount;
 
         uint256 _supplyFactor =
             _burn({ user: _msgSender(), receiverOfUnderlying: receiverOfUnderlying, amount: amount });
@@ -564,11 +567,12 @@ contract IonPool is PausableUpgradeable, RewardModule {
         uint256 newTotalDebt = _accrueInterest();
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.weth += amount;
+        $.liquidity += amount;
 
         uint256 _supplyFactor = _mint({ user: user, senderOfUnderlying: _msgSender(), amount: amount });
 
-        uint256 _supplyCap = $.wethSupplyCap;
+        uint256 _supplyCap = $.supplyCap;
+
         if (totalSupply() > _supplyCap) revert DepositSurpassesSupplyCap(amount, _supplyCap);
 
         emit Supply(user, _msgSender(), amount, _supplyFactor, newTotalDebt);
@@ -793,13 +797,13 @@ contract IonPool is PausableUpgradeable, RewardModule {
             uint256 amountWad = amountUint / RAY;
             if (amountUint % RAY > 0) ++amountWad;
 
-            $.weth += amountWad;
+            $.liquidity += amountWad;
             underlying().safeTransferFrom(user, address(this), amountWad);
         } else {
             // Round down in protocol's favor
             uint256 amountWad = uint256(amount) / RAY;
 
-            $.weth -= amountWad;
+            $.liquidity -= amountWad;
 
             underlying().safeTransfer(user, amountWad);
         }
@@ -887,53 +891,11 @@ contract IonPool is PausableUpgradeable, RewardModule {
     // --- Getters ---
 
     /**
-     * @return The total amount of collateral in the pool.
-     */
-    function ilkCount() external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilks.length;
-    }
-
-    /**
-     * @return The index of the collateral with `ilkAddress`.
-     */
-    function getIlkIndex(address ilkAddress) external view returns (uint8) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        bytes32 addressInBytes32 = bytes32(uint256(uint160(ilkAddress)));
-
-        // Since there should never be more than 256 collaterals, an unsafe cast
-        // should be fine
-        return uint8($.ilkAddresses._inner._positions[addressInBytes32] - 1);
-    }
-
-    /**
      * @return The address of the collateral at index `ilkIndex`.
      */
     function getIlkAddress(uint256 ilkIndex) external view returns (address) {
         IonPoolStorage storage $ = _getIonPoolStorage();
         return $.ilkAddresses.at(ilkIndex);
-    }
-
-    /**
-     * @return Whether or not an address is a supported collateral.
-     */
-    function addressContains(address ilk) external view returns (bool) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilkAddresses.contains(ilk);
-    }
-
-    /**
-     * @return The total amount of normalized debt for collateral with index
-     * `ilkIndex`.
-     */
-    function totalNormalizedDebt(uint8 ilkIndex) external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilks[ilkIndex].totalNormalizedDebt;
-    }
-
-    function rateUnaccrued(uint8 ilkIndex) external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilks[ilkIndex].rate;
     }
 
     /**
@@ -945,31 +907,6 @@ contract IonPool is PausableUpgradeable, RewardModule {
         (uint256 newRateIncrease,) = calculateRewardAndDebtDistributionForIlk(ilkIndex);
 
         return $.ilks[ilkIndex].rate + newRateIncrease;
-    }
-
-    /**
-     * @return The timestamp of the last rate update for collateral with index
-     * `ilkIndex`.
-     */
-    function lastRateUpdate(uint8 ilkIndex) external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilks[ilkIndex].lastRateUpdate;
-    }
-
-    /**
-     * @return The spot oracle for collateral with index `ilkIndex`.
-     */
-    function spot(uint8 ilkIndex) external view returns (SpotOracle) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilks[ilkIndex].spot;
-    }
-
-    /**
-     * @return debt ceiling for collateral with index `ilkIndex`.
-     */
-    function debtCeiling(uint8 ilkIndex) external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.ilks[ilkIndex].debtCeiling;
     }
 
     /**
@@ -1005,30 +942,6 @@ contract IonPool is PausableUpgradeable, RewardModule {
     }
 
     /**
-     * @return Amount of `gem` that `user` has for collateral with index `ilkIndex`.
-     */
-    function gem(uint8 ilkIndex, address user) external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.gem[ilkIndex][user];
-    }
-
-    /**
-     * @return The amount of unbacked debt `user` has.
-     */
-    function unbackedDebt(address user) external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.unbackedDebt[user];
-    }
-
-    /**
-     * @return Whether or not `operator` is an `operator` on `user`'s positions.
-     */
-    function isOperator(address user, address operator) external view returns (bool) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.isOperator[user][operator] == 1;
-    }
-
-    /**
      * @return Whether or not `operator` has permission to make unsafe changes
      * to `user`'s positions.
      */
@@ -1038,55 +951,6 @@ contract IonPool is PausableUpgradeable, RewardModule {
         return either(user == operator, $.isOperator[user][operator] == 1);
     }
 
-    function debtUnaccrued() external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.debt;
-    }
-
-    /**
-     * @dev This includes unbacked debt.
-     * @return The total amount of debt.
-     */
-    function debt() external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-
-        (,,, uint256 totalDebtIncrease,) = calculateRewardAndDebtDistribution();
-
-        return $.debt + totalDebtIncrease;
-    }
-
-    /**
-     * @return The total amount of unbacked debt.
-     */
-    function totalUnbackedDebt() external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.totalUnbackedDebt;
-    }
-
-    /**
-     * @return The address of interest rate module.
-     */
-    function interestRateModule() external view returns (address) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return address($.interestRateModule);
-    }
-
-    /**
-     * @return The address of the whitelist.
-     */
-    function whitelist() external view returns (address) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return address($.whitelist);
-    }
-
-    /**
-     * @return The total amount of ETH liquidity in the pool.
-     */
-    function weth() external view returns (uint256) {
-        IonPoolStorage storage $ = _getIonPoolStorage();
-        return $.weth;
-    }
-
     /**
      * @dev Gets the current borrow rate for borrowing against a given collateral.
      */
@@ -1094,6 +958,7 @@ contract IonPool is PausableUpgradeable, RewardModule {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
         uint256 totalEthSupply = totalSupplyUnaccrued();
+
         uint256 _totalNormalizedDebt = $.ilks[ilkIndex].totalNormalizedDebt;
         uint256 _rate = $.ilks[ilkIndex].rate;
 
@@ -1101,6 +966,12 @@ contract IonPool is PausableUpgradeable, RewardModule {
 
         (borrowRate, reserveFactor) = $.interestRateModule.calculateInterestRate(ilkIndex, totalDebt, totalEthSupply);
         borrowRate += RAY;
+    }
+
+    function extsload(bytes32 slot) external view returns (bytes32 value) {
+        assembly {
+            value := sload(slot)
+        }
     }
 
     /**
