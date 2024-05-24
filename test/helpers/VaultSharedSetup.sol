@@ -68,6 +68,9 @@ contract VaultSharedSetup is IonPoolSharedSetup {
 
     address constant NULL = address(0);
 
+    bytes32 public constant ION_POOL_SUPPLY_CAP_SLOT =
+        0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e09;
+
     function setUp() public virtual override {
         super.setUp();
 

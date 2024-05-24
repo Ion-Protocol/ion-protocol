@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { IIonPool } from "./../interfaces/IIonPool.sol";
-import { IIonPool } from "./../interfaces/IIonPool.sol";
 import { RAY } from "./../libraries/math/WadRayMath.sol";
 
 import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
@@ -48,6 +47,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     error MarketsAndAllocationCapLengthMustBeEqual();
     error IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
     error InvalidFeePercentage();
+    error InvalidFeeRecipient();
     error MaxSupportedMarketsReached();
 
     event UpdateSupplyQueue(address indexed caller, IIonPool[] newSupplyQueue);
@@ -144,6 +144,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * @param _feeRecipient The recipient address of the shares minted as fees.
      */
     function updateFeeRecipient(address _feeRecipient) external onlyRole(OWNER_ROLE) {
+        if (_feeRecipient == address(0)) revert InvalidFeeRecipient();
         feeRecipient = _feeRecipient;
     }
 
@@ -459,21 +460,29 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
         for (uint256 i; i != supplyQueueLength;) {
             IIonPool pool = supplyQueue[i];
-
             uint256 depositable = pool == IDLE ? _zeroFloorSub(caps[pool], currentIdleDeposits) : _depositable(pool);
-
             if (depositable != 0) {
                 uint256 toSupply = Math.min(depositable, assets);
 
-                // For the IDLE pool, decrement the accumulator at the end of this
-                // loop, but no external interactions need to be made as the assets
-                // are already on this contract' balance. If the pool supply
-                // reverts, simply skip to the next iteration.
                 if (pool != IDLE) {
-                    try pool.supply(address(this), toSupply, new bytes32[](0)) {
-                        assets -= toSupply;
-                        // solhint-disable-next-line no-empty-blocks
-                    } catch { }
+                    // Early exit ok since this is the last remaining part of
+                    // the user's requested amount and the deposit will
+                    // normalize to zero. Note that this dust amount has already
+                    // been transferred to the vault but is not a 'donation'  as
+                    // this amount was accounted for when calculating the amount
+                    // of shares to mint.
+                    uint256 normalizedSupply = toSupply.mulDiv(RAY, pool.supplyFactor());
+                    if (toSupply == assets && normalizedSupply == 0) {
+                        return;
+                    } else {
+                        // If this call reverts by trying to mint zero shares
+                        // with a small supply amount, skip to the next
+                        // iteration.
+                        try pool.supply(address(this), toSupply, new bytes32[](0)) {
+                            assets -= toSupply;
+                            // solhint-disable-next-line no-empty-blocks
+                        } catch { }
+                    }
                 } else {
                     assets -= toSupply;
                 }
@@ -513,6 +522,9 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 // transfer. If the pool withdraw reverts, simply skip to the
                 // next iteration.
                 if (pool != IDLE) {
+                    // This will never throw InvalidBurnAmount since
+                    // `toWithdraw` is non-zero which means the normalized
+                    // shares to burn inside the IonPool must be non-zero.
                     try pool.withdraw(address(this), toWithdraw) {
                         assets -= toWithdraw;
                         // solhint-disable-next-line no-empty-blocks
