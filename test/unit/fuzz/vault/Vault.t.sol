@@ -952,7 +952,7 @@ contract VaultInflationAttack is VaultSharedSetup {
 
         // deploy using the factory which enforces minimum deposit of 1e9 assets
         // and the 1e3 shares burn.
-        bytes32 salt = keccak256("random salt");
+        bytes32 salt = _getSalt(deployer, "random salt");
 
         setERC20Balance(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
 

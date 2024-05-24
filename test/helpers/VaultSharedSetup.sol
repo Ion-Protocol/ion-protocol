@@ -167,6 +167,12 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         ionPool.grantRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin));
     }
 
+    function _getSalt(address caller, bytes memory str) internal returns (bytes32 salt) {
+        bytes32 keccak = keccak256(str);
+        salt = bytes32(abi.encodePacked(caller, keccak));
+        require(address(bytes20(salt)) == caller, "invalid salt creation");
+    }
+
     function claimAfterDeposit(uint256 currShares, uint256 amount, uint256 supplyFactor) internal returns (uint256) {
         uint256 sharesMinted = amount.rayDivDown(supplyFactor);
         uint256 resultingShares = currShares + sharesMinted;

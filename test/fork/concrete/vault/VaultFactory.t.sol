@@ -24,12 +24,6 @@ contract VaultFactoryTest is VaultSharedSetup {
     IIonPool[] internal newSupplyQueue;
     IIonPool[] internal newWithdrawQueue;
 
-    function _getSalt(address caller, bytes memory str) public returns (bytes32 salt) {
-        bytes32 keccak = keccak256(str);
-        salt = bytes32(abi.encodePacked(caller, keccak)); 
-        require(address(bytes20(salt)) == caller, 'invalid salt creation');
-    }
-
     function setUp() public override {
         super.setUp();
 
@@ -61,7 +55,7 @@ contract VaultFactoryTest is VaultSharedSetup {
     }
 
     function test_CreateVault_Basic() public {
-        bytes32 salt = _getSalt(address(this), "random salt"); 
+        bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
             baseAsset,
@@ -109,7 +103,7 @@ contract VaultFactoryTest is VaultSharedSetup {
     }
 
     function test_CreateVault_SameBytecodeDifferentSalt() public {
-        bytes32 salt = _getSalt(address(this), "random salt"); 
+        bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
             baseAsset,
@@ -127,7 +121,7 @@ contract VaultFactoryTest is VaultSharedSetup {
         setERC20Balance(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
         BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
 
-        bytes32 salt2 = _getSalt(address(this), "second random salt"); 
+        bytes32 salt2 = _getSalt(address(this), "second random salt");
         Vault vault2 = factory.createVault(
             baseAsset,
             feeRecipient,
@@ -151,7 +145,7 @@ contract VaultFactoryTest is VaultSharedSetup {
     }
 
     function test_Revert_CreateVault_SameSaltTwice() public {
-        bytes32 salt = _getSalt(address(this), "random salt"); 
+        bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
             baseAsset,
@@ -180,7 +174,7 @@ contract VaultFactoryTest is VaultSharedSetup {
             MIN_INITIAL_DEPOSIT
         );
     }
-    
+
     function test_Revert_SaltMustBeginWithMsgSender() public {
         bytes32 salt = _getSalt(address(1), "random salt");
         require(address(this) != address(1));
@@ -197,7 +191,7 @@ contract VaultFactoryTest is VaultSharedSetup {
             salt,
             marketsArgs,
             MIN_INITIAL_DEPOSIT
-        ); 
+        );
     }
 
     /**
@@ -205,10 +199,10 @@ contract VaultFactoryTest is VaultSharedSetup {
      * different, it should deploy to different addresses.
      */
     function test_Revert_SaltBeginsWithMsgSenderButDiffEnding() public {
-        bytes32 salt1 = _getSalt(address(this), "first random salt"); 
-        bytes32 salt2 = _getSalt(address(this), "second random salt"); 
+        bytes32 salt1 = _getSalt(address(this), "first random salt");
+        bytes32 salt2 = _getSalt(address(this), "second random salt");
 
-        require(salt1 != salt2, 'salt must be different');
+        require(salt1 != salt2, "salt must be different");
 
         deal(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
         BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
@@ -238,13 +232,13 @@ contract VaultFactoryTest is VaultSharedSetup {
             salt2,
             marketsArgs,
             MIN_INITIAL_DEPOSIT
-        );  
+        );
 
         assertTrue(address(vault1) != address(vault2), "deployment addresses must be different");
     }
 
     function test_CreateVault_SameSaltDifferentBytecode() public {
-        bytes32 salt = _getSalt(address(this), "random salt"); 
+        bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
             BASE_ASSET,
@@ -316,7 +310,7 @@ contract VaultFactoryTest is VaultSharedSetup {
         address deployer = newAddress("DEPLOYER");
         // deploy using the factory which enforces minimum deposit of 1e9 assets
         // and the 1e3 shares burn.
-        bytes32 salt = _getSalt(deployer, "random salt"); 
+        bytes32 salt = _getSalt(deployer, "random salt");
 
         setERC20Balance(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
 
@@ -460,7 +454,7 @@ contract VaultFactoryTest is VaultSharedSetup {
             marketsArgs,
             MIN_INITIAL_DEPOSIT
         );
-        vm.stopPrank(); 
+        vm.stopPrank();
     }
 
     /**
@@ -474,8 +468,8 @@ contract VaultFactoryTest is VaultSharedSetup {
         deal(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
         deal(address(BASE_ASSET), attacker, MIN_INITIAL_DEPOSIT);
 
-        bytes32 deployerSalt = _getSalt(deployer, "random"); 
-        bytes32 attackerSalt = _getSalt(attacker, "random"); 
+        bytes32 deployerSalt = _getSalt(deployer, "random");
+        bytes32 attackerSalt = _getSalt(attacker, "random");
 
         vm.startPrank(deployer);
         BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
@@ -507,7 +501,7 @@ contract VaultFactoryTest is VaultSharedSetup {
             marketsArgs,
             MIN_INITIAL_DEPOSIT
         );
-        vm.stopPrank(); 
+        vm.stopPrank();
 
         assertTrue(address(deployerVault) != address(attackerVault), "different deployment address");
     }

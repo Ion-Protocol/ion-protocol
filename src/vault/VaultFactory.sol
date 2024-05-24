@@ -12,8 +12,8 @@ import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/Sa
  */
 contract VaultFactory {
     using SafeERC20 for IERC20;
-    
-    // --- Errors --- 
+
+    // --- Errors ---
     error SaltMustBeginWithMsgSender();
 
     // --- Events ---
@@ -28,11 +28,11 @@ contract VaultFactory {
         address indexed initialDefaultAdmin
     );
 
-    // --- Modifier --- 
+    // --- Modifier ---
     /**
      * @dev Guarantees msg.sender protection for salts. If another caller
      * frontruns a deployment transaction, the salt cannot be stolen.
-     * Taken from 0age's `Create2Factory`. 
+     * Taken from 0age's `Create2Factory`.
      * https://github.com/0age/Pr000xy/blob/master/contracts/Create2Factory.sol
      * @param salt The salt used for CREATE2 deployment. The first 20 bytes must
      * be the msg.sender.
