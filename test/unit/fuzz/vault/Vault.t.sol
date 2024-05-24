@@ -250,7 +250,7 @@ contract VaultWithYieldAndFeeSharedSetup is VaultSharedSetup {
 contract VaultWithYieldAndFee_Fuzz_FeeAccrual is VaultWithYieldAndFeeSharedSetup {
     function testFuzz_AccruedFeeShares(uint256 initialDeposit, uint256 feePerc, uint256 daysAccrued) public {
         // fee percentage
-        feePerc = bound(feePerc, 0, RAY - 1);
+        feePerc = bound(feePerc, 0, RAY);
 
         vm.prank(OWNER);
         vault.updateFeePercentage(feePerc);
