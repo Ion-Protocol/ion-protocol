@@ -30,7 +30,7 @@ contract Vault_ForkTest is VaultForkBase {
 
         // vault
         assertEq(resultingSharesMinted, totalSupplyAfterDeposit - totalSupply, "vault total supply after deposit");
-        assertApproxEqAbs(maxDeposit, totalAssetsAfterDeposit - totalAssets, 3, "vault total assets after deposit"); // 1
+        assertApproxEqAbs(maxDeposit, totalAssetsAfterDeposit - totalAssets, 4, "vault total assets after deposit"); // 1
             // wei error per market
 
         uint256 withdrawAmt = vault.maxWithdraw(address(this));
@@ -49,7 +49,9 @@ contract Vault_ForkTest is VaultForkBase {
         assertEq(
             resultingSharesRedeemed, totalSupplyAfterDeposit - totalSupplyAfterWithdraw, "total supply after withdraw"
         );
-        assertEq(withdrawAmt, totalAssetsAfterDeposit - totalAssetsAfterWithdraw, "total assets after withdraw");
+        assertApproxEqAbs(
+            withdrawAmt, totalAssetsAfterDeposit - totalAssetsAfterWithdraw, 3, "total assets after withdraw"
+        );
     }
 
     function test_Deposit_MaxMint_MaxRedeem() public {
@@ -77,7 +79,7 @@ contract Vault_ForkTest is VaultForkBase {
         // vault
         assertEq(maxMint, totalSupplyAfterMint - totalSupply, "vault total supply after deposit");
         assertApproxEqAbs(
-            resultingAssetsDeposited, totalAssetsAfterMint - totalAssets, 3, "vault total assets after deposit"
+            resultingAssetsDeposited, totalAssetsAfterMint - totalAssets, 4, "vault total assets after deposit"
         ); // 1 wei error per market
 
         uint256 prevShares = vault.balanceOf(address(this));

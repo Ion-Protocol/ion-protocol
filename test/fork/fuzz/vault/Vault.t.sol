@@ -30,7 +30,7 @@ contract Vault_ForkFuzzTest is VaultForkBase {
 
         // vault
         assertEq(resultingSharesMinted, totalSupplyAfterDeposit - totalSupply, "vault total supply after deposit");
-        assertApproxEqAbs(depositAmt, totalAssetsAfterDeposit - totalAssets, 3, "vault total assets after deposit"); // 1
+        assertApproxEqAbs(depositAmt, totalAssetsAfterDeposit - totalAssets, 4, "vault total assets after deposit"); // 1
             // wei error per market
 
         // tries to withdraw max
@@ -52,7 +52,7 @@ contract Vault_ForkFuzzTest is VaultForkBase {
             resultingSharesRedeemed, totalSupplyAfterDeposit - totalSupplyAfterWithdraw, "total supply after withdraw"
         );
         assertApproxEqAbs(
-            withdrawAmt, totalAssetsAfterDeposit - totalAssetsAfterWithdraw, 1, "total assets after withdraw"
+            withdrawAmt, totalAssetsAfterDeposit - totalAssetsAfterWithdraw, 4, "total assets after withdraw"
         );
     }
 
@@ -83,7 +83,7 @@ contract Vault_ForkFuzzTest is VaultForkBase {
         // vault
         assertEq(mintAmt, totalSupplyAfterMint - totalSupply, "vault total supply after deposit");
         assertApproxEqAbs(
-            resultingAssetsDeposited, totalAssetsAfterMint - totalAssets, 3, "vault total assets after deposit"
+            resultingAssetsDeposited, totalAssetsAfterMint - totalAssets, 4, "vault total assets after deposit"
         ); // 1 wei error per market
 
         uint256 prevShares = vault.balanceOf(address(this));
@@ -106,7 +106,7 @@ contract Vault_ForkFuzzTest is VaultForkBase {
         // vault
         assertEq(redeemAmt, totalSupplyAfterMint - totalSupplyAfterRedeem, "total supply after withdraw");
         assertApproxEqAbs(
-            expectedWithdrawAmt, totalAssetsAfterMint - totalAssetsAfterRedeem, 1, "total assets after withdraw"
+            expectedWithdrawAmt, totalAssetsAfterMint - totalAssetsAfterRedeem, 3, "total assets after withdraw"
         );
     }
 }

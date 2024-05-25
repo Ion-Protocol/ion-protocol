@@ -19,6 +19,11 @@ abstract contract ValidateInterface {
     function _validateInterfaceIonPool(IonPool ionPool) internal view {
         require(address(ionPool).code.length > 0, "ionPool address must have code");
         ionPool.balanceOf(address(this));
+        ionPool.totalSupply();
+        ionPool.GEM_JOIN_ROLE();
+        ionPool.LIQUIDATOR_ROLE();
+        ionPool.PAUSE_ROLE();
+        ionPool.calculateRewardAndDebtDistribution();
     }
 
     function _validateInterface(IERC20 ilkAddress) internal view {

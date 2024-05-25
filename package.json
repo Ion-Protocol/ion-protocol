@@ -63,7 +63,14 @@
     "10_AdminTransfer:deployment:deploy:anvil": "forge script script/deploy/10_AdminTransfer.s.sol --rpc-url http://localhost:8545 --private-key $PRIVATE_KEY --slow",
     "10_AdminTransfer:deployment:deploy:tenderly": "forge script script/deploy/10_AdminTransfer.s.sol --rpc-url $TENDERLY_RPC_URL --private-key $PRIVATE_KEY --slow",
     "10_AdminTransfer:deployment:deploy:sepolia": "forge script script/deploy/10_AdminTransfer.s.sol --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --slow",
-    "10_AdminTransfer:deployment:deploy:mainnet": "forge script script/deploy/10_AdminTransfer.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow"
+    "10_AdminTransfer:deployment:deploy:mainnet": "forge script script/deploy/10_AdminTransfer.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow",
+    "VaultBytecode:deployment:deploy:tenderly": "forge script script/deploy/vault/DeployVaultBytecode.s.sol --rpc-url $TENDERLY_RPC_URL --private-key $PRIVATE_KEY --slow",
+    "VaultBytecode:deployment:deploy:mainnet": "forge script script/deploy/vault/DeployVaultBytecode.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow",
+    "VaultFactory:deployment:deploy:anvil": "forge script script/deploy/vault/DeployVaultFactory.s.sol --rpc-url http://localhost:8545 --private-key $PRIVATE_KEY --slow",
+    "VaultFactory:deployment:deploy:tenderly": "forge script script/deploy/vault/DeployVaultFactory.s.sol --rpc-url $TENDERLY_RPC_URL --private-key $PRIVATE_KEY --slow",
+    "VaultFactory:deployment:deploy:mainnet": "forge script script/deploy/vault/DeployVaultFactory.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow",
+    "Vault:deployment:deploy:tenderly": "forge script script/deploy/vault/DeployVault.s.sol --rpc-url $TENDERLY_RPC_URL --private-key $PRIVATE_KEY --slow",
+    "Vault:deployment:deploy:mainnet": "forge script script/deploy/vault/DeployVault.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow"
   },
   "dependencies": {
     "date-fns": "^2.30.0",
