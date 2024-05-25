@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Vault } from "./../../../../src/vault/Vault.sol";
+import { VaultBytecode } from "./../../../../src/vault/VaultBytecode.sol";
 import { VaultFactory } from "./../../../../src/vault/VaultFactory.sol";
 import { VaultSharedSetup } from "../../../helpers/VaultSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../../../helpers/ERC20PresetMinterPauser.sol";
@@ -11,8 +12,6 @@ import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 import { console2 } from "forge-std/console2.sol";
 
 contract VaultFactoryTest is VaultSharedSetup {
-    VaultFactory factory;
-
     address internal feeRecipient = address(2);
     uint256 internal feePercentage = 0.02e27;
     IERC20 internal baseAsset = BASE_ASSET;
@@ -25,9 +24,7 @@ contract VaultFactoryTest is VaultSharedSetup {
     IIonPool[] internal newWithdrawQueue;
 
     function setUp() public override {
-        super.setUp();
-
-        factory = new VaultFactory();
+        super.setUp(); // factory deployed in parent
 
         marketsToAdd.push(weEthIonPool);
         marketsToAdd.push(rsEthIonPool);

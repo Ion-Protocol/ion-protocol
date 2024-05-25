@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { Vault } from "./../../../../src/vault/Vault.sol";
-import { VaultFactory } from "./../../../../src/vault/VaultFactory.sol";
 import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 import { IonPoolExposed } from "../../../helpers/IonPoolSharedSetup.sol";
 import { VaultSharedSetup } from "../../../helpers/VaultSharedSetup.sol";
@@ -955,8 +954,6 @@ contract VaultInflationAttack is VaultSharedSetup {
         bytes32 salt = _getSalt(deployer, "random salt");
 
         setERC20Balance(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
-
-        VaultFactory factory = new VaultFactory();
 
         vm.startPrank(deployer);
         BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);

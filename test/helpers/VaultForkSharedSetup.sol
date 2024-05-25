@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { VaultFactory } from "./../../../../src/vault/VaultFactory.sol";
+import { VaultBytecode } from "./../../src/vault/VaultBytecode.sol";
 import { Vault } from "./../../../../src/vault/Vault.sol";
 import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 import { IonLens } from "./../../../../src/periphery/IonLens.sol";
@@ -14,24 +15,24 @@ import "forge-std/Test.sol";
 using EnumerableSet for EnumerableSet.AddressSet;
 
 contract VaultForkBase is Test {
+    // Mainnet addresses
     IIonPool constant WEETH_IONPOOL = IIonPool(0x0000000000eaEbd95dAfcA37A39fd09745739b78);
     IIonPool constant RSETH_IONPOOL = IIonPool(0x0000000000E33e35EE6052fae87bfcFac61b1da9);
     IIonPool constant RSWETH_IONPOOL = IIonPool(0x00000000007C8105548f9d0eE081987378a6bE93);
     IonLens constant LENS = IonLens(0xe89AF12af000C4f76a57A3aD16ef8277a727DC81);
-    bytes32 constant ION_ROLE = 0x5ab1a5ffb29c47d95dec8c5f9ad49a551754822b51a3359ed1c21e2be24beefa;
-
     IERC20 constant BASE_ASSET = WSTETH_ADDRESS;
 
-    address FEE_RECIPIENT = address(1);
+    bytes32 constant ION_ROLE = 0x5ab1a5ffb29c47d95dec8c5f9ad49a551754822b51a3359ed1c21e2be24beefa;
+    address VAULT_ADMIN = 0x0000000000417626Ef34D62C4DC189b021603f2F;
+
+    // Test addresses
+    IIonPool constant IDLE = IIonPool(address(uint160(uint256(keccak256("IDLE_ASSET_HOLDINGS")))));
+
+    address constant FEE_RECIPIENT = address(1);
+    address constant NULL = address(0);
 
     uint48 constant INITIAL_DELAY = 0;
     uint256 constant MIN_INITIAL_DEPOSIT = 1e3;
-
-    address VAULT_ADMIN = 0x0000000000417626Ef34D62C4DC189b021603f2F;
-
-    IIonPool constant IDLE = IIonPool(address(uint160(uint256(keccak256("IDLE_ASSET_HOLDINGS")))));
-
-    address constant NULL = address(0);
     uint256 constant DEFAULT_ALLO_CAO = type(uint128).max;
 
     IIonPool[] markets;
@@ -42,7 +43,8 @@ contract VaultForkBase is Test {
 
     uint256[] allocationCaps;
 
-    VaultFactory factory;
+    VaultBytecode bytecodeDeployer = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
+    VaultFactory factory = VaultFactory(0x0000000000D7DC416dFe993b0E3dd53BA3E27Fc8);
     Vault vault;
 
     uint256 internal forkBlock = 0;
@@ -58,7 +60,12 @@ contract VaultForkBase is Test {
         if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
         else vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), forkBlock);
 
-        factory = new VaultFactory();
+        // The factory stores a constant address for `VaultBytecode`
+        VaultBytecode _bytecodeDeployer = new VaultBytecode();
+        VaultFactory _factory = new VaultFactory();
+
+        vm.etch(address(bytecodeDeployer), address(_bytecodeDeployer).code);
+        vm.etch(address(factory), address(_factory).code);
 
         markets.push(IDLE);
         markets.push(WEETH_IONPOOL);

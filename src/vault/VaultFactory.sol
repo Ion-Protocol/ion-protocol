@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.21;
 
+import { VaultBytecode } from "./VaultBytecode.sol";
 import { Vault } from "./Vault.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -14,6 +15,7 @@ contract VaultFactory {
     using SafeERC20 for IERC20;
 
     // --- Errors ---
+
     error SaltMustBeginWithMsgSender();
 
     // --- Events ---
@@ -28,7 +30,10 @@ contract VaultFactory {
         address indexed initialDefaultAdmin
     );
 
+    VaultBytecode constant BYTECODE_DEPLOYER = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
+
     // --- Modifier ---
+
     /**
      * @dev Guarantees msg.sender protection for salts. If another caller
      * frontruns a deployment transaction, the salt cannot be stolen.
@@ -82,8 +87,8 @@ contract VaultFactory {
         containsCaller(salt)
         returns (Vault vault)
     {
-        vault = new Vault{ salt: salt }(
-            baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin, marketsArgs
+        vault = BYTECODE_DEPLOYER.deploy(
+            baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin, salt, marketsArgs
         );
 
         baseAsset.safeTransferFrom(msg.sender, address(this), initialDeposit);

@@ -3,6 +3,8 @@ pragma solidity 0.8.21;
 
 import { WadRayMath, RAY } from "./../../src/libraries/math/WadRayMath.sol";
 import { Vault } from "./../../src/vault/Vault.sol";
+import { VaultBytecode } from "./../../src/vault/VaultBytecode.sol";
+import { VaultFactory } from "./../../src/vault/VaultFactory.sol";
 import { IonPool } from "./../../src/IonPool.sol";
 import { IIonPool } from "./../../src/interfaces/IIonPool.sol";
 import { GemJoin } from "./../../src/join/GemJoin.sol";
@@ -71,6 +73,9 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     bytes32 public constant ION_POOL_SUPPLY_CAP_SLOT =
         0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e09;
 
+    VaultBytecode bytecodeDeployer = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
+    VaultFactory factory = VaultFactory(0x0000000000D7DC416dFe993b0E3dd53BA3E27Fc8);
+
     function setUp() public virtual override {
         super.setUp();
 
@@ -88,6 +93,7 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         marketsArgs.newSupplyQueue = markets;
         marketsArgs.newWithdrawQueue = markets;
 
+        // deployed without factory for unit tests
         vault = new Vault{ salt: SALT }(
             BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, marketsArgs
         );
@@ -113,6 +119,13 @@ contract VaultSharedSetup is IonPoolSharedSetup {
         weEthIonPool.grantRole(weEthIonPool.GEM_JOIN_ROLE(), address(weEthGemJoin));
         rsEthIonPool.grantRole(rsEthIonPool.GEM_JOIN_ROLE(), address(rsEthGemJoin));
         rswEthIonPool.grantRole(rswEthIonPool.GEM_JOIN_ROLE(), address(rswEthGemJoin));
+
+        // separate vault factory deployment
+        VaultBytecode _bytecodeDeployer = new VaultBytecode();
+        VaultFactory _factory = new VaultFactory();
+
+        vm.etch(address(bytecodeDeployer), address(_bytecodeDeployer).code);
+        vm.etch(address(factory), address(_factory).code);
     }
 
     function setERC20Balance(address token, address usr, uint256 amt) public {
