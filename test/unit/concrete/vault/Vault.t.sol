@@ -24,6 +24,22 @@ contract VaultSetUpTest is VaultSharedSetup {
         super.setUp();
     }
 
+    function test_Revert_InvalidFeeRecipientInConstructor() public {
+        address feeRecipient = address(0);
+        vm.expectRevert(Vault.InvalidFeeRecipient.selector);
+        vault = new Vault(
+            BASE_ASSET, address(0), ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+    }
+
+    function test_Revert_InvalidFeePercentageInConstructor() public {
+        uint256 feePerc = 1e27 + 1;
+        vm.expectRevert(Vault.InvalidFeePercentage.selector);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, feePerc, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+    }
+
     function test_AddSupportedMarketsSeparately() public {
         vault = new Vault(
             BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs

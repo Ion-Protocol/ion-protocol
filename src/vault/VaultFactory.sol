@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.21;
 
+import { VaultBytecode } from "./VaultBytecode.sol";
 import { Vault } from "./Vault.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -13,6 +14,10 @@ import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/Sa
 contract VaultFactory {
     using SafeERC20 for IERC20;
 
+    // --- Errors ---
+
+    error SaltMustBeginWithMsgSender();
+
     // --- Events ---
 
     event CreateVault(
@@ -24,6 +29,25 @@ contract VaultFactory {
         string symbol,
         address indexed initialDefaultAdmin
     );
+
+    VaultBytecode constant BYTECODE_DEPLOYER = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
+
+    // --- Modifier ---
+
+    /**
+     * @dev Guarantees msg.sender protection for salts. If another caller
+     * frontruns a deployment transaction, the salt cannot be stolen.
+     * Taken from 0age's `Create2Factory`.
+     * https://github.com/0age/Pr000xy/blob/master/contracts/Create2Factory.sol
+     * @param salt The salt used for CREATE2 deployment. The first 20 bytes must
+     * be the msg.sender.
+     */
+    modifier containsCaller(bytes32 salt) {
+        if (address(bytes20(salt)) != msg.sender) {
+            revert SaltMustBeginWithMsgSender();
+        }
+        _;
+    }
 
     // --- External ---
 
@@ -42,7 +66,8 @@ contract VaultFactory {
      * @param symbol Symbol of the vault token.
      * @param initialDelay The initial delay for default admin transfers.
      * @param initialDefaultAdmin The initial default admin for the vault.
-     * @param salt The salt used for CREATE2 deployment.
+     * @param salt The salt used for CREATE2 deployment. The first 20 bytes must
+     * be the msg.sender.
      * @param marketsArgs Arguments for the markets to be added to the vault.
      * @param initialDeposit The initial deposit to be made to the vault.
      */
@@ -59,10 +84,11 @@ contract VaultFactory {
         uint256 initialDeposit
     )
         external
+        containsCaller(salt)
         returns (Vault vault)
     {
-        vault = new Vault{ salt: salt }(
-            baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin, marketsArgs
+        vault = BYTECODE_DEPLOYER.deploy(
+            baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin, salt, marketsArgs
         );
 
         baseAsset.safeTransferFrom(msg.sender, address(this), initialDeposit);

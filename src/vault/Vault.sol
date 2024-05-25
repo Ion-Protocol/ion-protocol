@@ -114,6 +114,9 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     {
         BASE_ASSET = _baseAsset;
 
+        if (_feePercentage > RAY) revert InvalidFeePercentage();
+        if (_feeRecipient == address(0)) revert InvalidFeeRecipient();
+
         feePercentage = _feePercentage;
         feeRecipient = _feeRecipient;
 
