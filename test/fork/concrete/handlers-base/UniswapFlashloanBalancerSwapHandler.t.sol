@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
+import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UniswapFlashloanBalancerSwapHandler } from "../../../../src/flash/UniswapFlashloanBalancerSwapHandler.sol";
 import { IonHandlerBase } from "../../../../src/flash/IonHandlerBase.sol";
@@ -14,7 +15,7 @@ import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint256;
 
-abstract contract UniswapFlashloanBalancerSwapHandler_Test is LstHandler_ForkBase {
+abstract contract UniswapFlashloanBalancerSwapHandler_Test is LrtHandler_ForkBase {
     function testFork_FlashswapLeverage() external {
         uint256 initialDeposit = 1e18;
         uint256 resultingCollateral = 5e18;
@@ -46,7 +47,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler_Test is LstHandler_ForkBas
         uint256 roundingError = currentRate / RAY;
 
         assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral);
-        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(_getTypedUFBSHandler())), 0);
+        assertEq(IERC20(_getCollaterals()[_getIlkIndex()]).balanceOf(address(_getTypedUFBSHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedUFBSHandler())), roundingError);
         assertLt(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
@@ -108,7 +109,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler_Test is LstHandler_ForkBas
 
         assertGe(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(_getIlkIndex(), address(this)), 0);
-        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(_getTypedUFBSHandler())), 0);
+        assertEq(IERC20(_getCollaterals()[_getIlkIndex()]).balanceOf(address(_getTypedUFBSHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedUFBSHandler())), roundingError);
     }
 
@@ -163,7 +164,7 @@ abstract contract UniswapFlashloanBalancerSwapHandler_Test is LstHandler_ForkBas
 
         assertGe(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(_getIlkIndex(), address(this)), 0);
-        assertEq(IERC20(address(MAINNET_ETHX)).balanceOf(address(_getTypedUFBSHandler())), 0);
+        assertEq(IERC20(_getCollaterals()[_getIlkIndex()]).balanceOf(address(_getTypedUFBSHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedUFBSHandler())), roundingError);
     }
 
