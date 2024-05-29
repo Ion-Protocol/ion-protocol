@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
+import { ISpotOracle } from "../../../../src/interfaces/ISpotOracle.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { UniswapFlashswapDirectMintHandler } from "../../../../src/flash/UniswapFlashswapDirectMintHandler.sol";
 import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
@@ -41,7 +42,7 @@ abstract contract UniswapFlashswapDirectMintHandler_FuzzTest is LrtHandler_ForkB
         ionPool.addOperator(address(_getTypedUFDMHandler()));
 
         uint256 ilkRate = ionPool.rate(_getIlkIndex());
-        uint256 ilkSpot = ionPool.spot(_getIlkIndex()).getSpot();
+        uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, _getIlkIndex())).getSpot();
 
         uint256 maxResultingDebt = resultingCollateral * ilkSpot / 1e27;
         // Calculating this way emulates the newTotalDebt value in IonPool

@@ -24,9 +24,9 @@ contract DeployHandlersScript is DeployScript {
     Whitelist whitelist = Whitelist(config.readAddress(".whitelist"));
 
     function run() public broadcast returns (IonHandlerBase handler) {
-        _validateInterface(ionPool);
         _validateInterface(gemJoin);
         _validateInterface(whitelist);
+        _validateInterfaceIonPool(ionPool);
 
         if (deployCreate2) {
             handler = new RswEthHandler{ salt: DEFAULT_SALT }(

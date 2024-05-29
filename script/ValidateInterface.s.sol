@@ -16,11 +16,9 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * checking there is code at the provided address and calling a few functions.
  */
 abstract contract ValidateInterface {
-    function _validateInterface(IonPool ionPool) internal view {
+    function _validateInterfaceIonPool(IonPool ionPool) internal view {
         require(address(ionPool).code.length > 0, "ionPool address must have code");
         ionPool.balanceOf(address(this));
-        ionPool.debt();
-        ionPool.isOperator(address(this), address(this));
     }
 
     function _validateInterface(IERC20 ilkAddress) internal view {

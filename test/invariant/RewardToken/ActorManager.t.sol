@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 
-import { RewardModuleSharedSetup } from "../../helpers/RewardModuleSharedSetup.sol";
+import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
 import { UserHandler, SupplyFactorIncreaseHandler } from "./Handlers.t.sol";
 
 import { CommonBase } from "forge-std/Base.sol";
@@ -66,11 +66,11 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
 
 /**
  * @dev One big assumption of this invariant test is that `supplyFactor` is
- * always increased in proportion to the increase in the `RewardModule`
+ * always increased in proportion to the increase in the `RewardToken`
  * contract's underlying balance since the last time `supplyFactor` was
  * increased.
  */
-contract RewardModule_InvariantTest is RewardModuleSharedSetup {
+contract RewardToken_InvariantTest is RewardTokenSharedSetup {
     using WadRayMath for uint256;
 
     ActorManager public actorManager;
@@ -114,7 +114,7 @@ contract RewardModule_InvariantTest is RewardModuleSharedSetup {
         assertEq(rewardModule.normalizedTotalSupply(), totalSupplyByBalances);
     }
 
-    function invariant_totalSupplyAlwaysBacked() external {
+    function invariant_lenderClaimAlwaysBacked() external {
         uint256 totalSupply = rewardModule.totalSupply();
 
         uint256 underlyingBalance = underlying.balanceOf(address(rewardModule));

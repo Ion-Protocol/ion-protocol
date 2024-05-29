@@ -44,7 +44,7 @@ abstract contract SwEthHandler_ForkBase is LstHandler_ForkBase {
         IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
 
         // Remove debt ceiling for this test
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 

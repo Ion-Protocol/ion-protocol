@@ -2,9 +2,11 @@
 pragma solidity 0.8.21;
 
 import { IonPool } from "../../src/IonPool.sol";
+import { IonLens } from "../../src/periphery/IonLens.sol";
 import { IonRegistry } from "../../src/periphery/IonRegistry.sol";
 import { InterestRate, IlkData, SECONDS_IN_A_YEAR } from "../../src/InterestRate.sol";
 import { IYieldOracle } from "../../src/interfaces/IYieldOracle.sol";
+import { IIonPool } from "../../src/interfaces/IIonPool.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { WadRayMath, WAD } from "../../src/libraries/math/WadRayMath.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
@@ -66,7 +68,7 @@ contract IonPoolExposed is IonPool {
     function addLiquidity(uint256 amount) external {
         IonPoolStorage storage $ = _getIonPoolStorage();
 
-        $.weth += amount;
+        $.liquidity += amount;
     }
 }
 
@@ -113,6 +115,7 @@ struct Config {
 abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     Config config;
 
+    IIonPool iIonPool;
     IonPoolExposed ionPool;
     IonPoolExposed ionPoolImpl;
     IonRegistry ionRegistry;
@@ -180,7 +183,12 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
     GemJoin[] internal gemJoins;
     MockSpotOracle[] internal spotOracles;
 
+    IonLens lens;
+
     constructor() {
+        lens = new IonLens();
+        vm.makePersistent(address(lens));
+
         config.minimumProfitMargins =
             Solarray.uint128s(wstEthMinimumProfitMargin, ethXMinimumProfitMargin, swEthMinimumProfitMargin);
         config.minimumKinkRates = Solarray.uint16s(0, 0, 0);
@@ -262,6 +270,7 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         ionPool = IonPoolExposed(
             address(new TransparentUpgradeableProxy(address(ionPoolImpl), address(ionProxyAdmin), initializeBytes))
         );
+        iIonPool = IIonPool(address(ionPool));
 
         ionPool.grantRole(ionPool.ION(), address(this));
         ionPool.grantRole(ionPool.PAUSE_ROLE(), address(this));
@@ -307,21 +316,20 @@ abstract contract IonPoolSharedSetup is BaseTestSetup, YieldOracleSharedSetup {
         assertEq(ionPool.symbol(), SYMBOL, "symbol");
         assertEq(ionPool.defaultAdmin(), address(this), "default admin");
 
-        assertEq(ionPool.ilkCount(), collaterals.length, "ilk count");
+        assertEq(lens.ilkCount(iIonPool), collaterals.length, "ilk count");
 
         assertEq(ionPool.paused(), false, "pause");
 
         for (uint8 i = 0; i < collaterals.length; i++) {
             address collateralAddress = address(collaterals[i]);
-            assertEq(ionPool.addressContains(collateralAddress), true, "address contains");
             assertEq(ionPool.getIlkAddress(i), collateralAddress, "ilk address");
-            assertEq(ionPool.getIlkIndex(collateralAddress), ilkIndexes[collateralAddress], "ilk index");
+            assertEq(lens.getIlkIndex(iIonPool, collateralAddress), ilkIndexes[collateralAddress], "ilk index");
 
             // assertEq(ionPool.totalNormalizedDebt(i), 0);
             // assertEq(ionPool.rate(i), 1e27);
-            assertEq(address(ionPool.spot(i)), address(spotOracles[i]), "spot oracle");
+            assertEq(address(lens.spot(iIonPool, i)), address(spotOracles[i]), "spot oracle");
 
-            assertEq(ionPool.debtCeiling(i), _getDebtCeiling(i), "debt ceiling");
+            assertEq(lens.debtCeiling(iIonPool, i), _getDebtCeiling(i), "debt ceiling");
             assertEq(ionPool.dust(i), DUST, "dust");
 
             // (uint256 borrowRate, uint256 reserveFactor) = ionPool.getCurrentBorrowRate(i);

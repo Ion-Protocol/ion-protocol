@@ -126,7 +126,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
             // ffi to see when this branch gets hit
             // vm.writeLine("fuzz_out.txt", "DUST");
             assert(ionPool.normalizedDebt(ILK_INDEX, borrower1) == 0);
-            assert(ionPool.unbackedDebt(address(liquidation)) == 0);
+            assert(lens.unbackedDebt(iIonPool, address(liquidation)) == 0);
         } else if (results.category == 2) {
             // vm.writeLine("fuzz_out.txt", "PARTIAL");
             uint256 actualCollateral = ionPool.collateral(ILK_INDEX, borrower1);
@@ -141,7 +141,7 @@ contract LiquidationFuzzFixedConfigs is LiquidationSharedSetup {
                     deploymentArgs.liquidationThreshold
                 );
                 assert(healthRatio >= deploymentArgs.targetHealth);
-                assert(ionPool.unbackedDebt(address(liquidation)) == 0);
+                assert(lens.unbackedDebt(iIonPool, address(liquidation)) == 0);
             }
         }
     }

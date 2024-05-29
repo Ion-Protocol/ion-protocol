@@ -4,6 +4,8 @@ pragma solidity 0.8.21;
 import { GemJoin } from "../../../src/join/GemJoin.sol";
 import { IonPool } from "../../../src/IonPool.sol";
 import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
+import { IIonLens } from "../../../src/interfaces/IIonLens.sol";
+import { IIonPool } from "../../../src/interfaces/IIonPool.sol";
 
 import { IonPoolSharedSetup } from "../../helpers/IonPoolSharedSetup.sol";
 import { InvariantHelpers } from "../../helpers/InvariantHelpers.sol";
@@ -18,17 +20,22 @@ using WadRayMath for uint256;
 
 contract ActorManager is CommonBase, StdCheats, StdUtils {
     IonPool ionPool;
+    IIonPool iIonPool;
+    IIonLens lens;
     LenderHandler[] internal lenders;
     BorrowerHandler[] internal borrowers;
     LiquidatorHandler[] internal liquidators;
 
     constructor(
         IonPool _ionPool,
+        IIonLens _lens,
         LenderHandler[] memory _lenders,
         BorrowerHandler[] memory _borrowers,
         LiquidatorHandler[] memory _liquidators
     ) {
         ionPool = _ionPool;
+        iIonPool = IIonPool(address(_ionPool));
+        lens = _lens;
         lenders = _lenders;
         borrowers = _borrowers;
         liquidators = _liquidators;
@@ -44,7 +51,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
     )
         public
     {
-        uint256 globalUtilizationRate = InvariantHelpers.getUtilizationRate(ionPool);
+        uint256 globalUtilizationRate = InvariantHelpers.getUtilizationRate(ionPool, lens);
 
         if (globalUtilizationRate < 0.5e45) {
             functionIndex = bound(functionIndex, 0, 4);
@@ -105,14 +112,14 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
 
     function borrow(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
-        ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
+        ilkIndex = uint128(bound(ilkIndex, 0, lens.ilkCount(iIonPool) - 1));
 
         borrowers[borrowerIndex].borrow(uint8(ilkIndex), amount, warpTimeAmount);
     }
 
     function repay(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
-        ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
+        ilkIndex = uint128(bound(ilkIndex, 0, lens.ilkCount(iIonPool) - 1));
 
         borrowers[borrowerIndex].repay(uint8(ilkIndex), amount, warpTimeAmount);
     }
@@ -126,7 +133,7 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         internal
     {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
-        ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
+        ilkIndex = uint128(bound(ilkIndex, 0, lens.ilkCount(iIonPool) - 1));
 
         borrowers[borrowerIndex].depositCollateral(uint8(ilkIndex), amount, warpTimeAmount);
     }
@@ -140,21 +147,21 @@ contract ActorManager is CommonBase, StdCheats, StdUtils {
         internal
     {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
-        ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
+        ilkIndex = uint128(bound(ilkIndex, 0, lens.ilkCount(iIonPool) - 1));
 
         borrowers[borrowerIndex].withdrawCollateral(uint8(ilkIndex), amount, warpTimeAmount);
     }
 
     function gemJoin(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
-        ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
+        ilkIndex = uint128(bound(ilkIndex, 0, lens.ilkCount(iIonPool) - 1));
 
         borrowers[borrowerIndex].gemJoin(uint8(ilkIndex), amount, warpTimeAmount);
     }
 
     function gemExit(uint128 borrowerIndex, uint128 ilkIndex, uint128 amount, uint128 warpTimeAmount) internal {
         borrowerIndex = uint128(bound(borrowerIndex, 0, borrowers.length - 1));
-        ilkIndex = uint128(bound(ilkIndex, 0, ionPool.ilkCount() - 1));
+        ilkIndex = uint128(bound(ilkIndex, 0, lens.ilkCount(iIonPool) - 1));
 
         borrowers[borrowerIndex].gemExit(uint8(ilkIndex), amount, warpTimeAmount);
     }
@@ -185,13 +192,13 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         super.setUp();
 
         // Disable debt ceiling
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             ionPool.updateIlkDebtCeiling(i, _getDebtCeiling(i));
         }
 
         for (uint256 i = 0; i < AMOUNT_LENDERS; i++) {
             LenderHandler lender =
-                new LenderHandler(ionPool, ionRegistry, underlying, config.distributionFactors, log, report);
+                new LenderHandler(ionPool, lens, ionRegistry, underlying, config.distributionFactors, log, report);
             lenders.push(lender);
             underlying.grantRole(underlying.MINTER_ROLE(), address(lender));
 
@@ -201,7 +208,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
 
         for (uint256 i = 0; i < AMOUNT_BORROWERS; i++) {
             BorrowerHandler borrower = new BorrowerHandler(
-                ionPool, ionRegistry, underlying, mintableCollaterals, config.distributionFactors, log, report
+                ionPool, lens, ionRegistry, underlying, mintableCollaterals, config.distributionFactors, log, report
             );
             borrowers.push(borrower);
             for (uint8 j = 0; j < collaterals.length; j++) {
@@ -213,7 +220,7 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
                 borrower.borrow(j, INITIAL_BORROWER_BORROW_AMOUNT, 0);
             }
         }
-        actorManager = new ActorManager(ionPool, lenders, borrowers, liquidators);
+        actorManager = new ActorManager(ionPool, lens, lenders, borrowers, liquidators);
 
         targetContract(address(actorManager));
     }
@@ -241,17 +248,17 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
 
     function invariant_LiquidityInPoolPlusDebtToPoolStrictlyGreaterThanOrEqualToTotalSupply() external returns (bool) {
         uint256 totalDebt;
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             uint256 totalNormalizedDebts;
             for (uint256 j = 0; j < borrowers.length; j++) {
                 totalNormalizedDebts += ionPool.normalizedDebt(i, address(borrowers[j]));
             }
-            uint256 ilkRate = ionPool.rateUnaccrued(i);
+            uint256 ilkRate = lens.rateUnaccrued(iIonPool, i);
             totalDebt += totalNormalizedDebts.rayMulDown(ilkRate);
         }
-        assertGe(ionPool.weth() + totalDebt, ionPool.totalSupplyUnaccrued());
+        assertGe(lens.liquidity(iIonPool) + totalDebt, ionPool.totalSupplyUnaccrued());
         assertGe(
-            ionPool.weth().scaleUpToRad(18) + ionPool.debtUnaccrued(),
+            lens.liquidity(iIonPool).scaleUpToRad(18) + lens.debtUnaccrued(iIonPool),
             ionPool.normalizedTotalSupplyUnaccrued() * ionPool.supplyFactorUnaccrued()
         );
 
@@ -259,22 +266,22 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
     }
 
     function invariant_BorrowerNormalizedDebtsSumToTotalNormalizedDebt() external returns (bool) {
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             uint256 sumBorrowerNormalizedDebts;
             for (uint256 j = 0; j < borrowers.length; j++) {
                 sumBorrowerNormalizedDebts += ionPool.normalizedDebt(i, address(borrowers[j]));
             }
-            assertEq(sumBorrowerNormalizedDebts, ionPool.totalNormalizedDebt(i));
+            assertEq(sumBorrowerNormalizedDebts, lens.totalNormalizedDebt(iIonPool, i));
         }
 
         return !failed();
     }
 
     function invariant_SumOfAllGemAndCollateralEqualsTotalGemInGemJoin() external returns (bool) {
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             uint256 gemAndCollateralSum;
             for (uint256 j = 0; j < borrowers.length; j++) {
-                gemAndCollateralSum += ionPool.gem(i, address(borrowers[j]));
+                gemAndCollateralSum += lens.gem(iIonPool, i, address(borrowers[j]));
             }
             for (uint256 j = 0; j < borrowers.length; j++) {
                 gemAndCollateralSum += ionPool.collateral(i, address(borrowers[j]));
@@ -291,12 +298,12 @@ contract IonPool_InvariantTest is IonPoolSharedSetup {
         returns (bool)
     {
         uint256 totalDebt;
-        for (uint8 i = 0; i < ionPool.ilkCount(); i++) {
-            uint256 totalNormalizedDebt = ionPool.totalNormalizedDebt(i);
-            uint256 ilkRate = ionPool.rateUnaccrued(i);
+        for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
+            uint256 totalNormalizedDebt = lens.totalNormalizedDebt(iIonPool, i);
+            uint256 ilkRate = lens.rateUnaccrued(iIonPool, i);
             totalDebt += totalNormalizedDebt * ilkRate;
         }
-        assertEq(totalDebt + ionPool.totalUnbackedDebt(), ionPool.debtUnaccrued());
+        assertEq(totalDebt + lens.totalUnbackedDebt(iIonPool), lens.debtUnaccrued(iIonPool));
 
         return !failed();
     }

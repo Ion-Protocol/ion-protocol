@@ -61,14 +61,14 @@ contract GemJoin_Test is IonPoolSharedSetup {
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), 0);
+            assertEq(lens.gem(iIonPool, i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].GEM();
             gem.approve(address(gemJoins[i]), type(uint256).max);
 
             gemJoins[i].join(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), amountToJoin);
+            assertEq(lens.gem(iIonPool, i, address(this)), amountToJoin);
         }
     }
 
@@ -77,7 +77,7 @@ contract GemJoin_Test is IonPoolSharedSetup {
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), 0);
+            assertEq(lens.gem(iIonPool, i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].GEM();
             gem.approve(address(gemJoins[i]), type(uint256).max);
@@ -85,7 +85,7 @@ contract GemJoin_Test is IonPoolSharedSetup {
             vm.expectRevert(GemJoin.Int256Overflow.selector);
             gemJoins[i].join(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), 0);
+            assertEq(lens.gem(iIonPool, i, address(this)), 0);
         }
     }
 
@@ -96,18 +96,18 @@ contract GemJoin_Test is IonPoolSharedSetup {
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), 0);
+            assertEq(lens.gem(iIonPool, i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].GEM();
             gem.approve(address(gemJoins[i]), type(uint256).max);
 
             gemJoins[i].join(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), amountToJoin);
+            assertEq(lens.gem(iIonPool, i, address(this)), amountToJoin);
 
             gemJoins[i].exit(address(this), amountToExit);
 
-            assertEq(ionPool.gem(i, address(this)), amountToJoin - amountToExit);
+            assertEq(lens.gem(iIonPool, i, address(this)), amountToJoin - amountToExit);
         }
     }
 
@@ -118,19 +118,19 @@ contract GemJoin_Test is IonPoolSharedSetup {
         for (uint8 i = 0; i < gemJoins.length; i++) {
             mintableCollaterals[i].mint(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), 0);
+            assertEq(lens.gem(iIonPool, i, address(this)), 0);
 
             IERC20 gem = gemJoins[i].GEM();
             gem.approve(address(gemJoins[i]), type(uint256).max);
 
             gemJoins[i].join(address(this), amountToJoin);
 
-            assertEq(ionPool.gem(i, address(this)), amountToJoin);
+            assertEq(lens.gem(iIonPool, i, address(this)), amountToJoin);
 
             vm.expectRevert(GemJoin.Int256Overflow.selector);
             gemJoins[i].exit(address(this), amountToExit);
 
-            assertEq(ionPool.gem(i, address(this)), amountToJoin);
+            assertEq(lens.gem(iIonPool, i, address(this)), amountToJoin);
         }
     }
 }

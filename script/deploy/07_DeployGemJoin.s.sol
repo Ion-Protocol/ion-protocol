@@ -20,7 +20,7 @@ contract DeployGemJoinScript is DeployScript {
     function run() public broadcast returns (GemJoin gemJoin) {
         IERC20 ilkERC20 = IERC20(ilkAddress);
 
-        _validateInterface(ionPool);
+        _validateInterfaceIonPool(ionPool);
         _validateInterface(ilkERC20);
 
         if (deployCreate2) {

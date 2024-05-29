@@ -12,8 +12,8 @@ address constant SAFE = 0xcecc1978A819D4A3c0A2ee7C260ECb7A10732EEF;
 
 contract UpdateSpot is BaseScript, BatchScript {
     function run(bool _send, IonPool ionPool, SpotOracle newSpot) public {
-        _validateInterface(ionPool);
-        _validateInterface(newSpot);
+        // _validateInterface(ionPool);
+        // _validateInterface(newSpot);
 
         bytes memory txData = abi.encodeWithSelector(
             IonPool.updateIlkSpot.selector,

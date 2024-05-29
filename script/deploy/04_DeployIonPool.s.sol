@@ -35,7 +35,7 @@ contract DeployIonPoolScript is DeployScript {
         _validateInterface(whitelist);
 
         ionImpl = IonPool(0xAd71a9e73e235A61caEb10059B64459FAB23B8C7);
-        _validateInterface(ionImpl);
+        _validateInterfaceIonPool(ionImpl);
 
         // if (deployCreate2) {
         //     ionImpl = new IonPool{ salt: DEFAULT_SALT }();

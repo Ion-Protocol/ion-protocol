@@ -5,6 +5,9 @@ import { WadRayMath, RAY } from "../../../src/libraries/math/WadRayMath.sol";
 import { IonRegistry } from "../../../src/periphery/IonRegistry.sol";
 import { GemJoin } from "../../../src/join/GemJoin.sol";
 import { SECONDS_IN_A_YEAR } from "../../../src/InterestRate.sol";
+import { IIonLens } from "../../../src/interfaces/IIonLens.sol";
+import { IIonPool } from "../../../src/interfaces/IIonPool.sol";
+import { ISpotOracle } from "../../../src/interfaces/ISpotOracle.sol";
 
 import { IonPoolExposed } from "../../helpers/IonPoolSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../../helpers/ERC20PresetMinterPauser.sol";
@@ -61,6 +64,8 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
     using DecimalToFixedPoint for uint256;
 
     IonPoolExposed internal immutable ionPool;
+    IIonPool internal immutable iIonPool;
+    IIonLens internal immutable lens;
     ERC20PresetMinterPauser internal immutable underlying;
     IonRegistry internal immutable registry;
 
@@ -77,6 +82,7 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
 
     constructor(
         IonPoolExposed _ionPool,
+        IIonLens _lens,
         ERC20PresetMinterPauser _underlying,
         IonRegistry _registry,
         uint16[] memory _distributionFactors,
@@ -84,6 +90,8 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
         bool _report
     ) {
         ionPool = _ionPool;
+        iIonPool = IIonPool(address(_ionPool));
+        lens = _lens;
         underlying = _underlying;
         registry = _registry;
         distributionFactors = _distributionFactors;
@@ -149,21 +157,23 @@ abstract contract Handler is CommonBase, StdCheats, StdUtils {
 
         globalState.supplyFactor = ionPool.supplyFactor();
         globalState.totalSupply = ionPool.totalSupply();
-        globalState.totalDebt = ionPool.debt();
-        globalState.wethLiquidity = ionPool.weth();
-        globalState.utilizationRate = InvariantHelpers.getUtilizationRate(ionPool);
+        globalState.totalDebt = lens.debt(iIonPool);
+        globalState.wethLiquidity = lens.liquidity(iIonPool);
+        globalState.utilizationRate = InvariantHelpers.getUtilizationRate(ionPool, lens);
 
-        require(ilkIndexedState.length == ionPool.ilkCount(), "invariant/IonPool/Handlers.t.sol: Ilk count mismatch");
+        require(
+            ilkIndexedState.length == lens.ilkCount(iIonPool), "invariant/IonPool/Handlers.t.sol: Ilk count mismatch"
+        );
         for (uint256 i = 0; i < ilkIndexedState.length; ++i) {
             uint8 _ilkIndex = uint8(i);
-            ilkIndexedState[i].totalNormalizedDebt = ionPool.totalNormalizedDebt(_ilkIndex);
+            ilkIndexedState[i].totalNormalizedDebt = lens.totalNormalizedDebt(iIonPool, _ilkIndex);
             ilkIndexedState[i].rate = ionPool.rate(_ilkIndex);
             ilkIndexedState[i].totalGem = registry.gemJoins(_ilkIndex).totalGem();
             (uint256 currentBorrowRate,) = ionPool.getCurrentBorrowRate(_ilkIndex);
             ilkIndexedState[i].newInterestRatePerSecond = currentBorrowRate;
             ilkIndexedState[i].newInterestRatePerYear = ((currentBorrowRate - RAY) * SECONDS_IN_A_YEAR) + RAY;
             ilkIndexedState[i].utilizationRate =
-                InvariantHelpers.getIlkSpecificUtilizationRate(ionPool, distributionFactors, _ilkIndex);
+                InvariantHelpers.getIlkSpecificUtilizationRate(ionPool, lens, distributionFactors, _ilkIndex);
         }
 
         vm.writeLine(REPORT_FILE, "");
@@ -220,13 +230,14 @@ contract LenderHandler is Handler {
 
     constructor(
         IonPoolExposed _ionPool,
+        IIonLens _lens,
         IonRegistry _registry,
         ERC20PresetMinterPauser _underlying,
         uint16[] memory _distributionFactors,
         bool _log,
         bool _report
     )
-        Handler(_ionPool, _underlying, _registry, _distributionFactors, _log, _report)
+        Handler(_ionPool, _lens, _underlying, _registry, _distributionFactors, _log, _report)
     {
         underlying.approve(address(ionPool), type(uint256).max);
     }
@@ -251,7 +262,7 @@ contract LenderHandler is Handler {
 
     function withdraw(uint256 amount, uint256 warpTimeAmount) public {
         // To prevent reverts, limit withdraw amounts to the available liquidity in the pool
-        uint256 balance = Math.min(ionPool.weth(), ionPool.balanceOf(address(this)));
+        uint256 balance = Math.min(lens.liquidity(iIonPool), ionPool.balanceOf(address(this)));
         amount = bound(amount, 0, balance);
 
         _warpTime(warpTimeAmount);
@@ -274,6 +285,7 @@ contract BorrowerHandler is Handler {
 
     constructor(
         IonPoolExposed _ionPool,
+        IIonLens _lens,
         IonRegistry _registry,
         ERC20PresetMinterPauser _underlying,
         ERC20PresetMinterPauser[] memory _collaterals,
@@ -281,7 +293,7 @@ contract BorrowerHandler is Handler {
         bool _log,
         bool _report
     )
-        Handler(_ionPool, _underlying, _registry, _distributionFactors, _log, _report)
+        Handler(_ionPool, _lens, _underlying, _registry, _distributionFactors, _log, _report)
     {
         underlying.approve(address(_ionPool), type(uint256).max);
         ionPool.addOperator(address(_ionPool));
@@ -289,7 +301,7 @@ contract BorrowerHandler is Handler {
     }
 
     function borrow(uint8 ilkIndex, uint256 normalizedAmount, uint256 warpTimeAmount) public {
-        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, lens.ilkCount(iIonPool)));
 
         _warpTime(warpTimeAmount);
 
@@ -297,7 +309,7 @@ contract BorrowerHandler is Handler {
         uint256 maxAdditionalNormalizedDebt;
         {
             uint256 vaultCollateral = ionPool.collateral(_ilkIndex, address(this));
-            uint256 ilkSpot = ionPool.spot(_ilkIndex).getSpot();
+            uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, _ilkIndex)).getSpot();
             uint256 vaultNormalizedDebt = ionPool.normalizedDebt(_ilkIndex, address(this));
 
             uint256 currentDebt = vaultNormalizedDebt * ilkRate;
@@ -309,7 +321,7 @@ contract BorrowerHandler is Handler {
             maxAdditionalNormalizedDebt = _min(maxAdditionalDebt / ilkRate, type(uint64).max);
         }
 
-        uint256 poolLiquidity = ionPool.weth();
+        uint256 poolLiquidity = lens.liquidity(iIonPool);
         uint256 normalizedPoolLiquidity = poolLiquidity.rayDivDown(ilkRate);
 
         normalizedAmount = _min(bound(normalizedAmount, 0, maxAdditionalNormalizedDebt), normalizedPoolLiquidity);
@@ -322,7 +334,7 @@ contract BorrowerHandler is Handler {
     }
 
     function repay(uint8 ilkIndex, uint256 normalizedAmount, uint256 warpTimeAmount) public {
-        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, lens.ilkCount(iIonPool)));
 
         uint256 currentNormalizedDebt = ionPool.normalizedDebt(_ilkIndex, address(this));
         normalizedAmount = bound(normalizedAmount, 0, currentNormalizedDebt);
@@ -336,9 +348,9 @@ contract BorrowerHandler is Handler {
     }
 
     function depositCollateral(uint8 ilkIndex, uint256 amount, uint256 warpTimeAmount) public {
-        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, lens.ilkCount(iIonPool)));
 
-        amount = bound(amount, 0, ionPool.gem(_ilkIndex, address(this)));
+        amount = bound(amount, 0, lens.gem(iIonPool, _ilkIndex, address(this)));
 
         if (LOG) console.log("depositCollateral", amount);
 
@@ -349,13 +361,13 @@ contract BorrowerHandler is Handler {
     }
 
     function withdrawCollateral(uint8 ilkIndex, uint256 amount, uint256 warpTimeAmount) public {
-        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, lens.ilkCount(iIonPool)));
 
         uint256 ilkRate = ionPool.rate(_ilkIndex);
         uint256 maxRemovableCollateral;
         {
             uint256 vaultCollateral = ionPool.collateral(_ilkIndex, address(this));
-            uint256 ilkSpot = ionPool.spot(_ilkIndex).getSpot();
+            uint256 ilkSpot = ISpotOracle(lens.spot(iIonPool, _ilkIndex)).getSpot();
             uint256 vaultNormalizedDebt = ionPool.normalizedDebt(_ilkIndex, address(this));
 
             uint256 currentDebt = vaultNormalizedDebt * ilkRate;
@@ -374,7 +386,7 @@ contract BorrowerHandler is Handler {
     }
 
     function gemJoin(uint8 ilkIndex, uint256 amount, uint256 warpTimeAmount) public {
-        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, lens.ilkCount(iIonPool)));
         amount = bound(amount, 0, type(uint256).max);
 
         GemJoin _gemJoin = registry.gemJoins(_ilkIndex);
@@ -394,9 +406,9 @@ contract BorrowerHandler is Handler {
     }
 
     function gemExit(uint8 ilkIndex, uint256 amount, uint256 warpTimeAmount) public {
-        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, ionPool.ilkCount()));
+        uint8 _ilkIndex = uint8(bound(ilkIndex, 0, lens.ilkCount(iIonPool)));
 
-        amount = bound(amount, 0, ionPool.gem(_ilkIndex, address(this)));
+        amount = bound(amount, 0, lens.gem(iIonPool, _ilkIndex, address(this)));
         GemJoin _gemJoin = registry.gemJoins(_ilkIndex);
 
         if (LOG) console.log("gemExit", amount);
@@ -415,12 +427,13 @@ contract BorrowerHandler is Handler {
 contract LiquidatorHandler is Handler {
     constructor(
         IonPoolExposed _ionPool,
+        IIonLens lens,
         IonRegistry _registry,
         ERC20PresetMinterPauser _underlying,
         uint16[] memory _distributionFactors,
         bool _log,
         bool _report
     )
-        Handler(_ionPool, _underlying, _registry, _distributionFactors, _log, _report)
+        Handler(_ionPool, lens, _underlying, _registry, _distributionFactors, _log, _report)
     { }
 }
