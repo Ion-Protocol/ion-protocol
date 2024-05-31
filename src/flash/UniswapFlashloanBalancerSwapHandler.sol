@@ -309,12 +309,25 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         }
     }
 
+    function simulateGivenOutBalancerSwap(
+        IVault.FundManagement memory fundManagement,
+        address assetIn,
+        address assetOut,
+        uint256 amountOut
+    )
+        external
+        returns (uint256)
+    {
+        return _simulateGivenOutBalancerSwap(fundManagement, assetIn, assetOut, amountOut);
+    }
+
     /**
      * @notice Simulates a Balancer swap with a desired amount of `assetOut`.
      * @param fundManagement Balancer fund management struct
      * @param assetIn asset to swap from
      * @param assetOut asset to swap to
      * @param amountOut desired amount of assetOut. Will revert if not received. [WAD]
+     * @return Amount of input asset required to receive `amountOut`.
      */
     function _simulateGivenOutBalancerSwap(
         IVault.FundManagement memory fundManagement,

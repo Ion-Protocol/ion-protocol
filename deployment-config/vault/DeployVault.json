@@ -1,0 +1,37 @@
+{
+    "factory": "0x0000000000D7DC416dFe993b0E3dd53BA3E27Fc8",
+    "baseAsset": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+    "feeRecipient": "0x0000000000417626Ef34D62C4DC189b021603f2F",
+    "feePercentage": "100000000000000000000000000",
+    "name": "Morph ETH",
+    "symbol": "morETH", 
+    "initialDelay": "0",
+    "initialDefaultAdmin": "0x0000000000417626Ef34D62C4DC189b021603f2F",
+    "salt": "0x94544835cf97c631f101c5f538787fe14e2e04f64f25ea1ced308a327b67f6ff", 
+    "initialDeposit": "1000",
+    "marketsToAdd": [
+        "0x0000000000eaEbd95dAfcA37A39fd09745739b78",
+        "0x0000000000E33e35EE6052fae87bfcFac61b1da9",
+        "0x00000000007C8105548f9d0eE081987378a6bE93",
+        "0x9B1D53b1B3f4341f63626c17606A025fe7b17b1a"
+    ],
+    "allocationCaps": [
+        3000000000000000000000, 
+        3000000000000000000000,
+        3000000000000000000000,
+        3000000000000000000000
+    ],
+    "supplyQueue": [
+        "0x00000000007C8105548f9d0eE081987378a6bE93",
+        "0x0000000000E33e35EE6052fae87bfcFac61b1da9",
+        "0x0000000000eaEbd95dAfcA37A39fd09745739b78",
+        "0x9B1D53b1B3f4341f63626c17606A025fe7b17b1a" 
+    ],
+    "withdrawQueue": [
+        "0x9B1D53b1B3f4341f63626c17606A025fe7b17b1a",
+        "0x0000000000eaEbd95dAfcA37A39fd09745739b78",
+        "0x0000000000E33e35EE6052fae87bfcFac61b1da9",
+        "0x00000000007C8105548f9d0eE081987378a6bE93"
+    ]
+}
+  

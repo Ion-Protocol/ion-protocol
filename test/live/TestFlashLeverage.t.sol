@@ -20,6 +20,7 @@ using RestakedSwellLibrary for IRswEth;
 using EtherFiLibrary for IWeEth;
 using KelpDaoLibrary for IRsEth;
 
+// TODO Refactor this as abstract and test other functions than just leverage
 contract TestFlashLeverage is Test {
     IonPool rswEthPool;
     RswEthHandler rswEthHandler;
@@ -29,6 +30,8 @@ contract TestFlashLeverage is Test {
 
     IonPool rsEthPool;
     RsEthHandler rsEthHandler;
+
+    IonPool ezEthPool;
 
     Whitelist whitelist;
 
@@ -48,6 +51,8 @@ contract TestFlashLeverage is Test {
 
         rsEthPool = IonPool(0x0000000000E33e35EE6052fae87bfcFac61b1da9);
         rsEthHandler = RsEthHandler(payable(0x335FBFf118829Aa5ef0ac91196C164538A21a45A));
+
+        ezEthPool = IonPool(0x00000000008a3A77bd91bC738Ed2Efaa262c3763);
 
         whitelist = Whitelist(0x7E317f99aA313669AaCDd8dB3927ff3aCB562dAD);
 
@@ -126,6 +131,12 @@ contract TestFlashLeverage is Test {
             block.timestamp + 1_000_000_000_000,
             new bytes32[](0)
         );
+    }
+
+    function testEzEthSupply() public {
+        deal(address(WEETH_ADDRESS), address(this), 1 ether);
+        WEETH_ADDRESS.approve(address(ezEthPool), type(uint256).max);
+        ezEthPool.supply(address(this), WEETH_ADDRESS.balanceOf(address(this)), new bytes32[](0));
     }
 
     function _setupPool(IonPool pool) internal {

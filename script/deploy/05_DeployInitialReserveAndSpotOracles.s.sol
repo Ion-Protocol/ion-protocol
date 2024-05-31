@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 import { DeployScript } from "../Deploy.s.sol";
 import { RAY } from "../../src/libraries/math/WadRayMath.sol";
-import { RswEthWstEthReserveOracle } from "../../src/oracles/reserve/lrt/RswEthWstEthReserveOracle.sol";
-import { RswEthWstEthSpotOracle } from "../../src/oracles/spot/lrt/RswEthWstEthSpotOracle.sol";
+import { EzEthWethReserveOracle } from "./../../src/oracles/reserve/lrt/EzEthWethReserveOracle.sol";
+import { EzEthWethSpotOracle } from "./../../src/oracles/spot/lrt/EzEthWethSpotOracle.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
@@ -28,14 +28,13 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
         uint256 maxTimeFromLastUpdate = config.readUint(".maxTimeFromLastUpdate");
 
         if (deployCreate2) {
-            reserveOracle =
-                address(new RswEthWstEthReserveOracle{ salt: DEFAULT_SALT }(0, new address[](3), 0, maxChange));
+            reserveOracle = address(new EzEthWethReserveOracle{ salt: DEFAULT_SALT }(0, new address[](3), 0, maxChange));
             spotOracle = address(
-                new RswEthWstEthSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate)
+                new EzEthWethSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate)
             );
         } else {
-            reserveOracle = address(new RswEthWstEthReserveOracle(0, new address[](3), 0, maxChange));
-            spotOracle = address(new RswEthWstEthSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+            reserveOracle = address(new EzEthWethReserveOracle(0, new address[](3), 0, maxChange));
+            spotOracle = address(new EzEthWethSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
         }
     }
 }

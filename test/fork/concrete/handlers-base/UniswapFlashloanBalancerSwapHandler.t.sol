@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
+import { IVault } from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UniswapFlashloanBalancerSwapHandler } from "../../../../src/flash/UniswapFlashloanBalancerSwapHandler.sol";
@@ -217,6 +217,27 @@ abstract contract UniswapFlashloanBalancerSwapHandler_Test is LrtHandler_ForkBas
 
         vm.expectRevert();
         _getTypedUFBSHandler().flashDeleverageWethAndSwap(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
+    }
+
+    function testFork_simulateGivenOutBalancerSwap() external returns (uint256) {
+        IVault.FundManagement memory fundManagement = IVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(this),
+            toInternalBalance: false
+        });
+
+        uint256 amountOut = 100e18;
+
+        uint256 amountIn = _getTypedUFBSHandler().simulateGivenOutBalancerSwap(
+            fundManagement,
+            address(ionPool.underlying()), // assetIn i.e. base asset
+            address(_getCollaterals()[_getIlkIndex()]), // assetOut i.e. collateral
+            amountOut // exact amount out
+        );
+
+        assertTrue(amountIn != amountOut, "collateralIn should not be equal to amountOut");
+        assertTrue(amountIn > 0, "collateralIn should be greater than 0");
     }
 
     function _getTypedUFBSHandler() private view returns (UniswapFlashloanBalancerSwapHandler) {
