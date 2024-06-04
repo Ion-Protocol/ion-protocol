@@ -3,9 +3,9 @@
   "treasury": "0x0000000000417626Ef34D62C4DC189b021603f2F",
   "decimals": "18",
   "name": "Ion ezETH WETH Token",
-  "symbol": "iezETH-wETH",
+  "symbol": "iezETH-WETH",
   "whitelist": "0x7E317f99aA313669AaCDd8dB3927ff3aCB562dAD",
-  "interestRateModule": "0x6a341144D32004BD72A18B753b03Fe2812B27B30",
-  "ionImpl": "0x6712036512063bc3517492243988ad31335bd5cb",
+  "interestRateModule": "0xCcfD0fDEE103B4b4e45B5D8934540070219A6653",
+  "ionImpl": "0x77ca0d4b78d8b4f3c71e20f8c8771c4cb7abe201",
   "salt": "0x413a3e110b6efc009e045a000000000000000000000000000000000000000000"
 }
