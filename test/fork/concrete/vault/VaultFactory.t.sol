@@ -2,6 +2,7 @@
 pragma solidity 0.8.21;
 
 import { Vault } from "./../../../../src/vault/Vault.sol";
+import { VaultBytecode } from "./../../../../src/vault/VaultBytecode.sol";
 import { VaultFactory } from "./../../../../src/vault/VaultFactory.sol";
 import { VaultSharedSetup } from "../../../helpers/VaultSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../../../helpers/ERC20PresetMinterPauser.sol";
@@ -11,8 +12,6 @@ import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 import { console2 } from "forge-std/console2.sol";
 
 contract VaultFactoryTest is VaultSharedSetup {
-    VaultFactory factory;
-
     address internal feeRecipient = address(2);
     uint256 internal feePercentage = 0.02e27;
     IERC20 internal baseAsset = BASE_ASSET;
@@ -25,9 +24,7 @@ contract VaultFactoryTest is VaultSharedSetup {
     IIonPool[] internal newWithdrawQueue;
 
     function setUp() public override {
-        super.setUp();
-
-        factory = new VaultFactory();
+        super.setUp(); // factory deployed in parent
 
         marketsToAdd.push(weEthIonPool);
         marketsToAdd.push(rsEthIonPool);
@@ -54,8 +51,9 @@ contract VaultFactoryTest is VaultSharedSetup {
         BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
     }
 
-    function test_CreateVault() public {
-        bytes32 salt = keccak256("random salt");
+    function test_CreateVault_Basic() public {
+        bytes32 salt = _getSalt(address(this), "random salt");
+
         Vault vault = factory.createVault(
             baseAsset,
             feeRecipient,
@@ -101,8 +99,9 @@ contract VaultFactoryTest is VaultSharedSetup {
         assertEq(vault.balanceOf(address(this)), MIN_INITIAL_DEPOSIT - 1e3, "deployer gets 1e3 less shares");
     }
 
-    function test_CreateVault_Twice() public {
-        bytes32 salt = keccak256("first random salt");
+    function test_CreateVault_SameBytecodeDifferentSalt() public {
+        bytes32 salt = _getSalt(address(this), "random salt");
+
         Vault vault = factory.createVault(
             baseAsset,
             feeRecipient,
@@ -119,7 +118,7 @@ contract VaultFactoryTest is VaultSharedSetup {
         setERC20Balance(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
         BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
 
-        bytes32 salt2 = keccak256("second random salt");
+        bytes32 salt2 = _getSalt(address(this), "second random salt");
         Vault vault2 = factory.createVault(
             baseAsset,
             feeRecipient,
@@ -143,7 +142,8 @@ contract VaultFactoryTest is VaultSharedSetup {
     }
 
     function test_Revert_CreateVault_SameSaltTwice() public {
-        bytes32 salt = keccak256("random salt");
+        bytes32 salt = _getSalt(address(this), "random salt");
+
         Vault vault = factory.createVault(
             baseAsset,
             feeRecipient,
@@ -172,8 +172,70 @@ contract VaultFactoryTest is VaultSharedSetup {
         );
     }
 
+    function test_Revert_SaltMustBeginWithMsgSender() public {
+        bytes32 salt = _getSalt(address(1), "random salt");
+        require(address(this) != address(1));
+
+        vm.expectRevert(VaultFactory.SaltMustBeginWithMsgSender.selector);
+        Vault vault = factory.createVault(
+            baseAsset,
+            feeRecipient,
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            salt,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+    }
+
+    /**
+     * If the salt begins with the same sender, but the ending bytes are
+     * different, it should deploy to different addresses.
+     */
+    function test_Revert_SaltBeginsWithMsgSenderButDiffEnding() public {
+        bytes32 salt1 = _getSalt(address(this), "first random salt");
+        bytes32 salt2 = _getSalt(address(this), "second random salt");
+
+        require(salt1 != salt2, "salt must be different");
+
+        deal(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
+        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
+        Vault vault1 = factory.createVault(
+            baseAsset,
+            feeRecipient,
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            salt1,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+
+        deal(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
+        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
+        Vault vault2 = factory.createVault(
+            baseAsset,
+            feeRecipient,
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            salt2,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+
+        assertTrue(address(vault1) != address(vault2), "deployment addresses must be different");
+    }
+
     function test_CreateVault_SameSaltDifferentBytecode() public {
-        bytes32 salt = keccak256("random salt");
+        bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
             BASE_ASSET,
@@ -245,7 +307,7 @@ contract VaultFactoryTest is VaultSharedSetup {
         address deployer = newAddress("DEPLOYER");
         // deploy using the factory which enforces minimum deposit of 1e9 assets
         // and the 1e3 shares burn.
-        bytes32 salt = keccak256("random salt");
+        bytes32 salt = _getSalt(deployer, "random salt");
 
         setERC20Balance(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
 
@@ -347,5 +409,97 @@ contract VaultFactoryTest is VaultSharedSetup {
         assertLe(attackerGainFromAlice, lossFromDonation, "attack must not be profitable");
         assertLe(afterAssetBalance, initialAssetBalance, "attacker must not be profitable");
         assertLe(1e18, initialAssetBalance - afterAssetBalance, "attacker loss greater than amount griefed");
+    }
+
+    function test_Revert_Create2FrontrunSameConstructorArgDiffMsgSender() public {
+        address deployer = newAddress("DEPLOYER");
+        address attacker = newAddress("ATTACKER");
+
+        deal(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
+        deal(address(BASE_ASSET), attacker, MIN_INITIAL_DEPOSIT);
+
+        bytes32 deployerSalt = _getSalt(deployer, "random salt");
+
+        vm.startPrank(deployer);
+        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
+        Vault deployerVault = factory.createVault(
+            baseAsset,
+            feeRecipient,
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            deployerSalt,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+        vm.stopPrank();
+
+        vm.startPrank(attacker);
+        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
+        vm.expectRevert(); // create collision
+        Vault attackerVault = factory.createVault(
+            baseAsset,
+            feeRecipient,
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            deployerSalt,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+        vm.stopPrank();
+    }
+
+    /**
+     * Deployed with the same salt, but because the `feeRecipient` input address
+     * was changed, the attacker transaction deploys to a different address.
+     */
+    function test_Create2FrontrunDifferentConstructorArgsAndDifferentSalt() public {
+        address deployer = newAddress("DEPLOYER");
+        address attacker = newAddress("ATTACKER");
+
+        deal(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
+        deal(address(BASE_ASSET), attacker, MIN_INITIAL_DEPOSIT);
+
+        bytes32 deployerSalt = _getSalt(deployer, "random");
+        bytes32 attackerSalt = _getSalt(attacker, "random");
+
+        vm.startPrank(deployer);
+        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
+        Vault deployerVault = factory.createVault(
+            baseAsset,
+            feeRecipient,
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            deployerSalt,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+        vm.stopPrank();
+
+        vm.startPrank(attacker);
+        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
+        Vault attackerVault = factory.createVault(
+            baseAsset,
+            newAddress("ATTACKER_FRONTRUN_FEE_RECIPIENT"),
+            feePercentage,
+            name,
+            symbol,
+            INITIAL_DELAY,
+            VAULT_ADMIN,
+            attackerSalt,
+            marketsArgs,
+            MIN_INITIAL_DEPOSIT
+        );
+        vm.stopPrank();
+
+        assertTrue(address(deployerVault) != address(attackerVault), "different deployment address");
     }
 }

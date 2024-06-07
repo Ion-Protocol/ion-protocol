@@ -6,6 +6,7 @@ import { ValidateInterface } from "./ValidateInterface.s.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { Script, stdJson } from "forge-std/Script.sol";
+import { console2 } from "forge-std/console2.sol";
 
 abstract contract BaseScript is Script, ValidateInterface {
     using stdJson for string;
@@ -41,6 +42,8 @@ abstract contract BaseScript is Script, ValidateInterface {
             mnemonic = vm.envOr({ name: "MNEMONIC", defaultValue: TEST_MNEMONIC });
             (broadcaster,) = deriveRememberKey({ mnemonic: mnemonic, index: 0 });
         }
+
+        console2.log("broadcaster", broadcaster);
     }
 
     modifier broadcast() {

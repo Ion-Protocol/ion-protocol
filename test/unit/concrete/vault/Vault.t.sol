@@ -24,6 +24,22 @@ contract VaultSetUpTest is VaultSharedSetup {
         super.setUp();
     }
 
+    function test_Revert_InvalidFeeRecipientInConstructor() public {
+        address feeRecipient = address(0);
+        vm.expectRevert(Vault.InvalidFeeRecipient.selector);
+        vault = new Vault(
+            BASE_ASSET, address(0), ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+    }
+
+    function test_Revert_InvalidFeePercentageInConstructor() public {
+        uint256 feePerc = 1e27 + 1;
+        vm.expectRevert(Vault.InvalidFeePercentage.selector);
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, feePerc, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+    }
+
     function test_AddSupportedMarketsSeparately() public {
         vault = new Vault(
             BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
@@ -164,7 +180,23 @@ contract VaultSetUpTest is VaultSharedSetup {
         vm.stopPrank();
     }
 
-    function test_Revert_AddSupportedMarkets_MarketAlreadySupported() public { }
+    function test_Revert_AddSupportedMarkets_MarketAlreadySupported() public {
+        IIonPool[] memory newMarkets = new IIonPool[](1);
+        newMarkets[0] = weEthIonPool;
+
+        uint256[] memory newAllocationCaps = new uint256[](1);
+        newAllocationCaps[0] = 1e18;
+
+        IIonPool[] memory queue = new IIonPool[](4);
+        queue[0] = weEthIonPool;
+        queue[1] = rsEthIonPool;
+        queue[2] = rswEthIonPool;
+        queue[3] = weEthIonPool;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketAlreadySupported.selector, weEthIonPool));
+        vault.addSupportedMarkets(newMarkets, newAllocationCaps, queue, queue);
+    }
 
     function test_Revert_AddSupportedMarkets_MaxSupportedMarketsReached() public {
         vault = new Vault(
@@ -452,11 +484,82 @@ contract VaultSetUpTest is VaultSharedSetup {
         vault.updateSupplyQueue(notSupportedQueue);
     }
 
-    function test_UpdateWithdrawQueue() public { }
+    function test_UpdateSupplyQueue_Revert_DuplicateIonPool() public {
+        IIonPool[] memory duplicateQueue = new IIonPool[](3);
+        duplicateQueue[0] = weEthIonPool;
+        duplicateQueue[1] = rswEthIonPool;
+        duplicateQueue[2] = weEthIonPool;
 
-    function test_Revert_UpdateWithdrawQueue() public { }
+        vm.startPrank(OWNER);
+        vm.expectRevert(Vault.InvalidQueueContainsDuplicates.selector);
+        vault.updateSupplyQueue(duplicateQueue);
+    }
 
-    function test_Revert_DuplicateIonPoolArray() public { }
+    function test_UpdateWithdrawQueue() public {
+        IIonPool[] memory withdrawQueue = new IIonPool[](3);
+        withdrawQueue[0] = rsEthIonPool;
+        withdrawQueue[1] = rswEthIonPool;
+        withdrawQueue[2] = weEthIonPool;
+
+        vm.startPrank(OWNER);
+        vault.updateWithdrawQueue(withdrawQueue);
+
+        assertEq(address(vault.withdrawQueue(0)), address(withdrawQueue[0]), "updated withdraw queue");
+        assertEq(address(vault.withdrawQueue(1)), address(withdrawQueue[1]), "updated withdraw queue");
+        assertEq(address(vault.withdrawQueue(2)), address(withdrawQueue[2]), "updated withdraw queue");
+    }
+
+    function test_UpdateWithdrawQueue_Revert_InvalidQueueLength() public {
+        IIonPool[] memory smallerQueue = new IIonPool[](2);
+        smallerQueue[0] = rsEthIonPool;
+        smallerQueue[1] = rswEthIonPool;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidQueueLength.selector, 2, 3));
+        vault.updateWithdrawQueue(smallerQueue);
+
+        IIonPool[] memory biggerQueue = new IIonPool[](4);
+        biggerQueue[0] = rsEthIonPool;
+        biggerQueue[1] = rswEthIonPool;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidQueueLength.selector, 4, 3));
+        vault.updateWithdrawQueue(biggerQueue);
+    }
+
+    function test_UpdateWithdrawQueue_Revert_MarketNotSupported_IonPoolNotSupported() public {
+        IIonPool wrongIonPool = IIonPool(address(uint160(uint256(keccak256("address not in supported markets")))));
+        IIonPool[] memory queue = new IIonPool[](3);
+        queue[0] = rsEthIonPool;
+        queue[1] = rswEthIonPool;
+        queue[2] = wrongIonPool;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, wrongIonPool));
+        vault.updateWithdrawQueue(queue);
+    }
+
+    function test_UpdateWithdrawQueue_Revert_MarketNotSupported_ZeroAddress() public {
+        IIonPool[] memory queue = new IIonPool[](3);
+        queue[0] = IIonPool(address(0));
+        queue[1] = rswEthIonPool;
+        queue[2] = weEthIonPool;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, address(0)));
+        vault.updateWithdrawQueue(queue);
+    }
+
+    function test_UpdateWithdrawQueue_Revert_DuplicateIonPool() public {
+        IIonPool[] memory duplicateQueue = new IIonPool[](3);
+        duplicateQueue[0] = weEthIonPool;
+        duplicateQueue[1] = rswEthIonPool;
+        duplicateQueue[2] = weEthIonPool;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(Vault.InvalidQueueContainsDuplicates.selector);
+        vault.updateWithdrawQueue(duplicateQueue);
+    }
 
     function test_UpdateFeePercentage() public {
         vm.prank(OWNER);
@@ -472,6 +575,13 @@ contract VaultSetUpTest is VaultSharedSetup {
         vault.updateFeeRecipient(newFeeRecipient);
 
         assertEq(newFeeRecipient, vault.feeRecipient(), "fee recipient");
+    }
+
+    function test_UpdateFeeRecipient_Revert_ZeroAddress() public {
+        address zeroAddress = address(0);
+        vm.prank(OWNER);
+        vm.expectRevert(Vault.InvalidFeeRecipient.selector);
+        vault.updateFeeRecipient(zeroAddress);
     }
 }
 
@@ -779,7 +889,98 @@ abstract contract VaultDeposit is VaultSharedSetup {
         vault.deposit(depositAmount, address(this));
     }
 
-    function test_SupplyToIonPool_AllocationCapAndSupplyCapDiffs() public { }
+    // allocation cap diff less than supply cap diff
+    // Allocation Cap: 10 out of 15 (room = 5)
+    // Supply Cap: 10 out of 20 (room = 10)
+    // Depositing 7e18 should deposit 5e18 to the first pool, and deposit the rest to the second
+    function test_SupplyToIonPool_AllocationCapDiffBelowSupplyCapDiff() public {
+        uint256 allocationCap = 15e18;
+        uint256 supplyCap = 20e18;
+
+        updateAllocationCaps(vault, allocationCap, type(uint256).max, type(uint256).max);
+        updateSupplyCaps(vault, supplyCap, type(uint256).max, type(uint256).max);
+
+        uint256 initialDeposit = 10e18;
+        deal(address(BASE_ASSET), address(this), initialDeposit);
+        vault.deposit(initialDeposit, address(this));
+
+        uint256 initialIonPoolClaim = vault.supplyQueue(0).balanceOf(address(vault));
+        uint256 firstIonPoolRoundingError = vault.supplyQueue(0).supplyFactor() / RAY + 1;
+        assertLe(initialDeposit - initialIonPoolClaim, firstIonPoolRoundingError, "vault has initial ionPool claim");
+
+        uint256 depositAmt = 7e18;
+        deal(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 resultingFirstIonPoolClaim = vault.supplyQueue(0).balanceOf(address(vault));
+        assertLe(allocationCap - resultingFirstIonPoolClaim, firstIonPoolRoundingError, "vault resulting ionPool claim");
+
+        uint256 secondIonPoolRoundingError = vault.supplyQueue(1).supplyFactor() / RAY + 1;
+        uint256 resultingSecondIonPoolClaim = vault.supplyQueue(1).balanceOf(address(vault));
+        uint256 expectedSecondIonPoolClaim = initialDeposit + depositAmt - allocationCap;
+        assertLe(
+            expectedSecondIonPoolClaim - resultingSecondIonPoolClaim,
+            secondIonPoolRoundingError,
+            "vault second ionPool claim"
+        );
+    }
+
+    // Supply cap diff less than allocation cap diff
+    // Allocation Cap: 10e18 out of 35e18 (room = 25e18)
+    // Supply Cap: 30e18 out of 45e18 (room = 15e18)
+    // Depositing 20e18 should deposit 15e18 to the first pool, then deposit 5 to the next.
+    function test_SupplyToIonPool_SupplyCapDiffBelowAllocationCapDiff() public {
+        uint256 initialTotalSupply = 20e18; // becomes 30 with the `initialDeposit`
+        uint256 initialDeposit = 10e18;
+
+        uint256 allocationCap = 35e18;
+        uint256 supplyCap = 45e18;
+
+        uint256 depositAmt = 20e18;
+
+        updateAllocationCaps(vault, allocationCap, type(uint256).max, type(uint256).max);
+        updateSupplyCaps(vault, supplyCap, type(uint256).max, type(uint256).max);
+
+        // Initialize total supply in first ionPool
+        deal(address(BASE_ASSET), address(this), initialTotalSupply);
+        BASE_ASSET.approve(address(vault.supplyQueue(0)), initialTotalSupply);
+        vault.supplyQueue(0).supply(address(this), initialTotalSupply, new bytes32[](0));
+        uint256 firstIonPoolRoundingError = vault.supplyQueue(0).supplyFactor() / RAY + 1;
+        assertApproxEqAbs(
+            vault.supplyQueue(0).totalSupply(),
+            initialTotalSupply,
+            firstIonPoolRoundingError,
+            "first ionPool has initial total supply"
+        );
+
+        // Initialize vault's first deposit into the first ionPool (separate from the initial total supply)
+        deal(address(BASE_ASSET), address(this), initialDeposit);
+        vault.deposit(initialDeposit, address(this));
+
+        uint256 initialIonPoolClaim = vault.supplyQueue(0).balanceOf(address(vault));
+        assertLe(initialDeposit - initialIonPoolClaim, firstIonPoolRoundingError, "vault has initial ionPool claim");
+
+        // The resulting supply cap should be filled.
+        uint256 totalSupplyBeforeDeposit = vault.supplyQueue(0).totalSupply();
+        uint256 supplyCapBeforeDeposit = uint256(vm.load(address(vault.supplyQueue(0)), ION_POOL_SUPPLY_CAP_SLOT));
+        uint256 supplyCapDiff = supplyCapBeforeDeposit - totalSupplyBeforeDeposit;
+
+        deal(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 resultingFirstIonPoolClaim = vault.supplyQueue(0).balanceOf(address(vault));
+        // the resulting first ionpool claim should be 10 (initialDeposit) + 15 (out of depositAmt)
+        assertLe(25e18 - resultingFirstIonPoolClaim, firstIonPoolRoundingError, "vault resulting ionPool claim");
+
+        uint256 resultingSecondIonPoolClaim = vault.supplyQueue(1).balanceOf(address(vault));
+        uint256 expectedSecondIonPoolClaim = depositAmt - supplyCapDiff;
+        uint256 secondIonPoolRoundingError = vault.supplyQueue(1).supplyFactor() / RAY + 1;
+        assertLe(
+            expectedSecondIonPoolClaim - resultingSecondIonPoolClaim,
+            secondIonPoolRoundingError,
+            "vault second ionPool claim"
+        );
+    }
 
     /**
      * - Exact shares to mint must be minted to the user.
@@ -861,12 +1062,83 @@ abstract contract VaultDeposit is VaultSharedSetup {
         vault.deposit(depositAmt, address(this));
     }
 
-    function test_Mint_AllMarkets() public { }
+    function test_Deposit_Revert_AllSupplyCapsReachedWithAllocationCap() public {
+        updateAllocationCaps(vault, 10 ether, 10 ether, 10 ether);
+
+        uint256 depositAmt = 30 ether + 1;
+        deal(address(BASE_ASSET), address(this), depositAmt);
+
+        vm.expectRevert(Vault.AllSupplyCapsReached.selector);
+        vault.deposit(depositAmt, address(this));
+
+        // this should pass
+        vault.deposit(depositAmt - 1, address(this));
+    }
+
+    function test_Deposit_Revert_AllSupplyCapsReachedWithSupplyCap() public {
+        updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
+        updateSupplyCaps(vault, 15 ether, 15 ether, 15 ether);
+
+        uint256 depositAmt = 45 ether + 1;
+        deal(address(BASE_ASSET), address(this), depositAmt);
+
+        vm.expectRevert(Vault.AllSupplyCapsReached.selector);
+        vault.deposit(depositAmt, address(this));
+
+        // this should pass
+        vault.deposit(depositAmt - 1, address(this));
+    }
+
+    /**
+     * Supplying an amount small enough to the IonPool that truncates to mint
+     * zero shares will revert. The `Vault` contract handles this by keeping
+     * this dust amount that was already transferred in on the IDLE balance.
+     */
+    function test_Deposit_IonPoolInvalidMintAmountWithoutIteration() public {
+        updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
+
+        uint256 depositAmt = 1; // 1 wei
+        deal(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 expectedTotalAssets;
+        uint256 expectedVaultIdleBalance;
+        uint256 expectedVaultIonPoolBalance;
+
+        IIonPool pool = vault.supplyQueue(0);
+        if (depositAmt.mulDiv(RAY, pool.supplyFactor()) == 0) {
+            expectedTotalAssets = 0;
+            expectedVaultIdleBalance = depositAmt;
+            expectedVaultIonPoolBalance = 0;
+        } else {
+            expectedTotalAssets = depositAmt;
+            expectedVaultIdleBalance = 0;
+            expectedVaultIonPoolBalance = depositAmt;
+        }
+
+        assertEq(BASE_ASSET.balanceOf(address(vault)), expectedVaultIdleBalance, "vault base asset balance");
+        assertEq(vault.totalAssets(), expectedTotalAssets, "vault total assets");
+
+        // No deposit was actually made to the underlying IonPool
+        assertEq(pool.balanceOf(address(vault)), expectedVaultIonPoolBalance, "IonPool balance");
+    }
+
+    function test_Deposit_IonPoolInvalidMintAmountWithIteration() public { }
+
+    /**
+     * If the try catch encounters an error that is not `InvalidMintAmount`, it
+     * should simply skip the iteration.
+     */
+    function test_Deposit_IonPoolThrowsUnrecognizedError() public { }
 }
 
 abstract contract VaultWithdraw is VaultSharedSetup {
     function setUp() public virtual override {
         super.setUp();
+    }
+
+    function test_Withdraw_SenderIsNotTheOwner() public {
+        // TODO
     }
 
     function test_Withdraw_SingleMarket() public {
@@ -1032,6 +1304,27 @@ abstract contract VaultWithdraw is VaultSharedSetup {
             rswEthIonPool.supplyFactor() / RAY,
             "rswEthIonPool balance"
         );
+    }
+
+    /**
+     * Case where the last remaining asset being withdrawn would lead to
+     * InvalidBurnAmount error. This should revert if there are no IDLE assets
+     * to be withdrawn.
+     */
+    function test_Withdraw_InvalidBurnAmountAtTheLastWithdraw() public {
+        updateAllocationCaps(vault, 1e18, 2e18, 3e18);
+
+        uint256 depositAmt = vault.maxDeposit(NULL);
+        deal(address(BASE_ASSET), address(this), depositAmt);
+        vault.deposit(depositAmt, address(this));
+
+        uint256 withdrawable = weEthIonPool.balanceOf(address(vault)); // withdrawable from the first pool
+        // Tries to withdraw 1 more than the withdrawable from the first pool.
+        // This should attempt a 1 wei withdrawal on the second pool.
+        uint256 withdrawAmt = withdrawable + 1;
+
+        require(BASE_ASSET.balanceOf(address(vault)) == 0, "vault IDLE pool is zero");
+        vault.withdraw(withdrawAmt, address(this), address(this));
     }
 
     // try to deposit and withdraw same amounts
