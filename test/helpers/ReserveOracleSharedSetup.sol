@@ -60,13 +60,17 @@ contract ReserveOracleSharedSetup is IonPoolSharedSetup {
 
     function setUp() public virtual override {
         if (blockNumber == 0) {
-            vm.createSelectFork(MAINNET_RPC_URL);
+            vm.createSelectFork(_getForkRpc());
         } else {
-            mainnetFork = vm.createSelectFork(MAINNET_RPC_URL, blockNumber);
+            mainnetFork = vm.createSelectFork(_getForkRpc(), blockNumber);
         }
         super.setUp();
 
         mockToken = new ERC20PresetMinterPauser("Mock LST", "mLST");
+    }
+
+    function _getForkRpc() internal virtual returns (string memory) {
+        return vm.envString("MAINNET_ARCHIVE_RPC_URL");
     }
 
     function changeStaderOracleExchangeRate(
