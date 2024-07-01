@@ -75,7 +75,7 @@
     "VaultFactory:deployment:deploy:tenderly": "forge script script/deploy/vault/DeployVaultFactory.s.sol --rpc-url $TENDERLY_RPC_URL --private-key $PRIVATE_KEY --slow",
     "VaultFactory:deployment:deploy:mainnet": "forge script script/deploy/vault/DeployVaultFactory.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow",
     "Vault:deployment:deploy:tenderly": "forge script script/deploy/vault/DeployVault.s.sol --rpc-url $TENDERLY_RPC_URL --private-key $PRIVATE_KEY --slow",
-    "Vault:deployment:deploy:mainnet": "forge script script/deploy/vault/DeployVault.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow"
+    "Vault:deployment:deploy:mainnet": "forge script script/deploy/vault/DeployVault.s.sol --rpc-url $MAINNET_RPC_URL --private-key $PRIVATE_KEY --slow" 
   },
   "dependencies": {
     "date-fns": "^2.30.0",

@@ -43,13 +43,17 @@ abstract contract LrtHandler_ForkBase is IonHandler_ForkBase {
         vm.deal(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
 
         vm.startPrank(lender1);
-        uint256 amount = WSTETH_ADDRESS.depositForLst(INITIAL_LENDER_UNDERLYING_BALANCE);
-        WSTETH_ADDRESS.approve(address(ionPool), type(uint256).max);
+        uint256 amount = WSTETH_ADDRESS.depositForLst(INITIAL_LENDER_UNDERLYING_BALANCE); // TODO remove
+        WSTETH_ADDRESS.approve(address(ionPool), type(uint256).max); // TODO remove
+
+        deal(address(ionPool.underlying()), lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ionPool.underlying().approve(address(ionPool), type(uint256).max);
+
         ionPool.supply(lender1, amount, emptyProof);
         vm.stopPrank();
     }
 
-    function _getUnderlying() internal pure override returns (address) {
+    function _getUnderlying() internal pure virtual override returns (address) {
         return address(WSTETH_ADDRESS);
     }
 }

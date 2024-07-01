@@ -5,6 +5,7 @@ pragma solidity 0.8.21;
 import { ReserveOracle } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 import { RsEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RsEthWstEthReserveOracle.sol";
 import { RswEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RswEthWstEthReserveOracle.sol";
+import { EzEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/EzEthWethReserveOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UPDATE_COOLDOWN } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 import {
@@ -125,6 +126,32 @@ abstract contract ReserveOracle_ForkTest is ReserveOracleSharedSetup {
     function _getProtocolExchangeRate() internal virtual returns (uint256);
 }
 
+abstract contract MockEzEth is ReserveOracle_ForkTest {
+    bytes32 constant EZETH_TOTAL_SUPPLY_SLOT = 0x0000000000000000000000000000000000000000000000000000000000000035;
+
+    function _increaseExchangeRate() internal override returns (uint256 newExchangeRate) {
+        uint256 prevExchangeRate = _getProtocolExchangeRate();
+        // effectively doubles the exchange rate by halving the total supply of ezETH
+        uint256 existingEzETHSupply = EZETH.totalSupply();
+        uint256 newTotalSupply = existingEzETHSupply / 2;
+        vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
+        newExchangeRate = _getProtocolExchangeRate();
+
+        require(newExchangeRate > prevExchangeRate, "exchange rate should increase");
+    }
+
+    function _decreaseExchangeRate() internal override returns (uint256 newExchangeRate) {
+        uint256 prevExchangeRate = _getProtocolExchangeRate();
+        // effectively halves the exchange rate by doubling the total supply of ezETH
+        uint256 existingEzETHSupply = EZETH.totalSupply();
+        uint256 newTotalSupply = existingEzETHSupply * 2;
+        vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
+        newExchangeRate = _getProtocolExchangeRate();
+
+        require(newExchangeRate < prevExchangeRate, "exchange rate should decrease");
+    }
+}
+
 contract RsEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
     using WadRayMath for uint256;
 
@@ -172,36 +199,12 @@ contract RsEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
     }
 }
 
-contract EzEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
+contract EzEthWstEthReserveOracle_ForkTest is MockEzEth {
     using WadRayMath for uint256;
-
-    bytes32 constant EZETH_TOTAL_SUPPLY_SLOT = 0x0000000000000000000000000000000000000000000000000000000000000035;
 
     function setUp() public override {
         super.setUp();
         reserveOracle = new EzEthWstEthReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE);
-    }
-
-    function _increaseExchangeRate() internal override returns (uint256 newExchangeRate) {
-        uint256 prevExchangeRate = _getProtocolExchangeRate();
-        // effectively doubles the exchange rate by halving the total supply of ezETH
-        uint256 existingEzETHSupply = EZETH.totalSupply();
-        uint256 newTotalSupply = existingEzETHSupply / 2;
-        vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
-        newExchangeRate = _getProtocolExchangeRate();
-
-        require(newExchangeRate > prevExchangeRate, "exchange rate should increase");
-    }
-
-    function _decreaseExchangeRate() internal override returns (uint256 newExchangeRate) {
-        uint256 prevExchangeRate = _getProtocolExchangeRate();
-        // effectively halves the exchange rate by doubling the total supply of ezETH
-        uint256 existingEzETHSupply = EZETH.totalSupply();
-        uint256 newTotalSupply = existingEzETHSupply * 2;
-        vm.store(address(EZETH), EZETH_TOTAL_SUPPLY_SLOT, bytes32(newTotalSupply));
-        newExchangeRate = _getProtocolExchangeRate();
-
-        require(newExchangeRate < prevExchangeRate, "exchange rate should decrease");
     }
 
     function _convertToEth(uint256 amt) internal view override returns (uint256) {
@@ -379,5 +382,24 @@ contract RswEthWstEthReserveOracle_ForkTest is ReserveOracle_ForkTest {
 
     function _getProtocolExchangeRate() internal view override returns (uint256) {
         return RSWETH.getRate().wadMulDown(WSTETH_ADDRESS.tokensPerStEth());
+    }
+}
+
+contract EzEthWethReserveOracle_ForkTest is MockEzEth {
+    using WadRayMath for uint256;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new EzEthWethReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE);
+    }
+
+    function _convertToEth(uint256 amt) internal view override returns (uint256) {
+        return amt; // `amt` is already WETH
+    }
+
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
+        (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
+        uint256 totalSupply = EZETH.totalSupply();
+        return totalTVL.wadDivDown(totalSupply);
     }
 }

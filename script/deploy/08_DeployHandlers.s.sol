@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { MAINNET_WSTETH_WETH_UNISWAP } from "../../src/Constants.sol";
+import { MAINNET_WSTETH_WETH_UNISWAP, EZETH_WETH_BALANCER_POOL_ID } from "../../src/Constants.sol";
 import { DeployScript } from "../Deploy.s.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { IonHandlerBase } from "../../src/flash/IonHandlerBase.sol";
-import { RswEthHandler } from "../../src/flash/lrt/RswEthHandler.sol";
-
+import { EzEthWethHandler } from "./../../src/flash/lrt/EzEthWethHandler.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 // NOTE: Different handlers will have different constructor parameters.
-// This script should be reconfigured on each handler deployment.
+// NOTE: THIS SCRIPT MUST BE reconfigured on each handler deployment.
 contract DeployHandlersScript is DeployScript {
     using StdJson for string;
 
@@ -29,11 +28,13 @@ contract DeployHandlersScript is DeployScript {
         _validateInterfaceIonPool(ionPool);
 
         if (deployCreate2) {
-            handler = new RswEthHandler{ salt: DEFAULT_SALT }(
-                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP
+            handler = new EzEthWethHandler{ salt: DEFAULT_SALT }(
+                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP, EZETH_WETH_BALANCER_POOL_ID
             );
         } else {
-            handler = new RswEthHandler(ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP);
+            handler = new EzEthWethHandler{ salt: DEFAULT_SALT }(
+                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, MAINNET_WSTETH_WETH_UNISWAP, EZETH_WETH_BALANCER_POOL_ID
+            );
         }
     }
 }

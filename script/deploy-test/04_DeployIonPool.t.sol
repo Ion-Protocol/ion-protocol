@@ -6,7 +6,7 @@ import { IonPool } from "../../src/IonPool.sol";
 import { DeployTestBase } from "./00_DeployTestBase.t.sol";
 import { DeployIonPoolScript } from "../deploy/04_DeployIonPool.s.sol";
 
-address constant CREATEX_PUBLIC_KEY = 0x01bd9aBD70D74D8eC70D338bD6099ca29DA3F9B4;
+address constant CREATEX_PUBLIC_KEY = 0x94544835Cf97c631f101c5f538787fE14E2E04f6;
 
 contract DeployIonPoolTest is DeployTestBase, DeployIonPoolScript {
     function checkState(IonPool ionPool) public {

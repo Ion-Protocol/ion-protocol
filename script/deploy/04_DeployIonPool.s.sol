@@ -12,6 +12,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
+import { console2 } from "forge-std/console2.sol";
 
 contract DeployIonPoolScript is DeployScript {
     using StdJson for string;
@@ -30,11 +31,13 @@ contract DeployIonPoolScript is DeployScript {
     bytes32 salt = config.readBytes32(".salt");
 
     function createX() public returns (IonPool ionImpl, IonPool ionPool) {
+        ionImpl = IonPool(config.readAddress(".ionImpl"));
+
         _validateInterface(IERC20(underlying));
         _validateInterface(interestRateModule);
         _validateInterface(whitelist);
 
-        ionImpl = IonPool(0xAd71a9e73e235A61caEb10059B64459FAB23B8C7);
+        // ionImpl = IonPool();
         _validateInterfaceIonPool(ionImpl);
 
         // if (deployCreate2) {
