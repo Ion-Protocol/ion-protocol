@@ -14,7 +14,7 @@ remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
                 "forge-safe/=lib/forge-safe/src/"]
 fs_permissions = [{ access = "read-write", path = "./"}]
 optimizer = true
-optimizer_runs = 300
+optimizer_runs = 200
 no_match_contract = "Echidna"
 no_match_path = "script/**/*.sol"
 gas_reports = ["IonHandler", "IonRegistry", "TransparentUpgradeableProxy", "IonPool", "WstEthHandler", "EthXHandler", "SwEthHandler", "GemJoin", "InterestRate", "Whitelist", "WeEthHandler"]
