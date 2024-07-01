@@ -162,4 +162,4 @@ jobs:
         uses: Rubilmax/foundry-storage-check@v3.7
         with:
           contract: src/IonPool.sol:IonPool
-          address: "0x00000000005a1de4c0eb34609e211ad8831707e0" # the address at which the contract check is deployed
+          address: "0xad71a9e73e235a61caeb10059b64459fab23b8c7" # the address at which the contract check is deployed

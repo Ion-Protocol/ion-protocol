@@ -136,6 +136,7 @@ contract IonPool is PausableUpgradeable, RewardToken {
         Ilk[] ilks;
         // remove() should never be called, it will mess up the ordering
         EnumerableSet.AddressSet ilkAddresses;
+        uint256 storageDiff;
         mapping(uint256 ilkIndex => mapping(address user => Vault)) vaults;
         mapping(uint256 ilkIndex => mapping(address user => uint256)) gem; // [WAD]
         mapping(address unbackedDebtor => uint256) unbackedDebt; // [RAD]
