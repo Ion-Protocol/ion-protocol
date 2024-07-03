@@ -142,14 +142,15 @@ contract EzEthWethSpotOracle_ForkTest is SpotOracle_ForkTest {
 }
 
 contract WeEthWethSpotOracle_ForkTest is SpotOracle_ForkTest {
+    uint256 constant GRACE_PERIOD = 3600;
     uint256 constant MAX_TIME_FROM_LAST_UPDATE = 87_000;
     uint256 constant MAX_LTV = 0.8e27;
 
     function setUp() public override {
         super.setUp();
         reserveOracle =
-            new WeEthWethReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE);
-        spotOracle = new WeEthWethSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE);
+            new WeEthWethReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
+        spotOracle = new WeEthWethSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
     }
 
     function _getForkRpc() internal override returns (string memory) {

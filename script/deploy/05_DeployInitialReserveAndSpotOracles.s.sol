@@ -15,6 +15,7 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
     string config = vm.readFile(configPath);
 
     uint256 maxChange = config.readUint(".maxChange");
+    uint256 gracePeriod = config.readUint(".gracePeriod");
     uint256 ltv = config.readUint(".ltv");
 
     function run() public broadcast returns (address reserveOracle, address spotOracle) {
@@ -30,16 +31,16 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
         if (deployCreate2) {
             reserveOracle = address(
                 new WeEthWethReserveOracle{ salt: DEFAULT_SALT }(
-                    0, new address[](3), 0, maxChange, maxTimeFromLastUpdate
+                    0, new address[](3), 0, maxChange, maxTimeFromLastUpdate, gracePeriod
                 )
             );
             spotOracle = address(
-                new WeEthWethSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate)
+                new WeEthWethSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod)
             );
         } else {
             reserveOracle =
-                address(new WeEthWethReserveOracle(0, new address[](3), 0, maxChange, maxTimeFromLastUpdate));
-            spotOracle = address(new WeEthWethSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+                address(new WeEthWethReserveOracle(0, new address[](3), 0, maxChange, maxTimeFromLastUpdate, gracePeriod));
+            spotOracle = address(new WeEthWethSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod));
         }
     }
 }

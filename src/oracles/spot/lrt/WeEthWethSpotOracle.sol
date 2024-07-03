@@ -18,8 +18,18 @@ contract WeEthWethSpotOracle is SpotOracle {
     using SafeCast for int256;
 
     error SequencerDown();
+    error GracePeriodNotOver();
 
+    /**
+     * @notice The maximum delay for the oracle update in seconds before the
+     * data is considered stale. 
+     */
     uint256 public immutable MAX_TIME_FROM_LAST_UPDATE; // seconds
+
+    /**
+     * @notice Amount of time to wait after the sequencer restarts.
+     */
+    uint256 public immutable GRACE_PERIOD; 
 
     /**
      * @notice Creates a new `WeEthWethSpotOracle` instance.
@@ -30,11 +40,13 @@ contract WeEthWethSpotOracle is SpotOracle {
     constructor(
         uint256 _ltv,
         address _reserveOracle,
-        uint256 _maxTimeFromLastUpdate
+        uint256 _maxTimeFromLastUpdate,
+        uint256 _gracePeriod
     )
         SpotOracle(_ltv, _reserveOracle)
     {
         MAX_TIME_FROM_LAST_UPDATE = _maxTimeFromLastUpdate;
+        GRACE_PERIOD = _gracePeriod;
     }
 
     /**
@@ -54,6 +66,7 @@ contract WeEthWethSpotOracle is SpotOracle {
         ) = BASE_SEQUENCER_UPTIME_FEED.latestRoundData();
 
         if (answer == 1) revert SequencerDown();
+        if (block.timestamp - startedAt <= GRACE_PERIOD) revert GracePeriodNotOver();
 
         (
             /*uint80 roundID*/

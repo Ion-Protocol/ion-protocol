@@ -430,10 +430,11 @@ contract WeEthWethReserveOracle_ForkTest is ReserveOracle_ForkTest {
     error MaxTimeFromLastUpdateExceeded(uint256, uint256);
 
     uint256 public immutable MAX_TIME_FROM_LAST_UPDATE = 87_000; // seconds
+    uint256 public immutable GRACE_PERIOD = 3600;
 
     function setUp() public override {
         super.setUp();
-        reserveOracle = new WeEthWethReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE);
+        reserveOracle = new WeEthWethReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
     }
 
     function _getForkRpc() internal override returns (string memory) {
