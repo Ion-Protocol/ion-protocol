@@ -46,8 +46,12 @@ abstract contract UniswapFlashswapDirectMintHandlerWithDust_Test is LrtHandler_F
             maxResultingDebt + roundingError,
             "max resulting debt upper bound with rounding error"
         );
-        assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())), 0);
-        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError);
+        assertEq(
+            IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())),
+            0,
+            "collateral balanceOf"
+        );
+        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError, "rounding error");
         // TODO: bound this with a max dust bound
         assertGt(
             ionPool.collateral(_getIlkIndex(), address(this)),

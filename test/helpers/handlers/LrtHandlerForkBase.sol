@@ -24,10 +24,32 @@ abstract contract LrtHandler_ForkBase is IonHandler_ForkBase {
         }
         config.distributionFactors[0] = 1e4;
 
-        if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
-        else vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), forkBlock);
+        if (forkBlock == 0) vm.createSelectFork(_getForkRpc());
+        else vm.createSelectFork(_getForkRpc(), forkBlock);
         IonPoolSharedSetup.setUp();
 
+        spotOracles[0].setPrice(_getInitialSpotPrice());
+
+        vm.deal(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        vm.deal(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
+
+        vm.startPrank(lender1);
+
+        // uint256 amount = WSTETH_ADDRESS.depositForLst(INITIAL_LENDER_UNDERLYING_BALANCE); // TODO remove
+        // WSTETH_ADDRESS.approve(address(ionPool), type(uint256).max); // TODO remove
+
+        deal(address(ionPool.underlying()), lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
+        ionPool.underlying().approve(address(ionPool), type(uint256).max);
+
+        ionPool.supply(lender1, INITIAL_LENDER_UNDERLYING_BALANCE, emptyProof);
+        vm.stopPrank();
+    }
+
+    function _getUnderlying() internal pure virtual override returns (address) {
+        return address(WSTETH_ADDRESS);
+    }
+
+    function _getInitialSpotPrice() internal view virtual returns (uint256) {
         (, int256 stEthSpot,,,) = STETH_ETH_CHAINLINK.latestRoundData();
         uint256 wstEthInEthSpot = MAINNET_WSTETH.getStETHByWstETH(uint256(stEthSpot));
 
@@ -36,24 +58,6 @@ abstract contract LrtHandler_ForkBase is IonHandler_ForkBase {
 
         // wstETH / weETH [18 decimals]
         uint256 weEthWstEthSpot = uint256(answer).scaleUpToWad(8).wadDivDown(wstEthInEthSpot);
-
-        spotOracles[0].setPrice(weEthWstEthSpot);
-
-        vm.deal(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        vm.deal(lender2, INITIAL_LENDER_UNDERLYING_BALANCE);
-
-        vm.startPrank(lender1);
-        uint256 amount = WSTETH_ADDRESS.depositForLst(INITIAL_LENDER_UNDERLYING_BALANCE); // TODO remove
-        WSTETH_ADDRESS.approve(address(ionPool), type(uint256).max); // TODO remove
-
-        deal(address(ionPool.underlying()), lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
-        ionPool.underlying().approve(address(ionPool), type(uint256).max);
-
-        ionPool.supply(lender1, amount, emptyProof);
-        vm.stopPrank();
-    }
-
-    function _getUnderlying() internal pure virtual override returns (address) {
-        return address(WSTETH_ADDRESS);
+        return weEthWstEthSpot;
     }
 }

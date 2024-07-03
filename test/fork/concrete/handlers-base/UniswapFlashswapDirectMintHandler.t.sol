@@ -42,11 +42,18 @@ abstract contract UniswapFlashswapDirectMintHandler_Test is LrtHandler_ForkBase 
 
         assertLe(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
-            maxResultingDebt + roundingError
+            maxResultingDebt + roundingError,
+            "resulting debt"
         );
-        assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())), 0);
-        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError);
-        assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral);
+        assertEq(
+            IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFDMHandler())),
+            0,
+            "collateral balanceOf"
+        );
+        assertLe(IERC20(_getUnderlying()).balanceOf(address(_getTypedUFDMHandler())), roundingError, "rounding error");
+        assertEq(
+            ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral, "resulting collateral"
+        );
     }
 
     function testFork_RevertWhen_UntrustedCallerCallsFlashswapCallback() external {

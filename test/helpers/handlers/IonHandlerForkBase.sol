@@ -12,6 +12,8 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
+import { WETH_ADDRESS } from "./../../../src/Constants.sol";
+
 abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     uint256 constant INITIAL_THIS_UNDERLYING_BALANCE = 20e18;
 
@@ -23,15 +25,15 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     AggregatorV2V3Interface constant STETH_ETH_CHAINLINK =
         AggregatorV2V3Interface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 
-    IWETH9 constant weth = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IWETH9 internal weth = IWETH9(_getUnderlying());
 
     uint256 forkBlock = 0;
 
     bytes32[] borrowerWhitelistProof;
 
     function setUp() public virtual override {
-        if (forkBlock == 0) vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"));
-        else vm.createSelectFork(vm.envString("MAINNET_ARCHIVE_RPC_URL"), forkBlock);
+        if (forkBlock == 0) vm.createSelectFork(_getForkRpc());
+        else vm.createSelectFork(_getForkRpc(), forkBlock);
         super.setUp();
 
         vm.deal(lender1, INITIAL_LENDER_UNDERLYING_BALANCE);
@@ -58,8 +60,12 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
         }
     }
 
+    /**
+     * The asset that the lenders deposit into the IonPool. By default, the test
+     * assumes the base asset is WETH.
+     */
     function _getUnderlying() internal pure virtual override returns (address) {
-        return address(weth);
+        return address(WETH_ADDRESS);
     }
 
     function _getDebtCeiling(uint8) internal pure override returns (uint256) {
@@ -71,6 +77,10 @@ abstract contract IonHandler_ForkBase is IonPoolSharedSetup {
     function _getProviderLibrary() internal view virtual returns (IProviderLibraryExposed);
 
     function _getHandler() internal view virtual returns (address);
+
+    function _getForkRpc() internal view virtual returns (string memory) {
+        return vm.envString("MAINNET_ARCHIVE_RPC_URL");
+    }
 
     receive() external payable { }
 }

@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 
 import { SpotOracle } from "../../../oracles/spot/SpotOracle.sol";
 import { WadRayMath } from "../../../libraries/math/WadRayMath.sol";
-import { BASE_WEETH_ETH_PRICE_CHAINLINK } from "../../../Constants.sol";
+import { BASE_WEETH_ETH_PRICE_CHAINLINK, BASE_SEQUENCER_UPTIME_FEED } from "../../../Constants.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -16,6 +16,8 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 contract WeEthWethSpotOracle is SpotOracle {
     using WadRayMath for uint256;
     using SafeCast for int256;
+
+    error SequencerDown();
 
     uint256 public immutable MAX_TIME_FROM_LAST_UPDATE; // seconds
 
@@ -41,7 +43,28 @@ contract WeEthWethSpotOracle is SpotOracle {
      * @return wethPerWeEth price of weETH in WETH. [WAD]
      */
     function getPrice() public view override returns (uint256) {
-        (, int256 ethPerWeEth,, uint256 ethPerWeEthUpdatedAt,) = BASE_WEETH_ETH_PRICE_CHAINLINK.latestRoundData(); // [WAD]
+        (
+            /*uint80 roundID*/
+            ,
+            int256 answer,
+            uint256 startedAt,
+            /*uint256 updatedAt*/
+            ,
+            /*uint80 answeredInRound*/
+        ) = BASE_SEQUENCER_UPTIME_FEED.latestRoundData();
+
+        if (answer == 1) revert SequencerDown();
+
+        (
+            /*uint80 roundID*/
+            ,
+            int256 ethPerWeEth,
+            /*uint startedAt*/
+            ,
+            uint256 ethPerWeEthUpdatedAt,
+            /*uint80 answeredInRound*/
+        ) = BASE_WEETH_ETH_PRICE_CHAINLINK.latestRoundData(); // [WAD]
+
         if (block.timestamp - ethPerWeEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE) {
             return 0; // collateral valuation is zero if oracle data is stale
         } else {
