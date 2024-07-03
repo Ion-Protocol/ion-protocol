@@ -35,12 +35,16 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
                 )
             );
             spotOracle = address(
-                new WeEthWethSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod)
+                new WeEthWethSpotOracle{ salt: DEFAULT_SALT }(
+                    ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod
+                )
             );
         } else {
-            reserveOracle =
-                address(new WeEthWethReserveOracle(0, new address[](3), 0, maxChange, maxTimeFromLastUpdate, gracePeriod));
-            spotOracle = address(new WeEthWethSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod));
+            reserveOracle = address(
+                new WeEthWethReserveOracle(0, new address[](3), 0, maxChange, maxTimeFromLastUpdate, gracePeriod)
+            );
+            spotOracle =
+                address(new WeEthWethSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod));
         }
     }
 }

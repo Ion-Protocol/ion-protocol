@@ -434,7 +434,9 @@ contract WeEthWethReserveOracle_ForkTest is ReserveOracle_ForkTest {
 
     function setUp() public override {
         super.setUp();
-        reserveOracle = new WeEthWethReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
+        reserveOracle = new WeEthWethReserveOracle(
+            ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD
+        );
     }
 
     function _getForkRpc() internal override returns (string memory) {

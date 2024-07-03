@@ -22,14 +22,14 @@ contract WeEthWethSpotOracle is SpotOracle {
 
     /**
      * @notice The maximum delay for the oracle update in seconds before the
-     * data is considered stale. 
+     * data is considered stale.
      */
     uint256 public immutable MAX_TIME_FROM_LAST_UPDATE; // seconds
 
     /**
      * @notice Amount of time to wait after the sequencer restarts.
      */
-    uint256 public immutable GRACE_PERIOD; 
+    uint256 public immutable GRACE_PERIOD;
 
     /**
      * @notice Creates a new `WeEthWethSpotOracle` instance.

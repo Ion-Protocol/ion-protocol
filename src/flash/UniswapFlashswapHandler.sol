@@ -22,6 +22,10 @@ import { IUniswapV3SwapCallback } from "@uniswap/v3-core/contracts/interfaces/ca
  * @dev When using the `UniswapFlashSwapHandler`, the `IUniswapV3Pool pool` fed to the
  * constructor should be the WETH/[LST] pool.
  *
+ * This flow can be used in case when the UniswapV3 Pool has a collateral <>
+ * base asset pair. However, the current version of this contract always assumes
+ * that the base asset is `WETH`.
+ *
  * Unlike Balancer flashloans, there is no concern here that somebody else could
  * initiate a flashswap, then direct the callback to be called on this contract.
  * Uniswap enforces that callback is only called on `msg.sender`.

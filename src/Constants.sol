@@ -20,6 +20,7 @@ import {
     IRenzoOracle,
     IRestakeManager
 } from "./interfaces/ProviderInterfaces.sol";
+import { IWETH9 } from "./interfaces/IWETH9.sol";
 import { IRedstonePriceFeed } from "./interfaces/IRedstone.sol";
 import { IChainlink } from "./interfaces/IChainlink.sol";
 import { ICreateX } from "./interfaces/ICreateX.sol";
@@ -108,4 +109,4 @@ bytes32 constant BASE_WEETH_WETH_BALANCER_POOL_ID = 0xab99a3e856deb448ed99713dfc
 IUniswapV3Pool constant BASE_WSTETH_WETH_UNISWAP = IUniswapV3Pool(0x20E068D76f9E90b90604500B84c7e19dCB923e7e);
 IChainlink constant BASE_SEQUENCER_UPTIME_FEED = IChainlink(0xBCF85224fc0756B9Fa45aA7892530B47e10b6433);
 IERC20 constant BASE_WEETH = IERC20(0x04C0599Ae5A44757c0af6F9eC3b93da8976c150A);
-IERC20 constant BASE_WETH = IERC20(0x4200000000000000000000000000000000000006);
+IWETH9 constant BASE_WETH = IWETH9(0x4200000000000000000000000000000000000006);

@@ -5,7 +5,7 @@ import { IRsEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
 import { KelpDaoLibrary } from "../../../../src/libraries/lrt/KelpDaoLibrary.sol";
 import { RsEthHandler } from "../../../../src/flash/lrt/RsEthHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
-import { RSETH, RSETH_LRT_DEPOSIT_POOL } from "../../../../src/Constants.sol";
+import { RSETH, RSETH_LRT_DEPOSIT_POOL, WETH_ADDRESS } from "../../../../src/Constants.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
@@ -38,7 +38,9 @@ abstract contract RsEthHandler_ForkBase is LrtHandler_ForkBase {
 
     function setUp() public virtual override {
         super.setUp();
-        rsEthHandler = new RsEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
+        rsEthHandler = new RsEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL, WETH_ADDRESS
+        );
 
         RSETH.approve(address(rsEthHandler), type(uint256).max);
 

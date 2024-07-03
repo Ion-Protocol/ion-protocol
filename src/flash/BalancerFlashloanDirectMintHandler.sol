@@ -14,7 +14,9 @@ IVault constant VAULT = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
 /**
  * @notice This contract allows for easy creation of leverage positions through
- * Balancer flashloans and LST mints through the LST provider.
+ * Balancer flashloans and LST mints through the LST provider. This contract
+ * should be used when the base asset of the market is `WETH` and when the asset
+ * required to mint the collateral is also `WETH`.
  *
  * @dev There are a couple things to consider here from a security perspective. The
  * first one is that the flashloan callback must only be callable from the

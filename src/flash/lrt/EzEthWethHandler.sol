@@ -5,14 +5,15 @@ import { IonPool } from "../../IonPool.sol";
 import { GemJoin } from "../../join/GemJoin.sol";
 import { Whitelist } from "../../Whitelist.sol";
 import { IonHandlerBase } from "../IonHandlerBase.sol";
+import { IWETH9 } from "./../../interfaces/IWETH9.sol";
 import { UniswapFlashloanBalancerSwapHandler } from "./../UniswapFlashloanBalancerSwapHandler.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-
 /**
  * @notice Handler for the ezETH collateral in the ezETH/WETH market.
  *
  * @custom:security-contact security@molecularlabs.io
  */
+
 contract EzEthWethHandler is UniswapFlashloanBalancerSwapHandler {
     /**
      * @notice Creates a new `EzEthWethHandler` instance.
@@ -29,9 +30,10 @@ contract EzEthWethHandler is UniswapFlashloanBalancerSwapHandler {
         GemJoin _gemJoin,
         Whitelist _whitelist,
         IUniswapV3Pool _wstEthUniswapPool,
-        bytes32 _balancerPoolId
+        bytes32 _balancerPoolId,
+        IWETH9 _weth
     )
-        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
+        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist, _weth)
         UniswapFlashloanBalancerSwapHandler(_wstEthUniswapPool, _balancerPoolId)
     { }
 }

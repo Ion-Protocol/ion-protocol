@@ -65,7 +65,7 @@ contract WeEthWethReserveOracle is ReserveOracle {
 
         if (answer == 1) revert SequencerDown();
         if (block.timestamp - startedAt <= GRACE_PERIOD) revert GracePeriodNotOver();
-        
+
         (, int256 ethPerWeEth,, uint256 ethPerWeEthUpdatedAt,) =
             BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
 

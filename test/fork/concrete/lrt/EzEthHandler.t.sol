@@ -5,7 +5,7 @@ import { RenzoLibrary } from "./../../../../src/libraries/lrt/RenzoLibrary.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { EzEthHandler } from "./../../../../src/flash/lrt/EzEthHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
-import { RENZO_RESTAKE_MANAGER, EZETH } from "../../../../src/Constants.sol";
+import { RENZO_RESTAKE_MANAGER, EZETH, WETH_ADDRESS } from "../../../../src/Constants.sol";
 import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
@@ -31,7 +31,9 @@ abstract contract EzEthHandler_ForkBase is LrtHandler_ForkBase {
 
     function setUp() public virtual override {
         super.setUp();
-        ezEthHandler = new EzEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
+        ezEthHandler = new EzEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL, WETH_ADDRESS
+        );
 
         EZETH.approve(address(ezEthHandler), type(uint256).max);
 

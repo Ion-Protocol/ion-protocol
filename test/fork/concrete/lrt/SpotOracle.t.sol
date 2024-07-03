@@ -148,8 +148,9 @@ contract WeEthWethSpotOracle_ForkTest is SpotOracle_ForkTest {
 
     function setUp() public override {
         super.setUp();
-        reserveOracle =
-            new WeEthWethReserveOracle(ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
+        reserveOracle = new WeEthWethReserveOracle(
+            ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD
+        );
         spotOracle = new WeEthWethSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
     }
 

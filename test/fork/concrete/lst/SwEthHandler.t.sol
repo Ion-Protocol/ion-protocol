@@ -5,6 +5,7 @@ import { ISwEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
 import { SwEthHandler } from "../../../../src/flash//lst/SwEthHandler.sol";
 import { SwellLibrary } from "../../../../src/libraries/lst/SwellLibrary.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
+import { WETH_ADDRESS } from "../../../../src/Constants.sol";
 
 import { LstHandler_ForkBase } from "../../../helpers/handlers/LstHandlerForkBase.sol";
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
@@ -39,7 +40,8 @@ abstract contract SwEthHandler_ForkBase is LstHandler_ForkBase {
 
     function setUp() public virtual override {
         super.setUp();
-        swEthHandler = new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), SWETH_ETH_POOL);
+        swEthHandler =
+            new SwEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), SWETH_ETH_POOL, WETH_ADDRESS);
 
         IERC20(address(MAINNET_SWELL)).approve(address(swEthHandler), type(uint256).max);
 

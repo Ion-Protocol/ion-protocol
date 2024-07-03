@@ -5,7 +5,7 @@ import { IRswEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
 import { RestakedSwellLibrary } from "../../../../src/libraries/lrt/RestakedSwellLibrary.sol";
 import { RswEthHandler } from "../../../../src/flash/lrt/RswEthHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
-import { RSWETH } from "../../../../src/Constants.sol";
+import { RSWETH, WETH_ADDRESS } from "../../../../src/Constants.sol";
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { IIonPool } from "./../../../../src/interfaces/IIonPool.sol";
 
@@ -39,7 +39,9 @@ abstract contract RswEthHandler_ForkBase is LrtHandler_ForkBase {
 
     function setUp() public virtual override {
         super.setUp();
-        rswEthHandler = new RswEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
+        rswEthHandler = new RswEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL, WETH_ADDRESS
+        );
 
         RSWETH.approve(address(rswEthHandler), type(uint256).max);
 

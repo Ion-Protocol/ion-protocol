@@ -10,6 +10,7 @@ import { IonHandlerBase } from "../IonHandlerBase.sol";
 import { UniswapFlashloanBalancerSwapHandler } from "../UniswapFlashloanBalancerSwapHandler.sol";
 import { BalancerFlashloanDirectMintHandler } from "../BalancerFlashloanDirectMintHandler.sol";
 import { UniswapFlashswapHandler } from "../UniswapFlashswapHandler.sol";
+import { IWETH9 } from "./../../interfaces/IWETH9.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
@@ -47,10 +48,11 @@ contract EthXHandler is
         Whitelist _whitelist,
         IUniswapV3Pool _wstEthUniswapPool,
         IUniswapV3Pool _ethXUniswapPool,
-        bytes32 _balancerPoolId
+        bytes32 _balancerPoolId,
+        IWETH9 _weth
     )
         UniswapFlashloanBalancerSwapHandler(_wstEthUniswapPool, _balancerPoolId)
-        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
+        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist, _weth)
         UniswapFlashswapHandler(_ethXUniswapPool, false)
     {
         STADER_DEPOSIT = _staderDeposit;

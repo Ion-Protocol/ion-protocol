@@ -5,7 +5,8 @@ import {
     BASE_WEETH_WETH_BALANCER_POOL_ID,
     BASE_WETH,
     BASE_WEETH,
-    BASE_WEETH_ETH_PRICE_CHAINLINK
+    BASE_WEETH_ETH_PRICE_CHAINLINK,
+    WETH_ADDRESS
 } from "./../../../../src/Constants.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
@@ -28,7 +29,8 @@ contract WeEthWethHandler_ForkTest is UniswapFlashloanBalancerSwapHandler_Test {
             gemJoins[ILK_INDEX],
             Whitelist(whitelist),
             BASE_WSTETH_WETH_UNISWAP,
-            BASE_WEETH_WETH_BALANCER_POOL_ID
+            BASE_WEETH_WETH_BALANCER_POOL_ID,
+            WETH_ADDRESS
         );
 
         BASE_WEETH.approve(address(handler), type(uint256).max);

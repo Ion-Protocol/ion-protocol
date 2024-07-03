@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { WEETH_ADDRESS, PT_WEETH_POOL } from "../../../../src/Constants.sol";
+import { WEETH_ADDRESS, PT_WEETH_POOL, WETH_ADDRESS } from "../../../../src/Constants.sol";
 import { PtHandler } from "../../../../src/flash/PtHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { IWeEth } from "../../../../src/interfaces/ProviderInterfaces.sol";
@@ -28,7 +28,8 @@ abstract contract PtWeEthHandler_ForkBase is PtHandler_ForkBase {
             pool: ionPool,
             join: gemJoins[ilkIndex],
             whitelist: Whitelist(whitelist),
-            _market: PT_WEETH_POOL
+            _market: PT_WEETH_POOL,
+            _weth: WETH_ADDRESS
         });
 
         IERC20 _pt = ptHandler.PT();

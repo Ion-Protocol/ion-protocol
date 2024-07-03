@@ -7,6 +7,7 @@ import { Whitelist } from "../../Whitelist.sol";
 import { IonHandlerBase } from "../IonHandlerBase.sol";
 import { UniswapFlashloanBalancerSwapHandler } from "./../UniswapFlashloanBalancerSwapHandler.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import { IWETH9 } from "./../../interfaces/IWETH9.sol";
 
 /**
  * @notice Handler for the weETH collateral in the weETH/WETH market.
@@ -29,9 +30,10 @@ contract WeEthWethHandler is UniswapFlashloanBalancerSwapHandler {
         GemJoin _gemJoin,
         Whitelist _whitelist,
         IUniswapV3Pool _wstEthUniswapPool,
-        bytes32 _balancerPoolId
+        bytes32 _balancerPoolId,
+        IWETH9 _weth
     )
-        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
+        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist, _weth)
         UniswapFlashloanBalancerSwapHandler(_wstEthUniswapPool, _balancerPoolId)
     { }
 }

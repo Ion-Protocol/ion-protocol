@@ -22,6 +22,9 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
  * rates. DEXes also provide an avenue for atomic deleveraging since the LST ->
  * ETH exchange can be made.
  *
+ * This contract is used when the Balancer has a collateral asset <> base asset
+ * pool, and the Uniswap has a base asset flashloan.
+ *
  * NOTE: Uniswap flashloans do charge a small fee.
  *
  * @dev Some tokens only have liquidity on Balancer. Due to the reentrancy lock
@@ -60,6 +63,8 @@ abstract contract UniswapFlashloanBalancerSwapHandler is IUniswapV3FlashCallback
         address token0 = IUniswapV3Pool(_flashloanPool).token0();
         address token1 = IUniswapV3Pool(_flashloanPool).token1();
 
+        // The naming convention uses `_weth`, but this terminology refers to
+        // the `BASE` token of the underlying IonPool.
         bool _wethIsToken0 = token0 == address(BASE);
         bool _wethIsToken1 = token1 == address(BASE);
 

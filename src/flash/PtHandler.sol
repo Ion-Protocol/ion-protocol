@@ -5,6 +5,7 @@ import { IonPool } from "../IonPool.sol";
 import { GemJoin } from "../join/GemJoin.sol";
 import { Whitelist } from "../Whitelist.sol";
 import { IonHandlerBase } from "./IonHandlerBase.sol";
+import { IWETH9 } from "./../interfaces/IWETH9.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -47,9 +48,10 @@ contract PtHandler is IonHandlerBase, IPMarketSwapCallback {
         IonPool pool,
         GemJoin join,
         Whitelist whitelist,
-        IPMarketV3 _market
+        IPMarketV3 _market,
+        IWETH9 _weth
     )
-        IonHandlerBase(0, pool, join, whitelist)
+        IonHandlerBase(0, pool, join, whitelist, _weth)
     {
         if (!pool.hasRole(pool.GEM_JOIN_ROLE(), address(join))) revert InvalidGemJoin(address(join));
 

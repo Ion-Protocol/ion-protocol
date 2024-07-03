@@ -24,7 +24,8 @@ contract EzEthWethHandler_ForkTest is UniswapFlashloanBalancerSwapHandler_Test {
             gemJoins[ILK_INDEX],
             Whitelist(whitelist),
             MAINNET_WSTETH_WETH_UNISWAP,
-            EZETH_WETH_BALANCER_POOL_ID
+            EZETH_WETH_BALANCER_POOL_ID,
+            WETH_ADDRESS
         );
 
         EZETH.approve(address(handler), type(uint256).max);
