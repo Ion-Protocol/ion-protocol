@@ -27,6 +27,7 @@ import { ICreateX } from "./interfaces/ICreateX.sol";
 import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
 
@@ -99,3 +100,12 @@ IPMarketV3 constant PT_RSWETH_POOL = IPMarketV3(0x1729981345aa5CaCdc19eA9eeffea9
 
 // CreateX
 ICreateX constant CREATEX = ICreateX(0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed);
+
+// --- BASE ---
+
+// EtherFi
+bytes32 constant BASE_WEETH_WETH_BALANCER_POOL_ID = 0xab99a3e856deb448ed99713dfce62f937e2d4d74000000000000000000000118;
+IUniswapV3Pool constant BASE_WSTETH_WETH_UNISWAP = IUniswapV3Pool(0x20E068D76f9E90b90604500B84c7e19dCB923e7e);
+IChainlink constant BASE_SEQUENCER_UPTIME_FEED = IChainlink(0xBCF85224fc0756B9Fa45aA7892530B47e10b6433);
+IERC20 constant BASE_WEETH = IERC20(0x04C0599Ae5A44757c0af6F9eC3b93da8976c150A);
+IERC20 constant BASE_WETH = IERC20(0x4200000000000000000000000000000000000006);
