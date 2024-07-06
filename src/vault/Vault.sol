@@ -369,6 +369,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
             MarketAllocation calldata allocation = allocations[i];
             IIonPool pool = allocation.pool;
 
+            _supportedMarketsIndexOf(address(pool)); // Checks if the pool is supported
+
             uint256 currentSupplied = pool == IDLE ? currentIdleDeposits : pool.balanceOf(address(this));
             int256 assets = allocation.assets; // to deposit or withdraw
 
