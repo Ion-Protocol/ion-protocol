@@ -93,7 +93,7 @@ contract IonLens is IIonLens {
     }
 
     /**
-     * @return The total amount of collateral in the pool.
+     * @return The total amount of collateral types in the pool.
      */
     function ilkCount(IIonPool pool) external view returns (uint256) {
         IonPoolStorage storage $ = _getIonPoolStorage();
