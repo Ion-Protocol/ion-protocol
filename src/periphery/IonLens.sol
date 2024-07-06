@@ -13,6 +13,13 @@ struct IlkSlot0 {
     uint48 lastRateUpdate; // block.timestamp of last update; overflows in 800_000 years}
 }
 
+/**
+ * @title Ion Lens
+ * @author Molecular Labs
+ * @notice Generalized lens contract for IonPools.
+ *
+ * @custom:security-contact security@molecularlabs.io
+ */
 contract IonLens is IIonLens {
     // --- Data ---
     struct Ilk {
