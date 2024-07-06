@@ -41,8 +41,6 @@ contract DeployVault is BaseScript {
 
     bytes32 salt = config.readBytes32(".salt");
 
-    uint256 initialDeposit = config.readUint(".initialDeposit");
-
     address[] marketsToAdd = config.readAddressArray(".marketsToAdd");
     uint256[] allocationCaps = config.readUintArray(".allocationCaps");
     address[] supplyQueue = config.readAddressArray(".supplyQueue");
@@ -99,14 +97,6 @@ contract DeployVault is BaseScript {
         // require(initialDelay != 0, "initialDelay");
         require(initialDefaultAdmin != address(0), "initialDefaultAdmin");
 
-        require(initialDeposit >= 1e3, "initialDeposit");
-        require(IERC20(baseAsset).balanceOf(broadcaster) >= initialDeposit, "sender balance");
-        // require(IERC20(baseAsset).allowance(broadcaster, address(factory)) >= initialDeposit, "sender allowance");
-
-        if (IERC20(baseAsset).allowance(broadcaster, address(factory)) < initialDeposit) {
-            IERC20(baseAsset).approve(address(factory), 1e9);
-        }
-
         // The length of all the arrays must be the same.
         require(marketsToAdd.length > 0);
         require(allocationCaps.length > 0);
@@ -146,8 +136,7 @@ contract DeployVault is BaseScript {
             initialDelay,
             initialDefaultAdmin,
             salt,
-            marketsArgs,
-            initialDeposit
+            marketsArgs
         );
 
         require(vault.feeRecipient() == feeRecipient, "feeRecipient");
