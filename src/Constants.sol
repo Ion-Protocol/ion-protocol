@@ -29,6 +29,7 @@ import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
+import {IPool} from "./interfaces/IPool.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
 
@@ -75,13 +76,15 @@ IRswEth constant RSWETH = IRswEth(0xFAe103DC9cf190eD75350761e95403b7b8aFa6c0);
 IRedstonePriceFeed constant REDSTONE_EZETH_ETH_PRICE_FEED =
     IRedstonePriceFeed(0xF4a3e183F59D2599ee3DF213ff78b1B3b1923696);
 IEzEth constant EZETH = IEzEth(0xbf5495Efe5DB9ce00f80364C8B423567e58d2110);
+IEzEth constant BASE_EZETH = IEzEth(0x2416092f143378750bb29b79eD961ab195CcEea5);
 IRenzoOracle constant RENZO_ORACLE = IRenzoOracle(0x5a12796f7e7EBbbc8a402667d266d2e65A814042);
 IRestakeManager constant RENZO_RESTAKE_MANAGER = IRestakeManager(0x74a09653A083691711cF8215a6ab074BB4e99ef5);
+IPool constant BASE_EZTETH_WETH_AERODROME = IPool(0x0C8bF3cb3E1f951B284EF14aa95444be86a33E2f);
 
 // Chainlink
 IChainlink constant ETH_PER_STETH_CHAINLINK = IChainlink(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 IChainlink constant MAINNET_USD_PER_ETH_CHAINLINK = IChainlink(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-
+IChainlink constant BASE_EZETH_ETH_PRICE_CHAINLINK = IChainlink(0x960BDD1dFD20d7c98fa482D793C3dedD73A113a3);
 // Redstone
 IRedstonePriceFeed constant MAINNET_USD_PER_ETHX_REDSTONE =
     IRedstonePriceFeed(0xFaBEb1474C2Ab34838081BFdDcE4132f640E7D2d);
@@ -92,6 +95,7 @@ IUniswapV3Pool constant MAINNET_WSTETH_WETH_UNISWAP = IUniswapV3Pool(0x109830a1A
 
 // Balancer
 bytes32 constant EZETH_WETH_BALANCER_POOL_ID = 0x596192bb6e41802428ac943d2f1476c1af25cc0e000000000000000000000659;
+bytes32 constant BASE_EZETH_WETH_BALANCER_POOL_ID = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
 // Pendle Pools
 IPMarketV3 constant PT_WEETH_POOL = IPMarketV3(0xF32e58F92e60f4b0A37A69b95d642A471365EAe8);
