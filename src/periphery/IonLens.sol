@@ -51,7 +51,6 @@ contract IonLens is IIonLens {
     bytes4 private constant EXTSLOAD_SELECTOR = 0x1e2eaeaf;
 
     error SloadFailed();
-    error InvalidFieldSlot();
 
     constructor() {
         IonPoolStorage storage $ = _getIonPoolStorage();
