@@ -340,7 +340,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             uint y = IERC20(tokenIn).balanceOf(address(AERODROME_POOL));
             uint x = IERC20(tokenOut).balanceOf(address(AERODROME_POOL));
 
-            amountToPay = (10030 * a * y) / ((10000*x) - (10000 + 30)*a);
+            amountToPay = (10030 * a * y) / ((10000*x) - (30)*a);
             
             // uint getAmountOut = AERODROME_POOL.getAmountOut(amount1, tokenOut);
             // console.log("Amount by getAmountOut", getAmountOut);
