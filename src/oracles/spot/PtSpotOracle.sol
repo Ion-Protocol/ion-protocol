@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import { SpotOracle } from "./SpotOracle.sol";
 
 import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
-import { PendlePtOracleLib } from "pendle-core-v2-public/oracles/PendlePtOracleLib.sol";
+import { PendlePtOracleLib } from "pendle-core-v2-public/contracts/oracles/PendlePtOracleLib.sol";
 
 /**
  * @notice Spot Oracle for PT MARKETs
