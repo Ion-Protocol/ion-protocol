@@ -22,6 +22,10 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         uint256 resultingAdditionalCollateral = 5e18;
         uint256 maxResultingDebt = 6e18; // In weth
 
+        console2.log("initial deposit: %d", initialDeposit);
+        console2.log("resulting additional collateral: %d", resultingAdditionalCollateral);
+        console2.log("max resulting debt: %d", maxResultingDebt);
+
         weth.approve(address(_getTypedUFHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFHandler()));
 
@@ -215,7 +219,7 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         weth.approve(address(_getTypedUFHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFHandler()));
 
-        vm.expectRevert();
+        vm.expectRevert(AerodromeFlashswapHandler.FlashswapRepaymentTooExpensive.selector);
         _getTypedUFHandler().flashswapLeverage(
             initialDeposit,
             resultingAdditionalCollateral,

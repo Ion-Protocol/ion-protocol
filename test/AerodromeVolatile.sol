@@ -3,7 +3,9 @@
 */
 
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.19;
+pragma solidity 0.8.21;
+
+import {console2} from "forge-std/console2.sol";
 
 // OpenZeppelin Contracts (last updated v4.8.0) (utils/math/Math.sol)
 
@@ -3067,6 +3069,8 @@ contract Pool is IPool, ERC20Permit, ReentrancyGuard {
             _balance0 = IERC20(_token0).balanceOf(address(this));
             _balance1 = IERC20(_token1).balanceOf(address(this));
         }
+        console2.log("balance0 + amount0Out - reserve0...i.e. amount0In", _balance0 + amount0Out - _reserve0);
+        console2.log("balance1 + amount1Out - reserve1...i.e. amount1In", _balance1 + amount1Out - _reserve1);
         uint256 amount0In = _balance0 > _reserve0 - amount0Out ? _balance0 - (_reserve0 - amount0Out) : 0;
         uint256 amount1In = _balance1 > _reserve1 - amount1Out ? _balance1 - (_reserve1 - amount1Out) : 0;
         if (amount0In == 0 && amount1In == 0) revert InsufficientInputAmount();
@@ -3078,6 +3082,8 @@ contract Pool is IPool, ERC20Permit, ReentrancyGuard {
             _balance0 = IERC20(_token0).balanceOf(address(this)); // since we removed tokens, we need to reconfirm balances, can also simply use previous balance - amountIn/ 10000, but doing balanceOf again as safety check
             _balance1 = IERC20(_token1).balanceOf(address(this));
             // The curve, either x3y+y3x for stable pools, or x*y for volatile pools
+            console2.log("_k of balances", _k(_balance0, _balance1));
+            console2.log("_k of reserves", _k(_reserve0, _reserve1));
             if (_k(_balance0, _balance1) < _k(_reserve0, _reserve1)) revert K();
         }
 
