@@ -16,7 +16,8 @@ import { EzEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/Ez
 import { EzEthWethSpotOracle } from "./../../../../src/oracles/spot/lrt/EzEthWethSpotOracle.sol";
 import { WeEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/WeEthWethReserveOracle.sol";
 import { WeEthWethSpotOracle } from "./../../../../src/oracles/spot/lrt/WeEthWethSpotOracle.sol";
-
+import { BaseEzEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/base/BaseEzEthWethReserveOracle.sol";
+import { BaseEzEthWethSpotOracle } from "./../../../../src/oracles/spot/lrt/base/BaseEzEthWethSpotOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
@@ -152,6 +153,25 @@ contract WeEthWethSpotOracle_ForkTest is SpotOracle_ForkTest {
             ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD
         );
         spotOracle = new WeEthWethSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
+    }
+
+    function _getForkRpc() internal override returns (string memory) {
+        return vm.envString("BASE_MAINNET_RPC_URL");
+    }
+}
+
+contract BaseEzEthWethSpotOracle_ForkTest is SpotOracle_ForkTest {
+    uint256 constant GRACE_PERIOD = 3600;
+    uint256 constant MAX_TIME_FROM_LAST_UPDATE = 87_000;
+    uint256 constant MAX_LTV = 0.8e27;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new BaseEzEthWethReserveOracle(
+            ILK_INDEX, emptyFeeds, QUORUM, DEFAULT_MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD
+        );
+        spotOracle =
+            new BaseEzEthWethSpotOracle(MAX_LTV, address(reserveOracle), MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD);
     }
 
     function _getForkRpc() internal override returns (string memory) {
