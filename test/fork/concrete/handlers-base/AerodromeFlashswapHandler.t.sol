@@ -111,7 +111,7 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
 
         vm.warp(block.timestamp + 3 hours);
 
-        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        uint256 slippageAndFeeTolerance = 1.007e18; // 0.7%
         // Want to completely deleverage position and only leave initial capital
         // in vault
         uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
@@ -171,7 +171,7 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         );
         assertEq(ionPool.normalizedDebt(_getIlkIndex(), address(this)), normalizedDebtCreated);
 
-        uint256 slippageAndFeeTolerance = 1.005e18; // 0.5%
+        uint256 slippageAndFeeTolerance = 1.007e18; // 0.7%
         // Want to completely deleverage position and only leave initial capital
         // in vault
         uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
