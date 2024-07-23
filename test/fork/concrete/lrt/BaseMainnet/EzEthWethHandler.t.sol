@@ -77,10 +77,10 @@ contract EzEthWethHandler_ForkTest is AerodromeFlashswapHandler_Test {
     }
 }
 
-// contract EzEthHandler_WithRateChange_ForkTest is EzEthWethHandler_ForkTest {
-//     function setUp() public virtual override {
-//         super.setUp();
+contract EzEthHandler_WithRateChange_ForkTest is EzEthWethHandler_ForkTest {
+    function setUp() public virtual override {
+        super.setUp();
 
-//         ionPool.setRate(ILK_INDEX, 3.5708923502395e27);
-//     }
-// }
+        ionPool.setRate(ILK_INDEX, 3.5708923502395e27);
+    }
+}
