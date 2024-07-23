@@ -8,6 +8,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPool} from "../interfaces/IPool.sol";
+import {IIonPool} from "../interfaces/IIonPool.sol";
 
 import {console} from "forge-std/Test.sol";
 
@@ -63,7 +64,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
      * @param _pool Pool to perform the flashswap on.
      * @param _wethIsToken0 Whether WETH is token0 or token1 in the pool.
      */
-    constructor(IPool _pool, bool _wethIsToken0) {
+    constructor(IPool _pool, bool _wethIsToken0){
         if (address(_pool) == address(0)) revert InvalidUniswapPool();
 
         address token0 = _pool.token0();
@@ -182,8 +183,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
 
         (uint256 initialUserDebt, ) = _getFullRepayAmount(msg.sender);
         console.log("initialUserDebt: ", initialUserDebt);
-        uint256 amountIn =
-            _initiateFlashSwap(zeroForOne, amountToLeverage, address(this), sqrtPriceLimitX96, flashswapData);
+        _initiateFlashSwap(zeroForOne, amountToLeverage, address(this), sqrtPriceLimitX96, flashswapData);
 
         (uint256 endUserDebt, ) = _getFullRepayAmount(msg.sender);
 
@@ -191,11 +191,10 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         // todo make this work with new variables
         // This protects against a potential sandwich attack
         console.log("AfterK actual ", AERODROME_POOL.getK());
-        console.log("amountIn: ", amountIn);
         console.log("balance of pool in collateral post: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
         console.log("balance of pool in WETH post: ", WETH.balanceOf(address(AERODROME_POOL)));
         if (endUserDebt > maxResultingAdditionalDebt + initialUserDebt) {
-            revert FlashswapRepaymentTooExpensive(amountIn, maxResultingAdditionalDebt);
+            revert FlashswapRepaymentTooExpensive(endUserDebt - initialUserDebt, maxResultingAdditionalDebt);
         }
     }
 
@@ -234,6 +233,10 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         // collateral -> WETH
         bool zeroForOne = !WETH_IS_TOKEN0;
 
+        console.log("Before K: ", AERODROME_POOL.getK());
+        console.log("balance of pool in collateral pre: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
+        console.log("balance of pool in WETH pre: ", WETH.balanceOf(address(AERODROME_POOL)));
+
         (uint256 r0, uint256 r1,) = AERODROME_POOL.getReserves();
         uint256 b0 = WETH.balanceOf(address(AERODROME_POOL));
         uint256 b1 = LST_TOKEN.balanceOf(address(AERODROME_POOL));
@@ -246,13 +249,23 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             IPool(address(AERODROME_POOL)).sync();
         }
 
-        // todo make deleverage work
         FlashSwapData memory flashswapData =
             FlashSwapData({ user: msg.sender, poolKBefore: AERODROME_POOL.getK(), changeInCollateralOrDebt: debtToRemove, zeroForOne: zeroForOne });
 
-        uint256 amountIn = _initiateFlashSwap(zeroForOne, debtToRemove, address(this), sqrtPriceLimitX96, flashswapData);
+        uint256 initialUserCollateral = IIonPool(address(POOL)).collateral(ILK_INDEX, msg.sender);
+        console.log("initialUserCollateral: ", initialUserCollateral);
 
-        if (amountIn > maxCollateralToRemove) revert FlashswapRepaymentTooExpensive(amountIn, maxCollateralToRemove);
+        _initiateFlashSwap(zeroForOne, debtToRemove, address(this), sqrtPriceLimitX96, flashswapData);
+
+        uint256 endUserCollateral = IIonPool(address(POOL)).collateral(ILK_INDEX, msg.sender);
+
+        console.log("endUserCollateral: ", endUserCollateral);
+        // This protects against a potential sandwich attack
+        console.log("AfterK actual ", AERODROME_POOL.getK());
+        console.log("balance of pool in collateral post: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
+        console.log("balance of pool in WETH post: ", WETH.balanceOf(address(AERODROME_POOL)));
+
+        if (initialUserCollateral > maxCollateralToRemove + endUserCollateral) revert FlashswapRepaymentTooExpensive(initialUserCollateral - endUserCollateral, maxCollateralToRemove);
     }
 
     /**
@@ -401,9 +414,20 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         // deleverage
         else {
             console.log("deleverage");
-            // console.log("User Balance of Token 1: ",IERC20(tokenIn).balanceOf(data.user));
-            // amountToPay = AERODROME_POOL.getAmountOut(amount1, tokenIn);
-            amountToPay = AERODROME_POOL.getAmountOut(amount0, tokenOut);
+            uint a = amount0;
+            uint y = IERC20(tokenIn).balanceOf(address(AERODROME_POOL));
+            uint x = IERC20(tokenOut).balanceOf(address(AERODROME_POOL));
+
+            amountToPay = (10000 * a * y ) / (9970* x);
+            uint256 afterK = (IERC20(tokenIn).balanceOf(address(AERODROME_POOL)) - 30*amountToPay / 10000 )* (IERC20(tokenOut).balanceOf(address(AERODROME_POOL)));
+            
+            if(afterK < data.poolKBefore){
+                console.log("K is less than before");
+                amountToPay += 1;
+            }
+            else{
+                console.log("K is greater than before");
+            }
             _repayAndWithdraw(data.user, address(this), amountToPay, data.changeInCollateralOrDebt);
         }
         console.log("sending back: ", amountToPay);
@@ -414,5 +438,6 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         console.log("Balance of pool in collateral end of hook: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
         console.log("Balance of pool in WETH end of hook: ", WETH.balanceOf(address(AERODROME_POOL)));
         console.log("After K manual: ", (IERC20(tokenIn).balanceOf(address(AERODROME_POOL)) - 30*amountToPay / 10000 )* (IERC20(tokenOut).balanceOf(address(AERODROME_POOL))));
+        
     }
 }
