@@ -16,6 +16,9 @@ interface IPoolCallee {
     function hook(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external;
 }
 
+interface IPoolFactory {
+    function getFee(address pool, bool isStable) external view returns (uint256);
+}
 
 /**
  * @notice This contract allows for easy creation and closing of leverage
@@ -62,9 +65,8 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
     /**
      * @notice Creates a new `AerodromeFlashswapHandler` instance.
      * @param _pool Pool to perform the flashswap on.
-     * @param _wethIsToken0 Whether WETH is token0 or token1 in the pool.
      */
-    constructor(IPool _pool, bool _wethIsToken0){
+    constructor(IPool _pool, bool /*_wethIsToken0*/){
         if (address(_pool) == address(0)) revert InvalidUniswapPool();
 
         address token0 = _pool.token0();
@@ -174,7 +176,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             IPool(address(AERODROME_POOL)).sync();
         }
 
-        uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, amountToLeverage, 30, true, balanceIn*balanceOut);
+        uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, amountToLeverage, balanceIn*balanceOut);
         console.log("Amount to Pay: ", amountToPay);
         FlashSwapData memory flashswapData = FlashSwapData({
             user: msg.sender,
@@ -240,8 +242,6 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         console.log("balance of pool in WETH pre: ", WETH.balanceOf(address(AERODROME_POOL)));
 
         (uint256 reserveOut, uint256 reserveIn,) = AERODROME_POOL.getReserves();
-        address tokenIn = address(LST_TOKEN);
-        address tokenOut = address(WETH);
         uint256 balanceIn = LST_TOKEN.balanceOf(address(AERODROME_POOL));
         uint256 balanceOut = WETH.balanceOf(address(AERODROME_POOL));
         if (!WETH_IS_TOKEN0) {
@@ -253,7 +253,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             IPool(address(AERODROME_POOL)).sync();
         }
 
-        uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, debtToRemove, 30, false, balanceIn*balanceOut);
+        uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, debtToRemove, balanceIn*balanceOut);
 
         FlashSwapData memory flashswapData = FlashSwapData({ 
             user: msg.sender,
@@ -388,7 +388,9 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
     //     a * balIn / [(1-F)(balOut - a)] = b => note* 1-F = (10000 - fee)/ 10000
     //     10000 * a * balIn / [(10000 - fee) * (balOut - a)] = b
 
-    function _calculateAmountToPay(uint256 balIn, uint256 balOut, uint256 amountChangeCollOrDebt, uint256 fee, bool isLeverage, uint256 poolKBefore) internal pure returns(uint256 amountToPay){
+    function _calculateAmountToPay(uint256 balIn, uint256 balOut, uint256 amountChangeCollOrDebt, uint256 poolKBefore) internal view returns(uint256 amountToPay){
+        address factory = AERODROME_POOL.factory();
+        uint256 fee = IPoolFactory(factory).getFee(address(AERODROME_POOL), false);
         uint256 a = amountChangeCollOrDebt;
 
         amountToPay = (10000 * a * balIn ) / (9970 * (balOut-a));
