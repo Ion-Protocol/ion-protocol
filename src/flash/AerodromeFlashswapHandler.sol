@@ -376,6 +376,15 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         console.log("After K manual: ", (IERC20(tokenIn).balanceOf(address(AERODROME_POOL)) - 30*amountToPay / 10000 )* (IERC20(tokenOut).balanceOf(address(AERODROME_POOL))));
     }
 
+    function getAmountOutGivenAmountIn (uint256 amountIn, bool isLeverage) external view returns(uint256 amountOut){
+        uint256 balanceWeth = WETH.balanceOf(address(AERODROME_POOL));
+        uint256 balanceCollateral = LST_TOKEN.balanceOf(address(AERODROME_POOL));
+        if(isLeverage){
+            return _calculateAmountToPay(balanceWeth, balanceCollateral, amountIn, balanceWeth*balanceCollateral);
+        }
+        return _calculateAmountToPay(balanceCollateral, balanceWeth, amountIn, balanceWeth*balanceCollateral);
+    }
+
     //     F = Fee multiplier e.g. 0.3% for 30 bps
     //     a = amount Token Out from pool (e.g. LRT for leverage or WETH for deleverage)
     //     balOut = out token reserve BEFORE a was taken out (after sync is called will be current initial balance)
