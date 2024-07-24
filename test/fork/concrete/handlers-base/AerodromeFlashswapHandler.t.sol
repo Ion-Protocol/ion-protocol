@@ -13,6 +13,7 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import { Vm } from "forge-std/Vm.sol";
 import { console2 } from "forge-std/console2.sol";
+import { StdUtils } from "forge-std/Test.sol";
 
 using WadRayMath for uint256;
 
@@ -24,20 +25,19 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
     uint160 sqrtPriceLimitX96;
 
     function testFuzz_amountOutGivenAmountIn(uint256 amountInToHandler, bool isLeverage) external{
-        // skip 0 case since that would have returned already with no leverage or deleverage
-        vm.assume(amountInToHandler > 0);
         uint256 poolK = IPool(BASE_RSETH_WETH_AERODROME).getK();
         uint256 wethBalance = BASE_WETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
         uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
         address factory = IPool(BASE_RSETH_WETH_AERODROME).factory();
         uint256 fee = IPoolFactory(factory).getFee(address(BASE_RSETH_WETH_AERODROME), false);
+        uint256 maxValue = isLeverage ? lrtBalance : wethBalance;
+        // skip 0 case since that would have returned already with no leverage or deleverage
+        // also bound so that amount does not completely wipe out
+        amountInToHandler = StdUtils.bound(amountInToHandler, 1, maxValue - 1);
 
-        // check that amount does not completely wipe out pool reserves
         if(isLeverage){
-            vm.assume(lrtBalance > amountInToHandler);
             lrtBalance -= amountInToHandler;
         } else{
-            vm.assume(wethBalance > amountInToHandler);
             wethBalance -= amountInToHandler;
         }
         uint256 amountOutFromUser = _getTypedUFHandler().getAmountOutGivenAmountIn(amountInToHandler, isLeverage);
