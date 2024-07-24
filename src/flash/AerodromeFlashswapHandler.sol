@@ -53,6 +53,8 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
     error FlashswapRepaymentTooExpensive(uint256 amountIn, uint256 maxAmountIn);
     error CallbackOnlyCallableByPool(address unauthorizedCaller);
     error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
+    error ZeroAmountIn();
+    error AmountInTooHigh(uint256 amountIn, uint256 maxAmountIn);
 
     /// @dev The minimum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MIN_TICK)
     uint160 internal constant MIN_SQRT_RATIO = 4_295_128_739;
@@ -360,8 +362,15 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
     }
 
     function getAmountOutGivenAmountIn (uint256 amountIn, bool isLeverage) external view returns(uint256 amountOut){
+        if(amountIn == 0){
+            revert ZeroAmountIn();
+        }
         uint256 balanceWeth = WETH.balanceOf(address(AERODROME_POOL));
         uint256 balanceCollateral = LST_TOKEN.balanceOf(address(AERODROME_POOL));
+        uint256 maxAmountIn = isLeverage ? balanceCollateral : balanceWeth;
+        if(amountIn >= maxAmountIn){
+            revert AmountInTooHigh(amountIn, maxAmountIn);
+        }
         if(isLeverage){
             return _calculateAmountToPay(balanceWeth, balanceCollateral, amountIn, balanceWeth*balanceCollateral);
         }
