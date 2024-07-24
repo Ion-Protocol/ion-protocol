@@ -85,9 +85,6 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
 
     struct FlashSwapData {
         address user;
-        // This value will be used for change in collateral during leveraging and change in (normalized) debt during
-        // deleveraging
-        uint256 poolKBefore;
         uint256 changeInCollateralOrDebt;
         uint256 amountToPay;
         address tokenIn;
@@ -178,9 +175,12 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
 
         uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, amountToLeverage, balanceIn*balanceOut);
         console.log("Amount to Pay: ", amountToPay);
+
+        // This protects against a potential sandwich attack
+        if (amountToPay > maxResultingAdditionalDebt) revert FlashswapRepaymentTooExpensive(amountToPay, maxResultingAdditionalDebt);
+
         FlashSwapData memory flashswapData = FlashSwapData({
             user: msg.sender,
-            poolKBefore: balanceIn*balanceOut,
             changeInCollateralOrDebt: resultingAdditionalCollateral,
             amountToPay: amountToPay,
             tokenIn: address(WETH),
@@ -188,21 +188,11 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             isLeverage: true
         });
 
-        (uint256 initialUserDebt, ) = _getFullRepayAmount(msg.sender);
-        console.log("initialUserDebt: ", initialUserDebt);
-
         _initiateFlashSwap(WETH_IS_TOKEN0, amountToLeverage, address(this), sqrtPriceLimitX96, flashswapData);
-
-        (uint256 endUserDebt, ) = _getFullRepayAmount(msg.sender);
-        console.log("endUserDebt: ", endUserDebt);
 
         console.log("AfterK actual ", AERODROME_POOL.getK());
         console.log("balance of pool in collateral post: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
         console.log("balance of pool in WETH post: ", WETH.balanceOf(address(AERODROME_POOL)));
-        // This protects against a potential sandwich attack
-        if (endUserDebt > maxResultingAdditionalDebt + initialUserDebt) {
-            revert FlashswapRepaymentTooExpensive(endUserDebt - initialUserDebt, maxResultingAdditionalDebt);
-        }
     }
 
     /**
@@ -255,9 +245,11 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
 
         uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, debtToRemove, balanceIn*balanceOut);
 
+        // This protects against a potential sandwich attack
+        if (amountToPay > maxCollateralToRemove) revert FlashswapRepaymentTooExpensive(amountToPay, maxCollateralToRemove);
+
         FlashSwapData memory flashswapData = FlashSwapData({ 
             user: msg.sender,
-            poolKBefore: AERODROME_POOL.getK(),
             changeInCollateralOrDebt: debtToRemove,
             amountToPay: amountToPay,
             tokenIn: address(LST_TOKEN),
@@ -265,20 +257,11 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             isLeverage: false
         });
 
-        uint256 initialUserCollateral = IIonPool(address(POOL)).collateral(ILK_INDEX, msg.sender);
-        console.log("initialUserCollateral: ", initialUserCollateral);
-
         _initiateFlashSwap(!WETH_IS_TOKEN0, debtToRemove, address(this), sqrtPriceLimitX96, flashswapData);
-
-        uint256 endUserCollateral = IIonPool(address(POOL)).collateral(ILK_INDEX, msg.sender);
-
-        console.log("endUserCollateral: ", endUserCollateral);
-        // This protects against a potential sandwich attack
+        
         console.log("AfterK actual ", AERODROME_POOL.getK());
         console.log("balance of pool in collateral post: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
         console.log("balance of pool in WETH post: ", WETH.balanceOf(address(AERODROME_POOL)));
-
-        if (initialUserCollateral > maxCollateralToRemove + endUserCollateral) revert FlashswapRepaymentTooExpensive(initialUserCollateral - endUserCollateral, maxCollateralToRemove);
     }
 
     /**

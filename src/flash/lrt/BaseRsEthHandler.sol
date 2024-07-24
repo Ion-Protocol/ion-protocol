@@ -15,7 +15,7 @@ import { IWETH9 } from "./../../interfaces/IWETH9.sol";
  *
  * @custom:security-contact security@molecularlabs.io
  */
-contract RsEthHandlerBaseChain is AerodromeFlashswapHandler {
+contract BaseRsEthHandler is AerodromeFlashswapHandler {
     /**
      * @notice Creates a new `RsEthHandler` instance.
      * @param _ilkIndex Ilk index of the pool.

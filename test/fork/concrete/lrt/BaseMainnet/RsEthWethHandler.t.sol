@@ -1,4 +1,6 @@
-import { RsEthHandlerBaseChain } from "../../../../../src/flash/lrt/RsEthHandlerBaseChain.sol";
+pragma solidity ^0.8.21;
+
+import { BaseRsEthHandler } from "../../../../../src/flash/lrt/BaseRsEthHandler.sol";
 import { Whitelist } from "../../../../../src/Whitelist.sol";
 import {
     BASE_RSETH_WETH_AERODROME,
@@ -17,12 +19,12 @@ import {IPool} from "../../../../../src/interfaces/IPool.sol";
 using SafeCast for int256;
 
 contract RsEthWethHandler_ForkTest is AerodromeFlashswapHandler_Test {
-    RsEthHandlerBaseChain handler;
+    BaseRsEthHandler handler;
     uint8 immutable ILK_INDEX = 0;
 
     function setUp() public virtual override {
         super.setUp();
-        handler = new RsEthHandlerBaseChain(
+        handler = new BaseRsEthHandler(
             ILK_INDEX,
             ionPool,
             gemJoins[ILK_INDEX],
@@ -64,7 +66,7 @@ contract RsEthWethHandler_ForkTest is AerodromeFlashswapHandler_Test {
     }
 
     // NOTE Should be unused
-    function _getProviderLibrary() internal view override returns (IProviderLibraryExposed) {
+    function _getProviderLibrary() internal pure override returns (IProviderLibraryExposed) {
         return IProviderLibraryExposed(address(0));
     }
 

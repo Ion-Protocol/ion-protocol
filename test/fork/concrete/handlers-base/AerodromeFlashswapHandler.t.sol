@@ -6,6 +6,7 @@ import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.
 import { AerodromeFlashswapHandler } from "../../../../src/flash/AerodromeFlashswapHandler.sol";
 import { IonHandlerBase } from "../../../../src/flash/IonHandlerBase.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
+import { BASE_RSETH_WETH_AERODROME } from "../../../../src/Constants.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
@@ -201,14 +202,14 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         _getTypedUFHandler().hook(address(this), 1, 1, "");
     }
 
-    // function testFork_RevertWhen_TradingInZeroLiquidityRegion() external {
-    //     vm.skip(borrowerWhitelistProof.length > 0);
+    function testFork_RevertWhen_TradingInZeroLiquidityRegion() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
 
-    //     //vm.startPrank(address(_getUniswapPools()[_getIlkIndex()]));
-    //     vm.expectRevert(AerodromeFlashswapHandler.InvalidZeroLiquidityRegionSwap.selector);
-    //     _getTypedUFHandler().hook(address(this), 0, 0, "");
-    //     //vm.stopPrank();
-    // }
+        vm.startPrank(address(BASE_RSETH_WETH_AERODROME));
+        vm.expectRevert(AerodromeFlashswapHandler.InvalidZeroLiquidityRegionSwap.selector);
+        _getTypedUFHandler().hook(address(this), 0, 0, "");
+        vm.stopPrank();
+    }
 
     function testFork_RevertWhen_FlashswapLeverageCreatesMoreDebtThanUserIsWilling() external {
         vm.skip(borrowerWhitelistProof.length > 0);
