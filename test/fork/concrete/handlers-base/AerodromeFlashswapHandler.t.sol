@@ -6,7 +6,8 @@ import { WadRayMath, RAY, WAD } from "../../../../src/libraries/math/WadRayMath.
 import { AerodromeFlashswapHandler } from "../../../../src/flash/AerodromeFlashswapHandler.sol";
 import { IonHandlerBase } from "../../../../src/flash/IonHandlerBase.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
-import { BASE_RSETH_WETH_AERODROME } from "../../../../src/Constants.sol";
+import { BASE_RSETH_WETH_AERODROME, BASE_RSETH, BASE_WETH } from "../../../../src/Constants.sol";
+import { IPool } from "../../../../src/interfaces/IPool.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
@@ -15,8 +16,50 @@ import { console2 } from "forge-std/console2.sol";
 
 using WadRayMath for uint256;
 
+interface IPoolFactory {
+    function getFee(address pool, bool isStable) external view returns (uint256);
+}
+
 abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
     uint160 sqrtPriceLimitX96;
+
+    function testFuzz_amountOutGivenAmountIn(uint256 amountInToHandler, bool isLeverage) external{
+        // skip 0 case since that would have returned already with no leverage or deleverage
+        vm.assume(amountInToHandler > 0);
+        uint256 poolK = IPool(BASE_RSETH_WETH_AERODROME).getK();
+        uint256 wethBalance = BASE_WETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
+        uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
+        address factory = IPool(BASE_RSETH_WETH_AERODROME).factory();
+        uint256 fee = IPoolFactory(factory).getFee(address(BASE_RSETH_WETH_AERODROME), false);
+
+        // check that amount does not completely wipe out pool reserves
+        if(isLeverage){
+            vm.assume(lrtBalance > amountInToHandler);
+            lrtBalance -= amountInToHandler;
+        } else{
+            vm.assume(wethBalance > amountInToHandler);
+            wethBalance -= amountInToHandler;
+        }
+        uint256 amountOutFromUser = _getTypedUFHandler().getAmountOutGivenAmountIn(amountInToHandler, isLeverage);
+        uint256 lowerAmountOutFromUser = amountOutFromUser - 1;
+        uint256 wethLowerBound;
+        uint256 lrtLowerBound;
+        if(isLeverage){
+            lrtLowerBound = lrtBalance;
+            wethLowerBound = wethBalance + lowerAmountOutFromUser - (fee * lowerAmountOutFromUser)/10000;
+            wethBalance += amountOutFromUser - (fee * amountOutFromUser)/10000;
+            
+        } else{
+            wethLowerBound = wethBalance;
+            lrtLowerBound = lrtBalance + lowerAmountOutFromUser - (fee * lowerAmountOutFromUser)/10000;
+            lrtBalance += amountOutFromUser - (fee * amountOutFromUser)/10000;
+        }
+
+        uint256 newPoolK = wethBalance * lrtBalance;
+        uint256 lowerBoundPoolK = wethLowerBound * lrtLowerBound;
+        assertGe(newPoolK, poolK);
+        assertGt(poolK, lowerBoundPoolK);
+    }
 
     function testFork_FlashswapLeverage() external {
         uint256 initialDeposit = 1e18;
