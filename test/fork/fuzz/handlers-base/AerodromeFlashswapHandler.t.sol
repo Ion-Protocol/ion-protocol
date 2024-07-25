@@ -21,10 +21,15 @@ interface IPoolFactory {
     function getFee(address pool, bool isStable) external view returns (uint256);
 }
 
-abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
-    uint160 sqrtPriceLimitX96;
+struct Config {
+    uint256 initialDepositLowerBound;
+}
 
-    function testFuzz_amountOutGivenAmountIn(uint256 amountInToHandler, bool isLeverage) external{
+abstract contract AerodromeFlashswapHandler_FuzzTest is LstHandler_ForkBase {
+    uint160 sqrtPriceLimitX96;
+    Config ufConfig;
+
+     function testFuzz_amountOutGivenAmountIn(uint256 amountInToHandler, bool isLeverage) external{
         uint256 poolK = IPool(BASE_RSETH_WETH_AERODROME).getK();
         uint256 wethBalance = BASE_WETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
         uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
@@ -61,57 +66,29 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         assertGt(poolK, lowerBoundPoolK);
     }
 
-    function testFork_FlashswapLeverage() external {
-        uint256 initialDeposit = 1e18;
-        uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxResultingDebt = 6e18; // In weth
-
-        console2.log("initial deposit: %d", initialDeposit);
-        console2.log("resulting additional collateral: %d", resultingAdditionalCollateral);
-        console2.log("max resulting debt: %d", maxResultingDebt);
+    function testForkFuzz_FlashswapLeverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
+        initialDeposit = bound(initialDeposit, ufConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
+        uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
+            // skip protecting for this in the test
 
         weth.approve(address(_getTypedUFHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFHandler()));
 
-        vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
         _getTypedUFHandler().flashswapLeverage(
             initialDeposit,
-            resultingAdditionalCollateral,
-            maxResultingDebt,
-            sqrtPriceLimitX96,
-            block.timestamp,
-            borrowerWhitelistProof
-        );
-
-        if (Whitelist(whitelist).borrowersRoot(0) != 0) {
-            vm.expectRevert(abi.encodeWithSelector(Whitelist.NotWhitelistedBorrower.selector, 0, address(this)));
-            _getTypedUFHandler().flashswapLeverage(
-                initialDeposit,
-                resultingAdditionalCollateral,
-                maxResultingDebt,
-                sqrtPriceLimitX96,
-                block.timestamp + 1,
-                new bytes32[](0)
-            );
-        }
-
-        uint256 gasBefore = gasleft();
-        _getTypedUFHandler().flashswapLeverage(
-            initialDeposit,
-            resultingAdditionalCollateral,
+            resultingCollateral,
             maxResultingDebt,
             sqrtPriceLimitX96,
             block.timestamp + 1,
-            borrowerWhitelistProof
+            new bytes32[](0)
         );
-        uint256 gasAfter = gasleft();
-        if (vm.envOr("SHOW_GAS", uint256(0)) == 1) console2.log("Gas used: %d", gasBefore - gasAfter);
 
         uint256 currentRate = ionPool.rate(_getIlkIndex());
         uint256 roundingError = currentRate / RAY;
 
-        assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral);
-        // assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(_getTypedUFHandler())), 0);
+        assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral);
+        assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedUFHandler())), roundingError);
         assertLt(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
@@ -119,10 +96,11 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         );
     }
 
-    function testFork_FlashswapDeleverage() external {
-        uint256 initialDeposit = 1e18;
-        uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxResultingDebt = type(uint256).max;
+    function testForkFuzz_FlashswapDeleverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
+        initialDeposit = bound(initialDeposit, ufConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
+        uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
+            // skip protecting for this in the test
 
         weth.approve(address(_getTypedUFHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFHandler()));
@@ -130,11 +108,11 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         vm.recordLogs();
         _getTypedUFHandler().flashswapLeverage(
             initialDeposit,
-            resultingAdditionalCollateral,
+            resultingCollateral,
             maxResultingDebt,
             sqrtPriceLimitX96,
             block.timestamp + 1,
-            borrowerWhitelistProof
+            new bytes32[](0)
         );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -146,7 +124,7 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
             normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
         }
 
-        assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral);
+        assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral);
         assertLt(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
             maxResultingDebt
@@ -158,33 +136,34 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         uint256 slippageAndFeeTolerance = 1.007e18; // 0.7%
         // Want to completely deleverage position and only leave initial capital
         // in vault
-        uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
         // Remove all debt
         uint256 normalizedDebtToRemove = ionPool.normalizedDebt(_getIlkIndex(), address(this));
 
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(_getIlkIndex()));
 
-        vm.expectRevert(abi.encodeWithSelector(IonHandlerBase.TransactionDeadlineReached.selector, block.timestamp));
-        _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp);
-
         _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(_getIlkIndex());
         uint256 roundingError = currentRate / RAY;
 
-        assertGe(
-            ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral - maxCollateralToRemove
-        );
+        assertGe(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(_getIlkIndex(), address(this)), 0);
-        // assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(_getTypedUFHandler())), 0);
+        assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedUFHandler())), roundingError);
     }
 
-    function testFork_FlashswapDeleverageFull() external {
-        uint256 initialDeposit = 1e18;
-        uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxResultingDebt = type(uint256).max;
+    function testForkFuzz_FlashswapDeleverageFull(
+        uint256 initialDeposit,
+        uint256 resultingCollateralMultiplier
+    )
+        public
+    {
+        initialDeposit = bound(initialDeposit, ufConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
+        uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
+            // skip protecting for this in the test
 
         weth.approve(address(_getTypedUFHandler()), type(uint256).max);
         ionPool.addOperator(address(_getTypedUFHandler()));
@@ -192,11 +171,11 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         vm.recordLogs();
         _getTypedUFHandler().flashswapLeverage(
             initialDeposit,
-            resultingAdditionalCollateral,
+            resultingCollateral,
             maxResultingDebt,
             sqrtPriceLimitX96,
             block.timestamp + 1,
-            borrowerWhitelistProof
+            new bytes32[](0)
         );
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
@@ -208,7 +187,7 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
             normalizedDebtCreated = abi.decode(entries[i].data, (uint256));
         }
 
-        assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral);
+        assertEq(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral);
         assertLt(
             ionPool.normalizedDebt(_getIlkIndex(), address(this)).rayMulUp(ionPool.rate(_getIlkIndex())),
             maxResultingDebt
@@ -218,97 +197,62 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         uint256 slippageAndFeeTolerance = 1.007e18; // 0.7%
         // Want to completely deleverage position and only leave initial capital
         // in vault
-        uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
+        uint256 normalizedDebtCurrent = ionPool.normalizedDebt(_getIlkIndex(), address(this));
 
-        // Remove all debt
-        uint256 debtToRemove = type(uint256).max;
+        // Remove all debt if any
+        uint256 debtToRemove = normalizedDebtCurrent == 0 ? 0 : type(uint256).max;
 
         _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(_getIlkIndex());
         uint256 roundingError = currentRate / RAY;
 
-        // assertGe(
-        //     ionPool.collateral(_getIlkIndex(), address(this)), resultingAdditionalCollateral - maxCollateralToRemove
-        // );
+        assertGe(ionPool.collateral(_getIlkIndex(), address(this)), resultingCollateral - maxCollateralToRemove);
         assertEq(ionPool.normalizedDebt(_getIlkIndex(), address(this)), 0);
-        // assertEq(IERC20(address(MAINNET_SWELL)).balanceOf(address(_getTypedUFHandler())), 0);
+        assertEq(IERC20(address(_getCollaterals()[_getIlkIndex()])).balanceOf(address(_getTypedUFHandler())), 0);
         assertLe(weth.balanceOf(address(_getTypedUFHandler())), roundingError);
     }
 
-    function testFork_RevertWhen_UntrustedCallerCallsFlashswapCallback() external {
-        vm.skip(borrowerWhitelistProof.length > 0);
+    function _getTypedUFHandler() private view returns (UniswapFlashswapHandler) {
+        return UniswapFlashswapHandler(payable(_getHandler()));
+    }
+}
 
-        vm.expectRevert(
-            abi.encodeWithSelector(AerodromeFlashswapHandler.CallbackOnlyCallableByPool.selector, address(this))
-        );
-        _getTypedUFHandler().hook(address(this), 1, 1, "");
+abstract contract AerodromeFlashswapHandler_WithRateChange_FuzzTest is AerodromeFlashswapHandler_FuzzTest {
+    function testForkFuzz_WithRateChange_FlashswapLeverage(
+        uint256 initialDeposit,
+        uint256 resultingCollateralMultiplier,
+        uint104 rate
+    )
+        external
+    {
+        rate = uint104(bound(rate, 1e27, 10e27));
+        ionPool.setRate(_getIlkIndex(), rate);
+        super.testForkFuzz_FlashswapLeverage(initialDeposit, resultingCollateralMultiplier);
     }
 
-    function testFork_RevertWhen_TradingInZeroLiquidityRegion() external {
-        vm.skip(borrowerWhitelistProof.length > 0);
-
-        vm.startPrank(address(BASE_RSETH_WETH_AERODROME));
-        vm.expectRevert(AerodromeFlashswapHandler.InvalidZeroLiquidityRegionSwap.selector);
-        _getTypedUFHandler().hook(address(this), 0, 0, "");
-        vm.stopPrank();
+    function testForkFuzz_WithRateChange_FlashswapDeleverage(
+        uint256 initialDeposit,
+        uint256 resultingCollateralMultiplier,
+        uint104 rate
+    )
+        external
+    {
+        rate = uint104(bound(rate, 1e27, 10e27));
+        ionPool.setRate(_getIlkIndex(), rate);
+        super.testForkFuzz_FlashswapDeleverage(initialDeposit, resultingCollateralMultiplier);
     }
 
-    function testFork_RevertWhen_FlashswapLeverageCreatesMoreDebtThanUserIsWilling() external {
-        vm.skip(borrowerWhitelistProof.length > 0);
-
-        uint256 initialDeposit = 1e18;
-        uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxResultingDebt = 3e18; // In weth
-
-        weth.approve(address(_getTypedUFHandler()), type(uint256).max);
-        ionPool.addOperator(address(_getTypedUFHandler()));
-
-        vm.expectRevert();
-        _getTypedUFHandler().flashswapLeverage(
-            initialDeposit,
-            resultingAdditionalCollateral,
-            maxResultingDebt,
-            sqrtPriceLimitX96,
-            block.timestamp + 1,
-            new bytes32[](0)
-        );
-    }
-
-    function testFork_RevertWhen_FlashswapDeleverageSellsMoreCollateralThanUserIsWilling() external {
-        vm.skip(borrowerWhitelistProof.length > 0);
-
-        uint256 initialDeposit = 1e18;
-        uint256 resultingAdditionalCollateral = 5e18;
-        uint256 maxResultingDebt = type(uint256).max;
-
-        weth.approve(address(_getTypedUFHandler()), type(uint256).max);
-        ionPool.addOperator(address(_getTypedUFHandler()));
-
-        _getTypedUFHandler().flashswapLeverage(
-            initialDeposit,
-            resultingAdditionalCollateral,
-            maxResultingDebt,
-            sqrtPriceLimitX96,
-            block.timestamp + 1,
-            new bytes32[](0)
-        );
-
-        uint256 slippageAndFeeTolerance = 1.0e18; // 0%
-        // Want to completely deleverage position and only leave initial capital
-        // in vault
-        uint256 maxCollateralToRemove = (resultingAdditionalCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
-        // Remove all debt
-        uint256 normalizedDebtToRemove = ionPool.normalizedDebt(_getIlkIndex(), address(this));
-
-        // Round up otherwise can leave 1 wei of dust in debt left
-        uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(_getIlkIndex()));
-
-        vm.expectRevert();
-        _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
-    }
-
-    function _getTypedUFHandler() private view returns (AerodromeFlashswapHandler) {
-        return AerodromeFlashswapHandler(payable(_getHandler()));
+    function testForkFuzz_WithRateChange_FlashswapDeleverageFull(
+        uint256 initialDeposit,
+        uint256 resultingCollateralMultiplier,
+        uint104 rate
+    )
+        external
+    {
+        rate = uint104(bound(rate, 1e27, 10e27));
+        ionPool.setRate(_getIlkIndex(), rate);
+        super.testForkFuzz_FlashswapDeleverageFull(initialDeposit, resultingCollateralMultiplier);
     }
 }
