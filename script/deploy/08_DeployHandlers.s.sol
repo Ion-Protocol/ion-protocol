@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { BASE_WETH, BASE_WEETH_WETH_BALANCER_POOL_ID, BASE_WSTETH_WETH_UNISWAP } from "../../src/Constants.sol";
+import { BASE_WETH, BASE_EZETH_WETH_AERODROME } from "../../src/Constants.sol";
 import { DeployScript } from "../Deploy.s.sol";
 import { IonPool } from "../../src/IonPool.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { IonHandlerBase } from "../../src/flash/IonHandlerBase.sol";
-import { WeEthWethHandler } from "./../../src/flash/lrt/WeEthWethHandler.sol";
+import { BaseEzEthWethHandler } from "./../../src/flash/lrt/base/BaseEzEthWethHandler.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 // NOTE: Different handlers will have different constructor parameters.
@@ -28,24 +28,12 @@ contract DeployHandlersScript is DeployScript {
         _validateInterfaceIonPool(ionPool);
 
         if (deployCreate2) {
-            handler = new WeEthWethHandler{ salt: DEFAULT_SALT }(
-                ILK_INDEX_ZERO,
-                ionPool,
-                gemJoin,
-                whitelist,
-                BASE_WSTETH_WETH_UNISWAP,
-                BASE_WEETH_WETH_BALANCER_POOL_ID,
-                BASE_WETH
+            handler = new BaseEzEthWethHandler{ salt: DEFAULT_SALT }(
+                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, BASE_EZETH_WETH_AERODROME, false, BASE_WETH
             );
         } else {
-            handler = new WeEthWethHandler{ salt: DEFAULT_SALT }(
-                ILK_INDEX_ZERO,
-                ionPool,
-                gemJoin,
-                whitelist,
-                BASE_WSTETH_WETH_UNISWAP,
-                BASE_WEETH_WETH_BALANCER_POOL_ID,
-                BASE_WETH
+            handler = new BaseEzEthWethHandler(
+                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, BASE_EZETH_WETH_AERODROME, false, BASE_WETH
             );
         }
     }

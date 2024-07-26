@@ -7,6 +7,7 @@ import { RsEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/Rs
 import { RswEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RswEthWstEthReserveOracle.sol";
 import { EzEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/EzEthWethReserveOracle.sol";
 import { WeEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/WeEthWethReserveOracle.sol";
+import { BaseEzEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/base/BaseEzEthWethReserveOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UPDATE_COOLDOWN } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 import {
@@ -20,7 +21,8 @@ import {
     RENZO_RESTAKE_MANAGER,
     BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK,
     ETHER_FI_LIQUIDITY_POOL_ADDRESS,
-    WEETH_ADDRESS
+    WEETH_ADDRESS,
+    BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK
 } from "../../../../src/Constants.sol";
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 import { StdStorage, stdStorage } from "../../../../lib/forge-safe/lib/forge-std/src/StdStorage.sol";
@@ -484,6 +486,71 @@ contract WeEthWethReserveOracle_ForkTest is ReserveOracle_ForkTest {
         MockChainlink(address(BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK)).setExchangeRate(0.5e18);
 
         (, int256 newExchangeRate,,,) = BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        require(newExchangeRate < prevExchangeRate, "price should decrease");
+    }
+}
+
+contract BaseEzEthWethReserveOracle_ForkTest is ReserveOracle_ForkTest {
+    using SafeCast for int256;
+
+    error MaxTimeFromLastUpdateExceeded(uint256, uint256);
+
+    uint256 public immutable MAX_TIME_FROM_LAST_UPDATE = 87_000; // seconds
+    uint256 public immutable GRACE_PERIOD = 3600;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new BaseEzEthWethReserveOracle(
+            ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD
+        );
+    }
+
+    function _getForkRpc() internal override returns (string memory) {
+        return vm.envString("BASE_MAINNET_RPC_URL");
+    }
+
+    function _convertToEth(uint256 amt) internal view override returns (uint256) {
+        return amt;
+    }
+
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
+        (, int256 ethPerEzEth,, uint256 ethPerEzEthUpdatedAt,) =
+            BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+        if (block.timestamp - ethPerEzEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE) {
+            revert MaxTimeFromLastUpdateExceeded(block.timestamp, ethPerEzEthUpdatedAt);
+        } else {
+            return ethPerEzEth.toUint256(); // [WAD]
+        }
+    }
+
+    // --- Slashing Scenario ---
+    function _increaseExchangeRate() internal override returns (uint256 newPrice) {
+        // Replace the Chainlink contract that returns the exchange rate with a
+        // new dummy contract that returns a higher exchange rate.
+        (, int256 prevExchangeRate,,,) = BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        MockChainlink chainlink = new MockChainlink();
+
+        vm.etch(address(BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK), address(chainlink).code);
+
+        MockChainlink(address(BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK)).setExchangeRate(1.8e18);
+
+        (, int256 newExchangeRate,,,) = BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        require(newExchangeRate > prevExchangeRate, "price should increase");
+    }
+
+    function _decreaseExchangeRate() internal override returns (uint256 newPrice) {
+        (, int256 prevExchangeRate,,,) = BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        MockChainlink chainlink = new MockChainlink();
+
+        vm.etch(address(BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK), address(chainlink).code);
+
+        MockChainlink(address(BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK)).setExchangeRate(0.5e18);
+
+        (, int256 newExchangeRate,,,) = BASE_EZETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
 
         require(newExchangeRate < prevExchangeRate, "price should decrease");
     }

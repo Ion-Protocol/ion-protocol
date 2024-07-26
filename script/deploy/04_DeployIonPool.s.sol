@@ -31,7 +31,7 @@ contract DeployIonPoolScript is DeployScript {
     bytes32 salt = config.readBytes32(".salt");
 
     function createX() public returns (IonPool ionImpl, IonPool ionPool) {
-        // ionImpl = IonPool(config.readAddress(".ionImpl"));
+        ionImpl = IonPool(config.readAddress(".ionImpl"));
 
         _validateInterface(IERC20(underlying));
         _validateInterface(interestRateModule);
@@ -39,11 +39,11 @@ contract DeployIonPoolScript is DeployScript {
 
         // ionImpl = IonPool();
 
-        if (deployCreate2) {
-            ionImpl = new IonPool{ salt: DEFAULT_SALT }();
-        } else {
-            ionImpl = new IonPool();
-        }
+        // if (deployCreate2) {
+        //     ionImpl = new IonPool{ salt: DEFAULT_SALT }();
+        // } else {
+        //     ionImpl = new IonPool();
+        // }
 
         _validateInterfaceIonPool(ionImpl);
 
