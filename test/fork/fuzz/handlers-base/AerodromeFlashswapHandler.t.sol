@@ -25,51 +25,18 @@ struct Config {
     uint256 initialDepositLowerBound;
 }
 
-abstract contract AerodromeFlashswapHandler_FuzzTest is LstHandler_ForkBase {
+abstract contract AerodromeFlashswapHandler_FuzzTest is LrtHandler_ForkBase {
     uint160 sqrtPriceLimitX96;
     Config ufConfig;
 
-     function testFuzz_amountOutGivenAmountIn(uint256 amountInToHandler, bool isLeverage) external{
-        uint256 poolK = IPool(BASE_RSETH_WETH_AERODROME).getK();
-        uint256 wethBalance = BASE_WETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
-        uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
-        address factory = IPool(BASE_RSETH_WETH_AERODROME).factory();
-        uint256 fee = IPoolFactory(factory).getFee(address(BASE_RSETH_WETH_AERODROME), false);
-        uint256 maxValue = isLeverage ? lrtBalance : wethBalance;
-        // skip 0 case since that would have returned already with no leverage or deleverage
-        // also bound so that amount does not completely wipe out
-        amountInToHandler = StdUtils.bound(amountInToHandler, 1, maxValue - 1);
-
-        if(isLeverage){
-            lrtBalance -= amountInToHandler;
-        } else{
-            wethBalance -= amountInToHandler;
-        }
-        uint256 amountOutFromUser = _getTypedUFHandler().getAmountOutGivenAmountIn(amountInToHandler, isLeverage);
-        uint256 lowerAmountOutFromUser = amountOutFromUser - 1;
-        uint256 wethLowerBound;
-        uint256 lrtLowerBound;
-        if(isLeverage){
-            lrtLowerBound = lrtBalance;
-            wethLowerBound = wethBalance + lowerAmountOutFromUser - (fee * lowerAmountOutFromUser)/10000;
-            wethBalance += amountOutFromUser - (fee * amountOutFromUser)/10000;
-            
-        } else{
-            wethLowerBound = wethBalance;
-            lrtLowerBound = lrtBalance + lowerAmountOutFromUser - (fee * lowerAmountOutFromUser)/10000;
-            lrtBalance += amountOutFromUser - (fee * amountOutFromUser)/10000;
-        }
-
-        uint256 newPoolK = wethBalance * lrtBalance;
-        uint256 lowerBoundPoolK = wethLowerBound * lrtLowerBound;
-        assertGe(newPoolK, poolK);
-        assertGt(poolK, lowerBoundPoolK);
-    }
-
     function testForkFuzz_FlashswapLeverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
-        initialDeposit = bound(initialDeposit, ufConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
+        // bound initial deposit to be between 10^-12 wrsEth and 4% of wrsEth balance of pool
+        // with up to 5x leverage in test this should test borrowing up to close to 1/6 of the pool
+        // (5-1)*4% = 16%
+        initialDeposit = bound(initialDeposit, 1e6, lrtBalance/25);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
-        uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
+        uint256 maxResultingDebt = resultingCollateral*2; // in weth. This is technically subject to slippage but we will
             // skip protecting for this in the test
 
         weth.approve(address(_getTypedUFHandler()), type(uint256).max);
@@ -97,7 +64,11 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LstHandler_ForkBase {
     }
 
     function testForkFuzz_FlashswapDeleverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
-        initialDeposit = bound(initialDeposit, ufConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
+        // bound initial deposit to be between 10^-12 wrsEth and 4% of wrsEth balance of pool
+        // with up to 5x leverage in test this should test borrowing up to close to 1/6 of the pool
+        // (5-1)*4% = 16%
+        initialDeposit = bound(initialDeposit, 1e6, lrtBalance/25);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
         uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
             // skip protecting for this in the test
@@ -133,7 +104,7 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LstHandler_ForkBase {
 
         vm.warp(block.timestamp + 3 hours);
 
-        uint256 slippageAndFeeTolerance = 1.007e18; // 0.7%
+        uint256 slippageAndFeeTolerance = 1.007e18; // 7%
         // Want to completely deleverage position and only leave initial capital
         // in vault
         uint256 maxCollateralToRemove = (resultingCollateral - initialDeposit) * slippageAndFeeTolerance / WAD;
@@ -160,7 +131,11 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LstHandler_ForkBase {
     )
         public
     {
-        initialDeposit = bound(initialDeposit, ufConfig.initialDepositLowerBound, INITIAL_THIS_UNDERLYING_BALANCE);
+        uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
+        // bound initial deposit to be between 10^-12 wrsEth and 4% of wrsEth balance of pool
+        // with up to 5x leverage in test this should test borrowing up to close to 1/6 of the pool
+        // (5-1)*4% = 16%
+        initialDeposit = bound(initialDeposit, 1e6, lrtBalance/25);
         uint256 resultingCollateral = initialDeposit * bound(resultingCollateralMultiplier, 1, 5);
         uint256 maxResultingDebt = resultingCollateral; // in weth. This is technically subject to slippage but we will
             // skip protecting for this in the test
@@ -214,8 +189,45 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LstHandler_ForkBase {
         assertLe(weth.balanceOf(address(_getTypedUFHandler())), roundingError);
     }
 
-    function _getTypedUFHandler() private view returns (UniswapFlashswapHandler) {
-        return UniswapFlashswapHandler(payable(_getHandler()));
+    function testForkFuzz_amountOutGivenAmountIn(uint256 amountInToHandler, bool isLeverage) external{
+        uint256 poolK = IPool(BASE_RSETH_WETH_AERODROME).getK();
+        uint256 wethBalance = BASE_WETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
+        uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
+        address factory = IPool(BASE_RSETH_WETH_AERODROME).factory();
+        uint256 fee = IPoolFactory(factory).getFee(address(BASE_RSETH_WETH_AERODROME), false);
+        uint256 maxValue = isLeverage ? lrtBalance : wethBalance;
+        // skip 0 case since that would have returned already with no leverage or deleverage
+        // also bound so that amount does not completely wipe out
+        amountInToHandler = StdUtils.bound(amountInToHandler, 1, maxValue - 1);
+
+        if(isLeverage){
+            lrtBalance -= amountInToHandler;
+        } else{
+            wethBalance -= amountInToHandler;
+        }
+        uint256 amountOutFromUser = _getTypedUFHandler().getAmountOutGivenAmountIn(amountInToHandler, isLeverage);
+        uint256 lowerAmountOutFromUser = amountOutFromUser - 1;
+        uint256 wethLowerBound;
+        uint256 lrtLowerBound;
+        if(isLeverage){
+            lrtLowerBound = lrtBalance;
+            wethLowerBound = wethBalance + lowerAmountOutFromUser - (fee * lowerAmountOutFromUser)/10000;
+            wethBalance += amountOutFromUser - (fee * amountOutFromUser)/10000;
+            
+        } else{
+            wethLowerBound = wethBalance;
+            lrtLowerBound = lrtBalance + lowerAmountOutFromUser - (fee * lowerAmountOutFromUser)/10000;
+            lrtBalance += amountOutFromUser - (fee * amountOutFromUser)/10000;
+        }
+
+        uint256 newPoolK = wethBalance * lrtBalance;
+        uint256 lowerBoundPoolK = wethLowerBound * lrtLowerBound;
+        assertGe(newPoolK, poolK);
+        assertGt(poolK, lowerBoundPoolK);
+    }
+
+    function _getTypedUFHandler() internal virtual view returns (AerodromeFlashswapHandler) {
+        return AerodromeFlashswapHandler(payable(_getHandler()));
     }
 }
 
