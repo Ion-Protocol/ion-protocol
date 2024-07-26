@@ -174,6 +174,10 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             // sync balances with reserves to avoid cases where there are unpredictable fee calculations
             IPool(address(AERODROME_POOL)).sync();
         }
+        // revert if trying to take all (or more) of the collateral
+        if(amountToLeverage >= balanceOut){
+            revert AmountInTooHigh(amountToLeverage, balanceOut);
+        }
 
         uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, amountToLeverage, balanceIn*balanceOut);
         console.log("Amount to Pay: ", amountToPay);
@@ -245,6 +249,10 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             IPool(address(AERODROME_POOL)).sync();
         }
 
+        // revert if trying to take all (or more) of the weth
+        if(debtToRemove >= balanceOut){
+            revert AmountInTooHigh(debtToRemove, balanceOut);
+        }
         uint256 amountToPay = _calculateAmountToPay(balanceIn, balanceOut, debtToRemove, balanceIn*balanceOut);
 
         // This protects against a potential sandwich attack
