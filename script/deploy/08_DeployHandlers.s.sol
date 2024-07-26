@@ -7,7 +7,7 @@ import { IonPool } from "../../src/IonPool.sol";
 import { GemJoin } from "../../src/join/GemJoin.sol";
 import { Whitelist } from "../../src/Whitelist.sol";
 import { IonHandlerBase } from "../../src/flash/IonHandlerBase.sol";
-import {BaseEzEthWethHandler} from "./../../src/flash/lrt/base/BaseEzEthWethHandler.sol";
+import { BaseEzEthWethHandler } from "./../../src/flash/lrt/base/BaseEzEthWethHandler.sol";
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
 // NOTE: Different handlers will have different constructor parameters.
@@ -29,23 +29,11 @@ contract DeployHandlersScript is DeployScript {
 
         if (deployCreate2) {
             handler = new BaseEzEthWethHandler{ salt: DEFAULT_SALT }(
-                ILK_INDEX_ZERO,
-                ionPool,
-                gemJoin,
-                whitelist,
-                BASE_EZETH_WETH_AERODROME,
-                false,
-                BASE_WETH
+                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, BASE_EZETH_WETH_AERODROME, false, BASE_WETH
             );
         } else {
             handler = new BaseEzEthWethHandler(
-                ILK_INDEX_ZERO,
-                ionPool,
-                gemJoin,
-                whitelist,
-                BASE_EZETH_WETH_AERODROME,
-                false,
-                BASE_WETH
+                ILK_INDEX_ZERO, ionPool, gemJoin, whitelist, BASE_EZETH_WETH_AERODROME, false, BASE_WETH
             );
         }
     }
