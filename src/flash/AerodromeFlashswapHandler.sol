@@ -7,7 +7,7 @@ import { WadRayMath } from "../libraries/math/WadRayMath.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IPool} from "../interfaces/IPool.sol";
+import {IPool} from "../interfaces/aerodrome/IPool.sol";
 import {IIonPool} from "../interfaces/IIonPool.sol";
 
 import {console} from "forge-std/Test.sol";
@@ -37,7 +37,6 @@ interface IPoolFactory {
  *
  * Unlike Balancer flashloans, there is no concern here that somebody else could
  * initiate a flashswap, then direct the callback to be called on this contract.
- * Uniswap enforces that callback is only called on `msg.sender`.
  *
  * @custom:security-contact security@molecularlabs.io
  */
@@ -46,20 +45,14 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    error InvalidUniswapPool();
+    error InvalidAerodromePool();
     error InvalidZeroLiquidityRegionSwap();
-    error InvalidSqrtPriceLimitX96(uint160 sqrtPriceLimitX96);
 
     error FlashswapRepaymentTooExpensive(uint256 amountIn, uint256 maxAmountIn);
     error CallbackOnlyCallableByPool(address unauthorizedCaller);
     error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
     error ZeroAmountIn();
     error AmountInTooHigh(uint256 amountIn, uint256 maxAmountIn);
-
-    /// @dev The minimum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MIN_TICK)
-    uint160 internal constant MIN_SQRT_RATIO = 4_295_128_739;
-    /// @dev The maximum value that can be returned from #getSqrtRatioAtTick. Equivalent to getSqrtRatioAtTick(MAX_TICK)
-    uint160 internal constant MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342;
 
     IPool public immutable AERODROME_POOL;
     bool private immutable WETH_IS_TOKEN0;
@@ -69,7 +62,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
      * @param _pool Pool to perform the flashswap on.
      */
     constructor(IPool _pool, bool /*_wethIsToken0*/){
-        if (address(_pool) == address(0)) revert InvalidUniswapPool();
+        if (address(_pool) == address(0)) revert InvalidAerodromePool();
 
         address token0 = _pool.token0();
         address token1 = _pool.token1();
@@ -77,8 +70,8 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         // I added this
         // require(_wethIsToken0 && token0 == address(WETH) || !_wethIsToken0 && token1 == address(WETH), "incorrect weth is token 0");
 
-        if (token0 != address(WETH) && token1 != address(WETH)) revert InvalidUniswapPool();
-        if (token0 == address(WETH) && token1 == address(WETH)) revert InvalidUniswapPool();
+        if (token0 != address(WETH) && token1 != address(WETH)) revert InvalidAerodromePool();
+        if (token0 == address(WETH) && token1 == address(WETH)) revert InvalidAerodromePool();
 
         AERODROME_POOL = _pool;
 
@@ -104,10 +97,6 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
      * @param resultingAdditionalCollateral in collateral terms. [WAD]
      * @param maxResultingAdditionalDebt in WETH terms. This value also allows
      * the user to control slippage of the swap. [WAD]
-     * @param sqrtPriceLimitX96 for the swap. Recommended value is the current
-     * exchange rate to ensure the swap never costs more than a direct mint
-     * would. Passing the current exchange rate means swapping beyond that point
-     * is worse than direct minting.
      * @param deadline timestamp for which the transaction must be executed.
      * This prevents txs that have sat in the mempool for too long to be
      * executed.
@@ -117,7 +106,6 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
         uint256 maxResultingAdditionalDebt,
-        uint160 sqrtPriceLimitX96,
         uint256 deadline,
         bytes32[] calldata proof
     )
@@ -126,7 +114,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
         onlyWhitelistedBorrowers(proof)
     {
         LST_TOKEN.safeTransferFrom(msg.sender, address(this), initialDeposit);
-        _flashswapLeverage(initialDeposit, resultingAdditionalCollateral, maxResultingAdditionalDebt, sqrtPriceLimitX96);
+        _flashswapLeverage(initialDeposit, resultingAdditionalCollateral, maxResultingAdditionalDebt);
     }
 
     /**
@@ -135,15 +123,11 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
      * collateral to add to the position in the vault.
      * @param maxResultingAdditionalDebt in terms of WETH. How much debt to add
      * to the position in the vault.
-     * @param sqrtPriceLimitX96 for the swap. Recommended value is the current
-     * exchange rate to ensure the swap never costs more than a direct mint
-     * would.
      */
     function _flashswapLeverage(
         uint256 initialDeposit,
         uint256 resultingAdditionalCollateral,
-        uint256 maxResultingAdditionalDebt,
-        uint160 sqrtPriceLimitX96
+        uint256 maxResultingAdditionalDebt
     )
         internal
     {
@@ -194,7 +178,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             isLeverage: true
         });
 
-        _initiateFlashSwap(WETH_IS_TOKEN0, amountToLeverage, address(this), sqrtPriceLimitX96, flashswapData);
+        _initiateFlashSwap(WETH_IS_TOKEN0, amountToLeverage, address(this), flashswapData);
 
         console.log("AfterK actual ", AERODROME_POOL.getK());
         console.log("balance of pool in collateral post: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
@@ -216,12 +200,10 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
      * @param maxCollateralToRemove he max amount of collateral user is willing
      * to sell to repay `debtToRemove` debt. [WAD]
      * @param debtToRemove The desired amount of debt to remove. [WAD]
-     * @param sqrtPriceLimitX96 for the swap. Can be set to 0 to set max bounds.
      */
     function flashswapDeleverage(
         uint256 maxCollateralToRemove,
         uint256 debtToRemove,
-        uint160 sqrtPriceLimitX96,
         uint256 deadline
     )
         external
@@ -267,7 +249,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
             isLeverage: false
         });
 
-        _initiateFlashSwap(!WETH_IS_TOKEN0, debtToRemove, address(this), sqrtPriceLimitX96, flashswapData);
+        _initiateFlashSwap(!WETH_IS_TOKEN0, debtToRemove, address(this), flashswapData);
         
         console.log("AfterK actual ", AERODROME_POOL.getK());
         console.log("balance of pool in collateral post: ", LST_TOKEN.balanceOf(address(AERODROME_POOL)));
@@ -280,21 +262,16 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
      * @param zeroForOne Direction of the swap.
      * @param amountOut Desired amount of output.
      * @param recipient of output tokens.
-     * @param sqrtPriceLimitX96 of the swap.
      * @param data Arbitrary data to be passed through swap callback.
      */
     function _initiateFlashSwap(
         bool zeroForOne,
         uint256 amountOut,
         address recipient,
-        uint160 sqrtPriceLimitX96,
         FlashSwapData memory data
     )
         private
     {
-        if ((sqrtPriceLimitX96 < MIN_SQRT_RATIO || sqrtPriceLimitX96 > MAX_SQRT_RATIO) && sqrtPriceLimitX96 != 0) {
-            revert InvalidSqrtPriceLimitX96(sqrtPriceLimitX96);
-        }
         // the following are AerodromePool.swap()s first 3 inputs:
         // @param amount0Out   Amount of token0 to send to `to`
         // @param amount1Out   Amount of token1 to send to `to`

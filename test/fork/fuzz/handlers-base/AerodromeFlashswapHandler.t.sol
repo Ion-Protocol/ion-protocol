@@ -7,7 +7,7 @@ import { AerodromeFlashswapHandler } from "../../../../src/flash/AerodromeFlashs
 import { IonHandlerBase } from "../../../../src/flash/IonHandlerBase.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { BASE_RSETH_WETH_AERODROME, BASE_RSETH, BASE_WETH } from "../../../../src/Constants.sol";
-import { IPool } from "../../../../src/interfaces/IPool.sol";
+import { IPool } from "../../../../src/interfaces/aerodrome/IPool.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
@@ -21,13 +21,7 @@ interface IPoolFactory {
     function getFee(address pool, bool isStable) external view returns (uint256);
 }
 
-struct Config {
-    uint256 initialDepositLowerBound;
-}
-
 abstract contract AerodromeFlashswapHandler_FuzzTest is LrtHandler_ForkBase {
-    uint160 sqrtPriceLimitX96;
-    Config ufConfig;
 
     function testForkFuzz_FlashswapLeverage(uint256 initialDeposit, uint256 resultingCollateralMultiplier) public {
         uint256 lrtBalance = BASE_RSETH.balanceOf(address(BASE_RSETH_WETH_AERODROME));
@@ -46,7 +40,6 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LrtHandler_ForkBase {
             initialDeposit,
             resultingCollateral,
             maxResultingDebt,
-            sqrtPriceLimitX96,
             block.timestamp + 1,
             new bytes32[](0)
         );
@@ -81,7 +74,6 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LrtHandler_ForkBase {
             initialDeposit,
             resultingCollateral,
             maxResultingDebt,
-            sqrtPriceLimitX96,
             block.timestamp + 1,
             new bytes32[](0)
         );
@@ -114,7 +106,7 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LrtHandler_ForkBase {
         // Round up otherwise can leave 1 wei of dust in debt left
         uint256 debtToRemove = normalizedDebtToRemove.rayMulUp(ionPool.rate(_getIlkIndex()));
 
-        _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
+        _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(_getIlkIndex());
         uint256 roundingError = currentRate / RAY;
@@ -148,7 +140,6 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LrtHandler_ForkBase {
             initialDeposit,
             resultingCollateral,
             maxResultingDebt,
-            sqrtPriceLimitX96,
             block.timestamp + 1,
             new bytes32[](0)
         );
@@ -178,7 +169,7 @@ abstract contract AerodromeFlashswapHandler_FuzzTest is LrtHandler_ForkBase {
         // Remove all debt if any
         uint256 debtToRemove = normalizedDebtCurrent == 0 ? 0 : type(uint256).max;
 
-        _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, 0, block.timestamp + 1);
+        _getTypedUFHandler().flashswapDeleverage(maxCollateralToRemove, debtToRemove, block.timestamp + 1);
 
         uint256 currentRate = ionPool.rate(_getIlkIndex());
         uint256 roundingError = currentRate / RAY;
