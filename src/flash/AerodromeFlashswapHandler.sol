@@ -53,6 +53,7 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
     error OutputAmountNotReceived(uint256 amountReceived, uint256 amountRequired);
     error ZeroAmountIn();
     error AmountInTooHigh(uint256 amountIn, uint256 maxAmountIn);
+    error SwapOnlyCallableByHandler(address sender);
 
     IPool public immutable AERODROME_POOL;
     bool private immutable WETH_IS_TOKEN0;
@@ -292,12 +293,14 @@ abstract contract AerodromeFlashswapHandler is IonHandlerBase, IPoolCallee {
      * the callback on `msg.sender`. So a theoretical attacker cannot call this
      * function by directing where to call the callback.
      *
+     * @param sender address which called swap function (this handler address only!)
      * @param amount0 change in token0
      * @param amount1 change in token1
      * @param _data flashswap data
      */
-    function hook(address, uint256 amount0, uint256 amount1, bytes calldata _data) external override {
+    function hook(address sender, uint256 amount0, uint256 amount1, bytes calldata _data) external override {
         if (msg.sender != address(AERODROME_POOL)) revert CallbackOnlyCallableByPool(msg.sender);
+        if(sender != address(this)) revert SwapOnlyCallableByHandler(sender);
 
         // swaps entirely within 0-liquidity regions are not supported
         if (amount0 == 0 && amount1 == 0) revert InvalidZeroLiquidityRegionSwap();

@@ -199,7 +199,7 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         vm.expectRevert(
             abi.encodeWithSelector(AerodromeFlashswapHandler.CallbackOnlyCallableByPool.selector, address(this))
         );
-        _getTypedUFHandler().hook(address(this), 1, 1, "");
+        _getTypedUFHandler().hook(address(_getTypedUFHandler()), 1, 1, "");
     }
 
     function testFork_RevertWhen_TradingInZeroLiquidityRegion() external {
@@ -207,7 +207,7 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
 
         vm.startPrank(address(BASE_RSETH_WETH_AERODROME));
         vm.expectRevert(AerodromeFlashswapHandler.InvalidZeroLiquidityRegionSwap.selector);
-        _getTypedUFHandler().hook(address(this), 0, 0, "");
+        _getTypedUFHandler().hook(address(_getTypedUFHandler()), 0, 0, "");
         vm.stopPrank();
     }
 
