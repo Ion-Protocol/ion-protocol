@@ -87,8 +87,9 @@ IPool constant BASE_EZTETH_WETH_AERODROME = IPool(0x0C8bF3cb3E1f951B284EF14aa954
 IChainlink constant ETH_PER_STETH_CHAINLINK = IChainlink(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
 IChainlink constant MAINNET_USD_PER_ETH_CHAINLINK = IChainlink(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
 IChainlink constant BASE_EZETH_ETH_PRICE_CHAINLINK = IChainlink(0x960BDD1dFD20d7c98fa482D793C3dedD73A113a3);
-// will add address once rseth/eth feed is live on base, for now use ezeth/eth feed
+// will add address once rseth/eth feed is live on base, for now use ezeth/eth feed for spot and reserve oracles
 IChainlink constant BASE_RSETH_ETH_PRICE_CHAINLINK = IChainlink(0x960BDD1dFD20d7c98fa482D793C3dedD73A113a3);
+IChainlink constant BASE_RSETH_ETH_EXCHANGE_RATE_CHAINLINK = IChainlink(0xC4300B7CF0646F0Fe4C5B2ACFCCC4dCA1346f5d8);
 // Redstone
 IRedstonePriceFeed constant MAINNET_USD_PER_ETHX_REDSTONE =
     IRedstonePriceFeed(0xFaBEb1474C2Ab34838081BFdDcE4132f640E7D2d);
