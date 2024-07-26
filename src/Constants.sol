@@ -29,7 +29,7 @@ import { IPMarketV3 } from "pendle-core-v2-public/interfaces/IPMarketV3.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import {IPool} from "./interfaces/IPool.sol";
+import {IPool} from "./interfaces/aerodrome/IPool.sol";
 
 uint8 constant REDSTONE_DECIMALS = 8;
 
