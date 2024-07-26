@@ -14,7 +14,6 @@ import { AerodromeFlashswapHandler_Test } from
     "../../../concrete/handlers-base/AerodromeFlashswapHandler.t.sol";
 import { IProviderLibraryExposed } from "../../../../helpers/IProviderLibraryExposed.sol";
 import { SafeCast } from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
-import {IPool} from "../../../../../src/interfaces/IPool.sol";
 
 using SafeCast for int256;
 
