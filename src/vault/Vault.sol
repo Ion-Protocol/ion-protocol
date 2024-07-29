@@ -579,9 +579,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256 assets) {
         uint256 newTotalAssets = _accrueFee();
 
-        // This is updated again with the deposited assets amount in `_deposit`.
-        lastTotalAssets = newTotalAssets;
-
         assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
 
         _deposit(_msgSender(), receiver, assets, shares);
@@ -839,7 +836,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         (feeShares, newTotalAssets) = _accruedFeeShares();
         if (feeShares != 0) _mint(feeRecipient, feeShares);
 
-        lastTotalAssets = newTotalAssets;
+        _updateLastTotalAssets(newTotalAssets);
 
         emit FeeAccrued(feeShares, newTotalAssets);
     }
