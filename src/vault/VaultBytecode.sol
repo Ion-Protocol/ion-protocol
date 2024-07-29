@@ -10,6 +10,8 @@ import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
  * @notice The sole job of this contract is to deploy the embedded `Vault`
  * contract's bytecode with the constructor args. `VaultFactory` handles rest of
  * the verification and post-deployment logic.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 contract VaultBytecode {
     error OnlyFactory();

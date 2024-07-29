@@ -10,6 +10,8 @@ import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/Sa
  * @title Ion Lending Vault Factory
  * @author Molecular Labs
  * @notice Factory contract for deploying Ion Lending Vaults.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 contract VaultFactory {
     using SafeERC20 for IERC20;
