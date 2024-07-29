@@ -197,9 +197,18 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         vm.skip(borrowerWhitelistProof.length > 0);
 
         vm.expectRevert(
+            abi.encodeWithSelector(AerodromeFlashswapHandler.SwapOnlyCallableByHandler.selector, address(this))
+        );
+        IPool(AERODROME_POOL).swap(1e18, 0, address(_getTypedUFHandler()), "");
+    }
+
+    function testFork_RevertWhen_otherCallerCallsFlashswapCallback() external {
+        vm.skip(borrowerWhitelistProof.length > 0);
+
+        vm.expectRevert(
             abi.encodeWithSelector(AerodromeFlashswapHandler.CallbackOnlyCallableByPool.selector, address(this))
         );
-        _getTypedUFHandler().hook(address(_getTypedUFHandler()), 1, 1, "");
+        _getTypedUFHandler().hook(address(_getHandler()), 1, 1, "");
     }
 
     function testFork_RevertWhen_TradingInZeroLiquidityRegion() external {
