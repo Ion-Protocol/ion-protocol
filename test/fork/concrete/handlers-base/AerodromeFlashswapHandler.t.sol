@@ -193,16 +193,16 @@ abstract contract AerodromeFlashswapHandler_Test is LrtHandler_ForkBase {
         assertLe(weth.balanceOf(address(_getTypedUFHandler())), roundingError);
     }
 
-    function testFork_RevertWhen_UntrustedCallerCallsFlashswapCallback() external {
+    function testFork_RevertWhen_HandlerIsNotSwapCaller() external {
         vm.skip(borrowerWhitelistProof.length > 0);
 
         vm.expectRevert(
             abi.encodeWithSelector(AerodromeFlashswapHandler.SwapOnlyCallableByHandler.selector, address(this))
         );
-        IPool(AERODROME_POOL).swap(1e18, 0, address(_getTypedUFHandler()), "");
+        IPool(BASE_RSETH_WETH_AERODROME).swap(1e18, 0, address(_getTypedUFHandler()), "0x1");
     }
 
-    function testFork_RevertWhen_otherCallerCallsFlashswapCallback() external {
+    function testFork_RevertWhen_UntrustedCallerCallsFlashswapCallback() external {
         vm.skip(borrowerWhitelistProof.length > 0);
 
         vm.expectRevert(
