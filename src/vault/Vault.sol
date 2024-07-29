@@ -319,8 +319,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
     /**
      * @notice Update allocation caps for specified IonPools or the IDLE pool.
-     * @dev The allocation caps are applied to pools in the order of the array
-     * within `supportedMarkets`. The elements inside `ionPools` must exist in
+     * @dev The allocation caps are applied to pools in the order of the
+     * `ionPool` array argument. The elements inside `ionPools` must exist in
      * `supportedMarkets`. To update the `IDLE` pool, use the `IDLE` constant
      * address.
      * @param ionPools The array of IonPools whose caps will be updated.
