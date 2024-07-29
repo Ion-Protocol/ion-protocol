@@ -222,6 +222,36 @@ contract VaultSetUpTest is VaultSharedSetup {
         vm.stopPrank();
     }
 
+    /**
+     * The BASE_ASSET of the vault and the IonPool is the same, but the decimals
+     * of the IonPool and the vaults' BASE_ASSET are different.
+     */
+    function test_Revert_AddSupportedMarkets_InvalidIonPoolDecimals() public {
+        bytes32 ION_POOL_DECIMALS_SLOT = 0xdb3a0d63a7808d7d0422c40bb62354f42bff7602a547c329c1453dbcbeef4900;
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vm.stopPrank();
+
+        IIonPool[] memory markets = new IIonPool[](1);
+        markets[0] = deployIonPool(BASE_ASSET, WEETH, address(this));
+
+        bytes32 newDecimals = bytes32(uint256(22));
+        vm.store(address(markets[0]), ION_POOL_DECIMALS_SLOT, newDecimals);
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = 1 ether;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidIonPoolDecimals.selector, address(markets[0])));
+        vault.addSupportedMarkets(markets, allocationCaps, markets, markets);
+        vm.stopPrank();
+    }
+
     function test_RemoveSingleSupportedMarket() public {
         uint256[] memory allocationCaps = new uint256[](1);
         allocationCaps[0] = 1e18;
@@ -758,8 +788,8 @@ abstract contract VaultDeposit is VaultSharedSetup {
 
         vault.deposit(depositAmount, address(this));
 
-        assertEq(vault.totalSupply(), depositAmount, "vault shares total supply");
-        assertEq(vault.balanceOf(address(this)), depositAmount, "user vault shares balance");
+        assertEq(_convertTo18(vault.totalSupply()), depositAmount, "vault shares total supply");
+        assertEq(_convertTo18(vault.balanceOf(address(this))), depositAmount, "user vault shares balance");
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
         assertEq(
             weEthIonPool.balanceOf(address(vault)),
@@ -783,8 +813,8 @@ abstract contract VaultDeposit is VaultSharedSetup {
         // 3e18 gets spread out equally amongst the three pools
         vault.deposit(depositAmount, address(this));
 
-        assertEq(vault.totalSupply(), depositAmount, "vault shares total supply");
-        assertEq(vault.balanceOf(address(this)), depositAmount, "user vault shares balance");
+        assertEq(_convertTo18(vault.totalSupply()), depositAmount, "vault shares total supply");
+        assertEq(_convertTo18(vault.balanceOf(address(this))), depositAmount, "user vault shares balance");
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
 
         assertEq(
@@ -819,8 +849,8 @@ abstract contract VaultDeposit is VaultSharedSetup {
         // 3e18 gets spread out equally amongst the three pools
         vault.deposit(depositAmount, address(this));
 
-        assertEq(vault.totalSupply(), depositAmount, "vault shares total supply");
-        assertEq(vault.balanceOf(address(this)), depositAmount, "user vault shares balance");
+        assertEq(_convertTo18(vault.totalSupply()), depositAmount, "vault shares total supply");
+        assertEq(_convertTo18(vault.balanceOf(address(this))), depositAmount, "user vault shares balance");
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
 
         assertEq(
@@ -856,8 +886,8 @@ abstract contract VaultDeposit is VaultSharedSetup {
 
         vault.deposit(depositAmount, address(this));
 
-        assertEq(vault.totalSupply(), depositAmount, "vault shares total supply");
-        assertEq(vault.balanceOf(address(this)), depositAmount, "user vault shares balance");
+        assertEq(_convertTo18(vault.totalSupply()), depositAmount, "vault shares total supply");
+        assertEq(_convertTo18(vault.balanceOf(address(this))), depositAmount, "user vault shares balance");
         assertEq(BASE_ASSET.balanceOf(address(vault)), 0, "base asset balance should be zero");
 
         assertEq(
@@ -988,7 +1018,7 @@ abstract contract VaultDeposit is VaultSharedSetup {
      * converting the shares to assets.
      */
     function test_Mint_WithoutSupplyCap_WithoutAllocationCap() public {
-        uint256 sharesToMint = 1e18;
+        uint256 sharesToMint = 1e18; // Shares is 22 decimals so technically 0.0001 shares
 
         setERC20Balance(address(BASE_ASSET), address(this), 100e18);
 
@@ -1005,6 +1035,12 @@ abstract contract VaultDeposit is VaultSharedSetup {
         uint256 assetsDeposited = vault.mint(sharesToMint, address(this));
 
         uint256 assetBalanceDiff = initialAssetBalance - BASE_ASSET.balanceOf(address(this));
+
+        console2.log("vault.decimals(): ", vault.decimals());
+        console2.log("vault.totalSupply(): ", vault.totalSupply());
+        console2.log("initialTotalSupply: ", initialTotalSupply);
+        console2.log("vault.totalAssets(): ", vault.totalAssets());
+        console2.log("initialTotalAssets: ", initialTotalAssets);
         uint256 totalSupplyDiff = vault.totalSupply() - initialTotalSupply;
         uint256 totalAssetsDiff = vault.totalAssets() - initialTotalAssets;
 
@@ -1166,8 +1202,9 @@ abstract contract VaultWithdraw is VaultSharedSetup {
         uint256 expectedNewTotalAssets = prevTotalAssets - withdrawAmount;
         uint256 expectedMaxWithdraw = prevMaxWithdraw - withdrawAmount;
 
-        uint256 expectedSharesBurned =
-            withdrawAmount.mulDiv(prevTotalSupply + 1, prevTotalAssets + 1, Math.Rounding.Ceil);
+        uint256 expectedSharesBurned = withdrawAmount.mulDiv(
+            prevTotalSupply + 10 ** vault.DECIMALS_OFFSET(), prevTotalAssets + 1, Math.Rounding.Ceil
+        );
         uint256 expectedNewTotalSupply = prevTotalSupply - expectedSharesBurned;
 
         // vault
@@ -1217,8 +1254,9 @@ abstract contract VaultWithdraw is VaultSharedSetup {
         uint256 expectedNewTotalAssets = prevTotalAssets - withdrawAmount;
         uint256 expectedMaxWithdraw = prevMaxWithdraw - withdrawAmount;
 
-        uint256 expectedSharesBurned =
-            withdrawAmount.mulDiv(prevTotalSupply + 1, prevTotalAssets + 1, Math.Rounding.Ceil);
+        uint256 expectedSharesBurned = withdrawAmount.mulDiv(
+            prevTotalSupply + 10 ** vault.DECIMALS_OFFSET(), prevTotalAssets + 1, Math.Rounding.Ceil
+        );
         uint256 expectedNewTotalSupply = prevTotalSupply - expectedSharesBurned;
 
         // error bound for resulting total assets after a withdraw
@@ -1341,6 +1379,29 @@ abstract contract VaultReallocate is VaultSharedSetup {
     }
 
     // --- Reallocate ---
+
+    function test_Revert_Reallocate_MarketNotSupported() public {
+        uint256 depositAmount = 10e18;
+
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+
+        updateSupplyQueue(vault, rsEthIonPool, rswEthIonPool, weEthIonPool);
+        updateSupplyCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
+        updateAllocationCaps(vault, 2e18, 3e18, 5e18);
+
+        vault.deposit(depositAmount, address(this));
+
+        updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
+
+        IIonPool notSupportedPool = IIonPool(makeAddr("NOT SUPPORTED"));
+
+        Vault.MarketAllocation[] memory allocs = new Vault.MarketAllocation[](1);
+        allocs[0] = Vault.MarketAllocation({ pool: notSupportedPool, assets: type(int256).max });
+
+        vm.prank(ALLOCATOR);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, address(notSupportedPool)));
+        vault.reallocate(allocs);
+    }
 
     function test_Reallocate_AcrossAllMarkets() public {
         uint256 depositAmount = 10e18;
@@ -2002,9 +2063,9 @@ contract VaultERC4626ExternalViews is VaultSharedSetup {
         uint256 maxWithdrawableAssets = vault.previewRedeem(resultingShares);
         uint256 maxRedeemableShares = vault.previewWithdraw(maxWithdrawableAssets);
 
-        assertEq(resultingShares, 60e18, "resulting shares");
+        assertEq(_convertTo18(resultingShares), 60e18, "resulting shares");
         assertEq(maxWithdrawableAssets, 60e18, "resulting claim");
-        assertEq(maxRedeemableShares, 60e18, "redeemable shares");
+        assertEq(_convertTo18(maxRedeemableShares), 60e18, "redeemable shares");
     }
 
     function test_MaxWithdraw() public { }

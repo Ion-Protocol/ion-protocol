@@ -282,7 +282,9 @@ contract VaultWithYieldAndFee_Fuzz_FeeAccrual is VaultWithYieldAndFeeSharedSetup
 
         uint256 expectedFeeAssets = interestAccrued.mulDiv(feePerc, RAY);
         uint256 expectedFeeShares = expectedFeeAssets.mulDiv(
-            vault.totalSupply() + 1, newTotalAssets - expectedFeeAssets + 1, Math.Rounding.Floor
+            vault.totalSupply() + 10 ** vault.DECIMALS_OFFSET(),
+            newTotalAssets - expectedFeeAssets + 1,
+            Math.Rounding.Floor
         );
 
         uint256 expectedUserAssets = prevUserAssets + interestAccrued.mulDiv(RAY - feePerc, RAY);
@@ -864,13 +866,16 @@ contract VaultInflationAttack is VaultSharedSetup {
         uint256 firstDepositAmt = bound(assets, 0, type(uint128).max);
         setERC20Balance(address(BASE_ASSET), ATTACKER, firstDepositAmt);
 
+        uint256 previewSharesMint = vault.previewDeposit(firstDepositAmt);
+
         vm.prank(ATTACKER);
-        vault.mint(firstDepositAmt, ATTACKER);
+        uint256 sharesMinted = vault.deposit(firstDepositAmt, ATTACKER);
+
+        assertEq(previewSharesMint, sharesMinted, "previewDeposit");
 
         uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(ATTACKER));
 
-        // check that the mint amount and transfer amount was the same
-        assertEq(BASE_ASSET.balanceOf(ATTACKER), 0, "mint amount equals transfer amount");
+        assertEq(BASE_ASSET.balanceOf(ATTACKER), 0, "vault.deposit transfers exact assets amount");
 
         // 3. The attacker donates.
         // - In this case, transfers to vault to increase IDLE deposits.
@@ -892,7 +897,7 @@ contract VaultInflationAttack is VaultSharedSetup {
         // - The sharesToMint must be less than 1 to round down to zero
         //     - depositAmt * (newTotalSupply + 1) / (newTotalAssets + 1) < 1
         //     - depositAmt < 1 * (newTotalAssets + 1) / (newTotalSupply + 1)
-        uint256 maxDepositAmt = (vault.totalAssets() + 1) / (vault.totalSupply() + 1);
+        uint256 maxDepositAmt = (vault.totalAssets() + 1) / (vault.totalSupply() + 10 ** vault.DECIMALS_OFFSET());
         uint256 userDepositAmt = bound(assets, 0, maxDepositAmt);
 
         vm.startPrank(USER);
@@ -953,8 +958,6 @@ contract VaultInflationAttack is VaultSharedSetup {
         // and the 1e3 shares burn.
         bytes32 salt = _getSalt(deployer, "random salt");
 
-        setERC20Balance(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
-
         vm.startPrank(deployer);
         BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
 
@@ -967,8 +970,7 @@ contract VaultInflationAttack is VaultSharedSetup {
             INITIAL_DELAY,
             VAULT_ADMIN,
             salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            marketsArgs
         );
         vm.stopPrank();
 
@@ -979,9 +981,9 @@ contract VaultInflationAttack is VaultSharedSetup {
         // 1. The vault has not been used.
         // - Initial minimum deposit amt of 1e9 deposited.
         // - 1e3 shares have been locked in factory.
-        assertEq(vault.totalSupply(), MIN_INITIAL_DEPOSIT, "initial total supply");
-        assertEq(vault.totalAssets(), MIN_INITIAL_DEPOSIT, "initial total assets");
-        assertEq(vault.balanceOf(address(factory)), 1e3, "initial factory shares");
+        assertEq(vault.totalSupply(), 0, "initial total supply");
+        assertEq(vault.totalAssets(), 0, "initial total assets");
+        assertEq(vault.balanceOf(address(factory)), 0, "initial factory shares");
 
         // 2. The attacker makes a first deposit.
         uint256 firstDepositAmt = bound(assets, 1, type(uint128).max);
@@ -989,12 +991,12 @@ contract VaultInflationAttack is VaultSharedSetup {
 
         vm.startPrank(ATTACKER);
         BASE_ASSET.approve(address(vault), type(uint256).max);
-        vault.mint(firstDepositAmt, ATTACKER);
+        uint256 sharesMinted = vault.deposit(firstDepositAmt, ATTACKER);
         vm.stopPrank();
 
         uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(ATTACKER));
 
-        assertEq(BASE_ASSET.balanceOf(ATTACKER), 0, "mint amount equals transfer amount");
+        assertEq(BASE_ASSET.balanceOf(ATTACKER), 0, "deposit transfers exact amount");
 
         // 3. The attacker donates.
         // - In this case, transfers to vault to increase IDLE deposits.
@@ -1013,8 +1015,8 @@ contract VaultInflationAttack is VaultSharedSetup {
         // - The sharesToMint must be less than 1 to round down to zero
         //     - depositAmt * (newTotalSupply + 1) / (newTotalAssets + 1) < 1
         //     - depositAmt < 1 * (newTotalAssets + 1) / (newTotalSupply + 1)
-        uint256 maxDepositAmt = (vault.totalAssets() + 1) / (vault.totalSupply() + 1);
-        uint256 userDepositAmt = bound(assets, 1, maxDepositAmt);
+        uint256 maxDepositAmt = (vault.totalAssets() + 1) / (vault.totalSupply() + 10 ** vault.DECIMALS_OFFSET());
+        uint256 userDepositAmt = bound(assets, 0, maxDepositAmt);
 
         vm.startPrank(USER);
         setERC20Balance(address(BASE_ASSET), USER, userDepositAmt);

@@ -3,7 +3,6 @@ pragma solidity 0.8.21;
 
 import { IIonPool } from "./../interfaces/IIonPool.sol";
 import { RAY } from "./../libraries/math/WadRayMath.sol";
-
 import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -49,6 +48,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     error InvalidFeePercentage();
     error InvalidFeeRecipient();
     error MaxSupportedMarketsReached();
+    error InvalidIonPoolDecimals(IIonPool pool);
 
     event UpdateSupplyQueue(address indexed caller, IIonPool[] newSupplyQueue);
     event UpdateWithdrawQueue(address indexed caller, IIonPool[] newWithdrawQueue);
@@ -58,6 +58,12 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     event FeeAccrued(uint256 feeShares, uint256 newTotalAssets);
     event UpdateLastTotalAssets(uint256 lastTotalAssets, uint256 newLastTotalAssets);
 
+    event UpdateFeePercentage(uint256 newFeePercentage);
+    event UpdateFeeRecipient(address indexed newFeeRecipient);
+    event AddSupportedMarkets(IIonPool[] marketsAdded);
+    event RemoveSupportedMarkets(IIonPool[] marketsRemoved);
+    event UpdateAllocationCaps(IIonPool[] ionPools, uint256[] newCaps);
+
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant ALLOCATOR_ROLE = keccak256("ALLOCATOR_ROLE");
 
@@ -65,10 +71,9 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
     uint8 public immutable DECIMALS_OFFSET;
 
-    bytes32 public immutable ION_POOL_SUPPLY_CAP_SLOT =
+    bytes32 public constant ION_POOL_SUPPLY_CAP_SLOT =
         0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e09;
-    bytes32 public immutable ION_POOL_LIQUIDITY_SLOT =
-        0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e08;
+    bytes32 public constant ION_POOL_LIQUIDITY_SLOT = 0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e08;
 
     IERC20 public immutable BASE_ASSET;
 
@@ -120,7 +125,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         feePercentage = _feePercentage;
         feeRecipient = _feeRecipient;
 
-        DECIMALS_OFFSET = uint8(_zeroFloorSub(uint256(18), IERC20Metadata(address(_baseAsset)).decimals()));
+        DECIMALS_OFFSET = 4;
 
         _addSupportedMarkets(
             marketsArgs.marketsToAdd,
@@ -140,6 +145,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         if (_feePercentage > RAY) revert InvalidFeePercentage();
         _accrueFee();
         feePercentage = _feePercentage;
+        emit UpdateFeePercentage(_feePercentage);
     }
 
     /**
@@ -149,6 +155,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     function updateFeeRecipient(address _feeRecipient) external onlyRole(OWNER_ROLE) {
         if (_feeRecipient == address(0)) revert InvalidFeeRecipient();
         feeRecipient = _feeRecipient;
+        emit UpdateFeeRecipient(_feeRecipient);
     }
 
     /**
@@ -157,6 +164,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * address. Valid IonPools require the base asset to be the same. Duplicate
      * addition to the EnumerableSet will revert. The allocationCaps of the
      * new markets being introduced must be set.
+     * It MUST be enforced that each IonPool's RewardToken `_decimals` is equal
+     * to the decimals of this vault's base asset.
      * @param marketsToAdd Array of new markets to be added.
      * @param allocationCaps Array of allocation caps for only the markets to be added.
      * @param newSupplyQueue Desired supply queue of IonPools for all resulting supported markets.
@@ -184,13 +193,15 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     {
         if (marketsToAdd.length != allocationCaps.length) revert MarketsAndAllocationCapLengthMustBeEqual();
 
-        for (uint256 i; i != marketsToAdd.length;) {
+        uint256 marketsToAddLength = marketsToAdd.length;
+        uint8 baseAssetDecimals = IERC20Metadata(address(BASE_ASSET)).decimals();
+        for (uint256 i; i != marketsToAddLength;) {
             IIonPool pool = marketsToAdd[i];
 
             if (pool != IDLE) {
-                if (address(pool.underlying()) != address(BASE_ASSET)) {
-                    revert InvalidUnderlyingAsset(pool);
-                }
+                if (pool.decimals() != baseAssetDecimals) revert InvalidIonPoolDecimals(pool);
+                if (address(pool.underlying()) != address(BASE_ASSET)) revert InvalidUnderlyingAsset(pool);
+
                 BASE_ASSET.approve(address(pool), type(uint256).max);
             }
 
@@ -207,6 +218,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
         _updateSupplyQueue(newSupplyQueue);
         _updateWithdrawQueue(newWithdrawQueue);
+
+        emit AddSupportedMarkets(marketsToAdd);
     }
 
     /**
@@ -229,7 +242,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         external
         onlyRole(OWNER_ROLE)
     {
-        for (uint256 i; i != marketsToRemove.length;) {
+        uint256 marketsToRemoveLength = marketsToRemove.length;
+        for (uint256 i; i != marketsToRemoveLength;) {
             IIonPool pool = marketsToRemove[i];
 
             if (pool == IDLE) {
@@ -251,6 +265,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         }
         _updateSupplyQueue(newSupplyQueue);
         _updateWithdrawQueue(newWithdrawQueue);
+
+        emit RemoveSupportedMarkets(marketsToRemove);
     }
 
     /**
@@ -319,8 +335,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
     /**
      * @notice Update allocation caps for specified IonPools or the IDLE pool.
-     * @dev The allocation caps are applied to pools in the order of the array
-     * within `supportedMarkets`. The elements inside `ionPools` must exist in
+     * @dev The allocation caps are applied to pools in the order of the
+     * `ionPool` array argument. The elements inside `ionPools` must exist in
      * `supportedMarkets`. To update the `IDLE` pool, use the `IDLE` constant
      * address.
      * @param ionPools The array of IonPools whose caps will be updated.
@@ -333,9 +349,10 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         external
         onlyRole(OWNER_ROLE)
     {
-        if (ionPools.length != newCaps.length) revert IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
+        uint256 ionPoolsLength = ionPools.length;
+        if (ionPoolsLength != newCaps.length) revert IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
 
-        for (uint256 i; i != ionPools.length;) {
+        for (uint256 i; i != ionPoolsLength;) {
             IIonPool pool = ionPools[i];
             if (!supportedMarkets.contains(address(pool))) revert MarketNotSupported(pool);
             caps[pool] = newCaps[i];
@@ -344,6 +361,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 ++i;
             }
         }
+
+        emit UpdateAllocationCaps(ionPools, newCaps);
     }
 
     /**
@@ -365,9 +384,13 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         uint256 totalWithdrawn;
 
         uint256 currentIdleDeposits = BASE_ASSET.balanceOf(address(this));
-        for (uint256 i; i != allocations.length;) {
+
+        uint256 allocationsLength = allocations.length;
+        for (uint256 i; i != allocationsLength;) {
             MarketAllocation calldata allocation = allocations[i];
             IIonPool pool = allocation.pool;
+
+            _supportedMarketsIndexOf(address(pool)); // Checks if the pool is supported
 
             uint256 currentSupplied = pool == IDLE ? currentIdleDeposits : pool.balanceOf(address(this));
             int256 assets = allocation.assets; // to deposit or withdraw
@@ -576,9 +599,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      */
     function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256 assets) {
         uint256 newTotalAssets = _accrueFee();
-
-        // This is updated again with the deposited assets amount in `_deposit`.
-        lastTotalAssets = newTotalAssets;
 
         assets = _convertToAssetsWithTotals(shares, totalSupply(), newTotalAssets, Math.Rounding.Ceil);
 
@@ -797,7 +817,9 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     }
 
     function _maxDeposit() internal view returns (uint256 maxDepositable) {
-        for (uint256 i; i != supportedMarkets.length();) {
+        uint256 supportedMarketsLength = supportedMarkets.length();
+
+        for (uint256 i; i != supportedMarketsLength;) {
             IIonPool pool = IIonPool(supportedMarkets.at(i));
 
             uint256 depositable =
@@ -837,7 +859,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         (feeShares, newTotalAssets) = _accruedFeeShares();
         if (feeShares != 0) _mint(feeRecipient, feeShares);
 
-        lastTotalAssets = newTotalAssets;
+        _updateLastTotalAssets(newTotalAssets);
 
         emit FeeAccrued(feeShares, newTotalAssets);
     }

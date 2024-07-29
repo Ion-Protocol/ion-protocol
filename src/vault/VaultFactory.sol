@@ -10,6 +10,8 @@ import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/Sa
  * @title Ion Lending Vault Factory
  * @author Molecular Labs
  * @notice Factory contract for deploying Ion Lending Vaults.
+ *
+ * @custom:security-contact security@molecularlabs.io
  */
 contract VaultFactory {
     using SafeERC20 for IERC20;
@@ -30,7 +32,7 @@ contract VaultFactory {
         address indexed initialDefaultAdmin
     );
 
-    VaultBytecode constant BYTECODE_DEPLOYER = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
+    VaultBytecode public constant BYTECODE_DEPLOYER = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
 
     // --- Modifier ---
 
@@ -52,13 +54,7 @@ contract VaultFactory {
     // --- External ---
 
     /**
-     * @notice Deploys a new Ion Lending Vault. Transfers the `initialDeposit`
-     * amount of the base asset from the caller initiate the first deposit to
-     * the vault. The minimum `initialDeposit` is 1e3. If less, this call would
-     * underflow as it will always burn 1e3 shares of the total shares minted to
-     * defend against inflation attacks.
-     * @dev The 1e3 initial deposit amount was chosen to defend against
-     * inflation attacks, referencing the UniV2 LP token implementation.
+     * @notice Deploys a new Ion Lending Vault.
      * @param baseAsset The asset that is being lent out to IonPools.
      * @param feeRecipient Address that receives the accrued manager fees.
      * @param feePercentage Fee percentage to be set.
@@ -69,7 +65,6 @@ contract VaultFactory {
      * @param salt The salt used for CREATE2 deployment. The first 20 bytes must
      * be the msg.sender.
      * @param marketsArgs Arguments for the markets to be added to the vault.
-     * @param initialDeposit The initial deposit to be made to the vault.
      */
     function createVault(
         IERC20 baseAsset,
@@ -80,8 +75,7 @@ contract VaultFactory {
         uint48 initialDelay,
         address initialDefaultAdmin,
         bytes32 salt,
-        Vault.MarketsArgs memory marketsArgs,
-        uint256 initialDeposit
+        Vault.MarketsArgs memory marketsArgs
     )
         external
         containsCaller(salt)
@@ -90,14 +84,6 @@ contract VaultFactory {
         vault = BYTECODE_DEPLOYER.deploy(
             baseAsset, feeRecipient, feePercentage, name, symbol, initialDelay, initialDefaultAdmin, salt, marketsArgs
         );
-
-        baseAsset.safeTransferFrom(msg.sender, address(this), initialDeposit);
-        baseAsset.approve(address(vault), initialDeposit);
-        uint256 sharesMinted = vault.deposit(initialDeposit, address(this));
-
-        // The factory keeps 1e3 shares to reduce inflation attack vector.
-        // Effectively burns this amount of shares by locking it in the factory.
-        vault.transfer(msg.sender, sharesMinted - 1e3);
 
         emit CreateVault(address(vault), baseAsset, feeRecipient, feePercentage, name, symbol, initialDefaultAdmin);
     }
