@@ -1350,6 +1350,29 @@ abstract contract VaultReallocate is VaultSharedSetup {
 
     // --- Reallocate ---
 
+    function test_Revert_Reallocate_MarketNotSupported() public {
+        uint256 depositAmount = 10e18;
+
+        setERC20Balance(address(BASE_ASSET), address(this), depositAmount);
+
+        updateSupplyQueue(vault, rsEthIonPool, rswEthIonPool, weEthIonPool);
+        updateSupplyCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
+        updateAllocationCaps(vault, 2e18, 3e18, 5e18);
+
+        vault.deposit(depositAmount, address(this));
+
+        updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
+
+        IIonPool notSupportedPool = IIonPool(makeAddr("NOT SUPPORTED"));
+
+        Vault.MarketAllocation[] memory allocs = new Vault.MarketAllocation[](1);
+        allocs[0] = Vault.MarketAllocation({ pool: notSupportedPool, assets: type(int256).max });
+
+        vm.prank(ALLOCATOR);
+        vm.expectRevert(abi.encodeWithSelector(Vault.MarketNotSupported.selector, address(notSupportedPool)));
+        vault.reallocate(allocs);
+    }
+
     function test_Reallocate_AcrossAllMarkets() public {
         uint256 depositAmount = 10e18;
 
