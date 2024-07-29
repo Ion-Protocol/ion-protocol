@@ -65,10 +65,9 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
     uint8 public immutable DECIMALS_OFFSET;
 
-    bytes32 public immutable ION_POOL_SUPPLY_CAP_SLOT =
+    bytes32 public constant ION_POOL_SUPPLY_CAP_SLOT =
         0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e09;
-    bytes32 public immutable ION_POOL_LIQUIDITY_SLOT =
-        0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e08;
+    bytes32 public constant ION_POOL_LIQUIDITY_SLOT = 0xceba3d526b4d5afd91d1b752bf1fd37917c20a6daf576bcb41dd1c57c1f67e08;
 
     IERC20 public immutable BASE_ASSET;
 
