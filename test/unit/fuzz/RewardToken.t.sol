@@ -6,6 +6,7 @@ import { WadRayMath } from "../../../src/libraries/math/WadRayMath.sol";
 import { IERC20Errors } from "../../../src/token/IERC20Errors.sol";
 
 import { RewardTokenSharedSetup } from "../../helpers/RewardTokenSharedSetup.sol";
+import { IonPoolSharedSetup } from "../../helpers/IonPoolSharedSetup.sol";
 
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -359,5 +360,73 @@ contract RewardToken_FuzzUnitTest is RewardTokenSharedSetup {
         }
 
         assertEq(rewardModule.allowance(sendingUser, spender), locals.amountOfRewardTokens);
+    }
+}
+
+contract RewardToken_FuzzUnitTest_WithIonPool is IonPoolSharedSetup {
+    /**
+     * The transfer function should take into account the up to date supply
+     * factor inclusive of the interest rate accrual.
+     * The decrease in sender's `balanceOf` should be equal to the increase in the recipient`s `balanceOf`.
+     * Same goes for `normalizedBalanceOf`.
+     */
+    function testFuzz_TransferWithSupplyFactorIncrease(
+        uint256 supplyAmt,
+        uint256 transferAmt,
+        uint256 timeDelta
+    )
+        public
+    {
+        uint8 ilkIndex = 0;
+        address recipient = makeAddr("RECIPIENT");
+
+        ionPool.updateIlkDebtCeiling(ilkIndex, type(uint256).max);
+
+        supplyAmt = bound(supplyAmt, 1e18, 100e18);
+        timeDelta = bound(timeDelta, 1 days, 10 days);
+        transferAmt = bound(transferAmt, supplyAmt / 10, supplyAmt / 2);
+
+        uint256 collateralAmt = supplyAmt;
+        uint256 borrowAmt = bound(supplyAmt, supplyAmt / 2, supplyAmt);
+
+        deal(address(underlying), address(lender1), supplyAmt);
+
+        vm.startPrank(lender1);
+        ionPool.underlying().approve(address(ionPool), supplyAmt);
+        ionPool.supply(lender1, supplyAmt, new bytes32[](0));
+        vm.stopPrank();
+
+        deal(address(collaterals[ilkIndex]), address(borrower1), collateralAmt);
+
+        vm.startPrank(borrower1);
+        collaterals[ilkIndex].approve(address(gemJoins[ilkIndex]), collateralAmt);
+        gemJoins[ilkIndex].join(borrower1, collateralAmt);
+        ionPool.depositCollateral(ilkIndex, borrower1, borrower1, collateralAmt, new bytes32[](0));
+        ionPool.borrow(ilkIndex, borrower1, borrower1, borrowAmt, new bytes32[](0));
+        vm.stopPrank();
+
+        uint256 prevSupplyFactor = ionPool.supplyFactor();
+
+        vm.warp(block.timestamp + timeDelta);
+
+        uint256 newSupplyFactor = ionPool.supplyFactor();
+
+        assertGt(newSupplyFactor, prevSupplyFactor, "supply factor must go up");
+
+        uint256 prevBalanceOf = ionPool.balanceOf(lender1);
+        uint256 prevRecipientBalanceOf = ionPool.balanceOf(recipient);
+
+        vm.prank(lender1);
+        ionPool.transfer(recipient, transferAmt);
+
+        uint256 newBalanceOf = ionPool.balanceOf(lender1);
+        uint256 newRecipientBalanceOf = ionPool.balanceOf(recipient);
+
+        assertApproxEqAbs(
+            prevBalanceOf - newBalanceOf,
+            newRecipientBalanceOf - prevRecipientBalanceOf,
+            ionPool.supplyFactor() / 1e27,
+            "the balanceOf change must be equal within a rounding error bound"
+        );
     }
 }

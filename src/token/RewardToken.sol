@@ -321,7 +321,7 @@ abstract contract RewardToken is
 
         RewardTokenStorage storage $ = _getRewardTokenStorage();
 
-        uint256 _supplyFactor = $.supplyFactor;
+        uint256 _supplyFactor = supplyFactor();
         uint256 amountNormalized = amount.rayDivDown(_supplyFactor);
 
         uint256 oldSenderBalance = $._normalizedBalances[from];
