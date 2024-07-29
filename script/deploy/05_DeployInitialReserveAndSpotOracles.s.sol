@@ -3,8 +3,8 @@ pragma solidity 0.8.21;
 
 import { DeployScript } from "../Deploy.s.sol";
 import { RAY } from "../../src/libraries/math/WadRayMath.sol";
-import { EzEthWethReserveOracle } from "./../../src/oracles/reserve/lrt/EzEthWethReserveOracle.sol";
-import { EzEthWethSpotOracle } from "./../../src/oracles/spot/lrt/EzEthWethSpotOracle.sol";
+import { WeEthWethReserveOracle } from "./../../src/oracles/reserve/lrt/WeEthWethReserveOracle.sol";
+import { WeEthWethSpotOracle } from "./../../src/oracles/spot/lrt/WeEthWethSpotOracle.sol";
 
 import { stdJson as StdJson } from "forge-std/StdJson.sol";
 
@@ -15,6 +15,7 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
     string config = vm.readFile(configPath);
 
     uint256 maxChange = config.readUint(".maxChange");
+    uint256 gracePeriod = config.readUint(".gracePeriod");
     uint256 ltv = config.readUint(".ltv");
 
     function run() public broadcast returns (address reserveOracle, address spotOracle) {
@@ -28,13 +29,22 @@ contract DeployInitialReserveAndSpotOraclesScript is DeployScript {
         uint256 maxTimeFromLastUpdate = config.readUint(".maxTimeFromLastUpdate");
 
         if (deployCreate2) {
-            reserveOracle = address(new EzEthWethReserveOracle{ salt: DEFAULT_SALT }(0, new address[](3), 0, maxChange));
+            reserveOracle = address(
+                new WeEthWethReserveOracle{ salt: DEFAULT_SALT }(
+                    0, new address[](3), 0, maxChange, maxTimeFromLastUpdate, gracePeriod
+                )
+            );
             spotOracle = address(
-                new EzEthWethSpotOracle{ salt: DEFAULT_SALT }(ltv, address(reserveOracle), maxTimeFromLastUpdate)
+                new WeEthWethSpotOracle{ salt: DEFAULT_SALT }(
+                    ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod
+                )
             );
         } else {
-            reserveOracle = address(new EzEthWethReserveOracle(0, new address[](3), 0, maxChange));
-            spotOracle = address(new EzEthWethSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate));
+            reserveOracle = address(
+                new WeEthWethReserveOracle(0, new address[](3), 0, maxChange, maxTimeFromLastUpdate, gracePeriod)
+            );
+            spotOracle =
+                address(new WeEthWethSpotOracle(ltv, address(reserveOracle), maxTimeFromLastUpdate, gracePeriod));
         }
     }
 }

@@ -6,7 +6,7 @@ import { EtherFiLibrary } from "../../../../src/libraries/lrt/EtherFiLibrary.sol
 import { LrtHandler_ForkBase } from "../../../helpers/handlers/LrtHandlerForkBase.sol";
 import { WeEthHandler } from "../../../../src/flash/lrt/WeEthHandler.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
-import { WEETH_ADDRESS, EETH_ADDRESS } from "../../../../src/Constants.sol";
+import { WEETH_ADDRESS, EETH_ADDRESS, WETH_ADDRESS } from "../../../../src/Constants.sol";
 
 import { IProviderLibraryExposed } from "../../../helpers/IProviderLibraryExposed.sol";
 import { UniswapFlashswapDirectMintHandler_Test } from "../handlers-base/UniswapFlashswapDirectMintHandler.t.sol";
@@ -38,7 +38,9 @@ abstract contract WeEthHandler_ForkBase is LrtHandler_ForkBase {
 
     function setUp() public virtual override {
         super.setUp();
-        weEthHandler = new WeEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
+        weEthHandler = new WeEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL, WETH_ADDRESS
+        );
 
         WEETH_ADDRESS.approve(address(weEthHandler), type(uint256).max);
 

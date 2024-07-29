@@ -1,9 +1,11 @@
-import { EzEthWethHandler } from "./../../../../src/flash/lrt/EzEthWethHandler.sol";
+import { WeEthWethHandler } from "./../../../../src/flash/lrt/WeEthWethHandler.sol";
 import { Whitelist } from "./../../../../src/Whitelist.sol";
 import {
-    MAINNET_WSTETH_WETH_UNISWAP,
-    EZETH_WETH_BALANCER_POOL_ID,
-    EZETH,
+    BASE_WSTETH_WETH_UNISWAP,
+    BASE_WEETH_WETH_BALANCER_POOL_ID,
+    BASE_WETH,
+    BASE_WEETH,
+    BASE_WEETH_ETH_PRICE_CHAINLINK,
     WETH_ADDRESS
 } from "./../../../../src/Constants.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
@@ -11,36 +13,39 @@ import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import { UniswapFlashloanBalancerSwapHandler_Test } from
     "./../../concrete/handlers-base/UniswapFlashloanBalancerSwapHandler.t.sol";
 import { IProviderLibraryExposed } from "./../../../helpers/IProviderLibraryExposed.sol";
+import { SafeCast } from "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
-contract EzEthWethHandler_ForkTest is UniswapFlashloanBalancerSwapHandler_Test {
-    EzEthWethHandler handler;
+using SafeCast for int256;
+
+contract WeEthWethHandler_ForkTest is UniswapFlashloanBalancerSwapHandler_Test {
+    WeEthWethHandler handler;
     uint8 immutable ILK_INDEX = 0;
 
     function setUp() public virtual override {
         super.setUp();
-        handler = new EzEthWethHandler(
+        handler = new WeEthWethHandler(
             ILK_INDEX,
             ionPool,
             gemJoins[ILK_INDEX],
             Whitelist(whitelist),
-            MAINNET_WSTETH_WETH_UNISWAP,
-            EZETH_WETH_BALANCER_POOL_ID,
+            BASE_WSTETH_WETH_UNISWAP,
+            BASE_WEETH_WETH_BALANCER_POOL_ID,
             WETH_ADDRESS
         );
 
-        EZETH.approve(address(handler), type(uint256).max);
+        BASE_WEETH.approve(address(handler), type(uint256).max);
 
         // Remove debt ceiling for this test
         for (uint8 i = 0; i < lens.ilkCount(iIonPool); i++) {
             ionPool.updateIlkDebtCeiling(i, type(uint256).max);
         }
 
-        deal(address(EZETH), address(this), INITIAL_BORROWER_COLLATERAL_BALANCE);
+        deal(address(BASE_WEETH), address(this), INITIAL_BORROWER_COLLATERAL_BALANCE);
     }
 
     function _getCollaterals() internal view override returns (IERC20[] memory _collaterals) {
         _collaterals = new IERC20[](1);
-        _collaterals[0] = EZETH;
+        _collaterals[0] = BASE_WEETH;
     }
 
     function _getHandler() internal view override returns (address) {
@@ -52,7 +57,12 @@ contract EzEthWethHandler_ForkTest is UniswapFlashloanBalancerSwapHandler_Test {
     }
 
     function _getUnderlying() internal pure override returns (address) {
-        return address(WETH_ADDRESS);
+        return address(BASE_WETH);
+    }
+
+    function _getInitialSpotPrice() internal view override returns (uint256) {
+        (, int256 ethPerWeEth,,,) = BASE_WEETH_ETH_PRICE_CHAINLINK.latestRoundData(); // [WAD]
+        return ethPerWeEth.toUint256();
     }
 
     // NOTE Should be unused
@@ -63,9 +73,13 @@ contract EzEthWethHandler_ForkTest is UniswapFlashloanBalancerSwapHandler_Test {
     function _getDepositContracts() internal view override returns (address[] memory) {
         return new address[](1);
     }
+
+    function _getForkRpc() internal view override returns (string memory) {
+        return vm.envString("BASE_MAINNET_RPC_URL");
+    }
 }
 
-contract EzEthHandler_WithRateChange_ForkTest is EzEthWethHandler_ForkTest {
+contract WeEthWethHandler_WithRateChange_ForkTest is WeEthWethHandler_ForkTest {
     function setUp() public virtual override {
         super.setUp();
 

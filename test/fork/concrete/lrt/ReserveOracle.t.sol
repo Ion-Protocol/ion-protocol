@@ -6,6 +6,7 @@ import { ReserveOracle } from "../../../../src/oracles/reserve/ReserveOracle.sol
 import { RsEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RsEthWstEthReserveOracle.sol";
 import { RswEthWstEthReserveOracle } from "../../../../src/oracles/reserve/lrt/RswEthWstEthReserveOracle.sol";
 import { EzEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/EzEthWethReserveOracle.sol";
+import { WeEthWethReserveOracle } from "./../../../../src/oracles/reserve/lrt/WeEthWethReserveOracle.sol";
 import { WadRayMath } from "../../../../src/libraries/math/WadRayMath.sol";
 import { UPDATE_COOLDOWN } from "../../../../src/oracles/reserve/ReserveOracle.sol";
 import {
@@ -16,7 +17,10 @@ import {
     ETHX_ADDRESS,
     RSWETH,
     EZETH,
-    RENZO_RESTAKE_MANAGER
+    RENZO_RESTAKE_MANAGER,
+    BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK,
+    ETHER_FI_LIQUIDITY_POOL_ADDRESS,
+    WEETH_ADDRESS
 } from "../../../../src/Constants.sol";
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 import { StdStorage, stdStorage } from "../../../../lib/forge-safe/lib/forge-std/src/StdStorage.sol";
@@ -27,7 +31,9 @@ import { EzEthWstEthReserveOracle } from "./../../../../src/oracles/reserve/lrt/
 
 import { ReserveOracleSharedSetup } from "../../../helpers/ReserveOracleSharedSetup.sol";
 
-import { ETHER_FI_LIQUIDITY_POOL_ADDRESS, WEETH_ADDRESS } from "../../../../src/Constants.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+import { console2 } from "forge-std/console2.sol";
 
 uint256 constant LTV = 0.9e27;
 uint256 constant MAX_CHANGE = 0.03e27;
@@ -401,5 +407,84 @@ contract EzEthWethReserveOracle_ForkTest is MockEzEth {
         (,, uint256 totalTVL) = RENZO_RESTAKE_MANAGER.calculateTVLs();
         uint256 totalSupply = EZETH.totalSupply();
         return totalTVL.wadDivDown(totalSupply);
+    }
+}
+
+contract MockChainlink {
+    using SafeCast for uint256;
+
+    uint256 public exchangeRate;
+
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        return (0, exchangeRate.toInt256(), 0, block.timestamp, 0);
+    }
+
+    function setExchangeRate(uint256 _exchangeRate) external returns (uint256) {
+        exchangeRate = _exchangeRate;
+    }
+}
+
+contract WeEthWethReserveOracle_ForkTest is ReserveOracle_ForkTest {
+    using SafeCast for int256;
+
+    error MaxTimeFromLastUpdateExceeded(uint256, uint256);
+
+    uint256 public immutable MAX_TIME_FROM_LAST_UPDATE = 87_000; // seconds
+    uint256 public immutable GRACE_PERIOD = 3600;
+
+    function setUp() public override {
+        super.setUp();
+        reserveOracle = new WeEthWethReserveOracle(
+            ILK_INDEX, emptyFeeds, QUORUM, MAX_CHANGE, MAX_TIME_FROM_LAST_UPDATE, GRACE_PERIOD
+        );
+    }
+
+    function _getForkRpc() internal override returns (string memory) {
+        return vm.envString("BASE_MAINNET_RPC_URL");
+    }
+
+    function _convertToEth(uint256 amt) internal view override returns (uint256) {
+        return amt;
+    }
+
+    function _getProtocolExchangeRate() internal view override returns (uint256) {
+        (, int256 ethPerWeEth,, uint256 ethPerWeEthUpdatedAt,) =
+            BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+        if (block.timestamp - ethPerWeEthUpdatedAt > MAX_TIME_FROM_LAST_UPDATE) {
+            revert MaxTimeFromLastUpdateExceeded(block.timestamp, ethPerWeEthUpdatedAt);
+        } else {
+            return ethPerWeEth.toUint256(); // [WAD]
+        }
+    }
+
+    // --- Slashing Scenario ---
+    function _increaseExchangeRate() internal override returns (uint256 newPrice) {
+        // Replace the Chainlink contract that returns the exchange rate with a
+        // new dummy contract that returns a higher exchange rate.
+        (, int256 prevExchangeRate,,,) = BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        MockChainlink chainlink = new MockChainlink();
+
+        vm.etch(address(BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK), address(chainlink).code);
+
+        MockChainlink(address(BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK)).setExchangeRate(1.8e18);
+
+        (, int256 newExchangeRate,,,) = BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        require(newExchangeRate > prevExchangeRate, "price should increase");
+    }
+
+    function _decreaseExchangeRate() internal override returns (uint256 newPrice) {
+        (, int256 prevExchangeRate,,,) = BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        MockChainlink chainlink = new MockChainlink();
+
+        vm.etch(address(BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK), address(chainlink).code);
+
+        MockChainlink(address(BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK)).setExchangeRate(0.5e18);
+
+        (, int256 newExchangeRate,,,) = BASE_WEETH_ETH_EXCHANGE_RATE_CHAINLINK.latestRoundData();
+
+        require(newExchangeRate < prevExchangeRate, "price should decrease");
     }
 }

@@ -9,6 +9,7 @@ import { BalancerFlashloanDirectMintHandler } from "../BalancerFlashloanDirectMi
 import { IWstEth } from "../../interfaces/ProviderInterfaces.sol";
 import { LidoLibrary } from "../../libraries/lst/LidoLibrary.sol";
 import { Whitelist } from "../../Whitelist.sol";
+import { IWETH9 } from "./../../interfaces/IWETH9.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -36,9 +37,10 @@ contract WstEthHandler is UniswapFlashswapHandler, BalancerFlashloanDirectMintHa
         IonPool _ionPool,
         GemJoin _gemJoin,
         Whitelist _whitelist,
-        IUniswapV3Pool _wstEthUniswapPool
+        IUniswapV3Pool _wstEthUniswapPool,
+        IWETH9 _weth
     )
-        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist)
+        IonHandlerBase(_ilkIndex, _ionPool, _gemJoin, _whitelist, _weth)
         UniswapFlashswapHandler(_wstEthUniswapPool, false)
     {
         // NOTE: approves wstETH contract infinite approval to move this contract's stEth

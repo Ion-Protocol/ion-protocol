@@ -7,6 +7,7 @@ import { WadRayMath, RAY } from "../../../../src/libraries/math/WadRayMath.sol";
 import { LidoLibrary } from "../../../../src/libraries/lst/LidoLibrary.sol";
 import { Whitelist } from "../../../../src/Whitelist.sol";
 import { IonHandlerBase } from "../../../../src/flash/IonHandlerBase.sol";
+import { WETH_ADDRESS } from "../../../../src/Constants.sol";
 
 import { BalancerFlashloanDirectMintHandler_Test } from "../handlers-base/BalancerFlashloanDirectMintHandler.t.sol";
 import { UniswapFlashswapHandler_Test } from "../handlers-base/UniswapFlashswapHandler.t.sol";
@@ -43,7 +44,9 @@ abstract contract WstEthHandler_ForkBase is LstHandler_ForkBase {
     function setUp() public virtual override {
         super.setUp();
 
-        wstEthHandler = new WstEthHandler(ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL);
+        wstEthHandler = new WstEthHandler(
+            ilkIndex, ionPool, gemJoins[ilkIndex], Whitelist(whitelist), WSTETH_WETH_POOL, WETH_ADDRESS
+        );
 
         IERC20(address(MAINNET_WSTETH)).approve(address(wstEthHandler), type(uint256).max);
 

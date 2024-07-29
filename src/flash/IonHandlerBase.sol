@@ -6,7 +6,6 @@ import { IWETH9 } from "../interfaces/IWETH9.sol";
 import { GemJoin } from "../join/GemJoin.sol";
 import { WadRayMath, RAY } from "../libraries/math/WadRayMath.sol";
 import { Whitelist } from "../Whitelist.sol";
-import { WETH_ADDRESS } from "../Constants.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -70,9 +69,8 @@ abstract contract IonHandlerBase {
     }
 
     IERC20 public immutable BASE;
-    // Will keep WETH for compatibility with other strategies. But this should
-    // be removed eventually to remove dependence on WETH as a base asset.
     IWETH9 public immutable WETH;
+
     uint8 public immutable ILK_INDEX;
     IonPool public immutable POOL;
     GemJoin public immutable JOIN;
@@ -86,14 +84,14 @@ abstract contract IonHandlerBase {
      * @param _gemJoin the `GemJoin` associated with the `ilkIndex` of this
      * contract.
      * @param _whitelist the `Whitelist` module address.
+     * @param _weth The WETH address of the chain.
      */
-    constructor(uint8 _ilkIndex, IonPool _ionPool, GemJoin _gemJoin, Whitelist _whitelist) {
+    constructor(uint8 _ilkIndex, IonPool _ionPool, GemJoin _gemJoin, Whitelist _whitelist, IWETH9 _weth) {
         POOL = _ionPool;
         ILK_INDEX = _ilkIndex;
 
         BASE = IERC20(_ionPool.underlying());
 
-        IWETH9 _weth = WETH_ADDRESS;
         WETH = _weth;
 
         address ilkAddress = POOL.getIlkAddress(_ilkIndex);
@@ -262,6 +260,6 @@ abstract contract IonHandlerBase {
      * @dev To allow unwrapping of WETH into ETH.
      */
     receive() external payable {
-        if (msg.sender != address(WETH_ADDRESS)) revert CannotSendEthToContract();
+        if (msg.sender != address(WETH)) revert CannotSendEthToContract();
     }
 }

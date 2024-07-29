@@ -16,7 +16,7 @@ contract DeployAdminTransferTest is DeployTestBase, AdminTransferScript {
         assertLe(addressSchedule, block.timestamp, "address schedule");
 
         // assertEq(yieldOracle.pendingOwner(), protocol, "yield oracle pending owner");
-        // assertEq(whitelist.pendingOwner(), protocol, "whitelist pending owner");
+        assertEq(whitelist.pendingOwner(), protocol, "whitelist pending owner");
         assertEq(proxyAdmin.pendingOwner(), protocol, "proxy admin pending owner");
         assertTrue(ionPool.hasRole(ionPool.GEM_JOIN_ROLE(), address(gemJoin)), "gem join role");
         assertTrue(ionPool.hasRole(ionPool.LIQUIDATOR_ROLE(), address(liquidation)), "gem join role");

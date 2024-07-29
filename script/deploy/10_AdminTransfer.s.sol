@@ -49,7 +49,7 @@ contract AdminTransferScript is DeployScript {
 
         ionPool.beginDefaultAdminTransfer(protocol);
         // yieldOracle.transferOwnership(protocol);
-        // whitelist.transferOwnership(protocol);
+        whitelist.transferOwnership(protocol);
         proxyAdmin.transferOwnership(protocol);
     }
 }
