@@ -183,7 +183,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     {
         if (marketsToAdd.length != allocationCaps.length) revert MarketsAndAllocationCapLengthMustBeEqual();
 
-        for (uint256 i; i != marketsToAdd.length;) {
+        uint256 marketsToAddLength = marketsToAdd.length;
+        for (uint256 i; i != marketsToAddLength;) {
             IIonPool pool = marketsToAdd[i];
 
             if (pool != IDLE) {
@@ -228,7 +229,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         external
         onlyRole(OWNER_ROLE)
     {
-        for (uint256 i; i != marketsToRemove.length;) {
+        uint256 marketsToRemoveLength = marketsToRemove.length;
+        for (uint256 i; i != marketsToRemoveLength;) {
             IIonPool pool = marketsToRemove[i];
 
             if (pool == IDLE) {
@@ -332,9 +334,10 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         external
         onlyRole(OWNER_ROLE)
     {
-        if (ionPools.length != newCaps.length) revert IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
+        uint256 ionPoolsLength = ionPools.length;
+        if (ionPoolsLength != newCaps.length) revert IonPoolsArrayAndNewCapsArrayMustBeOfEqualLength();
 
-        for (uint256 i; i != ionPools.length;) {
+        for (uint256 i; i != ionPoolsLength;) {
             IIonPool pool = ionPools[i];
             if (!supportedMarkets.contains(address(pool))) revert MarketNotSupported(pool);
             caps[pool] = newCaps[i];
@@ -364,7 +367,9 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         uint256 totalWithdrawn;
 
         uint256 currentIdleDeposits = BASE_ASSET.balanceOf(address(this));
-        for (uint256 i; i != allocations.length;) {
+
+        uint256 allocationsLength = allocations.length;
+        for (uint256 i; i != allocationsLength;) {
             MarketAllocation calldata allocation = allocations[i];
             IIonPool pool = allocation.pool;
 
@@ -795,6 +800,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     }
 
     function _maxDeposit() internal view returns (uint256 maxDepositable) {
+        uint256 supportedMarketsLength = supportedMarkets.length();
+
         for (uint256 i; i != supportedMarkets.length();) {
             IIonPool pool = IIonPool(supportedMarkets.at(i));
 
