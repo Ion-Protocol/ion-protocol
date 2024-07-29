@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import { IIonPool } from "./../interfaces/IIonPool.sol";
 import { RAY } from "./../libraries/math/WadRayMath.sol";
-
+// solhint-disable-next-line no-unused-import
 import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -670,6 +670,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     }
 
     /**
+     * 
      * @inheritdoc IERC20Metadata
      */
     function decimals() public view override(ERC4626) returns (uint8) {
@@ -816,7 +817,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     function _maxDeposit() internal view returns (uint256 maxDepositable) {
         uint256 supportedMarketsLength = supportedMarkets.length();
 
-        for (uint256 i; i != supportedMarkets.length();) {
+        for (uint256 i; i != supportedMarketsLength;) {
             IIonPool pool = IIonPool(supportedMarkets.at(i));
 
             uint256 depositable =
