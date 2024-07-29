@@ -222,6 +222,36 @@ contract VaultSetUpTest is VaultSharedSetup {
         vm.stopPrank();
     }
 
+    /**
+     * The BASE_ASSET of the vault and the IonPool is the same, but the decimals
+     * of the IonPool and the vaults' BASE_ASSET are different.
+     */
+    function test_Revert_AddSupportedMarkets_InvalidIonPoolDecimals() public {
+        bytes32 ION_POOL_DECIMALS_SLOT = 0xdb3a0d63a7808d7d0422c40bb62354f42bff7602a547c329c1453dbcbeef4900;
+        vault = new Vault(
+            BASE_ASSET, FEE_RECIPIENT, ZERO_FEES, "Ion Vault Token", "IVT", INITIAL_DELAY, VAULT_ADMIN, emptyMarketsArgs
+        );
+
+        vm.startPrank(vault.defaultAdmin());
+        vault.grantRole(vault.OWNER_ROLE(), OWNER);
+        vault.grantRole(vault.ALLOCATOR_ROLE(), OWNER);
+        vm.stopPrank();
+
+        IIonPool[] memory markets = new IIonPool[](1);
+        markets[0] = deployIonPool(BASE_ASSET, WEETH, address(this));
+
+        bytes32 newDecimals = bytes32(uint256(22));
+        vm.store(address(markets[0]), ION_POOL_DECIMALS_SLOT, newDecimals);
+
+        uint256[] memory allocationCaps = new uint256[](1);
+        allocationCaps[0] = 1 ether;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Vault.InvalidIonPoolDecimals.selector, address(markets[0])));
+        vault.addSupportedMarkets(markets, allocationCaps, markets, markets);
+        vm.stopPrank();
+    }
+
     function test_RemoveSingleSupportedMarket() public {
         uint256[] memory allocationCaps = new uint256[](1);
         allocationCaps[0] = 1e18;

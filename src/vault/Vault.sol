@@ -3,7 +3,6 @@ pragma solidity 0.8.21;
 
 import { IIonPool } from "./../interfaces/IIonPool.sol";
 import { RAY } from "./../libraries/math/WadRayMath.sol";
-// solhint-disable-next-line no-unused-import
 import { IERC20Metadata } from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -49,6 +48,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     error InvalidFeePercentage();
     error InvalidFeeRecipient();
     error MaxSupportedMarketsReached();
+    error InvalidIonPoolDecimals(IIonPool pool);
 
     event UpdateSupplyQueue(address indexed caller, IIonPool[] newSupplyQueue);
     event UpdateWithdrawQueue(address indexed caller, IIonPool[] newWithdrawQueue);
@@ -164,6 +164,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
      * address. Valid IonPools require the base asset to be the same. Duplicate
      * addition to the EnumerableSet will revert. The allocationCaps of the
      * new markets being introduced must be set.
+     * It MUST be enforced that each IonPool's RewardToken `_decimals` is equal
+     * to the decimals of this vault's base asset.
      * @param marketsToAdd Array of new markets to be added.
      * @param allocationCaps Array of allocation caps for only the markets to be added.
      * @param newSupplyQueue Desired supply queue of IonPools for all resulting supported markets.
@@ -192,13 +194,14 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         if (marketsToAdd.length != allocationCaps.length) revert MarketsAndAllocationCapLengthMustBeEqual();
 
         uint256 marketsToAddLength = marketsToAdd.length;
+        uint8 baseAssetDecimals = IERC20Metadata(address(BASE_ASSET)).decimals();
         for (uint256 i; i != marketsToAddLength;) {
             IIonPool pool = marketsToAdd[i];
 
             if (pool != IDLE) {
-                if (address(pool.underlying()) != address(BASE_ASSET)) {
-                    revert InvalidUnderlyingAsset(pool);
-                }
+                if (pool.decimals() != baseAssetDecimals) revert InvalidIonPoolDecimals(pool);
+                if (address(pool.underlying()) != address(BASE_ASSET)) revert InvalidUnderlyingAsset(pool);
+
                 BASE_ASSET.approve(address(pool), type(uint256).max);
             }
 
@@ -670,7 +673,6 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     }
 
     /**
-     * 
      * @inheritdoc IERC20Metadata
      */
     function decimals() public view override(ERC4626) returns (uint8) {

@@ -16,6 +16,7 @@ import { ProxyAdmin } from "./../../src/admin/ProxyAdmin.sol";
 import { TransparentUpgradeableProxy } from "./../../src/admin/TransparentUpgradeableProxy.sol";
 import { ERC20PresetMinterPauser } from "./ERC20PresetMinterPauser.sol";
 import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
+import { IERC20Metadata } from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { EnumerableSet } from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
@@ -319,6 +320,6 @@ contract VaultSharedSetup is IonPoolSharedSetup {
     }
 
     function _convertTo18(uint256 amt) internal view returns (uint256) {
-        return amt / (10 ** (vault.decimals() - 18));
+        return amt / (10 ** (vault.decimals() - IERC20Metadata(address(BASE_ASSET)).decimals()));
     }
 }
