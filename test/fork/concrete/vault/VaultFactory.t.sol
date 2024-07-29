@@ -2,7 +2,6 @@
 pragma solidity 0.8.21;
 
 import { Vault } from "./../../../../src/vault/Vault.sol";
-import { VaultBytecode } from "./../../../../src/vault/VaultBytecode.sol";
 import { VaultFactory } from "./../../../../src/vault/VaultFactory.sol";
 import { VaultSharedSetup } from "../../../helpers/VaultSharedSetup.sol";
 import { ERC20PresetMinterPauser } from "../../../helpers/ERC20PresetMinterPauser.sol";
@@ -55,16 +54,7 @@ contract VaultFactoryTest is VaultSharedSetup {
         bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
 
         address[] memory supportedMarkets = vault.getSupportedMarkets();
@@ -91,45 +81,23 @@ contract VaultFactoryTest is VaultSharedSetup {
         }
 
         // initial deposits
-        assertEq(BASE_ASSET.balanceOf(address(this)), 0, "initial deposit spent");
-        assertEq(vault.totalAssets(), MIN_INITIAL_DEPOSIT, "total assets");
-        assertEq(vault.totalSupply(), MIN_INITIAL_DEPOSIT, "total supply");
+        assertEq(vault.totalAssets(), 0, "total assets");
+        assertEq(vault.totalSupply(), 0, "total supply");
 
-        assertEq(vault.balanceOf(address(factory)), 1e3, "factory gets 1e3 shares");
-        assertEq(vault.balanceOf(address(this)), MIN_INITIAL_DEPOSIT - 1e3, "deployer gets 1e3 less shares");
+        assertEq(vault.balanceOf(address(factory)), 0, "factory starts with zero shares");
+        assertEq(vault.balanceOf(address(this)), 0, "deployer zero shares");
     }
 
     function test_CreateVault_SameBytecodeDifferentSalt() public {
         bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
-
-        setERC20Balance(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
 
         bytes32 salt2 = _getSalt(address(this), "second random salt");
         Vault vault2 = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt2,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt2, marketsArgs
         );
 
         assertEq(VAULT_ADMIN, vault.defaultAdmin(), "default admin");
@@ -145,30 +113,12 @@ contract VaultFactoryTest is VaultSharedSetup {
         bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
 
         vm.expectRevert();
         Vault vault2 = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
     }
 
@@ -178,16 +128,7 @@ contract VaultFactoryTest is VaultSharedSetup {
 
         vm.expectRevert(VaultFactory.SaltMustBeginWithMsgSender.selector);
         Vault vault = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
     }
 
@@ -201,34 +142,12 @@ contract VaultFactoryTest is VaultSharedSetup {
 
         require(salt1 != salt2, "salt must be different");
 
-        deal(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
         Vault vault1 = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt1,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt1, marketsArgs
         );
 
-        deal(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
         Vault vault2 = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt2,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt2, marketsArgs
         );
 
         assertTrue(address(vault1) != address(vault2), "deployment addresses must be different");
@@ -238,16 +157,7 @@ contract VaultFactoryTest is VaultSharedSetup {
         bytes32 salt = _getSalt(address(this), "random salt");
 
         Vault vault = factory.createVault(
-            BASE_ASSET,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            BASE_ASSET, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
 
         // Deploy a vault with different base assets
@@ -263,20 +173,8 @@ contract VaultFactoryTest is VaultSharedSetup {
         marketsArgs.newSupplyQueue = markets;
         marketsArgs.newWithdrawQueue = markets;
 
-        setERC20Balance(address(diffBaseAsset), address(this), MIN_INITIAL_DEPOSIT);
-        diffBaseAsset.approve(address(factory), MIN_INITIAL_DEPOSIT);
-
         Vault vault2 = factory.createVault(
-            diffBaseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            diffBaseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
 
         require(address(vault) != address(vault2), "different deployment address");
@@ -305,26 +203,13 @@ contract VaultFactoryTest is VaultSharedSetup {
         marketsArgs.newWithdrawQueue = markets;
 
         address deployer = newAddress("DEPLOYER");
-        // deploy using the factory which enforces minimum deposit of 1e9 assets
-        // and the 1e3 shares burn.
+
         bytes32 salt = _getSalt(deployer, "random salt");
 
-        setERC20Balance(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
-
         vm.startPrank(deployer);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
 
         Vault vault = factory.createVault(
-            BASE_ASSET,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            BASE_ASSET, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, salt, marketsArgs
         );
         vm.stopPrank();
 
@@ -335,7 +220,8 @@ contract VaultFactoryTest is VaultSharedSetup {
         updateAllocationCaps(vault, type(uint256).max, type(uint256).max, type(uint256).max);
 
         uint256 donationAmt = 10e18;
-        uint256 mintAmt = 10;
+        uint256 mintAmt = 10; // 10 shares * 1 / 10000
+        uint256 assetsFromMint = vault.previewMint(mintAmt);
 
         // fund attacker
         setERC20Balance(address(BASE_ASSET), address(this), donationAmt + mintAmt);
@@ -345,6 +231,7 @@ contract VaultFactoryTest is VaultSharedSetup {
         console2.log("attacker balance before :");
         console2.log("%e", initialAssetBalance);
 
+        console2.log("minting: ", mintAmt);
         vault.mint(mintAmt, address(this));
         uint256 attackerClaimAfterMint = vault.previewRedeem(vault.balanceOf(address(this)));
 
@@ -357,8 +244,8 @@ contract VaultFactoryTest is VaultSharedSetup {
         // donate to inflate exchange rate by increasing `totalAssets`
         IERC20(address(BASE_ASSET)).transfer(address(vault), donationAmt);
 
-        assertEq(donationAmt + mintAmt + 1e3, vault.totalAssets(), "total assets");
-        assertEq(mintAmt + 1e3, vault.totalSupply(), "minted shares");
+        assertEq(donationAmt + assetsFromMint, vault.totalAssets(), "total assets");
+        assertEq(mintAmt, vault.totalSupply(), "minted shares");
 
         // how much of this donation was captured by the virtual shares on the vault?
         uint256 attackerClaimAfterDonation = vault.previewRedeem(vault.balanceOf(address(this)));
@@ -415,41 +302,20 @@ contract VaultFactoryTest is VaultSharedSetup {
         address deployer = newAddress("DEPLOYER");
         address attacker = newAddress("ATTACKER");
 
-        deal(address(BASE_ASSET), deployer, MIN_INITIAL_DEPOSIT);
         deal(address(BASE_ASSET), attacker, MIN_INITIAL_DEPOSIT);
 
         bytes32 deployerSalt = _getSalt(deployer, "random salt");
 
         vm.startPrank(deployer);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
         Vault deployerVault = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            deployerSalt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, deployerSalt, marketsArgs
         );
         vm.stopPrank();
 
         vm.startPrank(attacker);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
         vm.expectRevert(); // create collision
         Vault attackerVault = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            deployerSalt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, deployerSalt, marketsArgs
         );
         vm.stopPrank();
     }
@@ -469,18 +335,8 @@ contract VaultFactoryTest is VaultSharedSetup {
         bytes32 attackerSalt = _getSalt(attacker, "random");
 
         vm.startPrank(deployer);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
         Vault deployerVault = factory.createVault(
-            baseAsset,
-            feeRecipient,
-            feePercentage,
-            name,
-            symbol,
-            INITIAL_DELAY,
-            VAULT_ADMIN,
-            deployerSalt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            baseAsset, feeRecipient, feePercentage, name, symbol, INITIAL_DELAY, VAULT_ADMIN, deployerSalt, marketsArgs
         );
         vm.stopPrank();
 
@@ -495,8 +351,7 @@ contract VaultFactoryTest is VaultSharedSetup {
             INITIAL_DELAY,
             VAULT_ADMIN,
             attackerSalt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            marketsArgs
         );
         vm.stopPrank();
 

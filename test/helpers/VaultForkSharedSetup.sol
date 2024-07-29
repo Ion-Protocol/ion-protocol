@@ -96,8 +96,6 @@ contract VaultForkBase is Test {
 
         bytes32 salt = bytes32(abi.encodePacked(address(this), keccak256("random salt")));
 
-        deal(address(BASE_ASSET), address(this), MIN_INITIAL_DEPOSIT);
-        BASE_ASSET.approve(address(factory), MIN_INITIAL_DEPOSIT);
         vault = factory.createVault(
             BASE_ASSET,
             FEE_RECIPIENT,
@@ -107,8 +105,7 @@ contract VaultForkBase is Test {
             INITIAL_DELAY,
             VAULT_ADMIN,
             salt,
-            marketsArgs,
-            MIN_INITIAL_DEPOSIT
+            marketsArgs
         );
 
         require(vault.supplyQueue(0) == WEETH_IONPOOL);

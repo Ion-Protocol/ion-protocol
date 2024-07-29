@@ -317,4 +317,8 @@ contract VaultSharedSetup is IonPoolSharedSetup {
             z := mul(gt(x, y), sub(x, y))
         }
     }
+
+    function _convertTo18(uint256 amt) internal view returns (uint256) {
+        return amt / (10 ** (vault.decimals() - 18));
+    }
 }

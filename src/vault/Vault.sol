@@ -120,7 +120,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         feePercentage = _feePercentage;
         feeRecipient = _feeRecipient;
 
-        DECIMALS_OFFSET = uint8(_zeroFloorSub(uint256(18), IERC20Metadata(address(_baseAsset)).decimals()));
+        DECIMALS_OFFSET = 4;
 
         _addSupportedMarkets(
             marketsArgs.marketsToAdd,
