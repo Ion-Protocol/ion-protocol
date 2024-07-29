@@ -32,7 +32,7 @@ contract VaultFactory {
         address indexed initialDefaultAdmin
     );
 
-    VaultBytecode constant BYTECODE_DEPLOYER = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
+    VaultBytecode public constant BYTECODE_DEPLOYER = VaultBytecode(0x0000000000382a154e4A696A8C895b4292fA3D82);
 
     // --- Modifier ---
 

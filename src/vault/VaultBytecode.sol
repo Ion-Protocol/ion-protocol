@@ -16,7 +16,7 @@ import { IERC20 } from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 contract VaultBytecode {
     error OnlyFactory();
 
-    address constant VAULT_FACTORY = 0x0000000000D7DC416dFe993b0E3dd53BA3E27Fc8;
+    address public constant VAULT_FACTORY = 0x0000000000D7DC416dFe993b0E3dd53BA3E27Fc8;
 
     /**
      * @notice Deploys the embedded `Vault` bytecode with the given constructor

@@ -58,6 +58,12 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     event FeeAccrued(uint256 feeShares, uint256 newTotalAssets);
     event UpdateLastTotalAssets(uint256 lastTotalAssets, uint256 newLastTotalAssets);
 
+    event UpdateFeePercentage(uint256 newFeePercentage);
+    event UpdateFeeRecipient(address indexed newFeeRecipient);
+    event AddSupportedMarkets(IIonPool[] marketsAdded);
+    event RemoveSupportedMarkets(IIonPool[] marketsRemoved);
+    event UpdateAllocationCaps(IIonPool[] ionPools, uint256[] newCaps);
+
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant ALLOCATOR_ROLE = keccak256("ALLOCATOR_ROLE");
 
@@ -139,6 +145,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         if (_feePercentage > RAY) revert InvalidFeePercentage();
         _accrueFee();
         feePercentage = _feePercentage;
+        emit UpdateFeePercentage(_feePercentage);
     }
 
     /**
@@ -148,6 +155,7 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
     function updateFeeRecipient(address _feeRecipient) external onlyRole(OWNER_ROLE) {
         if (_feeRecipient == address(0)) revert InvalidFeeRecipient();
         feeRecipient = _feeRecipient;
+        emit UpdateFeeRecipient(_feeRecipient);
     }
 
     /**
@@ -207,6 +215,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
 
         _updateSupplyQueue(newSupplyQueue);
         _updateWithdrawQueue(newWithdrawQueue);
+
+        emit AddSupportedMarkets(marketsToAdd);
     }
 
     /**
@@ -252,6 +262,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
         }
         _updateSupplyQueue(newSupplyQueue);
         _updateWithdrawQueue(newWithdrawQueue);
+
+        emit RemoveSupportedMarkets(marketsToRemove);
     }
 
     /**
@@ -346,6 +358,8 @@ contract Vault is ERC4626, Multicall, AccessControlDefaultAdminRules, Reentrancy
                 ++i;
             }
         }
+
+        emit UpdateAllocationCaps(ionPools, newCaps);
     }
 
     /**
